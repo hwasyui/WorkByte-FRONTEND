@@ -1,0 +1,30 @@
+services:
+  capstone-frontend:
+    image: workbyte/flutter:latest
+    container_name: capstone-frontend
+    volumes:
+      - .:/app
+      - ${HOME:-~}/.android:/root/.android
+      - gradle_cache:/root/.gradle
+      - flutter_pub_cache:/root/.pub-cache
+      - android_sdk_cache:/opt/android-sdk
+      - flutter_cache:/opt/flutter/bin/cache
+    working_dir: /app
+    environment:
+      - ANDROID_SDK_ROOT=/opt/android-sdk
+    tty: true
+    stdin_open: true
+    networks:
+      - capstone-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  gradle_cache:
+  flutter_pub_cache:
+  android_sdk_cache:
+  flutter_cache:
+
+networks:
+  capstone-network:
+    external: true
