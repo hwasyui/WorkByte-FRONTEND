@@ -5,6 +5,7 @@ import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
+import '../../screens/dashboard/dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -108,7 +109,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 14),
 
                     /// Login button
-                    PrimaryButton(label: 'Login', onPressed: () {}),
+                    PrimaryButton(
+                      label: 'Login',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        );
+                      },
+                    ),
 
                     const SizedBox(height: 48),
 
