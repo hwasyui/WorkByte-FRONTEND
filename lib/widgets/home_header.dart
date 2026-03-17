@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/text_styles.dart';
+import '../core/constants/text_styles.dart';
+import '../screens/dashboard/notification.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -37,7 +38,11 @@ class HomeHeader extends StatelessWidget {
         const Spacer(),
         // Notification bell
         GestureDetector(
-          onTap: onNotificationTap,
+          onTap:
+              onNotificationTap ??
+              () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
