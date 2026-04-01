@@ -9,6 +9,7 @@ import '../../widgets/freelancer_card.dart';
 import '../../widgets/category_tile.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
 import '../../widgets/home_header.dart';
+import '../freelancer_profile/freelancer_profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,16 +21,28 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
 
+  void _handleNavigation(int index) {
+    if (index == 4) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      setState(() {
+        _currentNavIndex = index;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // ── Teal curved header ──────────────────────────────────────
+
           _TealHeader(),
 
-          // ── Scrollable body ─────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 29),
@@ -38,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 16),
 
-                  // Greeting row
                   HomeHeader(
                     userName: 'Alexa Joe',
                     userAvatar: Image.network(
@@ -56,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 26),
 
-                  // ── Popular Jobs ──────────────────────────────────
+                  // Popular jobs
                   SectionHeader(title: 'Popular Jobs', onViewAll: () {}),
                   const SizedBox(height: 12),
 
@@ -107,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 26),
 
-                  // ── Top Freelancers ───────────────────────────────
+                  // Top Freelancers
                   SectionHeader(title: 'Top Freelancers', onViewAll: () {}),
                   const SizedBox(height: 12),
 
@@ -160,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 26),
 
-                  // ── Popular Categories ────────────────────────────
+                  // Popular categories
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
                   const SizedBox(height: 12),
 
@@ -197,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     jobCount: 10,
                   ),
 
-                  // Bottom padding so last item clears the nav bar
                   const SizedBox(height: 24),
                 ],
               ),
@@ -207,15 +218,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
-        onTap: (i) => setState(() => _currentNavIndex = i),
+        // onTap: (i) => setState(() => _currentNavIndex = i),
+        onTap: _handleNavigation,
       ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Teal curved top header
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _TealHeader extends StatelessWidget {
   @override
@@ -246,8 +254,6 @@ class _TealHeader extends StatelessWidget {
   }
 }
 
-/// Clips the bottom of the teal banner with a gentle downward ellipse curve,
-/// matching the Figma design's rotated ellipse overlay effect.
 class _EllipseClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
