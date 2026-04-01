@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../widgets/education_profile.dart';
+import '../../widgets/experience_profile.dart';
+import '../../widgets/edit_profile_form.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -10,14 +14,17 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  String aboutText = '';
+  String name = "Dennis Wang";
+  String username = "@denniswang";
+  String job = "UI/UX Designer";
+  String aboutText= '';
+  String? profileImage;
   String? uploadedCVPath;
   final TextEditingController aboutController = TextEditingController();
   late TabController _tabController;
 
   static const Color primaryColor = Color(0xFF00AAA8);
 
-  // ── Sample review data ───────────────────────────────────────────────────
   final List<Map<String, dynamic>> _reviews = [
     {
       'name': 'Ais Vadelia',
@@ -36,6 +43,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       'time': '1 month ago',
     },
   ];
+  List<Map<String, dynamic>> educations = [];
+  List<Map<String, dynamic>> experiences = [];
 
   @override
   void initState() {
@@ -48,6 +57,56 @@ class _ProfileScreenState extends State<ProfileScreen>
     aboutController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+  void _showEditProfile() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => EditProfileForm(
+        initialData: {
+          "name": name,
+          "username": username,
+          "job": job,
+          "image": profileImage,
+        },
+        onSave: (data) {
+          setState(() {
+            name = data['name'];
+            username = data['username'];
+            job = data['job'];
+            profileImage = data['image'];
+          });
+        },
+      ),
+    );
+  }
+
+  void _showEducationForm() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => EducationProfile(
+        onSave: (data) {
+          setState(() {
+            educations.add(data);
+          });
+        },
+      ),
+    );
+  }
+
+  void _showExperienceForm() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ExperienceProfile(
+        onSave: (data) {
+          setState(() {
+            experiences.add(data);
+          });
+        },
+      ),
+    );
   }
 
   void _editAbout() {
@@ -95,7 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // ── BUILD ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,7 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── STICKY HEADER ────────────────────────────────────────────────────────
   Widget _buildStickyHeader() {
     return Container(
       color: Colors.grey[100],
@@ -174,10 +231,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 44,
-                      backgroundImage:
-                          NetworkImage('https://via.placeholder.com/150'),
+                      backgroundImage: profileImage != null
+                        ? (profileImage!.startsWith('http')
+                            ? NetworkImage(profileImage!)
+                            : FileImage(File(profileImage!)) as ImageProvider)
+                        : const NetworkImage('https://via.placeholder.com/150'),
                     ),
                   ),
                 ),
@@ -198,20 +258,17 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text('Dennis Wang',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            children: [
+              Text(name, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               SizedBox(width: 4),
               Icon(Icons.verified, color: primaryColor, size: 18),
             ],
           ),
-          const SizedBox(height: 2),
-          const Text('@denniswang',
-              style: TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 2),
-          const Text('UI/UX Designer',
-              style: TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 12),
+          SizedBox(height: 2),
+          Text(username, style: TextStyle(color: Colors.grey, fontSize: 13)),
+          SizedBox(height: 2),
+          Text(job, style: TextStyle(color: Colors.grey, fontSize: 13)),
+          SizedBox(height: 12),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -219,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: _showEditProfile,
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Edit Profile'),
                     style: ElevatedButton.styleFrom(
@@ -273,7 +330,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── ABOUT TAB ────────────────────────────────────────────────────────────
   Widget _buildAboutTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(top: 16, bottom: 32),
@@ -366,15 +422,37 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           _buildSection(
             title: 'Experiences',
-            actionButton: _buildAddButton('Add Experiences', () {}),
-            child: const SizedBox(height: 16),
+            actionButton: _buildAddButton('Add Experiences', _showExperienceForm),
+            child: Column(
+              children: experiences.map((e) {
+                return _ExperienceItem(
+                  logo: Icons.work,
+                  title: e['title'],
+                  company: e['company'],
+                  period: e['isPresent'] == true
+                      ? "${e['startDate']?.year ?? ''} - Present"
+                      : "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
+                  logoColor: primaryColor,
+                );
+              }).toList(),
+            ),
           ),
           const SizedBox(height: 16),
 
           _buildSection(
             title: 'Education',
-            actionButton: _buildAddButton('Add Education', () {}),
-            child: const SizedBox(height: 16),
+            actionButton: _buildAddButton('Add Education', _showEducationForm),
+            child: Column(
+              children: educations.map((e) {
+                return _EducationItem(
+                  degree: e['degree'],
+                  school: e['school'],
+                  period:
+                      "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
+                  color: primaryColor,
+                );
+              }).toList(),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -388,14 +466,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── REVIEWS TAB ──────────────────────────────────────────────────────────
   Widget _buildReviewsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Rating Summary Card ──────────────────────────────────────
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
@@ -412,7 +488,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: Row(
               children: [
-                // Left: big score
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -455,8 +530,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
 
                 const SizedBox(width: 20),
-
-                // Right: bar chart per star
                 Expanded(
                   child: Column(
                     children: [5, 4, 3, 2, 1].map((star) {
@@ -502,7 +575,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           const SizedBox(height: 20),
 
-          // ── Reviews Header ───────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -525,13 +597,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
 
           const SizedBox(height: 12),
-
-          // ── Review Cards ─────────────────────────────────────────────
           ..._reviews.map((r) => _buildReviewCard(r)).toList(),
 
           const SizedBox(height: 4),
-
-          // ── Load more ────────────────────────────────────────────────
           Center(
             child: TextButton.icon(
               onPressed: () {},
@@ -564,7 +632,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top: avatar + name/username + star rating
+         
           Row(
             children: [
               CircleAvatar(
@@ -621,7 +689,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── HELPERS ──────────────────────────────────────────────────────────────
   Widget _buildSection({
     required String title,
     required Widget child,
@@ -690,8 +757,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 }
-
-// ── SHARED WIDGETS ──────────────────────────────────────────────────────────
 
 class _SkillChip extends StatelessWidget {
   final String label;
