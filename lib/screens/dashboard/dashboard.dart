@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
-import '../../core/constants/text_styles.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_card.dart';
@@ -10,6 +9,7 @@ import '../../widgets/category_tile.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
 import '../../widgets/home_header.dart';
 import '../freelancer_profile/freelancer_profile.dart';
+import '../../screens/job_freelancer_view/job_list.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
 
   void _handleNavigation(int index) {
-    if (index == 4) {
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const JobListScreen()),
+      );
+    } else if (index == 4) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
@@ -40,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-
           _TealHeader(),
 
           Expanded(
@@ -218,12 +222,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
-        // onTap: (i) => setState(() => _currentNavIndex = i),
         onTap: _handleNavigation,
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Teal curved top header
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _TealHeader extends StatelessWidget {
   @override
@@ -242,7 +249,7 @@ class _TealHeader extends StatelessWidget {
           right: 29,
         ),
         child: Text(
-          "Find your dream job",
+          'Find your dream job',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
             fontSize: 24,
@@ -254,6 +261,8 @@ class _TealHeader extends StatelessWidget {
   }
 }
 
+/// Clips the bottom of the teal banner with a gentle downward ellipse curve,
+/// matching the Figma design's rotated ellipse overlay effect.
 class _EllipseClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
