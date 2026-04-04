@@ -18,6 +18,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+
+  String _selectedRole = 'Freelancer'; // ✅ NEW
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -31,7 +34,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -80,19 +82,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 14),
 
-                    /// Username
-                    LoginTextField(
-                      hintText: 'Username',
-                      controller: _usernameController,
-                      prefixIcon: const Icon(
-                        Icons.person_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
                     /// Email
                     LoginTextField(
                       hintText: 'Email address',
@@ -120,10 +109,81 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 26),
 
+                    /// 🔥 Role Toggle (Freelancer / Client)
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedRole = 'Freelancer');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'Freelancer'
+                                      ? AppColors.primary
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Freelancer',
+                                  style: TextStyle(
+                                    color: _selectedRole == 'Freelancer'
+                                        ? Colors.white
+                                        : const Color(0xFF7D7D7D),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedRole = 'Client');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'Client'
+                                      ? AppColors.primary
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Client',
+                                  style: TextStyle(
+                                    color: _selectedRole == 'Client'
+                                        ? Colors.white
+                                        : const Color(0xFF7D7D7D),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
                     /// Sign Up button
                     PrimaryButton(label: 'Sign Up', onPressed: () {}),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 16),
 
                     /// Or continue with
                     Center(
