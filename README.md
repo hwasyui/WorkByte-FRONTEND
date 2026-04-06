@@ -1,17 +1,58 @@
-# app
+# 🎨 WorkByte Frontend
 
-A new Flutter project.
+Frontend application for **WorkByte**, providing a modern interface for clients and freelancers to interact and collaborate.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📌 Overview
 
-A few resources to get you started if this is your first Flutter project:
+This repository contains the frontend of WorkByte, including:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+* User interface for Clients & Freelancers
+* Job browsing & proposal submission
+* Dashboard & profile management
+* Integration with backend APIs
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🏗️ Tech Stack
+
+* **Framework**: Flutter
+* **Language**: Dart
+* **Containerization**: Docker
+
+---
+
+## 🐳 Development
+
+All development is done inside the Docker container environment.
+
+---
+
+## 🔗 Related Repositories
+
+* Backend: https://github.com/hwasyui/WorkByte-BACKEND
+* Database: https://github.com/hwasyui/WorkByte-DATABASE
+
+---
+
+## 👥 Team Members & Commit Codes
+
+| Code  | Name           | GitHub                            |
+| ----- | -------------- | --------------------------------- |
+| [ASW] | hwasyui        | https://github.com/hwasyui        |
+| [IKP] | tannpsy        | https://github.com/tannpsy        |
+| [SKF] | sarahkimberlyy | https://github.com/sarahkimberlyy |
+
+---
+
+## 📝 Notes
+
+* Ensure backend services are available for full functionality
+* Use commit prefixes when contributing
+
+---
+
+## 📄 License
+
+This project is for academic (capstone) purposes.
