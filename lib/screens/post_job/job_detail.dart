@@ -7,9 +7,40 @@ class PostNewJobJobDetail extends StatefulWidget {
 	PostNewJobJobDetailState createState() => PostNewJobJobDetailState();
 }
 class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
-	String textField1 = '';
+  String textField1 = '';
 	String textField2 = '';
+  DateTime selectedDate = DateTime.now();
+  String deadlineText = "23/02/2023";
+	final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descController = TextEditingController();
+  final TextEditingController _budgetController = TextEditingController();
+  final TextEditingController _daysController = TextEditingController(text: "7");
+
 	bool _isTeamSelected = false;
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        deadlineText = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+      });
+    }
+  }
+
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    _budgetController.dispose();
+    _daysController.dispose();
+    super.dispose();
+  }
+
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
@@ -199,26 +230,24 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 															margin: const EdgeInsets.only( bottom: 17, left: 29, right: 29),
 															width: double.infinity,
 															child: TextField(
-																style: TextStyle(
-																	color: Color(0xFFB5B4B4),
-																	fontSize: 12,
-																),
-																onChanged: (value) { 
-																	setState(() { textField1 = value; });
-																},
-																decoration: InputDecoration(
-																	hintText: "Create a logo for my company",
-																	isDense: true,
-																	contentPadding: const EdgeInsets.only( top: 20, bottom: 20, left: 19, right: 19),
-																	border: InputBorder.none,
-																	focusedBorder: InputBorder.none,
-																	filled: false,
-																),
-															),
+                                controller: _titleController,
+                                style: TextStyle(
+                                  color: _titleController.text.isNotEmpty ? Color(0xFF333333) : Color(0xFFB5B4B4),
+                                  fontSize: 12,
+                                ),
+                                onChanged: (value) => setState(() {}),
+                                decoration: InputDecoration(
+                                  hintText: "Create a logo for my company",
+                                  hintStyle: TextStyle(color: Color(0xFFB5B4B4)),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.all(19),
+                                  border: InputBorder.none,
+                                ),
+                              ),
 														),
 													),
-													Container(
-														margin: const EdgeInsets.only( bottom: 7, left: 29),
+                          Container(
+														margin: const EdgeInsets.only( bottom: 10, left: 32),
 														child: Text(
 															"Description",
 															style: TextStyle(
@@ -229,36 +258,31 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 														),
 													),
 													IntrinsicHeight(
-														child: Container(
-															decoration: BoxDecoration(
-																border: Border.all(
-																	color: Color(0xFFF0F0F1),
-																	width: 1,
-																),
-																borderRadius: BorderRadius.circular(10),
-																color: Color(0xFFFFFFFF),
-															),
-															padding: const EdgeInsets.only( top: 15, left: 19, right: 39),
-															margin: const EdgeInsets.only( bottom: 17, left: 29, right: 29),
-															width: double.infinity,
-															child: Column(
-																crossAxisAlignment: CrossAxisAlignment.start,
-																children: [
-																	Container(
-																		margin: const EdgeInsets.only( bottom: 201),
-																		width: double.infinity,
-																		child: Text(
-																			"I need a freelancer who experiences with logo design for my brand new company",
-																			style: TextStyle(
-																				color: Color(0xFFB5B4B4),
-																				fontSize: 12,
-																			),
-																		),
-																	),
-																]
-															),
-														),
-													),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Color(0xFFF0F0F1), width: 1),
+                                borderRadius: BorderRadius.circular(10),
+                                color: Color(0xFFFFFFFF),
+                              ),
+                              margin: const EdgeInsets.only(bottom: 17, left: 29, right: 29),
+                              width: double.infinity,
+                              child: TextField(
+                                controller: _descController,
+                                maxLines: 5, 
+                                style: TextStyle(
+                                  color: _descController.text.isNotEmpty ? Color(0xFF333333) : Color(0xFFB5B4B4),
+                                  fontSize: 12,
+                                ),
+                                onChanged: (value) => setState(() {}),
+                                decoration: InputDecoration(
+                                  hintText: "I need a freelancer who experiences with logo design...",
+                                  hintStyle: TextStyle(color: Color(0xFFB5B4B4)),
+                                  contentPadding: const EdgeInsets.all(19),
+                                  border: InputBorder.none,
+                                ),
+                              ),
+                            ),
+                          ),
 													Container(
 														margin: const EdgeInsets.only( bottom: 7, left: 32),
 														child: Text(
@@ -284,23 +308,28 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 															margin: const EdgeInsets.only( bottom: 11, left: 29, right: 29),
 															width: double.infinity,
 															child: TextField(
-																style: TextStyle(
-																	color: Color(0xFF333333),
-																	fontSize: 12,
-																),
-																onChanged: (value) { 
-																	setState(() { textField2 = value; });
-																},
-																decoration: InputDecoration(
-																	hintText: "Rp.    1.000.000",
-																	isDense: true,
-																	contentPadding: const EdgeInsets.only( top: 21, bottom: 21, left: 19, right: 19),
-																	border: InputBorder.none,
-																	focusedBorder: InputBorder.none,
-																	filled: false,
-																),
-															),
-														),
+                                controller: _budgetController, 
+                                keyboardType: TextInputType.number, 
+                                style: TextStyle(
+                                  color: _budgetController.text.isNotEmpty ? const Color(0xFF333333) : const Color(0xFFB5B4B4),
+                                  fontSize: 12,
+                                ),
+                                onChanged: (value) { 
+                                  setState(() { 
+                                    textField2 = value;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  hintText: "Rp.    1.000.000",
+                                  hintStyle: const TextStyle(color: Color(0xFFB5B4B4)),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.only(top: 21, bottom: 21, left: 19, right: 19),
+                                  border: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                ),
+                              ),
+                            ),
 													),
 													Container(
 														margin: const EdgeInsets.only( bottom: 24, left: 29, right: 29),
@@ -325,39 +354,48 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 														),
 													),
 													IntrinsicHeight(
-														child: Container(
-															decoration: BoxDecoration(
-																border: Border.all(
-																	color: Color(0xFFF0F0F1),
-																	width: 1,
-																),
-																borderRadius: BorderRadius.circular(10),
-																color: Color(0xFFFFFFFF),
-															),
-															padding: const EdgeInsets.only( top: 21, bottom: 21, left: 19, right: 19),
-															margin: const EdgeInsets.only( bottom: 11, left: 29, right: 29),
-															width: double.infinity,
-															child: Row(
-																mainAxisAlignment: MainAxisAlignment.spaceBetween,
-																children: [
-																	Text(
-																		"7",
-																		style: TextStyle(
-																			color: Color(0xFFB5B4B4),
-																			fontSize: 12,
-																		),
-																	),
-																	Text(
-																		"days",
-																		style: TextStyle(
-																			color: Color(0xFF333333),
-																			fontSize: 12,
-																		),
-																	),
-																]
-															),
-														),
-													),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Color(0xFFF0F0F1), width: 1),
+                                borderRadius: BorderRadius.circular(10),
+                                color: Color(0xFFFFFFFF),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 5),
+                              margin: const EdgeInsets.only(bottom: 11, left: 29, right: 29),
+                              width: double.infinity,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _daysController,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        color: _daysController.text.isNotEmpty ? Color(0xFF333333) : Color(0xFFB5B4B4),
+                                        fontSize: 12,
+                                      ),
+                                      onChanged: (value) {
+                                        setState(() {}); 
+                                      },
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        border: InputBorder.none,
+                                        hintText: "0",
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    "days",
+                                    style: TextStyle(
+                                      color: Color(0xFF333333), 
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
 													Container(
 														margin: const EdgeInsets.only( bottom: 22, left: 32, right: 46),
 														width: double.infinity,
@@ -381,40 +419,43 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 														),
 													),
 													IntrinsicHeight(
-														child: Container(
-															decoration: BoxDecoration(
-																border: Border.all(
-																	color: Color(0xFFF0F0F1),
-																	width: 1,
-																),
-																borderRadius: BorderRadius.circular(10),
-																color: Color(0xFFFFFFFF),
-															),
-															padding: const EdgeInsets.only( top: 17, bottom: 17, left: 19, right: 19),
-															margin: const EdgeInsets.only( bottom: 11, left: 29, right: 29),
-															width: double.infinity,
-															child: Row(
-																mainAxisAlignment: MainAxisAlignment.spaceBetween,
-																children: [
-																	Text(
-																		"23/02/2023",
-																		style: TextStyle(
-																			color: Color(0xFFB5B4B4),
-																			fontSize: 12,
-																		),
-																	),
-																	Container(
-																		width: 20,
-																		height: 20,
-																		child: Image.network(
-																			"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/dPj38vYMjM/vkcsd2w0_expires_30_days.png",
-																			fit: BoxFit.fill,
-																		)
-																	),
-																]
-															),
-														),
-													),
+                            child: InkWell(
+                              onTap: () => _selectDate(context),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFFF0F0F1),
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: const Color(0xFFFFFFFF),
+                                ),
+                                padding: const EdgeInsets.only(top: 17, bottom: 17, left: 19, right: 19),
+                                margin: const EdgeInsets.only(bottom: 11, left: 29, right: 29),
+                                width: double.infinity,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      deadlineText, 
+                                      style: TextStyle(
+                                        color: deadlineText == "23/02/2023" ? const Color(0xFFB5B4B4) : const Color(0xFF333333),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: Image.network(
+                                        "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/dPj38vYMjM/vkcsd2w0_expires_30_days.png",
+                                        fit: BoxFit.fill,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
 													Container(
 														margin: const EdgeInsets.only( bottom: 18, left: 32),
 														child: Text(
