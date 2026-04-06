@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/login.dart';
+// import '../../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -29,6 +31,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _usernameController.dispose();
     super.dispose();
   }
+
+  // Future<void> _handleSignUp() async {
+  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+  //   final email = _emailController.text.trim();
+  //   final password = _passwordController.text.trim();
+  //   final fullName = _nameController.text.trim();
+  //   final userType = _selectedRole.toLowerCase();
+
+  //   if (email.isEmpty || password.isEmpty || fullName.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Please fill all required fields')),
+  //     );
+  //     return;
+  //   }
+
+  //   final success = await authProvider.register(
+  //     email: email,
+  //     password: password,
+  //     userType: userType,
+  //     fullName: userType == 'freelancer' ? fullName : null,
+  //     companyName: userType == 'client' ? fullName : null,
+  //   );
+
+  //   if (success) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Registration successful! Please login.')),
+  //     );
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
+  //     );
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(authProvider.error ?? 'Registration failed')),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +221,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 32),
 
                     /// Sign Up button
-                    PrimaryButton(label: 'Sign Up', onPressed: () {}),
+                    // Consumer<AuthProvider>(
+                    //   builder: (context, authProvider, child) {
+                    //     return PrimaryButton(
+                    //       label: authProvider.isLoading ? 'Signing Up...' : 'Sign Up',
+                    //       onPressed: authProvider.isLoading ? null : _handleSignUp,
+                    //     );
+                    //   },
+                    // ),
+                    PrimaryButton(label: 'Sign Up', onPressed: () {
+                      // Navigate to login or show message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sign up functionality disabled')),
+                      );
+                    }),
 
                     const SizedBox(height: 16),
 

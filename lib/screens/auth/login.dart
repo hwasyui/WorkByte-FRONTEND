@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
@@ -6,6 +7,7 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
 import '../../screens/dashboard/dashboard.dart';
+// import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,6 +26,36 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+
+  // Future<void> _handleLogin() async {
+  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+  //   final email = _emailController.text.trim();
+  //   final password = _passwordController.text.trim();
+
+  //   if (email.isEmpty || password.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Please fill email and password')),
+  //     );
+  //     return;
+  //   }
+
+  //   final success = await authProvider.login(email, password);
+
+  //   if (success) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Login successful!')),
+  //     );
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (_) => const HomeScreen()),
+  //     );
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(authProvider.error ?? 'Login failed')),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +141,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 14),
 
                     /// Login button
+                    // Consumer<AuthProvider>(
+                    //   builder: (context, authProvider, child) {
+                    //     return PrimaryButton(
+                    //       label: authProvider.isLoading ? 'Logging in...' : 'Login',
+                    //       onPressed: authProvider.isLoading ? null : _handleLogin,
+                    //     );
+                    //   },
+                    // ),
                     PrimaryButton(
                       label: 'Login',
                       onPressed: () {

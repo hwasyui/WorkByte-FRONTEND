@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
+import '../screens/post_job/job_detail.dart' show PostNewJobJobDetail;
 
 class HomeBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -58,14 +59,20 @@ class HomeBottomNavBar extends StatelessWidget {
               ],
             ),
           ),
-          // Floating center button
+          // Floating center button - Navigate to Post Job
           Positioned(
             top: -20,
             left: 0,
             right: 0,
             child: Center(
               child: GestureDetector(
-                onTap: () => onTap?.call(2),
+                onTap: () {
+                  // Navigate to job_detail page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => PostNewJobJobDetail()),
+                  );
+                },
                 child: Container(
                   width: 50,
                   height: 50,
