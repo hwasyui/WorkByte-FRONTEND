@@ -59,7 +59,7 @@ class _PostNewJobAddTeamState extends State<PostNewJobAddTeam> {
                 children: [
                   InkWell(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
+                    child: const Icon(Icons.chevron_left, color: Colors.white),
                   ),
                   const SizedBox(height: 10),
                   const Text(
@@ -203,7 +203,7 @@ class _PostNewJobAddTeamState extends State<PostNewJobAddTeam> {
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Silakan isi Role dan Budget'),
+                                  content: Text('Please fill in all required fields'),
                                 ),
                               );
                             }
