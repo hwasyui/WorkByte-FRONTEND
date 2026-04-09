@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
 import '../../widgets/edit_profile_form.dart';
+import 'upload_cv.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
@@ -291,9 +292,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.share, size: 16),
-                    label: const Text('Share Profile'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UploadCVScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.analytics_outlined, size: 18),
+                    label: const Text('Analyze CV'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 11),
@@ -390,22 +398,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ],
                     ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.analytics_outlined, size: 18),
-                      label: const Text('Analyze CV'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
+                  // const SizedBox(height: 12),
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   child: ElevatedButton.icon(
+                  //     onPressed: () {},
+                  //     icon: const Icon(Icons.analytics_outlined, size: 18),
+                  //     label: const Text('Analyze CV'),
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: primaryColor,
+                  //       foregroundColor: Colors.white,
+                  //       padding: const EdgeInsets.symmetric(vertical: 12),
+                  //       shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(8)),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
