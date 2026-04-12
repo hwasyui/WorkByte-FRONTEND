@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
@@ -7,7 +7,8 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
 import '../../screens/dashboard/dashboard.dart';
-// import '../../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +21,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  String? _emailError;
+  String? _passwordError;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,41 +31,66 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Future<void> _handleLogin() async {
-  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
 
-  //   final email = _emailController.text.trim();
-  //   final password = _passwordController.text.trim();
+  bool _validate() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-  //   if (email.isEmpty || password.isEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Please fill email and password')),
-  //     );
-  //     return;
-  //   }
+    setState(() {
+      // Email
+      if (email.isEmpty) {
+        _emailError = 'Email is required';
+      } else if (!_isValidEmail(email)) {
+        _emailError = 'Enter a valid email address';
+      } else {
+        _emailError = null;
+      }
 
-  //   final success = await authProvider.login(email, password);
+      // Password
+      if (password.isEmpty) {
+        _passwordError = 'Password is required';
+      } else if (password.length < 8) {
+        _passwordError = 'Password must be at least 8 characters';
+      } else {
+        _passwordError = null;
+      }
+    });
 
-  //   if (success) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Login successful!')),
-  //     );
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const HomeScreen()),
-  //     );
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text(authProvider.error ?? 'Login failed')),
-  //     );
-  //   }
-  // }
+    return _emailError == null && _passwordError == null;
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_validate()) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final success = await context.read<AuthProvider>().login(
+      _emailController.text.trim(),
+      _passwordController.text,
+      profileProvider: context.read<ProfileProvider>(),
+    );
+
+    if (success) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.error ?? 'Login failed')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -78,7 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// Title
                     Text(
                       'Welcome back',
                       style: AppText.h1.copyWith(
@@ -101,6 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     LoginTextField(
                       hintText: 'Email address',
                       controller: _emailController,
+                      errorText: _emailError,
+                      keyboardType: TextInputType.emailAddress,
                       prefixIcon: const Icon(
                         Icons.mail_outline,
                         size: 24,
@@ -115,6 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Password',
                       controller: _passwordController,
                       isPassword: true,
+                      errorText: _passwordError,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                         size: 24,
@@ -141,27 +172,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 14),
 
                     /// Login button
-                    // Consumer<AuthProvider>(
-                    //   builder: (context, authProvider, child) {
-                    //     return PrimaryButton(
-                    //       label: authProvider.isLoading ? 'Logging in...' : 'Login',
-                    //       onPressed: authProvider.isLoading ? null : _handleLogin,
-                    //     );
-                    //   },
-                    // ),
-                    PrimaryButton(
-                      label: 'Login',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return PrimaryButton(
+                          label: authProvider.isLoading
+                              ? 'Logging in...'
+                              : 'Login',
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : _handleLogin,
                         );
                       },
                     ),
 
                     const SizedBox(height: 48),
 
-                    /// Or continue with
                     Center(
                       child: Text(
                         'Or continue with',
@@ -173,7 +198,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 16),
 
-                    /// Social buttons
                     Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -202,7 +226,6 @@ class _LoginScreenState extends State<LoginScreen> {
               Builder(
                 builder: (context) {
                   final bottomInset = MediaQuery.of(context).padding.bottom;
-
                   return ClipPath(
                     clipper: _WaveClipper(),
                     child: Container(
@@ -259,20 +282,16 @@ class _WaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-
     path.moveTo(0, size.height * 0.35);
-
     path.quadraticBezierTo(
       size.width * 0.5,
       -size.height * 0.25,
       size.width + 10,
       size.height * 0.2,
     );
-
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
-
     return path;
   }
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/login.dart';
-// import '../../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -19,56 +19,100 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
 
-  String _selectedRole = 'Freelancer'; // ✅ NEW
+  // Field-level error messages
+  String? _nameError;
+  String? _emailError;
+  String? _passwordError;
+
+  String _selectedRole = 'Freelancer';
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
-    _usernameController.dispose();
     super.dispose();
   }
 
-  // Future<void> _handleSignUp() async {
-  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  // ─── Validate email format ────────────────────────────────────────────────
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
 
-  //   final email = _emailController.text.trim();
-  //   final password = _passwordController.text.trim();
-  //   final fullName = _nameController.text.trim();
-  //   final userType = _selectedRole.toLowerCase();
+  // ─── Run all validations, return true if all pass ─────────────────────────
+  bool _validate() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final fullName = _nameController.text.trim();
 
-  //   if (email.isEmpty || password.isEmpty || fullName.isEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Please fill all required fields')),
-  //     );
-  //     return;
-  //   }
+    setState(() {
+      // Full name
+      if (fullName.isEmpty) {
+        _nameError = 'Full name is required';
+      } else if (fullName.length < 2) {
+        _nameError = 'Name must be at least 2 characters';
+      } else {
+        _nameError = null;
+      }
 
-  //   final success = await authProvider.register(
-  //     email: email,
-  //     password: password,
-  //     userType: userType,
-  //     fullName: userType == 'freelancer' ? fullName : null,
-  //     companyName: userType == 'client' ? fullName : null,
-  //   );
+      // Email
+      if (email.isEmpty) {
+        _emailError = 'Email is required';
+      } else if (!_isValidEmail(email)) {
+        _emailError = 'Enter a valid email address';
+      } else {
+        _emailError = null;
+      }
 
-  //   if (success) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Registration successful! Please login.')),
-  //     );
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const LoginScreen()),
-  //     );
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text(authProvider.error ?? 'Registration failed')),
-  //     );
-  //   }
-  // }
+      // Password — matches backend: min 8 characters
+      if (password.isEmpty) {
+        _passwordError = 'Password is required';
+      } else if (password.length < 8) {
+        _passwordError = 'Password must be at least 8 characters';
+      } else {
+        _passwordError = null;
+      }
+    });
+
+    return _nameError == null && _emailError == null && _passwordError == null;
+  }
+
+  Future<void> _handleSignUp() async {
+    if (!_validate()) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final fullName = _nameController.text.trim();
+    final userType = _selectedRole.toLowerCase();
+
+    final success = await authProvider.register(
+      email: email,
+      password: password,
+      userType: userType,
+      fullName: userType == 'freelancer' ? fullName : null,
+      companyName: userType == 'client' ? fullName : null,
+    );
+
+    if (success) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration successful! Please login.')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } else {
+      if (!mounted) return;
+      // Show backend error (e.g. email already registered)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.error ?? 'Registration failed')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +157,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     LoginTextField(
                       hintText: 'Full name',
                       controller: _nameController,
+                      errorText: _nameError,
                       prefixIcon: const Icon(
                         Icons.person_outline,
                         size: 24,
@@ -126,6 +171,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     LoginTextField(
                       hintText: 'Email address',
                       controller: _emailController,
+                      errorText: _emailError,
                       prefixIcon: const Icon(
                         Icons.mail_outline,
                         size: 24,
@@ -140,6 +186,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       hintText: 'Password',
                       controller: _passwordController,
                       isPassword: true,
+                      errorText: _passwordError,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                         size: 24,
@@ -149,7 +196,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 26),
 
-                    /// 🔥 Role Toggle (Freelancer / Client)
+                    /// Role Toggle (Freelancer / Client)
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
@@ -221,20 +268,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 32),
 
                     /// Sign Up button
-                    // Consumer<AuthProvider>(
-                    //   builder: (context, authProvider, child) {
-                    //     return PrimaryButton(
-                    //       label: authProvider.isLoading ? 'Signing Up...' : 'Sign Up',
-                    //       onPressed: authProvider.isLoading ? null : _handleSignUp,
-                    //     );
-                    //   },
-                    // ),
-                    PrimaryButton(label: 'Sign Up', onPressed: () {
-                      // Navigate to login or show message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sign up functionality disabled')),
-                      );
-                    }),
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return PrimaryButton(
+                          label: authProvider.isLoading
+                              ? 'Signing Up...'
+                              : 'Sign Up',
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : _handleSignUp,
+                        );
+                      },
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -336,20 +381,16 @@ class _WaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-
     path.moveTo(0, size.height * 0.35);
-
     path.quadraticBezierTo(
       size.width * 0.5,
       -size.height * 0.25,
       size.width + 10,
       size.height * 0.2,
     );
-
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
-
     return path;
   }
 

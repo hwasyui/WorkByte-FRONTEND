@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
@@ -55,16 +58,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 16),
 
-                  HomeHeader(
-                    userName: 'Alexa Joe',
-                    userAvatar: Image.network(
-                      'https://i.pravatar.cc/60?img=12',
-                      width: 32,
-                      height: 32,
-                      fit: BoxFit.cover,
-                    ),
+                  Consumer2<AuthProvider, ProfileProvider>(
+                    builder: (context, auth, profile, child) {
+                      return HomeHeader(
+                        userName: profile.displayName,
+                        userAvatar: profile.profilePictureUrl != null
+                            ? Image.network(
+                                profile.profilePictureUrl!,
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(
+                                Icons.person,
+                                size: 32,
+                                color: Colors.white,
+                              ),
+                      );
+                    },
                   ),
-
                   const SizedBox(height: 22),
 
                   // Search bar
