@@ -1,20 +1,53 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import 'profile_provider.dart';
 
-class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+class AuthProvider extends ChangeNotifier {
+  final AuthService _service = AuthService();
 
-  User? _user;
-  String? _token;
   bool _isLoading = false;
   String? _error;
+  String? _token;
+  UserModel? _currentUser;
 
-  User? get user => _user;
-  String? get token => _token;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAuthenticated => _token != null && _user != null;
+  String? get token => _token;
+  UserModel? get currentUser => _currentUser;
+  bool get isAuthenticated => _token != null;
+
+  Future<bool> login(
+    String email,
+    String password, {
+    ProfileProvider? profileProvider,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _token = await _service.login(email, password);
+      _currentUser = await _service.getMe(_token!);
+
+      if (profileProvider != null) {
+        await profileProvider.fetchProfile(
+          token: _token!,
+          userId: _currentUser!.userId,
+          userType: _currentUser!.type,
+        );
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 
   Future<bool> register({
     required String email,
@@ -28,7 +61,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final request = RegisterRequest(
+      await _service.register(
         email: email,
         password: password,
         userType: userType,
@@ -36,50 +69,21 @@ class AuthProvider with ChangeNotifier {
         companyName: companyName,
       );
 
-      final response = await _authService.register(request);
-
       _isLoading = false;
       notifyListeners();
-
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  Future<bool> login(String email, String password) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final request = LoginRequest(email: email, password: password);
-      final authResponse = await _authService.login(request);
-
-      _token = authResponse.accessToken;
-
-      // Get user info
-      _user = await _authService.getCurrentUser(_token!);
-
-      _isLoading = false;
-      notifyListeners();
-
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  void logout() {
-    _user = null;
+  void logout({ProfileProvider? profileProvider}) {
     _token = null;
-    _error = null;
+    _currentUser = null;
+    profileProvider?.clear();
     notifyListeners();
   }
 
