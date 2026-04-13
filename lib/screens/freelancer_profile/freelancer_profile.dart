@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
 import '../../widgets/edit_profile_form.dart';
+import '../../widgets/add_skill.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 import 'upload_cv.dart';
 import 'dart:io';
 
@@ -15,12 +19,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  String name = "Dennis Wang";
-  String username = "@denniswang";
-  String job = "UI/UX Designer";
   String aboutText= '';
-  String? profileImage;
   String? uploadedCVPath;
+  List<String> skills = [];
   final TextEditingController aboutController = TextEditingController();
   late TabController _tabController;
 
@@ -60,23 +61,32 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
   void _showEditProfile() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => EditProfileForm(
         initialData: {
-          "name": name,
-          "username": username,
-          "job": job,
-          "image": profileImage,
+          "name": profile.displayName,
+          "username": auth.currentUser?.email ?? '',
+          "job": profile.jobTitle,
+          "image": profile.profilePictureUrl,
         },
-        onSave: (data) {
-          setState(() {
-            name = data['name'];
-            username = data['username'];
-            job = data['job'];
-            profileImage = data['image'];
-          });
+        onSave: (data) async {
+          // Update job title locally (not saved to database)
+          profile.updateJobTitle(data['job']);
+          
+          // Update other profile fields to backend
+          final fields = {
+            "full_name": data['name'],
+            "profile_picture_url": data['image'],
+          };
+          await profile.updateProfile(
+            token: auth.token!,
+            identifier: auth.currentUser!.userId,
+            fields: fields,
+          );
         },
       ),
     );
@@ -138,6 +148,20 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: const Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSkillForm() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddSkillWidget(
+        onSave: (newSkills) {
+          setState(() {
+            skills.addAll(newSkills);
+          });
+        },
       ),
     );
   }
@@ -232,13 +256,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
                     ),
-                    child: CircleAvatar(
-                      radius: 44,
-                      backgroundImage: profileImage != null
-                        ? (profileImage!.startsWith('http')
-                            ? NetworkImage(profileImage!)
-                            : FileImage(File(profileImage!)) as ImageProvider)
-                        : const NetworkImage('https://via.placeholder.com/150'),
+                    child: Consumer<ProfileProvider>(
+                      builder: (context, profile, child) {
+                        final profileImage = profile.profilePictureUrl;
+                        return CircleAvatar(
+                          radius: 44,
+                          backgroundImage: profileImage != null
+                            ? (profileImage.startsWith('http')
+                                ? NetworkImage(profileImage)
+                                : FileImage(File(profileImage)) as ImageProvider)
+                            : null,
+                          child: profileImage == null ? const Icon(Icons.person, size: 44) : null,
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -260,15 +290,23 @@ class _ProfileScreenState extends State<ProfileScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(name, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Consumer2<AuthProvider, ProfileProvider>(
+                builder: (context, auth, profile, child) {
+                  return Column(
+                    children: [
+                      Text(profile.displayName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 2),
+                      Text(auth.currentUser?.email ?? '', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      SizedBox(height: 2),
+                      Text(profile.jobTitle, style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    ],
+                  );
+                },
+              ),
               SizedBox(width: 4),
               Icon(Icons.verified, color: primaryColor, size: 18),
             ],
           ),
-          SizedBox(height: 2),
-          Text(username, style: TextStyle(color: Colors.grey, fontSize: 13)),
-          SizedBox(height: 2),
-          Text(job, style: TextStyle(color: Colors.grey, fontSize: 13)),
           SizedBox(height: 12),
 
           Padding(
@@ -423,8 +461,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           _buildSection(
             title: 'Skills',
-            actionButton: _buildAddButton('Add Skill', () {}),
-            child: const SizedBox(height: 16),
+            actionButton: _buildAddButton('Add Skill', _showSkillForm),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: skills.map((s) => _SkillChip(label: s)).toList(),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
 

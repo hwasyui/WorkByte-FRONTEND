@@ -5,6 +5,7 @@ class ClientModel {
   final String? bio;
   final String? websiteUrl;
   final String? profilePictureUrl;
+  final String jobTitle;
   final int totalJobsPosted;
   final int totalProjectsCompleted;
   final double? averageRatingGiven;
@@ -18,6 +19,7 @@ class ClientModel {
     this.bio,
     this.websiteUrl,
     this.profilePictureUrl,
+    this.jobTitle = '-',
     this.totalJobsPosted = 0,
     this.totalProjectsCompleted = 0,
     this.averageRatingGiven,
@@ -32,6 +34,7 @@ class ClientModel {
     bio: json['bio'] as String?,
     websiteUrl: json['website_url'] as String?,
     profilePictureUrl: json['profile_picture_url'] as String?,
+    jobTitle: '-',
     totalJobsPosted: (json['total_jobs_posted'] as num?)?.toInt() ?? 0,
     totalProjectsCompleted:
         (json['total_projects_completed'] as num?)?.toInt() ?? 0,
@@ -51,6 +54,7 @@ class ClientModel {
     String? bio,
     String? websiteUrl,
     String? profilePictureUrl,
+    String? jobTitle,
   }) => ClientModel(
     clientId: clientId,
     userId: userId,
@@ -58,6 +62,7 @@ class ClientModel {
     bio: bio ?? this.bio,
     websiteUrl: websiteUrl ?? this.websiteUrl,
     profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+    jobTitle: jobTitle ?? this.jobTitle,
     totalJobsPosted: totalJobsPosted,
     totalProjectsCompleted: totalProjectsCompleted,
     averageRatingGiven: averageRatingGiven,

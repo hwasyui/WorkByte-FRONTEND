@@ -5,6 +5,7 @@ class FreelancerModel {
   final String? bio;
   final String? cvFileUrl;
   final String? profilePictureUrl;
+  final String jobTitle;
   final double? estimatedRate;
   final String? rateTime;
   final String? rateCurrency;
@@ -19,6 +20,7 @@ class FreelancerModel {
     this.bio,
     this.cvFileUrl,
     this.profilePictureUrl,
+    this.jobTitle = '-',
     this.estimatedRate,
     this.rateTime,
     this.rateCurrency,
@@ -35,6 +37,7 @@ class FreelancerModel {
         bio: json['bio'] as String?,
         cvFileUrl: json['cv_file_url'] as String?,
         profilePictureUrl: json['profile_picture_url'] as String?,
+        jobTitle: '-',
         estimatedRate: (json['estimated_rate'] as num?)?.toDouble(),
         rateTime: json['rate_time'] as String?,
         rateCurrency: json['rate_currency'] as String?,
@@ -61,6 +64,7 @@ class FreelancerModel {
     String? bio,
     String? cvFileUrl,
     String? profilePictureUrl,
+    String? jobTitle,
     double? estimatedRate,
     String? rateTime,
     String? rateCurrency,
@@ -71,6 +75,7 @@ class FreelancerModel {
     bio: bio ?? this.bio,
     cvFileUrl: cvFileUrl ?? this.cvFileUrl,
     profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+    jobTitle: jobTitle ?? this.jobTitle,
     estimatedRate: estimatedRate ?? this.estimatedRate,
     rateTime: rateTime ?? this.rateTime,
     rateCurrency: rateCurrency ?? this.rateCurrency,

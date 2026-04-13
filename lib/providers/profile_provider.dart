@@ -37,6 +37,11 @@ class ProfileProvider extends ChangeNotifier {
     return _freelancerProfile?.bio;
   }
 
+  String get jobTitle {
+    if (isClient) return _clientProfile?.jobTitle ?? '-';
+    return _freelancerProfile?.jobTitle ?? '-';
+  }
+
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
     '',
@@ -141,6 +146,16 @@ class ProfileProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return false;
+  }
+
+  // ─── Update local jobTitle ───────────────────────────────────────────────
+  void updateJobTitle(String jobTitle) {
+    if (isClient) {
+      _clientProfile = _clientProfile?.copyWith(jobTitle: jobTitle);
+    } else {
+      _freelancerProfile = _freelancerProfile?.copyWith(jobTitle: jobTitle);
+    }
+    notifyListeners();
   }
 
   // ─── Clear on logout ──────────────────────────────────────────────────────
