@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class EditProfileForm extends StatefulWidget {
@@ -23,7 +23,8 @@ class _EditProfileFormState extends State<EditProfileForm> {
   late TextEditingController usernameCtrl;
   late TextEditingController jobCtrl;
 
-  String? imagePath;
+  String? imagePath; 
+  String? imageUrl; 
 
   @override
   void initState() {
@@ -32,17 +33,18 @@ class _EditProfileFormState extends State<EditProfileForm> {
     usernameCtrl =
         TextEditingController(text: widget.initialData['username']);
     jobCtrl = TextEditingController(text: widget.initialData['job']);
-    imagePath = widget.initialData['image'];
+    imageUrl = widget.initialData['image'];
+    imagePath = imageUrl; 
   }
 
   Future<void> _pickImage() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (result != null) {
+    if (image != null) {
       setState(() {
-        imagePath = result.files.single.path;
+        imagePath = image.path; 
+        imageUrl = image.name;
       });
     }
   }
@@ -53,7 +55,8 @@ class _EditProfileFormState extends State<EditProfileForm> {
         "name": nameCtrl.text,
         "username": usernameCtrl.text,
         "job": jobCtrl.text,
-        "image": imagePath,
+        "image": imagePath, 
+        "imageUrl": imageUrl, 
       });
 
       Navigator.pop(context);
@@ -84,12 +87,11 @@ class _EditProfileFormState extends State<EditProfileForm> {
           backgroundImage: imagePath != null
               ? (imagePath!.startsWith('http')
                   ? NetworkImage(imagePath!)
-                  : FileImage(
-                      // ignore: unnecessary_cast
-                      File(imagePath!),
-                    ) as ImageProvider)
+                  : (File(imagePath!).existsSync()
+                      ? FileImage(File(imagePath!))
+                      : null))
               : null,
-          child: imagePath == null
+          child: imagePath == null || (!imagePath!.startsWith('http') && !File(imagePath!).existsSync())
               ? const Icon(Icons.person, size: 40)
               : null,
         ),
@@ -120,13 +122,22 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 _input(usernameCtrl, "Username"),
                 _input(jobCtrl, "Job Title"),
 
-                const SizedBox(height: 16),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _submit,
-                    child: const Text("Save"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00AAA8),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Save",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
                   ),
                 ),
               ],
