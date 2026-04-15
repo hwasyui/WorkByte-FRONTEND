@@ -14,6 +14,7 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
 
   final titleCtrl = TextEditingController();
   final companyCtrl = TextEditingController();
+  final locationCtrl = TextEditingController();
   final descCtrl = TextEditingController();
 
   DateTime? startDate;
@@ -41,12 +42,27 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
+      if (startDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Start date is required')),
+        );
+        return;
+      }
+
+      if (!isPresent && endDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('End date is required unless currently working here')),
+        );
+        return;
+      }
+
       widget.onSave({
         "title": titleCtrl.text,
         "company": companyCtrl.text,
+        "location": locationCtrl.text,
         "description": descCtrl.text,
         "startDate": startDate,
-        "endDate": isPresent ? null : endDate,
+        "endDate": endDate,
         "isPresent": isPresent,
       });
 
@@ -110,7 +126,7 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                   onChanged: (v) => setState(() => isPresent = v!),
                   title: const Text("Currently working here"),
                 ),
-
+                _input(locationCtrl, "Location"),
                 _input(descCtrl, "Description", maxLines: 3),
 
                 const SizedBox(height: 16),
@@ -119,7 +135,18 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _submit,
-                    child: const Text("Save"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00AAA8),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Save",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
                   ),
                 ),
               ],
