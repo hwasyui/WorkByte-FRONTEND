@@ -4,6 +4,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../dashboard/dashboard.dart';
+import '../../models/job_post_model.dart';
+import '../job_client_view/job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -221,109 +223,126 @@ class JobListScreenState extends State<JobListScreen> {
     final teamCount = job['team_count'] ?? job['member_count'] ?? '';
     final deadline = job['deadline'] ?? job['created_at'] ?? '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () {
+        final jobModel = JobPostModel.fromJson(job);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClientJobDetailScreen(job: jobModel),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Title ────────────────────────────────────────────────────
-          Text(
-            job['job_title'] ?? 'Untitled',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: 8),
-          // ── Meta row ─────────────────────────────────────────────────
-          Row(
-            children: [
-              Text(
-                job['category'] ?? job['job_category'] ?? 'General',
-                style: const TextStyle(color: Color(0xFF7D7D7D), fontSize: 12),
-              ),
-              if (isTeam && teamCount != '') ...[
-                const SizedBox(width: 12),
-                const Icon(
-                  Icons.people_outline,
-                  size: 14,
-                  color: Color(0xFF7D7D7D),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  teamCount.toString(),
-                  style: const TextStyle(
-                    color: Color(0xFF7D7D7D),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-              if (deadline.isNotEmpty) ...[
-                const SizedBox(width: 12),
-                Text(
-                  _formatDate(deadline.toString()),
-                  style: const TextStyle(
-                    color: Color(0xFF7D7D7D),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          // ── Project type badge ───────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              border: Border.all(color: _primary),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              isTeam ? 'Team' : 'Individual',
+          ],
+        ),
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Title ────────────────────────────────────────────────────
+            Text(
+              job['job_title'] ?? 'Untitled',
               style: const TextStyle(
-                color: Color(0xFF00AAA8),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A1A1A),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          // ── Bidding row ──────────────────────────────────────────────
-          Row(
-            children: [
-              // Placeholder avatars
-              SizedBox(
-                width: 60,
-                height: 28,
-                child: Stack(
-                  children: [
-                    _placeholderAvatar(0),
-                    _placeholderAvatar(1),
-                    _placeholderAvatar(2),
-                  ],
+            const SizedBox(height: 8),
+            // ── Meta row ─────────────────────────────────────────────────
+            Row(
+              children: [
+                Text(
+                  job['category'] ?? job['job_category'] ?? 'General',
+                  style: const TextStyle(
+                    color: Color(0xFF7D7D7D),
+                    fontSize: 12,
+                  ),
+                ),
+                if (isTeam && teamCount != '') ...[
+                  const SizedBox(width: 12),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 14,
+                    color: Color(0xFF7D7D7D),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    teamCount.toString(),
+                    style: const TextStyle(
+                      color: Color(0xFF7D7D7D),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (deadline.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Text(
+                    _formatDate(deadline.toString()),
+                    style: const TextStyle(
+                      color: Color(0xFF7D7D7D),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            // ── Project type badge ───────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(color: _primary),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isTeam ? 'Team' : 'Individual',
+                style: const TextStyle(
+                  color: Color(0xFF00AAA8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '+${job['bid_count'] ?? job['proposal_count'] ?? 0} bidding',
-                style: const TextStyle(color: Color(0xFF7D7D7D), fontSize: 12),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 12),
+            // ── Bidding row ──────────────────────────────────────────────
+            Row(
+              children: [
+                // Placeholder avatars
+                SizedBox(
+                  width: 60,
+                  height: 28,
+                  child: Stack(
+                    children: [
+                      _placeholderAvatar(0),
+                      _placeholderAvatar(1),
+                      _placeholderAvatar(2),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '+${job['bid_count'] ?? job['proposal_count'] ?? 0} bidding',
+                  style: const TextStyle(
+                    color: Color(0xFF7D7D7D),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

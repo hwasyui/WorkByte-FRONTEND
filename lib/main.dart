@@ -4,6 +4,7 @@ import 'screens/splash/splash_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/job_post_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/proposal_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -21,6 +22,7 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => JobPostProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => ProposalProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

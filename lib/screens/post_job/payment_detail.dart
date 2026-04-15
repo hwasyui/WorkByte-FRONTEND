@@ -15,8 +15,8 @@ class PostPaymentDetail extends StatefulWidget {
 class PostPaymentDetailState extends State<PostPaymentDetail> {
   static const Color _primary = Color(0xFF00AAA8);
 
-  bool _isFullSelected = false;
-  String _selectedOption = '2 (50%, 100%)';
+  bool _isFullSelected = true;
+  String _selectedOption = '1 (100%)';
 
   final List<String> _milestoneOptions = [
     '2 (50%, 100%)',
@@ -29,20 +29,20 @@ class PostPaymentDetailState extends State<PostPaymentDetail> {
 
   void _onNext() {
     if (_isFullSelected) {
-      // Full payment — save draft and go straight to summary
       context.read<JobPostProvider>().setDraftPayment(
         JobPaymentDraft(isFullPayment: true, paymentOption: _selectedOption),
       );
-      Navigator.pushReplacement(
+      Navigator.push(
+        // ← push, not pushReplacement
         context,
         MaterialPageRoute(builder: (_) => const PostNewJobSummary()),
       );
     } else {
-      // Milestone — go to milestone detail screen first
       context.read<JobPostProvider>().setDraftPayment(
         JobPaymentDraft(isFullPayment: false, paymentOption: _selectedOption),
       );
-      Navigator.pushReplacement(
+      Navigator.push(
+        // ← push, not pushReplacement
         context,
         MaterialPageRoute(
           builder: (_) => PostNewJobMilestone(selectedOption: _selectedOption),

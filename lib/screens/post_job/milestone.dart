@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../models/job_payment_model.dart';
@@ -17,25 +18,45 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
   static const Color _primary = Color(0xFF00AAA8);
 
   late int milestoneCount;
-  late List<String> workProgress;
-  late List<String> paymentPercentage;
+  late List<TextEditingController> workProgressControllers;
+  late List<TextEditingController> paymentPercentageControllers;
 
   @override
   void initState() {
     super.initState();
     milestoneCount = int.tryParse(widget.selectedOption.split(' ').first) ?? 1;
-    workProgress = List<String>.filled(milestoneCount, '');
-    paymentPercentage = List<String>.filled(milestoneCount, '');
+    workProgressControllers = List.generate(
+      milestoneCount,
+      (_) => TextEditingController(),
+    );
+    paymentPercentageControllers = List.generate(
+      milestoneCount,
+      (_) => TextEditingController(),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (final c in workProgressControllers) c.dispose();
+    for (final c in paymentPercentageControllers) c.dispose();
+    super.dispose();
   }
 
   // ─── Validation ───────────────────────────────────────────────────────────
   String? _validate() {
     for (int i = 0; i < milestoneCount; i++) {
-      if (workProgress[i].trim().isEmpty) {
-        return 'Milestone ${i + 1}: work progress is required';
+      final wp = workProgressControllers[i].text.trim();
+      final pp = paymentPercentageControllers[i].text.trim();
+
+      if (wp.isEmpty) return 'Milestone ${i + 1}: work progress is required';
+      if (int.tryParse(wp) == null) {
+        return 'Milestone ${i + 1}: work progress must be a whole number';
       }
-      if (paymentPercentage[i].trim().isEmpty) {
+      if (pp.isEmpty) {
         return 'Milestone ${i + 1}: payment percentage is required';
+      }
+      if (int.tryParse(pp) == null) {
+        return 'Milestone ${i + 1}: payment percentage must be a whole number';
       }
     }
     return null;
@@ -53,13 +74,12 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
     final milestones = List.generate(
       milestoneCount,
       (i) => JobMilestoneModel(
-        workProgress: workProgress[i].trim(),
-        paymentPercentage: paymentPercentage[i].trim(),
+        workProgress: '${workProgressControllers[i].text.trim()}%',
+        paymentPercentage: '${paymentPercentageControllers[i].text.trim()}%',
         milestoneOrder: i + 1,
       ),
     );
 
-    // Update the draft payment with milestone details
     final provider = context.read<JobPostProvider>();
     final existing = provider.draftPayment;
     provider.setDraftPayment(
@@ -70,7 +90,7 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
       ),
     );
 
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PostNewJobSummary()),
     );
@@ -150,7 +170,8 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                             ),
                           ),
                           const SizedBox(height: 25),
-                          // ── Milestone rows ────────────────────────────────
+
+                          // ── Milestone rows ─────────────────────────────────
                           for (
                             int index = 0;
                             index < milestoneCount;
@@ -187,6 +208,7 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // ── Column labels ─────────────────────────
                                   Padding(
                                     padding: const EdgeInsets.only(
                                       bottom: 6,
@@ -198,7 +220,7 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                           MainAxisAlignment.spaceBetween,
                                       children: const [
                                         Text(
-                                          'Work progress',
+                                          'Work progress (%)',
                                           style: TextStyle(
                                             color: Color(0xFF7D7D7D),
                                             fontSize: 12,
@@ -206,7 +228,7 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                           ),
                                         ),
                                         Text(
-                                          'Payment Percentage',
+                                          'Payment (%)',
                                           style: TextStyle(
                                             color: Color(0xFF7D7D7D),
                                             fontSize: 12,
@@ -216,12 +238,14 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                       ],
                                     ),
                                   ),
+                                  // ── Input row ─────────────────────────────
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                     ),
                                     child: Row(
                                       children: [
+                                        // Work progress field
                                         Expanded(
                                           child: Container(
                                             decoration: BoxDecoration(
@@ -237,16 +261,20 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                               right: 19,
                                             ),
                                             child: TextField(
+                                              controller:
+                                                  workProgressControllers[index],
+                                              keyboardType:
+                                                  TextInputType.number,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                              ],
                                               style: const TextStyle(
                                                 color: Color(0xFF333333),
                                                 fontSize: 12,
                                               ),
-                                              onChanged: (value) => setState(
-                                                () =>
-                                                    workProgress[index] = value,
-                                              ),
                                               decoration: const InputDecoration(
-                                                hintText: 'Ex: 25%',
+                                                hintText: 'e.g. 25',
                                                 hintStyle: TextStyle(
                                                   color: Color(0xFFB5B4B4),
                                                   fontSize: 12,
@@ -258,10 +286,16 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                                       vertical: 22,
                                                     ),
                                                 border: InputBorder.none,
+                                                suffixText: '%',
+                                                suffixStyle: TextStyle(
+                                                  color: Color(0xFF7D7D7D),
+                                                  fontSize: 12,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
+                                        // Payment percentage field
                                         Expanded(
                                           child: Container(
                                             decoration: BoxDecoration(
@@ -274,16 +308,20 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                               color: const Color(0xFFFFFFFF),
                                             ),
                                             child: TextField(
+                                              controller:
+                                                  paymentPercentageControllers[index],
+                                              keyboardType:
+                                                  TextInputType.number,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                              ],
                                               style: const TextStyle(
                                                 color: Color(0xFF333333),
                                                 fontSize: 12,
                                               ),
-                                              onChanged: (value) => setState(
-                                                () => paymentPercentage[index] =
-                                                    value,
-                                              ),
                                               decoration: const InputDecoration(
-                                                hintText: 'Ex: 25%',
+                                                hintText: 'e.g. 25',
                                                 hintStyle: TextStyle(
                                                   color: Color(0xFFB5B4B4),
                                                   fontSize: 12,
@@ -295,6 +333,11 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                                                       vertical: 22,
                                                     ),
                                                 border: InputBorder.none,
+                                                suffixText: '%',
+                                                suffixStyle: TextStyle(
+                                                  color: Color(0xFF7D7D7D),
+                                                  fontSize: 12,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -307,7 +350,8 @@ class PostNewJobMilestoneState extends State<PostNewJobMilestone> {
                             ),
                             const SizedBox(height: 8),
                           ],
-                          // ── Next button ───────────────────────────────────
+
+                          // ── Next button ────────────────────────────────────
                           InkWell(
                             onTap: _onNext,
                             child: Container(

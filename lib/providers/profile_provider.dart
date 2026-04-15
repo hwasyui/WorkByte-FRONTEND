@@ -182,6 +182,30 @@ class ProfileProvider extends ChangeNotifier {
     return null;
   }
 
+  // ─── Fetch any freelancer by freelancerId (for proposal enrichment) ───────
+  Future<FreelancerModel?> fetchFreelancerById({
+    required String token,
+    required String freelancerId,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/freelancers/$freelancerId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final profileData = body['details'] ?? body['data'] ?? body;
+        return FreelancerModel.fromJson(profileData as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('fetchFreelancerById error: $e');
+    }
+    return null;
+  }
+
   // ─── Clear on logout ──────────────────────────────────────────────────────
   void clear() {
     _clientProfile = null;

@@ -1,8 +1,4 @@
 // ── lib/screens/job_post/job_detail.dart ────────────────────────────────────
-// CHANGES:
-//  • Removed createJobPost() API call — now uses provider.setDraftJobData()
-//  • Added deadline required validation
-//  • Navigates forward passing draft data via constructor args (no JobPostModel yet)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -26,17 +22,22 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   final TextEditingController _daysController = TextEditingController(
     text: '7',
   );
+  final TextEditingController _roleController = TextEditingController();
+  final TextEditingController _budgetController = TextEditingController();
 
   String _projectType = 'individual';
   String _projectScope = 'small';
   String _experienceLevel = 'entry';
   DateTime? _deadline;
+  bool _submitted = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
     _daysController.dispose();
+    _roleController.dispose();
+    _budgetController.dispose();
     super.dispose();
   }
 
@@ -67,6 +68,13 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   // ─── Validation ───────────────────────────────────────────────────────────
   String? _validate() {
     if (_titleController.text.trim().isEmpty) return 'Title is required';
+    if (_projectType == 'individual') {
+      if (_roleController.text.trim().isEmpty) return 'Role is required';
+      if (_budgetController.text.trim().isEmpty) return 'Budget is required';
+      if (double.tryParse(_budgetController.text.trim()) == null) {
+        return 'Budget must be a valid number';
+      }
+    }
     if (_descController.text.trim().isEmpty) return 'Description is required';
     if (_daysController.text.trim().isEmpty) return 'Working days is required';
     if (int.tryParse(_daysController.text.trim()) == null) {
@@ -78,6 +86,8 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 
   // ─── Next button handler ──────────────────────────────────────────────────
   void _onNext() {
+    setState(() => _submitted = true);
+
     final error = _validate();
     if (error != null) {
       ScaffoldMessenger.of(
@@ -98,8 +108,22 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       'status': 'draft',
     };
 
-    // Save draft locally — no API call yet
     context.read<JobPostProvider>().setDraftJobData(draftData);
+
+    // ── Store individual role as a single draft role ───────────────────────
+    if (_projectType == 'individual') {
+      context.read<JobPostProvider>().setDraftRoles([
+        {
+          'role_title': _roleController.text.trim(),
+          'role_budget': double.parse(_budgetController.text.trim()),
+          'budget_currency': 'IDR',
+          'budget_type': 'fixed',
+          'positions_available': 1,
+          'is_required': true,
+          'display_order': 0,
+        },
+      ]);
+    }
 
     if (_projectType == 'team') {
       Navigator.push(
@@ -138,6 +162,22 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                       controller: _titleController,
                       hint: 'Create a logo for my company',
                     ),
+
+                    // ── Individual-only fields ─────────────────────────────
+                    if (_projectType == 'individual') ...[
+                      _buildLabel('Role'),
+                      _buildTextField(
+                        controller: _roleController,
+                        hint: 'e.g. UI Designer, Frontend Developer',
+                      ),
+                      _buildLabel('Budget (IDR)'),
+                      _buildTextField(
+                        controller: _budgetController,
+                        hint: 'e.g. 1500000',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+
                     _buildLabel('Description'),
                     _buildTextField(
                       controller: _descController,
@@ -309,6 +349,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     required TextEditingController controller,
     required String hint,
     int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
   }) => Container(
     decoration: BoxDecoration(
       border: Border.all(color: const Color(0xFFF0F0F1)),
@@ -319,6 +360,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     child: TextField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Color(0xFF333333), fontSize: 12),
       decoration: InputDecoration(
         hintText: hint,
@@ -401,8 +443,8 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     child: Container(
       decoration: BoxDecoration(
         border: Border.all(
-          color: _deadline == null
-              ? const Color(0xFFFF5C5C) // red border if not selected yet
+          color: _submitted && _deadline == null
+              ? const Color(0xFFFF5C5C)
               : const Color(0xFFF0F0F1),
         ),
         borderRadius: BorderRadius.circular(10),
