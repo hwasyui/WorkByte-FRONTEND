@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../models/job_post_model.dart';
+import '../../models/client_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../../widgets/bidding_bottom_sheet.dart';
 
 class SingleJobDetailScreen extends StatefulWidget {
-  const SingleJobDetailScreen({super.key});
+  final JobPostModel job;
+
+  const SingleJobDetailScreen({super.key, required this.job});
 
   @override
   State<SingleJobDetailScreen> createState() => _SingleJobDetailScreenState();
@@ -14,13 +21,50 @@ class SingleJobDetailScreen extends StatefulWidget {
 
 class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
   int _selectedTab = 0;
+  ClientModel? _client;
+  bool _clientLoading = true;
 
-  static const _tabs = ['Details', 'Terms', 'Bidding (35)'];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchClient());
+  }
 
-  static const _description =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\n'
-      'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\n\n'
-      'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.';
+  Future<void> _fetchClient() async {
+    final token = context.read<AuthProvider>().token!;
+    final client = await context.read<ProfileProvider>().fetchClientById(
+      token: token,
+      clientId: widget.job.clientId,
+    );
+    if (mounted) {
+      setState(() {
+        _client = client;
+        _clientLoading = false;
+      });
+    }
+  }
+
+  List<String> get _tabs => [
+    'Details',
+    'Terms',
+    'Bidding (${widget.job.proposalCount})',
+  ];
+
+  List<String> get _tags {
+    final tags = <String>[];
+    if (widget.job.deadline != null) tags.add(widget.job.deadline!);
+    if (widget.job.workingDays != null) {
+      tags.add('${widget.job.workingDays} days');
+    }
+    tags.add(_capitalize(widget.job.projectScope));
+    if (widget.job.experienceLevel != null) {
+      tags.add(_capitalize(widget.job.experienceLevel!));
+    }
+    return tags;
+  }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   @override
   Widget build(BuildContext context) {
@@ -28,26 +72,40 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // ── Scrollable content ───────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Teal header
+                  // ── Teal header ────────────────────────────────────
                   JobDetailHeader(
-                    companyLogo: Image.network(
-                      'https://www.google.com/favicon.ico',
-                      fit: BoxFit.contain,
-                    ),
-                    posterName: 'Alexa Doe',
-                    username: '@alexadoe',
-                    jobTitle: 'Need freelancer to revamp and redesign website',
-                    category: 'Web Development',
-                    tags: const ['Rp. 6.000.000', '23/02/2023', 'Milestone'],
+                    companyLogo: _client?.profilePictureUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              _client!.profilePictureUrl!,
+                              width: 64,
+                              height: 64,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.business,
+                            size: 40,
+                            color: Color(0xFF00AAA8),
+                          ),
+                    posterName: _clientLoading
+                        ? '...'
+                        : (_client?.displayName ?? 'Client'),
+                    username: _clientLoading
+                        ? ''
+                        : (_client?.websiteUrl ??
+                              '#${widget.job.clientId.substring(0, 8)}'),
+                    jobTitle: widget.job.jobTitle,
+                    category: _capitalize(widget.job.projectScope),
+                    tags: _tags,
                   ),
 
-                  // Tab bar
+                  // ── Tab bar ────────────────────────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
                     child: JobDetailTabBar(
@@ -57,16 +115,16 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
                     ),
                   ),
 
-                  // Tab content
-                  if (_selectedTab == 0) _buildDetailsContent(),
-                  if (_selectedTab == 1) _buildPlaceholderTab('Terms'),
+                  // ── Tab content ────────────────────────────────────
+                  if (_selectedTab == 0) _buildDetailsTab(),
+                  if (_selectedTab == 1) _buildTermsTab(),
                   if (_selectedTab == 2) _buildPlaceholderTab('Bidding'),
                 ],
               ),
             ),
           ),
 
-          // ── Sticky Apply button ──────────────────────────────────
+          // ── Sticky Apply button ────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
             child: SizedBox(
@@ -97,24 +155,17 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
     );
   }
 
-  Widget _buildDetailsContent() {
+  // ── Details tab ────────────────────────────────────────────────────────────
+  Widget _buildDetailsTab() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(27, 20, 27, 8),
+      padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Description heading
-          Text(
-            'Description',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF333333),
-            ),
-          ),
+          _sectionTitle('Description'),
           const SizedBox(height: 12),
           Text(
-            _description,
+            widget.job.jobDescription,
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -123,29 +174,110 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
             ),
           ),
 
-          const SizedBox(height: 28),
+          if (_client?.bio != null) ...[
+            const SizedBox(height: 28),
+            _sectionTitle('About the Client'),
+            const SizedBox(height: 8),
+            Text(
+              _client!.bio!,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF7D7D7D),
+                height: 18 / 12,
+              ),
+            ),
+          ],
 
-          // Skill requirements
-          Text(
-            'Skill requirements',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF333333),
+          if (widget.job.experienceLevel != null) ...[
+            const SizedBox(height: 28),
+            _sectionTitle('Experience Level'),
+            const SizedBox(height: 8),
+            Text(
+              _capitalize(widget.job.experienceLevel!),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3EB489),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'PHP, HTML, ReactJS, CSS, Laravel, Inertia, Javascript, Vite, MySQL',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF3EB489),
-              height: 18 / 12,
-            ),
-          ),
+          ],
 
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  // ── Terms tab ──────────────────────────────────────────────────────────────
+  Widget _buildTermsTab() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _termRow('Project Type', _capitalize(widget.job.projectType)),
+          _termRow('Project Scope', _capitalize(widget.job.projectScope)),
+          if (widget.job.workingDays != null)
+            _termRow('Working Days', '${widget.job.workingDays} days'),
+          if (widget.job.deadline != null)
+            _termRow('Deadline', widget.job.deadline!),
+          if (widget.job.estimatedDuration != null)
+            _termRow('Estimated Duration', widget.job.estimatedDuration!),
+          if (widget.job.experienceLevel != null)
+            _termRow(
+              'Experience Level',
+              _capitalize(widget.job.experienceLevel!),
+            ),
+          if (widget.job.postedAt != null)
+            _termRow('Posted At', _formatDate(widget.job.postedAt!)),
+          if (_client != null) ...[
+            const SizedBox(height: 8),
+            _sectionTitle('Client Info'),
+            const SizedBox(height: 12),
+            _termRow('Name', _client!.displayName),
+            _termRow('Jobs Posted', _client!.totalJobsPosted.toString()),
+            _termRow(
+              'Projects Completed',
+              _client!.totalProjectsCompleted.toString(),
+            ),
+            if (_client!.averageRatingGiven != null)
+              _termRow(
+                'Avg Rating Given',
+                _client!.averageRatingGiven!.toStringAsFixed(1),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _termRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF7D7D7D),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF333333),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -164,5 +296,39 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
         ),
       ),
     );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.poppins(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: const Color(0xFF333333),
+      ),
+    );
+  }
+
+  String _formatDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return raw;
+    }
   }
 }

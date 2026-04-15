@@ -158,6 +158,30 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Fetch any client by clientId (for job detail view) ──────────────────
+  Future<ClientModel?> fetchClientById({
+    required String token,
+    required String clientId,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/clients/$clientId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final profileData = body['details'] ?? body['data'] ?? body;
+        return ClientModel.fromJson(profileData as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('fetchClientById error: $e');
+    }
+    return null;
+  }
+
   // ─── Clear on logout ──────────────────────────────────────────────────────
   void clear() {
     _clientProfile = null;
