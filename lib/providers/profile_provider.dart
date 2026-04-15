@@ -21,6 +21,7 @@ class ProfileProvider extends ChangeNotifier {
   bool get isClient => _userType == 'client';
   bool get isFreelancer => _userType == 'freelancer';
 
+  // ─── Unified helpers for the UI ───────────────────────────────────────────
   String get displayName {
     if (isClient) return _clientProfile?.displayName ?? 'User';
     return _freelancerProfile?.displayName ?? 'User';
@@ -49,6 +50,7 @@ class ProfileProvider extends ChangeNotifier {
   // local
   // static const String _baseUrl = 'http://10.0.2.2:8000';
 
+  // ─── Fetch profile ────────────────────────────────────────────────────────
   Future<void> fetchProfile({
     required String token,
     required String userId,
@@ -98,6 +100,7 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Update profile ───────────────────────────────────────────────────────
   Future<bool> updateProfile({
     required String token,
     required String identifier,
@@ -124,7 +127,7 @@ class ProfileProvider extends ChangeNotifier {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final profileData = data['details'] ?? data['data'] ?? data;
+        final profileData = data['data'] ?? data;
         if (isClient) {
           _clientProfile = ClientModel.fromJson(profileData);
         } else {
@@ -145,6 +148,7 @@ class ProfileProvider extends ChangeNotifier {
     return false;
   }
 
+  // ─── Update local jobTitle ───────────────────────────────────────────────
   void updateJobTitle(String jobTitle) {
     if (isClient) {
       _clientProfile = _clientProfile?.copyWith(jobTitle: jobTitle);
@@ -203,14 +207,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   // ─── Clear on logout ──────────────────────────────────────────────────────
-  void updateProfilePictureUrl(String? url) {
-    if (isClient) {
-      _clientProfile = _clientProfile?.copyWith(profilePictureUrl: url);
-    } else {
-      _freelancerProfile = _freelancerProfile?.copyWith(profilePictureUrl: url);
-    }
-    notifyListeners();
-  }
   void clear() {
     _clientProfile = null;
     _freelancerProfile = null;
