@@ -1,15 +1,10 @@
-// ── lib/providers/job_post_provider.dart ────────────────────────────────────
-
 import 'package:flutter/material.dart';
 import '../models/job_post_model.dart';
 import '../models/job_role_model.dart';
-import '../models/job_payment_model.dart';
 import '../services/job_post_service.dart';
-import '../services/job_payment_service.dart';
 
 class JobPostProvider extends ChangeNotifier {
   final JobPostService _jobPostService = JobPostService();
-  final JobPaymentService _paymentService = JobPaymentService();
 
   bool _isLoading = false;
   String? _error;
@@ -20,7 +15,6 @@ class JobPostProvider extends ChangeNotifier {
   // ── Draft state ───────────────────────────────────────────────────────────
   Map<String, dynamic>? _draftJobData;
   List<Map<String, dynamic>> _draftRoles = [];
-  JobPaymentDraft? _draftPayment;
 
   // ── Getters ───────────────────────────────────────────────────────────────
   bool get isLoading => _isLoading;
@@ -30,7 +24,6 @@ class JobPostProvider extends ChangeNotifier {
   List<JobRoleModel> get jobRoles => _jobRoles;
   Map<String, dynamic>? get draftJobData => _draftJobData;
   List<Map<String, dynamic>> get draftRoles => List.unmodifiable(_draftRoles);
-  JobPaymentDraft? get draftPayment => _draftPayment;
 
   // ── Draft setters ─────────────────────────────────────────────────────────
   void setDraftJobData(Map<String, dynamic> data) {
@@ -43,15 +36,9 @@ class JobPostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setDraftPayment(JobPaymentDraft draft) {
-    _draftPayment = draft;
-    notifyListeners();
-  }
-
   void clearDraft() {
     _draftJobData = null;
     _draftRoles = [];
-    _draftPayment = null;
     notifyListeners();
   }
 
@@ -200,38 +187,6 @@ class JobPostProvider extends ChangeNotifier {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
-    }
-  }
-
-  // ── Payment + Milestones ──────────────────────────────────────────────────
-  Future<JobPaymentModel?> createPaymentWithMilestones({
-    required String token,
-    required String jobPostId,
-    required JobPaymentDraft draft,
-  }) async {
-    try {
-      // 1. Create payment record
-      final payment = await _paymentService.createPayment(token, {
-        'job_post_id': jobPostId,
-        'payment_type': draft.isFullPayment ? 'full' : 'milestone',
-        'payment_option': draft.paymentOption,
-      });
-
-      // 2. Create each milestone if milestone-based
-      if (!draft.isFullPayment && draft.milestones.isNotEmpty) {
-        for (final m in draft.milestones) {
-          await _paymentService.createMilestone(
-            token,
-            m.toJson(payment.jobPaymentId),
-          );
-        }
-      }
-
-      return payment;
-    } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
-      notifyListeners();
-      return null;
     }
   }
 

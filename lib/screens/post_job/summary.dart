@@ -1,5 +1,3 @@
-// ── lib/screens/job_post/summary.dart ───────────────────────────────────────
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -64,28 +62,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       }
     }
 
-    final paymentDraft = provider.draftPayment;
-
-    if (paymentDraft != null) {
-      final payment = await provider.createPaymentWithMilestones(
-        token: token,
-        jobPostId: created.jobPostId,
-        draft: paymentDraft,
-      );
-
-      if (!mounted) return;
-
-      if (payment == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(provider.error ?? 'Failed to save payment info'),
-          ),
-        );
-        setState(() => _isSubmitting = false);
-        return;
-      }
-    }
-
     provider.clearDraft();
     setState(() => _isSubmitting = false);
 
@@ -101,7 +77,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
   Widget build(BuildContext context) {
     final provider = context.watch<JobPostProvider>();
     final draft = provider.draftJobData ?? {};
-    final payment = provider.draftPayment;
     final roles = provider.draftRoles;
 
     return Scaffold(
@@ -185,51 +160,8 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                 if (draft['deadline'] != null)
                   _buildRow('Deadline', draft['deadline'] as String),
 
-                if (payment != null)
-                  _buildRow(
-                    'Payment type',
-                    payment.isFullPayment
-                        ? 'Full payment (100%)'
-                        : 'Milestone — ${payment.paymentOption}',
-                  ),
-
-                // ── Milestones ─────────────────────────────────────
-                if (payment != null &&
-                    !payment.isFullPayment &&
-                    payment.milestones.isNotEmpty) ...[
-                  _sectionLabel('Milestones'),
-                  for (final m in payment.milestones)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: 6,
-                        left: 29,
-                        right: 29,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'M${m.milestoneOrder}: ${(m.workProgress)} work',
-                            style: const TextStyle(
-                              color: Color(0xFFB5B4B4),
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            '${(m.paymentPercentage)} payment',
-                            style: const TextStyle(
-                              color: Color(0xFFB5B4B4),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                ],
-
-                // ── Roles (team only) ───────────────────────────────
-                if (draft['project_type'] == 'team' && roles.isNotEmpty) ...[
+                // ── Roles ──────────────────────────────────────────
+                if (roles.isNotEmpty) ...[
                   _sectionLabel('Roles'),
                   for (final role in roles)
                     Padding(
@@ -262,7 +194,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                   const SizedBox(height: 16),
                 ],
 
-                // ── Post Button ─────────────────────────────────────
+                // ── Post Button ────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 29),
                   child: SizedBox(

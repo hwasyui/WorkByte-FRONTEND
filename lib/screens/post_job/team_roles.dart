@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'add_team.dart';
-import 'payment_detail.dart';
 import '../../providers/job_post_provider.dart';
 import '../../models/job_role_model.dart';
+import 'summary.dart';
 
 class PostNewJobTeamRoles extends StatefulWidget {
   const PostNewJobTeamRoles({super.key});
@@ -71,7 +71,7 @@ class PostNewJobTeamRolesState extends State<PostNewJobTeamRoles> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const PostPaymentDetail()),
+      MaterialPageRoute(builder: (_) => const PostNewJobSummary()),
     );
   }
 

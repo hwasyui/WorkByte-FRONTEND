@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
 import 'team_roles.dart';
-import 'payment_detail.dart';
+import 'summary.dart';
 
 class PostNewJobJobDetail extends StatefulWidget {
   const PostNewJobJobDetail({super.key});
@@ -133,7 +133,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const PostPaymentDetail()),
+        MaterialPageRoute(builder: (_) => const PostNewJobSummary()),
       );
     }
   }
