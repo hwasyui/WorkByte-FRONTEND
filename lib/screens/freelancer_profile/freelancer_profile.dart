@@ -7,6 +7,7 @@ import '../../widgets/edit_profile_form.dart';
 import '../../widgets/add_skill.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/api_service.dart';
 import 'upload_cv.dart';
 import 'dart:io';
 
@@ -19,32 +20,16 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  String aboutText= '';
+  String aboutText = '';
   String? uploadedCVPath;
-  List<String> skills = [];
+  bool _cvRemoved = false;
+  List<Map<String, dynamic>> skills = [];
   final TextEditingController aboutController = TextEditingController();
   late TabController _tabController;
 
   static const Color primaryColor = Color(0xFF00AAA8);
 
-  final List<Map<String, dynamic>> _reviews = [
-    {
-      'name': 'Ais Vadelia',
-      'username': '@aisvadelia',
-      'rating': 5,
-      'title': 'Design logo for brand new company',
-      'body': 'Absolutely good work Dennis! Keep your great work for all clients',
-      'time': '1 month ago',
-    },
-    {
-      'name': 'Hansen Nugraha',
-      'username': '@hansen',
-      'rating': 5,
-      'title': 'Design logo for brand new company',
-      'body': 'Absolutely good work Dennis! Keep your great work for all clients',
-      'time': '1 month ago',
-    },
-  ];
+  final List<Map<String, dynamic>> _reviews = [];
   List<Map<String, dynamic>> educations = [];
   List<Map<String, dynamic>> experiences = [];
 
@@ -52,6 +37,174 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadEducations();
+    _loadSkills();
+    _loadExperiences();
+    aboutController.addListener(() {
+      setState(() => aboutText = aboutController.text);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final profile = Provider.of<ProfileProvider>(context, listen: false);
+      setState(() {
+        aboutText = profile.bio ?? '';
+        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
+      });
+    });
+  }
+
+  Future<void> _deleteEducation(String educationId) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    final success = await ApiService.deleteEducation(auth.token!, educationId);
+
+    if (success) {
+      setState(() {
+        educations.removeWhere((edu) => edu["education_id"] == educationId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Education deleted successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete education')),
+      );
+    }
+  }
+
+  Future<void> _refreshProfile() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final userType = profile.userType ?? 'freelancer';
+
+    final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+    if (auth.token != null && identifier != null) {
+      print('Fetching profile for refresh using identifier: $identifier');
+      final refreshSuccess = await profile.fetchProfile(
+        token: auth.token!,
+        userId: identifier,
+        userType: userType,
+      );
+      print('Profile fetch refresh success: $refreshSuccess, bio: ${profile.bio}, cv: ${profile.freelancerProfile?.cvFileUrl}, pic: ${profile.profilePictureUrl}');
+      setState(() {
+        aboutText = profile.bio ?? '';
+        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
+        _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+      });
+      print('UI updated: aboutText: $aboutText, uploadedCVPath: $uploadedCVPath, _cvRemoved: $_cvRemoved');
+    }
+  }
+
+  Future<void> _loadSkills() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    if (auth.token != null && profile.freelancerProfile?.freelancerId != null) {
+      final skillsData = await ApiService.getFreelancerSkills(
+        auth.token!,
+        profile.freelancerProfile!.freelancerId,
+      );
+
+      print('DEBUG _loadSkills response: $skillsData');
+
+      setState(() {
+        skills = skillsData.map((skill) => {
+          "freelancer_skill_id": skill["freelancer_skill_id"],
+          "skill_name": skill["skill_name"] ?? "Unknown Skill",
+          "proficiency_level": skill["proficiency_level"] ?? "beginner",
+        }).toList();
+      });
+      
+      print('DEBUG skills mapped: $skills');
+    }
+  }
+
+  Future<void> _loadExperiences() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    if (auth.token != null && profile.freelancerProfile?.freelancerId != null) {
+      final experiencesData = await ApiService.getWorkExperiences(
+        auth.token!,
+        profile.freelancerProfile!.freelancerId,
+      );
+
+      setState(() {
+        experiences = experiencesData.map((exp) => {
+          "work_experience_id": exp["work_experience_id"],
+          "title": exp["job_title"],
+          "company": exp["company_name"],
+          "location": exp["location"],
+          "description": exp["description"],
+          "startDate": exp["start_date"] != null ? DateTime.parse(exp["start_date"]) : null,
+          "endDate": exp["end_date"] != null ? DateTime.parse(exp["end_date"]) : null,
+          "isPresent": exp["is_current"] ?? false,
+        }).toList();
+      });
+    }
+  }
+
+  Future<void> _loadEducations() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    if (auth.token != null && profile.freelancerProfile?.freelancerId != null) {
+      final educationsData = await ApiService.getEducations(
+        auth.token!,
+        profile.freelancerProfile!.freelancerId,
+      );
+
+      setState(() {
+        educations = educationsData.map((edu) => {
+          "education_id": edu["education_id"],
+          "school": edu["institution_name"],
+          "degree": edu["degree"],
+          "field": edu["field_of_study"],
+          "grade": edu["grade"],
+          "description": edu["description"],
+          "startDate": edu["start_date"] != null ? DateTime.parse(edu["start_date"]) : null,
+          "endDate": edu["end_date"] != null ? DateTime.parse(edu["end_date"]) : null,
+          "isCurrent": edu["is_current"] ?? false,
+        }).toList();
+      });
+    }
+  }
+
+  Future<void> _deleteSkill(String freelancerSkillId) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    final success = await ApiService.deleteFreelancerSkill(auth.token!, freelancerSkillId);
+
+    if (success) {
+      setState(() {
+        skills.removeWhere((skill) => skill["freelancer_skill_id"] == freelancerSkillId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Skill deleted successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete skill')),
+      );
+    }
+  }
+
+  Future<void> _deleteExperience(String workExperienceId) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    final success = await ApiService.deleteWorkExperience(auth.token!, workExperienceId);
+
+    if (success) {
+      setState(() {
+        experiences.removeWhere((exp) => exp["work_experience_id"] == workExperienceId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Experience deleted successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete experience')),
+      );
+    }
   }
 
   @override
@@ -74,47 +227,129 @@ class _ProfileScreenState extends State<ProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          // Update job title locally (not saved to database)
           profile.updateJobTitle(data['job']);
-          
-          // Update other profile fields to backend
+
           final fields = {
             "full_name": data['name'],
-            "profile_picture_url": data['image'],
           };
-          await profile.updateProfile(
+
+          if (data['imageDeleted'] == true) {
+            fields['profile_picture_url'] = null;
+          } else if (data['image'] != null && data['image'].isNotEmpty &&
+              data['image'] != profile.profilePictureUrl) {
+            if (data['image'].toString().startsWith('http')) {
+              fields['profile_picture_url'] = data['image'];
+            } else {
+              print('Skipping local image path for profile_picture_url save: ${data['image']}');
+            }
+          }
+
+          final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+          final success = await profile.updateProfile(
             token: auth.token!,
-            identifier: auth.currentUser!.userId,
+            identifier: identifier,
             fields: fields,
           );
+
+          print('Update Profile success: $success, fields: $fields, error: ${profile.error}');
+
+          if (success) {
+            if (data['imageDeleted'] == true) {
+              profile.clearProfilePicture();
+            } else {
+              final updatedUrl = profile.profilePictureUrl;
+              if (updatedUrl != null && updatedUrl.isNotEmpty) {
+                profile.updateProfilePictureUrl(updatedUrl);
+              }
+            }
+
+            print('Refreshing profile after Profile update');
+            await _refreshProfile();
+            profile.forceRefreshProfilePicture();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile updated successfully')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(profile.error ?? 'Failed to update profile')),
+            );
+          }
         },
       ),
     );
   }
 
   void _showEducationForm() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => EducationProfile(
-        onSave: (data) {
-          setState(() {
-            educations.add(data);
+        onSave: (data) async {
+          final success = await ApiService.createEducation(auth.token!, {
+            "freelancer_id": profile.freelancerProfile?.freelancerId,
+            "institution_name": data["school"],
+            "degree": data["degree"],
+            "field_of_study": data["field"],
+            "start_date": data["startDate"]?.toIso8601String().split('T')[0],
+            "end_date": data["endDate"]?.toIso8601String().split('T')[0],
+            "is_current": data["isCurrent"],
+            "grade": data["grade"],
+            "description": data["description"],
           });
+
+          if (success) {
+            await _loadEducations();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Education added successfully')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to add education')),
+            );
+          }
         },
       ),
     );
   }
 
   void _showExperienceForm() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => ExperienceProfile(
-        onSave: (data) {
-          setState(() {
-            experiences.add(data);
+        onSave: (data) async {
+          final success = await ApiService.createWorkExperience(auth.token!, {
+            "freelancer_id": profile.freelancerProfile?.freelancerId,
+            "job_title": data["title"],
+            "company_name": data["company"],
+            "location": data["location"],
+            "start_date": data["startDate"] != null
+                ? data["startDate"].toIso8601String().split('T')[0]
+                : null,
+            "end_date": data["endDate"] != null
+                ? data["endDate"].toIso8601String().split('T')[0]
+                : null,
+            "is_current": data["isPresent"],
+            "description": data["description"],
           });
+
+          if (success) {
+            await _loadExperiences();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Experience added successfully')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to add experience')),
+            );
+          }
         },
       ),
     );
@@ -140,9 +375,34 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() => aboutText = aboutController.text);
+            onPressed: () async {
+              final newBio = aboutController.text;
+              final bioValue = newBio.trim().isEmpty ? null : newBio;
+              setState(() => aboutText = newBio);
               Navigator.pop(context);
+
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final profile = Provider.of<ProfileProvider>(context, listen: false);
+              final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+              final updateFields = {"bio": bioValue};
+              print('Sending About update: identifier=$identifier, fields=$updateFields');
+              final success = await profile.updateProfile(
+                token: auth.token!,
+                identifier: identifier,
+                fields: updateFields,
+              );
+              print('Update About success: $success, bioValue: $bioValue, error: ${profile.error}');
+              if (success) {
+                print('Refreshing profile after About update');
+                await _refreshProfile();
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(success
+                      ? 'About saved successfully'
+                      : profile.error ?? 'Failed to save About'),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
             child: const Text('Save'),
@@ -153,30 +413,142 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showSkillForm() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => AddSkillWidget(
-        onSave: (newSkills) {
-          setState(() {
-            skills.addAll(newSkills);
+        onSave: (skillData) async {
+          final skillId = skillData["skill_id"];
+          final proficiency = skillData["proficiency_level"] as String;
+
+          if (skillId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please select a skill')),
+            );
+            return;
+          }
+
+          final success = await ApiService.createFreelancerSkill(auth.token!, {
+            "freelancer_id": profile.freelancerProfile?.freelancerId,
+            "skill_id": skillId,
+            "proficiency_level": proficiency,
           });
+
+          if (success) {
+            await _loadSkills();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Skill added successfully')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to add skill')),
+            );
+          }
         },
       ),
     );
   }
 
   Future<void> _uploadCV() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx'],
     );
     if (result != null) {
-      setState(() => uploadedCVPath = result.files.single.name);
+      final fileName = result.files.single.name;
+      final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+      final updateFields = {"cv_file_url": fileName};
+      print('Sending CV upload update: identifier=$identifier, fields=$updateFields');
+      final success = await profile.updateProfile(
+        token: auth.token!,
+        identifier: identifier,
+        fields: updateFields,
+      );
+      if (success) {
+        setState(() {
+          uploadedCVPath = fileName;
+          _cvRemoved = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CV uploaded and saved: $fileName')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(profile.error ?? 'Failed to save CV')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeCV() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+    final updateFields = {"cv_file_url": null};
+    print('Sending CV remove update: identifier=$identifier, fields=$updateFields');
+    final success = await profile.updateProfile(
+      token: auth.token!,
+      identifier: identifier,
+      fields: updateFields,
+    );
+
+    print('Remove CV success: $success, error: ${profile.error}');
+
+    if (success) {
+      print('Refreshing profile after CV remove');
+      await _refreshProfile();
+      setState(() {
+        uploadedCVPath = null;
+        _cvRemoved = true;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CV uploaded: ${result.files.single.name}')),
+        const SnackBar(content: Text('CV removed successfully')),
+      );
+    } else {
+      print('Failed to remove CV');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(profile.error ?? 'Failed to remove CV')),
       );
     }
+  }
+
+  String _getCvDisplayName(String? path) {
+    if (path == null || path.isEmpty) return '';
+    final parts = path.split(RegExp(r'[\\/]+'));
+    return parts.isNotEmpty ? parts.last : path;
+  }
+
+  double _getAverageRating() {
+    if (_reviews.isEmpty) return 0.0;
+    final totalRating = _reviews.fold<int>(0, (sum, review) {
+      return sum + (review['rating'] as int? ?? 0);
+    });
+    return totalRating / _reviews.length;
+  }
+
+  Widget _buildStarRating({required double rating, required double size}) {
+    final fullStars = rating.floor();
+    final hasHalfStar = rating % 1 != 0;
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        if (index < fullStars) {
+          return Icon(Icons.star, color: Colors.grey[400], size: size);
+        } else if (index == fullStars && hasHalfStar) {
+          return Icon(Icons.star_half, color: Colors.grey[400], size: size);
+        } else {
+          return Icon(Icons.star_outline, color: Colors.grey[400], size: size);
+        }
+      }),
+    );
   }
 
   @override
@@ -264,9 +636,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                           backgroundImage: profileImage != null
                             ? (profileImage.startsWith('http')
                                 ? NetworkImage(profileImage)
-                                : FileImage(File(profileImage)) as ImageProvider)
+                                : (File(profileImage).existsSync()
+                                    ? FileImage(File(profileImage))
+                                    : null))
                             : null,
-                          child: profileImage == null ? const Icon(Icons.person, size: 44) : null,
+                          child: profileImage == null || (!profileImage.startsWith('http') && !File(profileImage).existsSync())
+                            ? const Icon(Icons.person, size: 44)
+                            : null,
                         );
                       },
                     ),
@@ -278,12 +654,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           const SizedBox(height: 52),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              5,
-              (_) => const Icon(Icons.star, color: Colors.amber, size: 18),
-            ),
+          Center(
+            child: _buildStarRating(rating: _getAverageRating(), size: 18),
           ),
           const SizedBox(height: 6),
 
@@ -303,8 +675,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
               ),
-              SizedBox(width: 4),
-              Icon(Icons.verified, color: primaryColor, size: 18),
             ],
           ),
           SizedBox(height: 12),
@@ -377,85 +747,74 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAboutTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 16, bottom: 32),
-      child: Column(
-        children: [
-          // About
-          _buildSection(
-            title: 'About',
-            hasEdit: true,
-            onEdit: _editAbout,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                aboutText.isEmpty ? 'No information added yet' : aboutText,
-                style: TextStyle(
-                    color: aboutText.isEmpty ? Colors.grey : Colors.black87),
-              ),
-            ),
-          ),
+    return Consumer<ProfileProvider>(
+      builder: (context, profile, child) {
+        final bioText = aboutText;
+        final cvPath = !_cvRemoved ? (uploadedCVPath ?? profile.freelancerProfile?.cvFileUrl) : null;
+        final cvDisplayName = _getCvDisplayName(cvPath);
 
-          const SizedBox(height: 16),
-
-          // Upload CV
-          _buildSection(
-            title: 'Upload CV',
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (uploadedCVPath == null)
-                    OutlinedButton.icon(
-                      onPressed: _uploadCV,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload CV'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: const BorderSide(color: primaryColor),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    )
-                  else
-                    Row(
-                      children: [
-                        const Icon(Icons.description, color: primaryColor),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(uploadedCVPath!,
-                              style: const TextStyle(fontSize: 14)),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.grey),
-                          onPressed: () =>
-                              setState(() => uploadedCVPath = null),
-                        ),
-                      ],
-                    ),
-                  // const SizedBox(height: 12),
-                  // SizedBox(
-                  //   width: double.infinity,
-                  //   child: ElevatedButton.icon(
-                  //     onPressed: () {},
-                  //     icon: const Icon(Icons.analytics_outlined, size: 18),
-                  //     label: const Text('Analyze CV'),
-                  //     style: ElevatedButton.styleFrom(
-                  //       backgroundColor: primaryColor,
-                  //       foregroundColor: Colors.white,
-                  //       padding: const EdgeInsets.symmetric(vertical: 12),
-                  //       shape: RoundedRectangleBorder(
-                  //           borderRadius: BorderRadius.circular(8)),
-                  //     ),
-                  //   ),
-                  // ),
-                ],
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 16, bottom: 32),
+          child: Column(
+            children: [
+              // About
+              _buildSection(
+                title: 'About',
+                hasEdit: true,
+                onEdit: _editAbout,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    bioText.isEmpty ? 'No information added yet' : bioText,
+                    style: TextStyle(
+                        color: bioText.isEmpty ? Colors.grey : Colors.black87),
+                  ),
+                ),
               ),
-            ),
-          ),
+
+              const SizedBox(height: 16),
+
+              // Upload CV
+              _buildSection(
+                title: 'Upload CV',
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (cvPath == null)
+                        OutlinedButton.icon(
+                          onPressed: _uploadCV,
+                          icon: const Icon(Icons.upload_file),
+                          label: const Text('Upload CV'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            side: const BorderSide(color: primaryColor),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            const Icon(Icons.description, color: primaryColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(cvDisplayName,
+                                  style: const TextStyle(fontSize: 14)),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.grey),
+                              onPressed: _removeCV,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
 
           const SizedBox(height: 16),
 
@@ -467,7 +826,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: skills.map((s) => _SkillChip(label: s)).toList(),
+                children: skills.map((s) => _SkillChip(
+                  label: s['skill_name'],
+                  proficiency: s['proficiency_level'],
+                  onDelete: () => _deleteSkill(s['freelancer_skill_id']),
+                )).toList(),
               ),
             ),
           ),
@@ -477,7 +840,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             title: 'Experiences',
             actionButton: _buildAddButton('Add Experiences', _showExperienceForm),
             child: Column(
-              children: experiences.map((e) {
+              children: experiences.map<Widget>((e) {
                 return _ExperienceItem(
                   logo: Icons.work,
                   title: e['title'],
@@ -486,6 +849,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ? "${e['startDate']?.year ?? ''} - Present"
                       : "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
                   logoColor: primaryColor,
+                  onDelete: () => _deleteExperience(e['work_experience_id']),
                 );
               }).toList(),
             ),
@@ -497,25 +861,28 @@ class _ProfileScreenState extends State<ProfileScreen>
             actionButton: _buildAddButton('Add Education', _showEducationForm),
             child: Column(
               children: educations.map((e) {
+                String endYear = e['isCurrent'] == true ? 'Present' : (e['endDate']?.year.toString() ?? '');
                 return _EducationItem(
                   degree: e['degree'],
                   school: e['school'],
-                  period:
-                      "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
+                  period: "${e['startDate']?.year ?? ''} - $endYear",
                   color: primaryColor,
+                  onDelete: () => _deleteEducation(e['education_id']),
                 );
               }).toList(),
             ),
           ),
           const SizedBox(height: 16),
 
-          _buildSection(
-            title: 'Portfolio',
-            actionButton: _buildAddButton('Add Portfolio', () {}),
-            child: const SizedBox(height: 16),
-          ),
+          // _buildSection(
+          //   title: 'Portfolio',
+          //   actionButton: _buildAddButton('Add Portfolio', () {}),
+          //   child: const SizedBox(height: 16),
+          // ),
         ],
       ),
+    );
+  },
     );
   }
 
@@ -548,7 +915,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       text: const TextSpan(
                         children: [
                           TextSpan(
-                            text: '4.5',
+                            text: '0',
                             style: TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
@@ -570,14 +937,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       children: List.generate(
                         5,
                         (i) => Icon(
-                          i < 4 ? Icons.star : Icons.star_half,
-                          color: Colors.amber,
+                          Icons.star,
+                          color: Colors.grey[400],
                           size: 16,
                         ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text('25 reviews',
+                    const Text('0 reviews',
                         style: TextStyle(color: Colors.grey, fontSize: 11)),
                   ],
                 ),
@@ -587,17 +954,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Column(
                     children: [5, 4, 3, 2, 1].map((star) {
                       const Map<int, double> fractions = {
-                        5: 0.75,
-                        4: 0.55,
-                        3: 0.30,
-                        2: 0.10,
-                        1: 0.05,
+                        5: 0.0,
+                        4: 0.0,
+                        3: 0.0,
+                        2: 0.0,
+                        1: 0.0,
                       };
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Row(
                           children: [
-                            Icon(Icons.star, color: Colors.amber, size: 13),
+                            Icon(Icons.star, color: Colors.grey[400], size: 13),
                             const SizedBox(width: 4),
                             Text('$star',
                                 style: const TextStyle(
@@ -611,8 +978,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   minHeight: 7,
                                   backgroundColor: Colors.grey[200],
                                   valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                          Colors.amber),
+                                      AlwaysStoppedAnimation<Color>(
+                                          Colors.grey[400]!),
                                 ),
                               ),
                             ),
@@ -624,44 +991,67 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ],
             ),
-          ),
+          ), 
 
           const SizedBox(height: 20),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Reviews',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                Row(
-                  children: const [
-                    Text('Latest',
-                        style:
-                            TextStyle(color: Colors.grey, fontSize: 13)),
-                    SizedBox(width: 4),
-                    Icon(Icons.filter_list, color: Colors.grey, size: 18),
+          _reviews.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        Icon(Icons.rate_review,
+                            color: Colors.grey[400], size: 48),
+                        const SizedBox(height: 12),
+                        Text('No reviews here',
+                            style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Reviews',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          Row(
+                            children: const [
+                              Text('Latest',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 13)),
+                              SizedBox(width: 4),
+                              Icon(Icons.filter_list,
+                                  color: Colors.grey, size: 18),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._reviews.map((r) => _buildReviewCard(r)).toList(),
+                    const SizedBox(height: 4),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.keyboard_arrow_down,
+                            color: Colors.grey, size: 18),
+                        label: const Text('Load more',
+                            style:
+                                TextStyle(color: Colors.grey, fontSize: 13)),
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          ..._reviews.map((r) => _buildReviewCard(r)).toList(),
-
-          const SizedBox(height: 4),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.keyboard_arrow_down,
-                  color: Colors.grey, size: 18),
-              label: const Text('Load more',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
-            ),
-          ),
         ],
       ),
     );
@@ -811,27 +1201,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 }
 
-class _SkillChip extends StatelessWidget {
-  final String label;
-  const _SkillChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(label),
-      backgroundColor: const Color(0xFF00AAA8),
-      labelStyle: const TextStyle(color: Colors.white, fontSize: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    );
-  }
-}
-
 class _ExperienceItem extends StatelessWidget {
   final IconData logo;
   final String title;
   final String company;
   final String period;
   final Color logoColor;
+  final VoidCallback? onDelete;
 
   const _ExperienceItem({
     required this.logo,
@@ -839,6 +1215,7 @@ class _ExperienceItem extends StatelessWidget {
     required this.company,
     required this.period,
     required this.logoColor,
+    this.onDelete,
   });
 
   @override
@@ -873,6 +1250,15 @@ class _ExperienceItem extends StatelessWidget {
           ),
           Text(period,
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          if (onDelete != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ],
       ),
     );
@@ -884,12 +1270,14 @@ class _EducationItem extends StatelessWidget {
   final String school;
   final String period;
   final Color color;
+  final VoidCallback? onDelete;
 
   const _EducationItem({
     required this.degree,
     required this.school,
     required this.period,
     required this.color,
+    this.onDelete,
   });
 
   @override
@@ -932,8 +1320,40 @@ class _EducationItem extends StatelessWidget {
           ),
           Text(period,
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          if (onDelete != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _SkillChip extends StatelessWidget {
+  final String label;
+  final String proficiency;
+  final VoidCallback? onDelete;
+
+  const _SkillChip({
+    required this.label,
+    required this.proficiency,
+    this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text('$label ($proficiency)'),
+      deleteIcon: onDelete != null ? const Icon(Icons.delete, size: 18) : null,
+      onDeleted: onDelete,
+      backgroundColor: const Color(0xFF00AAA8).withOpacity(0.1),
+      labelStyle: const TextStyle(color: Color(0xFF00AAA8)),
     );
   }
 }

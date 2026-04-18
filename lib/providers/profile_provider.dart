@@ -21,7 +21,6 @@ class ProfileProvider extends ChangeNotifier {
   bool get isClient => _userType == 'client';
   bool get isFreelancer => _userType == 'freelancer';
 
-  // ─── Unified helpers for the UI ───────────────────────────────────────────
   String get displayName {
     if (isClient) return _clientProfile?.displayName ?? 'User';
     return _freelancerProfile?.displayName ?? 'User';
@@ -50,8 +49,7 @@ class ProfileProvider extends ChangeNotifier {
   // local
   // static const String _baseUrl = 'http://10.0.2.2:8000';
 
-  // ─── Fetch profile ────────────────────────────────────────────────────────
-  Future<void> fetchProfile({
+  Future<bool> fetchProfile({
     required String token,
     required String userId,
     required String userType,
@@ -66,6 +64,7 @@ class ProfileProvider extends ChangeNotifier {
           ? '$_baseUrl/clients/$userId'
           : '$_baseUrl/freelancers/$userId';
 
+      debugPrint('GET /$userType profile endpoint: $endpoint');
       final response = await http.get(
         Uri.parse(endpoint),
         headers: {
@@ -88,19 +87,24 @@ class ProfileProvider extends ChangeNotifier {
             profileData as Map<String, dynamic>,
           );
         }
+        _isLoading = false;
+        notifyListeners();
+        return true;
       } else {
         _error = body['message'] ?? body['detail'] ?? 'Failed to load profile';
+        _isLoading = false;
+        notifyListeners();
+        return false;
       }
     } catch (e) {
       _error = 'Network error: ${e.toString()}';
       debugPrint('fetchProfile error: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
-  // ─── Update profile ───────────────────────────────────────────────────────
   Future<bool> updateProfile({
     required String token,
     required String identifier,
@@ -115,6 +119,8 @@ class ProfileProvider extends ChangeNotifier {
           ? '$_baseUrl/clients/$identifier'
           : '$_baseUrl/freelancers/$identifier';
 
+      debugPrint('PUT profile endpoint: $endpoint');
+      debugPrint('PUT profile payload: $fields');
       final response = await http.put(
         Uri.parse(endpoint),
         headers: {
@@ -125,9 +131,11 @@ class ProfileProvider extends ChangeNotifier {
       );
 
       final data = jsonDecode(response.body);
+      debugPrint('Update profile response: ${response.statusCode}, data: $data');
 
       if (response.statusCode == 200) {
-        final profileData = data['data'] ?? data;
+        final profileData = data['details'] ?? data['data'] ?? data;
+        print('Profile data from server: $profileData');
         if (isClient) {
           _clientProfile = ClientModel.fromJson(profileData);
         } else {
@@ -139,6 +147,7 @@ class ProfileProvider extends ChangeNotifier {
       }
 
       _error = data['message'] ?? data['detail'] ?? 'Update failed';
+      print('Update failed: $_error');
     } catch (e) {
       _error = 'Network error: ${e.toString()}';
     }
@@ -148,7 +157,6 @@ class ProfileProvider extends ChangeNotifier {
     return false;
   }
 
-  // ─── Update local jobTitle ───────────────────────────────────────────────
   void updateJobTitle(String jobTitle) {
     if (isClient) {
       _clientProfile = _clientProfile?.copyWith(jobTitle: jobTitle);
@@ -158,7 +166,42 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─── Fetch any client by clientId (for job detail view) ──────────────────
+  void updateProfilePictureUrl(String url) {
+    // Clear image cache to force reload
+    imageCache.clear();
+    imageCache.clearLiveImages();
+    
+    if (isClient) {
+      _clientProfile =
+          _clientProfile?.copyWith(profilePictureUrl: url);
+    } else {
+      _freelancerProfile =
+          _freelancerProfile?.copyWith(profilePictureUrl: url);
+    }
+    notifyListeners();
+  }
+
+  void clearProfilePicture() {
+    // Clear image cache to force reload
+    imageCache.clear();
+    imageCache.clearLiveImages();
+    
+    if (isClient) {
+      _clientProfile = _clientProfile?.copyWith(profilePictureUrl: null);
+    } else {
+      _freelancerProfile = _freelancerProfile?.copyWith(profilePictureUrl: null);
+    }
+    notifyListeners();
+  }
+
+  void forceRefreshProfilePicture() {
+    // This method forces a rebuild without changing the URL
+    // Useful for cache busting
+    imageCache.clear();
+    imageCache.clearLiveImages();
+    notifyListeners();
+  }
+
   Future<ClientModel?> fetchClientById({
     required String token,
     required String clientId,
@@ -182,7 +225,6 @@ class ProfileProvider extends ChangeNotifier {
     return null;
   }
 
-  // ─── Fetch any freelancer by freelancerId (for proposal enrichment) ───────
   Future<FreelancerModel?> fetchFreelancerById({
     required String token,
     required String freelancerId,
@@ -206,7 +248,6 @@ class ProfileProvider extends ChangeNotifier {
     return null;
   }
 
-  // ─── Clear on logout ──────────────────────────────────────────────────────
   void clear() {
     _clientProfile = null;
     _freelancerProfile = null;

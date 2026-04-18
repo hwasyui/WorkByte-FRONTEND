@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class EditProfileForm extends StatefulWidget {
@@ -23,7 +23,9 @@ class _EditProfileFormState extends State<EditProfileForm> {
   late TextEditingController usernameCtrl;
   late TextEditingController jobCtrl;
 
-  String? imagePath;
+  String? imagePath; 
+  String? imageUrl;
+  bool? imageDeleted;
 
   @override
   void initState() {
@@ -32,19 +34,78 @@ class _EditProfileFormState extends State<EditProfileForm> {
     usernameCtrl =
         TextEditingController(text: widget.initialData['username']);
     jobCtrl = TextEditingController(text: widget.initialData['job']);
-    imagePath = widget.initialData['image'];
+    imageUrl = widget.initialData['image'];
+    imagePath = imageUrl;
+    imageDeleted = false;
   }
 
-  Future<void> _pickImage() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
+  Future<void> _pickImageFromCamera() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
 
-    if (result != null) {
+    if (image != null) {
       setState(() {
-        imagePath = result.files.single.path;
+        imagePath = image.path; 
+        imageUrl = image.name;
+        imageDeleted = false;
       });
     }
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        imagePath = image.path; 
+        imageUrl = image.name;
+        imageDeleted = false;
+      });
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  void _deleteImage() {
+    setState(() {
+      imagePath = null;
+      imageUrl = null;
+      imageDeleted = true;
+    });
+    Navigator.pop(context);
+  }
+
+  void _showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF00AAA8)),
+              title: const Text('Camera'),
+              onTap: _pickImageFromCamera,
+            ),
+            ListTile(
+              leading: const Icon(Icons.image, color: Color(0xFF00AAA8)),
+              title: const Text('Gallery'),
+              onTap: _pickImageFromGallery,
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Photo', style: TextStyle(color: Colors.red)),
+              onTap: _deleteImage,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _submit() {
@@ -53,7 +114,9 @@ class _EditProfileFormState extends State<EditProfileForm> {
         "name": nameCtrl.text,
         "username": usernameCtrl.text,
         "job": jobCtrl.text,
-        "image": imagePath,
+        "image": imagePath, 
+        "imageUrl": imageUrl,
+        "imageDeleted": imageDeleted ?? false,
       });
 
       Navigator.pop(context);
@@ -81,21 +144,20 @@ class _EditProfileFormState extends State<EditProfileForm> {
       children: [
         CircleAvatar(
           radius: 40,
-          backgroundImage: imagePath != null
+          backgroundImage: imagePath != null && !imageDeleted!
               ? (imagePath!.startsWith('http')
                   ? NetworkImage(imagePath!)
-                  : FileImage(
-                      // ignore: unnecessary_cast
-                      File(imagePath!),
-                    ) as ImageProvider)
+                  : (File(imagePath!).existsSync()
+                      ? FileImage(File(imagePath!))
+                      : null))
               : null,
-          child: imagePath == null
+          child: (imagePath == null || imageDeleted!) || (!imagePath!.startsWith('http') && !File(imagePath!).existsSync())
               ? const Icon(Icons.person, size: 40)
               : null,
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: _pickImage,
+          onPressed: _showImageOptions,
           child: const Text("Change Photo"),
         )
       ],
@@ -120,13 +182,22 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 _input(usernameCtrl, "Username"),
                 _input(jobCtrl, "Job Title"),
 
-                const SizedBox(height: 16),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _submit,
-                    child: const Text("Save"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00AAA8),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Save",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
                   ),
                 ),
               ],

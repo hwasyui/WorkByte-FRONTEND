@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -69,20 +71,53 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
+                      final imageUrl = profile.profilePictureUrl;
+                      
+                      Widget displayImage;
+                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                        if (imageUrl.startsWith('http')) {
+                          final urlWithBustingCache = '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+                          displayImage = Image.network(
+                            urlWithBustingCache,
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.cover,
+                            cacheWidth: 64,
+                            cacheHeight: 64,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.person, size: 32, color: Colors.white);
+                            },
+                          );
+                        } else if (File(imageUrl).existsSync()) {
+                          displayImage = Image.file(
+                            File(imageUrl),
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.cover,
+                            cacheWidth: 64,
+                            cacheHeight: 64,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.person, size: 32, color: Colors.white);
+                            },
+                          );
+                        } else {
+                          displayImage = const Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.white,
+                          );
+                        }
+                      } else {
+                        displayImage = const Icon(
+                          Icons.person,
+                          size: 32,
+                          color: Colors.white,
+                        );
+                      }
+                      
                       return HomeHeader(
                         userName: profile.displayName,
-                        userAvatar: profile.profilePictureUrl != null
-                            ? Image.network(
-                                profile.profilePictureUrl!,
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(
-                                Icons.person,
-                                size: 32,
-                                color: Colors.white,
-                              ),
+                        userAvatar: displayImage,
                       );
                     },
                   ),
@@ -244,10 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Teal curved top header
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _TealHeader extends StatelessWidget {
   @override
