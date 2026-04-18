@@ -97,7 +97,6 @@ class _JobListScreenState extends State<JobListScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Title + sort
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -205,7 +204,8 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _buildJobCard(JobPostModel job) {
-    final isTeam = job.projectType == 'team';
+    final isTeam = job.projectType.toLowerCase() == 'team';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: JobListCard(
@@ -217,7 +217,7 @@ class _JobListScreenState extends State<JobListScreen> {
         posterName: 'Client',
         title: job.jobTitle,
         category: job.projectScope,
-        teamSize: 1,
+        teamSize: job.roleCount,
         typeTag: isTeam ? 'Team' : null,
         salaryTag: null,
         bidderAvatars: const [],
@@ -226,7 +226,7 @@ class _JobListScreenState extends State<JobListScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => isTeam
-                ? TeamJobDetailScreen(job: job) // ← pass job
+                ? TeamJobDetailScreen(job: job)
                 : SingleJobDetailScreen(job: job),
           ),
         ),

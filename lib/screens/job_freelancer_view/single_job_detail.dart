@@ -3,11 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../models/job_post_model.dart';
+import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/job_post_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
+import '../../widgets/role_card.dart';
 import '../../widgets/bidding_bottom_sheet.dart';
 
 class SingleJobDetailScreen extends StatefulWidget {
@@ -23,11 +26,16 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
   int _selectedTab = 0;
   ClientModel? _client;
   bool _clientLoading = true;
+  List<JobRoleModel> _roles = [];
+  bool _rolesLoading = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchClient());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchClient();
+      _fetchRoles();
+    });
   }
 
   Future<void> _fetchClient() async {
@@ -41,6 +49,25 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
         _client = client;
         _clientLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchRoles() async {
+    final token = context.read<AuthProvider>().token!;
+    try {
+      final roles = await JobPostService().getJobRoles(
+        token,
+        widget.job.jobPostId,
+      );
+      if (mounted) {
+        setState(() {
+          _roles = roles;
+          _rolesLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('_fetchRoles error: $e');
+      if (mounted) setState(() => _rolesLoading = false);
     }
   }
 
@@ -65,6 +92,11 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
 
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+  String _formatBudget(JobRoleModel role) {
+    if (role.roleBudget == null) return 'Negotiable';
+    return 'Rp. ${role.roleBudget!.toStringAsFixed(0)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +219,41 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
               ),
             ),
           ],
+
+          const SizedBox(height: 28),
+          _sectionTitle('Role'),
+          const SizedBox(height: 12),
+
+          // ── Roles list ─────────────────────────────────────────────
+          if (_rolesLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: CircularProgressIndicator(color: Color(0xFF00AAA8)),
+              ),
+            )
+          else if (_roles.isEmpty)
+            Text(
+              'No role listed for this job.',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF7D7D7D),
+              ),
+            )
+          else
+            ...List.generate(_roles.length, (i) {
+              final role = _roles[i];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: RoleCard(
+                  roleTitle: role.roleTitle,
+                  roleDescription:
+                      role.roleDescription ?? 'No description provided.',
+                  salary: _formatBudget(role),
+                  onApply: () => showBiddingBottomSheet(context),
+                ),
+              );
+            }),
 
           if (widget.job.experienceLevel != null) ...[
             const SizedBox(height: 28),

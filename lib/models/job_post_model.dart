@@ -13,6 +13,7 @@ class JobPostModel {
   final bool isAiGenerated;
   final int viewCount;
   final int proposalCount;
+  final int roleCount;
   final String? createdAt;
   final String? postedAt;
   final String? closedAt;
@@ -32,6 +33,7 @@ class JobPostModel {
     this.isAiGenerated = false,
     this.viewCount = 0,
     this.proposalCount = 0,
+    this.roleCount = 0,
     this.createdAt,
     this.postedAt,
     this.closedAt,
@@ -52,6 +54,7 @@ class JobPostModel {
     isAiGenerated: json['is_ai_generated'] as bool? ?? false,
     viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
     proposalCount: (json['proposal_count'] as num?)?.toInt() ?? 0,
+    roleCount: (json['role_count'] as num?)?.toInt() ?? 0,
     createdAt: json['created_at']?.toString(),
     postedAt: json['posted_at']?.toString(),
     closedAt: json['closed_at']?.toString(),
@@ -70,7 +73,6 @@ class JobPostModel {
     'is_ai_generated': isAiGenerated,
   };
 
-  // Add this right after toJson()
   Map<String, dynamic> toMap() => {
     'job_post_id': jobPostId,
     'client_id': clientId,
@@ -86,6 +88,7 @@ class JobPostModel {
     'is_ai_generated': isAiGenerated,
     'view_count': viewCount,
     'proposal_count': proposalCount,
+    'role_count': roleCount,
     'created_at': createdAt,
     'posted_at': postedAt,
     'closed_at': closedAt,

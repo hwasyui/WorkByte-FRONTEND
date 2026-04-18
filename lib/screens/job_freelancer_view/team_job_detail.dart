@@ -7,7 +7,7 @@ import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/job_post_provider.dart';
+import '../../services/job_post_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../../widgets/role_card.dart';
@@ -73,15 +73,25 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
 
   Future<void> _fetchRoles() async {
     final token = context.read<AuthProvider>().token!;
-    await context.read<JobPostProvider>().fetchJobRoles(
-      token,
-      widget.job.jobPostId,
-    );
-    if (mounted) {
-      setState(() {
-        _roles = context.read<JobPostProvider>().jobRoles;
-        _rolesLoading = false;
-      });
+
+    try {
+      // Fetch directly from service — bypass shared provider state
+      final roles = await JobPostService().getJobRoles(
+        token,
+        widget.job.jobPostId,
+      );
+      debugPrint('Fetched ${roles.length} roles for ${widget.job.jobPostId}');
+      if (mounted) {
+        setState(() {
+          _roles = roles;
+          _rolesLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('_fetchRoles error: $e');
+      if (mounted) {
+        setState(() => _rolesLoading = false);
+      }
     }
   }
 

@@ -51,7 +51,7 @@ class Frame1State extends State<Frame1> {
                                     margin: const EdgeInsets.only(bottom: 24),
                                     width: 211,
                                     child: const Text(
-                                      "Yeaayy. \nYour job has been posted!",
+                                      "Your job has been posted!",
                                       style: TextStyle(
                                         color: Color(0xFF00AAA8),
                                         fontSize: 16,
@@ -68,7 +68,7 @@ class Frame1State extends State<Frame1> {
                                     ),
                                     width: double.infinity,
                                     child: const Text(
-                                      "Your post will be review. If your post has been approved, it will be automatically on list job can can view by public.",
+                                      "Your post is under review. Once approved, it will be visible to freelancers on the job listing.",
                                       style: TextStyle(
                                         color: Color(0xFF7D7D7D),
                                         fontSize: 12,
@@ -153,7 +153,7 @@ class Frame1State extends State<Frame1> {
                                                 width: double.infinity,
                                                 child: const Center(
                                                   child: Text(
-                                                    "Post other job",
+                                                    "Post another job",
                                                     style: TextStyle(
                                                       color: Color(0xFFFFFFFF),
                                                       fontSize: 12,
