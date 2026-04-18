@@ -14,6 +14,7 @@ import '../../widgets/category_tile.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
 import '../../widgets/home_header.dart';
 import '../freelancer_profile/freelancer_profile.dart';
+import '../client_profile/client_profile.dart';
 import '../../screens/job_freelancer_view/job_list.dart';
 import '../../screens/job_client_view/job_list.dart' as client_job_list;
 
@@ -44,10 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } else if (index == 4) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-      );
+      final profile = context.read<ProfileProvider>();
+      if (profile.isClient) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ClientProfileScreen()),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
+      }
     } else {
       setState(() {
         _currentNavIndex = index;
