@@ -76,7 +76,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final userType = profile.userType ?? 'freelancer';
 
-    final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+    final identifier =
+        profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
     if (auth.token != null && identifier != null) {
       print('Fetching profile for refresh using identifier: $identifier');
       final refreshSuccess = await profile.fetchProfile(
@@ -84,13 +85,17 @@ class _ProfileScreenState extends State<ProfileScreen>
         userId: identifier,
         userType: userType,
       );
-      print('Profile fetch refresh success: $refreshSuccess, bio: ${profile.bio}, cv: ${profile.freelancerProfile?.cvFileUrl}, pic: ${profile.profilePictureUrl}');
+      print(
+        'Profile fetch refresh success: $refreshSuccess, bio: ${profile.bio}, cv: ${profile.freelancerProfile?.cvFileUrl}, pic: ${profile.profilePictureUrl}',
+      );
       setState(() {
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
       });
-      print('UI updated: aboutText: $aboutText, uploadedCVPath: $uploadedCVPath, _cvRemoved: $_cvRemoved');
+      print(
+        'UI updated: aboutText: $aboutText, uploadedCVPath: $uploadedCVPath, _cvRemoved: $_cvRemoved',
+      );
     }
   }
 
@@ -103,18 +108,19 @@ class _ProfileScreenState extends State<ProfileScreen>
         auth.token!,
         profile.freelancerProfile!.freelancerId,
       );
-
-      print('DEBUG _loadSkills response: $skillsData');
-
       setState(() {
-        skills = skillsData.map((skill) => {
-          "freelancer_skill_id": skill["freelancer_skill_id"],
-          "skill_name": skill["skill_name"] ?? "Unknown Skill",
-          "proficiency_level": skill["proficiency_level"] ?? "beginner",
-        }).toList();
+        skills = skillsData
+            .map(
+              (skill) => {
+                'freelancer_skill_id': skill['freelancer_skill_id'],
+                'skill_name':
+                    skill['skill_name'] ??
+                    'Unknown Skill', // ✅ always populated now
+                'proficiency_level': skill['proficiency_level'] ?? 'beginner',
+              },
+            )
+            .toList();
       });
-      
-      print('DEBUG skills mapped: $skills');
     }
   }
 
@@ -129,16 +135,24 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
 
       setState(() {
-        experiences = experiencesData.map((exp) => {
-          "work_experience_id": exp["work_experience_id"],
-          "title": exp["job_title"],
-          "company": exp["company_name"],
-          "location": exp["location"],
-          "description": exp["description"],
-          "startDate": exp["start_date"] != null ? DateTime.parse(exp["start_date"]) : null,
-          "endDate": exp["end_date"] != null ? DateTime.parse(exp["end_date"]) : null,
-          "isPresent": exp["is_current"] ?? false,
-        }).toList();
+        experiences = experiencesData
+            .map(
+              (exp) => {
+                "work_experience_id": exp["work_experience_id"],
+                "title": exp["job_title"],
+                "company": exp["company_name"],
+                "location": exp["location"],
+                "description": exp["description"],
+                "startDate": exp["start_date"] != null
+                    ? DateTime.parse(exp["start_date"])
+                    : null,
+                "endDate": exp["end_date"] != null
+                    ? DateTime.parse(exp["end_date"])
+                    : null,
+                "isPresent": exp["is_current"] ?? false,
+              },
+            )
+            .toList();
       });
     }
   }
@@ -154,17 +168,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
 
       setState(() {
-        educations = educationsData.map((edu) => {
-          "education_id": edu["education_id"],
-          "school": edu["institution_name"],
-          "degree": edu["degree"],
-          "field": edu["field_of_study"],
-          "grade": edu["grade"],
-          "description": edu["description"],
-          "startDate": edu["start_date"] != null ? DateTime.parse(edu["start_date"]) : null,
-          "endDate": edu["end_date"] != null ? DateTime.parse(edu["end_date"]) : null,
-          "isCurrent": edu["is_current"] ?? false,
-        }).toList();
+        educations = educationsData
+            .map(
+              (edu) => {
+                "education_id": edu["education_id"],
+                "school": edu["institution_name"],
+                "degree": edu["degree"],
+                "field": edu["field_of_study"],
+                "grade": edu["grade"],
+                "description": edu["description"],
+                "startDate": edu["start_date"] != null
+                    ? DateTime.parse(edu["start_date"])
+                    : null,
+                "endDate": edu["end_date"] != null
+                    ? DateTime.parse(edu["end_date"])
+                    : null,
+                "isCurrent": edu["is_current"] ?? false,
+              },
+            )
+            .toList();
       });
     }
   }
@@ -172,30 +194,40 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _deleteSkill(String freelancerSkillId) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await ApiService.deleteFreelancerSkill(auth.token!, freelancerSkillId);
+    final success = await ApiService.deleteFreelancerSkill(
+      auth.token!,
+      freelancerSkillId,
+    );
 
     if (success) {
       setState(() {
-        skills.removeWhere((skill) => skill["freelancer_skill_id"] == freelancerSkillId);
+        skills.removeWhere(
+          (skill) => skill["freelancer_skill_id"] == freelancerSkillId,
+        );
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Skill deleted successfully')),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete skill')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to delete skill')));
     }
   }
 
   Future<void> _deleteExperience(String workExperienceId) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await ApiService.deleteWorkExperience(auth.token!, workExperienceId);
+    final success = await ApiService.deleteWorkExperience(
+      auth.token!,
+      workExperienceId,
+    );
 
     if (success) {
       setState(() {
-        experiences.removeWhere((exp) => exp["work_experience_id"] == workExperienceId);
+        experiences.removeWhere(
+          (exp) => exp["work_experience_id"] == workExperienceId,
+        );
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Experience deleted successfully')),
@@ -213,9 +245,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     _tabController.dispose();
     super.dispose();
   }
+
   void _showEditProfile() {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -229,38 +263,61 @@ class _ProfileScreenState extends State<ProfileScreen>
         onSave: (data) async {
           profile.updateJobTitle(data['job']);
 
-          final fields = {
-            "full_name": data['name'],
-          };
+          final fields = <String, dynamic>{"full_name": data['name']};
 
           if (data['imageDeleted'] == true) {
+            // User explicitly deleted their profile picture
             fields['profile_picture_url'] = null;
-          } else if (data['image'] != null && data['image'].isNotEmpty &&
+          } else if (data['image'] != null &&
+              data['image'].toString().isNotEmpty &&
               data['image'] != profile.profilePictureUrl) {
-            if (data['image'].toString().startsWith('http')) {
-              fields['profile_picture_url'] = data['image'];
+            final imageVal = data['image'].toString();
+
+            if (imageVal.startsWith('http')) {
+              // Already a remote URL — save directly
+              fields['profile_picture_url'] = imageVal;
             } else {
-              print('Skipping local image path for profile_picture_url save: ${data['image']}');
+              // TODO: Replace this block with Supabase upload when ready:
+              // final uploadedUrl = await SupabaseService.uploadProfilePicture(
+              //   token: auth.token!,
+              //   filePath: imageVal,
+              // );
+              // if (uploadedUrl != null) {
+              //   fields['profile_picture_url'] = uploadedUrl;
+              // } else {
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     const SnackBar(content: Text('Failed to upload profile picture')),
+              //   );
+              //   return;
+              // }
+
+              // ⚠️ Temporary: save local path until Supabase upload is ready
+              // Note: this path only works on this device
+              fields['profile_picture_url'] = imageVal;
             }
           }
 
-          final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+          final identifier =
+              profile.freelancerProfile?.freelancerId ??
+              auth.currentUser!.userId;
+
           final success = await profile.updateProfile(
             token: auth.token!,
             identifier: identifier,
             fields: fields,
           );
 
-          print('Update Profile success: $success, fields: $fields, error: ${profile.error}');
+          print(
+            'Update Profile success: $success, fields: $fields, error: ${profile.error}',
+          );
 
           if (success) {
             if (data['imageDeleted'] == true) {
               profile.clearProfilePicture();
-            } else {
-              final updatedUrl = profile.profilePictureUrl;
-              if (updatedUrl != null && updatedUrl.isNotEmpty) {
-                profile.updateProfilePictureUrl(updatedUrl);
-              }
+            } else if (fields.containsKey('profile_picture_url') &&
+                fields['profile_picture_url'] != null) {
+              // Update local state with whatever URL/path was saved
+              profile.updateProfilePictureUrl(fields['profile_picture_url']);
             }
 
             print('Refreshing profile after Profile update');
@@ -272,7 +329,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(profile.error ?? 'Failed to update profile')),
+              SnackBar(
+                content: Text(profile.error ?? 'Failed to update profile'),
+              ),
             );
           }
         },
@@ -357,9 +416,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _editAbout() {
     aboutController.text = aboutText;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
+        // ← renamed, stops shadowing
         title: const Text('Edit About'),
         content: TextField(
           controller: aboutController,
@@ -371,38 +432,46 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              final newBio = aboutController.text;
-              final bioValue = newBio.trim().isEmpty ? null : newBio;
-              setState(() => aboutText = newBio);
-              Navigator.pop(context);
+              final newBio = aboutController.text.trim();
+              final bioValue = newBio.isEmpty ? null : newBio;
 
+              // ✅ These now use the SCREEN's context, not the dialog's
               final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(context, listen: false);
-              final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
-              final updateFields = {"bio": bioValue};
-              print('Sending About update: identifier=$identifier, fields=$updateFields');
+              final profile = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
+              final messenger = ScaffoldMessenger.of(context);
+              final identifier =
+                  profile.freelancerProfile?.freelancerId ??
+                  auth.currentUser!.userId;
+
+              Navigator.pop(dialogContext); // ← pop using dialog's context
+
               final success = await profile.updateProfile(
                 token: auth.token!,
                 identifier: identifier,
-                fields: updateFields,
+                fields: {'bio': bioValue},
               );
-              print('Update About success: $success, bioValue: $bioValue, error: ${profile.error}');
+
               if (success) {
-                print('Refreshing profile after About update');
-                await _refreshProfile();
+                setState(() => aboutText = newBio);
+                await _refreshProfile(); // ✅ uses screen's context internally
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('About saved successfully')),
+                );
+              } else {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(profile.error ?? 'Failed to save About'),
+                  ),
+                );
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(success
-                      ? 'About saved successfully'
-                      : profile.error ?? 'Failed to save About'),
-                ),
-              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
             child: const Text('Save'),
@@ -462,9 +531,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     if (result != null) {
       final fileName = result.files.single.name;
-      final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+      final identifier =
+          profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
       final updateFields = {"cv_file_url": fileName};
-      print('Sending CV upload update: identifier=$identifier, fields=$updateFields');
+      print(
+        'Sending CV upload update: identifier=$identifier, fields=$updateFields',
+      );
       final success = await profile.updateProfile(
         token: auth.token!,
         identifier: identifier,
@@ -490,9 +562,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
 
-    final identifier = profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+    final identifier =
+        profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
     final updateFields = {"cv_file_url": null};
-    print('Sending CV remove update: identifier=$identifier, fields=$updateFields');
+    print(
+      'Sending CV remove update: identifier=$identifier, fields=$updateFields',
+    );
     final success = await profile.updateProfile(
       token: auth.token!,
       identifier: identifier,
@@ -508,9 +583,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         uploadedCVPath = null;
         _cvRemoved = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CV removed successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('CV removed successfully')));
     } else {
       print('Failed to remove CV');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -536,7 +611,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildStarRating({required double rating, required double size}) {
     final fullStars = rating.floor();
     final hasHalfStar = rating % 1 != 0;
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(5, (index) {
@@ -562,10 +637,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  _buildAboutTab(),
-                  _buildReviewsTab(),
-                ],
+                children: [_buildAboutTab(), _buildReviewsTab()],
               ),
             ),
           ],
@@ -612,7 +684,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onPressed: () {},
                     ),
                     IconButton(
-                      icon: const Icon(Icons.bookmark_border, color: Colors.white),
+                      icon: const Icon(
+                        Icons.bookmark_border,
+                        color: Colors.white,
+                      ),
                       onPressed: () {},
                     ),
                   ],
@@ -634,15 +709,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                         return CircleAvatar(
                           radius: 44,
                           backgroundImage: profileImage != null
-                            ? (profileImage.startsWith('http')
-                                ? NetworkImage(profileImage)
-                                : (File(profileImage).existsSync()
-                                    ? FileImage(File(profileImage))
-                                    : null))
-                            : null,
-                          child: profileImage == null || (!profileImage.startsWith('http') && !File(profileImage).existsSync())
-                            ? const Icon(Icons.person, size: 44)
-                            : null,
+                              ? (profileImage.startsWith('http')
+                                    ? NetworkImage(profileImage)
+                                    : (File(profileImage).existsSync()
+                                          ? FileImage(File(profileImage))
+                                          : null))
+                              : null,
+                          child:
+                              profileImage == null ||
+                                  (!profileImage.startsWith('http') &&
+                                      !File(profileImage).existsSync())
+                              ? const Icon(Icons.person, size: 44)
+                              : null,
                         );
                       },
                     ),
@@ -666,11 +744,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                 builder: (context, auth, profile, child) {
                   return Column(
                     children: [
-                      Text(profile.displayName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        profile.displayName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text(auth.currentUser?.email ?? '', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      Text(
+                        auth.currentUser?.email ?? '',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
                       SizedBox(height: 2),
-                      Text(profile.jobTitle, style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      Text(
+                        profile.jobTitle,
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
                     ],
                   );
                 },
@@ -693,7 +783,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
@@ -715,7 +806,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       side: const BorderSide(color: primaryColor),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
@@ -732,8 +824,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               indicatorWeight: 2.5,
               labelColor: primaryColor,
               unselectedLabelColor: Colors.grey,
-              labelStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
               unselectedLabelStyle: const TextStyle(fontSize: 14),
               tabs: const [
                 Tab(text: 'About'),
@@ -750,7 +844,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Consumer<ProfileProvider>(
       builder: (context, profile, child) {
         final bioText = aboutText;
-        final cvPath = !_cvRemoved ? (uploadedCVPath ?? profile.freelancerProfile?.cvFileUrl) : null;
+        final cvPath = !_cvRemoved
+            ? (uploadedCVPath ?? profile.freelancerProfile?.cvFileUrl)
+            : null;
         final cvDisplayName = _getCvDisplayName(cvPath);
 
         return SingleChildScrollView(
@@ -767,7 +863,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Text(
                     bioText.isEmpty ? 'No information added yet' : bioText,
                     style: TextStyle(
-                        color: bioText.isEmpty ? Colors.grey : Colors.black87),
+                      color: bioText.isEmpty ? Colors.grey : Colors.black87,
+                    ),
                   ),
                 ),
               ),
@@ -791,9 +888,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                             foregroundColor: primaryColor,
                             side: const BorderSide(color: primaryColor),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                         )
                       else
@@ -802,8 +902,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const Icon(Icons.description, color: primaryColor),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(cvDisplayName,
-                                  style: const TextStyle(fontSize: 14)),
+                              child: Text(
+                                cvDisplayName,
+                                style: const TextStyle(fontSize: 14),
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, color: Colors.grey),
@@ -816,73 +918,87 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
 
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          _buildSection(
-            title: 'Skills',
-            actionButton: _buildAddButton('Add Skill', _showSkillForm),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: skills.map((s) => _SkillChip(
-                  label: s['skill_name'],
-                  proficiency: s['proficiency_level'],
-                  onDelete: () => _deleteSkill(s['freelancer_skill_id']),
-                )).toList(),
+              _buildSection(
+                title: 'Skills',
+                actionButton: _buildAddButton('Add Skill', _showSkillForm),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: skills
+                        .map(
+                          (s) => _SkillChip(
+                            label: s['skill_name'],
+                            proficiency: s['proficiency_level'],
+                            onDelete: () =>
+                                _deleteSkill(s['freelancer_skill_id']),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          _buildSection(
-            title: 'Experiences',
-            actionButton: _buildAddButton('Add Experiences', _showExperienceForm),
-            child: Column(
-              children: experiences.map<Widget>((e) {
-                return _ExperienceItem(
-                  logo: Icons.work,
-                  title: e['title'],
-                  company: e['company'],
-                  period: e['isPresent'] == true
-                      ? "${e['startDate']?.year ?? ''} - Present"
-                      : "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
-                  logoColor: primaryColor,
-                  onDelete: () => _deleteExperience(e['work_experience_id']),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
+              _buildSection(
+                title: 'Experiences',
+                actionButton: _buildAddButton(
+                  'Add Experiences',
+                  _showExperienceForm,
+                ),
+                child: Column(
+                  children: experiences.map<Widget>((e) {
+                    return _ExperienceItem(
+                      logo: Icons.work,
+                      title: e['title'],
+                      company: e['company'],
+                      period: e['isPresent'] == true
+                          ? "${e['startDate']?.year ?? ''} - Present"
+                          : "${e['startDate']?.year ?? ''} - ${e['endDate']?.year ?? ''}",
+                      logoColor: primaryColor,
+                      onDelete: () =>
+                          _deleteExperience(e['work_experience_id']),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          _buildSection(
-            title: 'Education',
-            actionButton: _buildAddButton('Add Education', _showEducationForm),
-            child: Column(
-              children: educations.map((e) {
-                String endYear = e['isCurrent'] == true ? 'Present' : (e['endDate']?.year.toString() ?? '');
-                return _EducationItem(
-                  degree: e['degree'],
-                  school: e['school'],
-                  period: "${e['startDate']?.year ?? ''} - $endYear",
-                  color: primaryColor,
-                  onDelete: () => _deleteEducation(e['education_id']),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
+              _buildSection(
+                title: 'Education',
+                actionButton: _buildAddButton(
+                  'Add Education',
+                  _showEducationForm,
+                ),
+                child: Column(
+                  children: educations.map((e) {
+                    String endYear = e['isCurrent'] == true
+                        ? 'Present'
+                        : (e['endDate']?.year.toString() ?? '');
+                    return _EducationItem(
+                      degree: e['degree'],
+                      school: e['school'],
+                      period: "${e['startDate']?.year ?? ''} - $endYear",
+                      color: primaryColor,
+                      onDelete: () => _deleteEducation(e['education_id']),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // _buildSection(
-          //   title: 'Portfolio',
-          //   actionButton: _buildAddButton('Add Portfolio', () {}),
-          //   child: const SizedBox(height: 16),
-          // ),
-        ],
-      ),
-    );
-  },
+              // _buildSection(
+              //   title: 'Portfolio',
+              //   actionButton: _buildAddButton('Add Portfolio', () {}),
+              //   child: const SizedBox(height: 16),
+              // ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -924,10 +1040,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           TextSpan(
                             text: ' /5',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -936,16 +1049,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Row(
                       children: List.generate(
                         5,
-                        (i) => Icon(
-                          Icons.star,
-                          color: Colors.grey[400],
-                          size: 16,
-                        ),
+                        (i) =>
+                            Icon(Icons.star, color: Colors.grey[400], size: 16),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text('0 reviews',
-                        style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    const Text(
+                      '0 reviews',
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
                   ],
                 ),
 
@@ -966,9 +1078,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                           children: [
                             Icon(Icons.star, color: Colors.grey[400], size: 13),
                             const SizedBox(width: 4),
-                            Text('$star',
-                                style: const TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
+                            Text(
+                              '$star',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: ClipRRect(
@@ -977,9 +1093,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   value: fractions[star]!,
                                   minHeight: 7,
                                   backgroundColor: Colors.grey[200],
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(
-                                          Colors.grey[400]!),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.grey[400]!,
+                                  ),
                                 ),
                               ),
                             ),
@@ -991,7 +1107,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ],
             ),
-          ), 
+          ),
 
           const SizedBox(height: 20),
 
@@ -1001,14 +1117,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Column(
                       children: [
-                        Icon(Icons.rate_review,
-                            color: Colors.grey[400], size: 48),
+                        Icon(
+                          Icons.rate_review,
+                          color: Colors.grey[400],
+                          size: 48,
+                        ),
                         const SizedBox(height: 12),
-                        Text('No reviews here',
-                            style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          'No reviews here',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1021,17 +1143,28 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Reviews',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Reviews',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           Row(
                             children: const [
-                              Text('Latest',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 13)),
+                              Text(
+                                'Latest',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
                               SizedBox(width: 4),
-                              Icon(Icons.filter_list,
-                                  color: Colors.grey, size: 18),
+                              Icon(
+                                Icons.filter_list,
+                                color: Colors.grey,
+                                size: 18,
+                              ),
                             ],
                           ),
                         ],
@@ -1043,11 +1176,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Center(
                       child: TextButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.keyboard_arrow_down,
-                            color: Colors.grey, size: 18),
-                        label: const Text('Load more',
-                            style:
-                                TextStyle(color: Colors.grey, fontSize: 13)),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.grey,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Load more',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
                       ),
                     ),
                   ],
@@ -1075,7 +1212,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-         
           Row(
             children: [
               CircleAvatar(
@@ -1084,7 +1220,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Text(
                   (r['name'] as String)[0],
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.grey),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1092,12 +1230,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(r['name'],
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(r['username'],
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 12)),
+                    Text(
+                      r['name'],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      r['username'],
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -1105,9 +1248,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 16),
                   const SizedBox(width: 3),
-                  Text('${r['rating']}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(
+                    '${r['rating']}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -1115,18 +1262,22 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           const SizedBox(height: 10),
 
-          Text(r['title'],
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 13)),
+          Text(
+            r['title'],
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
           const SizedBox(height: 4),
 
-          Text(r['body'],
-              style:
-                  const TextStyle(color: Colors.black87, fontSize: 13)),
+          Text(
+            r['body'],
+            style: const TextStyle(color: Colors.black87, fontSize: 13),
+          ),
           const SizedBox(height: 8),
 
-          Text(r['time'],
-              style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          Text(
+            r['time'],
+            style: const TextStyle(color: Colors.grey, fontSize: 11),
+          ),
         ],
       ),
     );
@@ -1162,15 +1313,22 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Row(
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     if (hasEdit) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: onEdit,
-                        child: const Icon(Icons.edit,
-                            size: 18, color: primaryColor),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: primaryColor,
+                        ),
                       ),
                     ],
                   ],
@@ -1238,18 +1396,25 @@ class _ExperienceItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(company,
-                    style:
-                        const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  company,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
           ),
-          Text(period,
-              style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            period,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
           if (onDelete != null) ...[
             const SizedBox(width: 8),
             IconButton(
@@ -1297,9 +1462,10 @@ class _EducationItem extends StatelessWidget {
               child: Text(
                 degree.contains('Bachelor') ? '2008' : '2005',
                 style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10),
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
               ),
             ),
           ),
@@ -1308,18 +1474,25 @@ class _EducationItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(degree,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  degree,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(school,
-                    style:
-                        const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  school,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
           ),
-          Text(period,
-              style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            period,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
           if (onDelete != null) ...[
             const SizedBox(width: 8),
             IconButton(

@@ -13,7 +13,10 @@ class ApiService {
   // static const String _baseUrl = 'http://10.0.2.2:8000';
 
   // Education API
-  static Future<bool> createEducation(String token, Map<String, dynamic> educationData) async {
+  static Future<bool> createEducation(
+    String token,
+    Map<String, dynamic> educationData,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/educations'),
@@ -36,7 +39,10 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getEducations(String token, String freelancerId) async {
+  static Future<List<Map<String, dynamic>>> getEducations(
+    String token,
+    String freelancerId,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
@@ -83,7 +89,10 @@ class ApiService {
   }
 
   // Freelancer Skills API
-  static Future<bool> createFreelancerSkill(String token, Map<String, dynamic> skillData) async {
+  static Future<bool> createFreelancerSkill(
+    String token,
+    Map<String, dynamic> skillData,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/freelancer-skills'),
@@ -106,10 +115,15 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getFreelancerSkills(String token, String freelancerId) async {
+  static Future<List<Map<String, dynamic>>> getFreelancerSkills(
+    String token,
+    String freelancerId,
+  ) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/freelancer-skills/freelancer/$freelancerId'),
+        Uri.parse(
+          '$_baseUrl/freelancers/$freelancerId/skills',
+        ), // ✅ dedicated endpoint
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -118,8 +132,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final details = data['details'] ?? data['data'] ?? [];
-        return List<Map<String, dynamic>>.from(details);
+        final skills = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(skills);
       } else {
         print('Failed to get freelancer skills: ${response.body}');
         return [];
@@ -154,7 +168,10 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> searchSkills(String token, String searchTerm) async {
+  static Future<List<Map<String, dynamic>>> searchSkills(
+    String token,
+    String searchTerm,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/skills/search/$searchTerm'),
@@ -182,7 +199,10 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> createSkill(String token, Map<String, dynamic> skillData) async {
+  static Future<Map<String, dynamic>?> createSkill(
+    String token,
+    Map<String, dynamic> skillData,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/skills'),
@@ -206,7 +226,10 @@ class ApiService {
     }
   }
 
-  static Future<bool> deleteFreelancerSkill(String token, String freelancerSkillId) async {
+  static Future<bool> deleteFreelancerSkill(
+    String token,
+    String freelancerSkillId,
+  ) async {
     try {
       final response = await http.delete(
         Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
@@ -228,7 +251,10 @@ class ApiService {
     }
   }
 
-  static Future<bool> createWorkExperience(String token, Map<String, dynamic> experienceData) async {
+  static Future<bool> createWorkExperience(
+    String token,
+    Map<String, dynamic> experienceData,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/work-experiences'),
@@ -251,7 +277,10 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getWorkExperiences(String token, String freelancerId) async {
+  static Future<List<Map<String, dynamic>>> getWorkExperiences(
+    String token,
+    String freelancerId,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
@@ -275,7 +304,10 @@ class ApiService {
     }
   }
 
-  static Future<bool> deleteWorkExperience(String token, String workExperienceId) async {
+  static Future<bool> deleteWorkExperience(
+    String token,
+    String workExperienceId,
+  ) async {
     try {
       final response = await http.delete(
         Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
@@ -296,7 +328,11 @@ class ApiService {
       return false;
     }
   }
-  static Future<String?> uploadProfilePicture(String token, String filePath) async {
+
+  static Future<String?> uploadProfilePicture(
+    String token,
+    String filePath,
+  ) async {
     try {
       final file = File(filePath);
       if (!file.existsSync()) {
@@ -304,7 +340,10 @@ class ApiService {
         return null;
       }
 
-      final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/upload/profile-picture'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/upload/profile-picture'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.files.add(await http.MultipartFile.fromPath('file', filePath));
 
@@ -314,7 +353,8 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Extract the URL from the response
-        final url = data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
+        final url =
+            data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
         if (url != null) {
           print('Profile picture uploaded successfully: $url');
           return url as String;
