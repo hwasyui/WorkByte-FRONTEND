@@ -5,8 +5,14 @@ import '../screens/post_job/job_detail.dart' show PostNewJobJobDetail;
 class HomeBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
+  final bool showCenterButton;
 
-  const HomeBottomNavBar({super.key, this.currentIndex = 0, this.onTap});
+  const HomeBottomNavBar({
+    super.key,
+    this.currentIndex = 0,
+    this.onTap,
+    this.showCenterButton = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +50,7 @@ class HomeBottomNavBar extends StatelessWidget {
                   isSelected: currentIndex == 1,
                   onTap: () => onTap?.call(1),
                 ),
-                // Center spacer for FAB
-                const SizedBox(width: 60),
+                if (showCenterButton) const SizedBox(width: 60),
                 _NavItem(
                   icon: Icons.group_outlined,
                   isSelected: currentIndex == 3,
@@ -60,38 +65,39 @@ class HomeBottomNavBar extends StatelessWidget {
             ),
           ),
           // Floating center button - Navigate to Post Job
-          Positioned(
-            top: -20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  // Navigate to job_detail page
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => PostNewJobJobDetail()),
-                  );
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.25),
-                        blurRadius: 2,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+          if (showCenterButton)
+            Positioned(
+              top: -20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    // Navigate to job_detail page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PostNewJobJobDetail()),
+                    );
+                  },
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.25),
+                          blurRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 28),
                   ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 28),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

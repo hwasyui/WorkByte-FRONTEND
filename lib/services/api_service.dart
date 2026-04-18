@@ -418,4 +418,89 @@ class ApiService {
       return null;
     }
   }
+
+  // Job Posts API
+  static Future<List<Map<String, dynamic>>> getAllJobPosts(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get job posts: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting job posts: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllFreelancers(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/freelancers/browse/all').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get freelancers: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting freelancers: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllClients(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/clients/browse/all').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get clients: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting clients: $e');
+      return [];
+    }
+  }
 }
