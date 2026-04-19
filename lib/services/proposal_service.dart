@@ -186,7 +186,25 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to update proposal');
   }
 
-  /// DELETE /proposals/:proposalId
+  /// PATCH /proposals/:proposalId/status
+  Future<ProposalModel> updateProposalStatus(
+    String token,
+    String proposalId,
+    String status,
+  ) async {
+    final res = await http.patch(
+      Uri.parse('$_baseUrl/proposals/$proposalId/status?status=$status'),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('PATCH /proposals/$proposalId/status → ${res.statusCode}');
+    if (res.statusCode == 200) {
+      return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
+    }
+    throw Exception(body['details'] ?? 'Failed to update proposal status');
+  }
+
+  /// DELETE /proposals/:proposalId"
   Future<void> deleteProposal(String token, String proposalId) async {
     final res = await http.delete(
       Uri.parse('$_baseUrl/proposals/$proposalId'),
