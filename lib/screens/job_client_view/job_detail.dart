@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../models/proposal_model.dart';
+import '../../models/proposal_file_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/proposal_provider.dart';
+import '../../providers/proposal_file_provider.dart';
 import '../../services/proposal_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
@@ -54,6 +57,15 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     return tags;
   }
 
+  String _roleTitle(String? jobRoleId) {
+    if (jobRoleId == null) return '';
+    try {
+      return _roles.firstWhere((r) => r.jobRoleId == jobRoleId).roleTitle;
+    } catch (_) {
+      return 'Role Applied';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,7 +107,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Future<void> _fetchProposals() async {
     final token = context.read<AuthProvider>().token!;
 
-    // 1. Fetch raw proposals
     await context.read<ProposalProvider>().fetchProposalsByJob(
       token: token,
       jobPostId: widget.job.jobPostId,
@@ -103,10 +114,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (!mounted) return;
 
-    // 2. Enrich each with freelancer profile in parallel
     final raw = context.read<ProposalProvider>().proposals;
     final profileProvider = context.read<ProfileProvider>();
 
+    // Enrich proposals with freelancer info
     final enriched = await Future.wait(
       raw.map((p) async {
         final freelancer = await profileProvider.fetchFreelancerById(
@@ -121,12 +132,18 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       }),
     );
 
-    if (mounted) {
-      setState(() {
-        _proposals = enriched;
-        _proposalsLoading = false;
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      _proposals = enriched;
+      _proposalsLoading = false;
+    });
+
+    // ── Fetch proposal files for all proposals in parallel ───────────────
+    await context.read<ProposalFileProvider>().fetchFilesForProposals(
+      token,
+      enriched.map((p) => p.proposalId).toList(),
+    );
   }
 
   Future<void> _acceptBid(ProposalModel proposal) async {
@@ -188,7 +205,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
 
     if (success) {
-      // Refresh local list to reflect new status
       setState(() {
         _proposals = _proposals
             .map(
@@ -206,7 +222,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final currentUserId =
         context.read<AuthProvider>().currentUser?.userId ?? '';
 
-    // Show a quick compose dialog
     final controller = TextEditingController();
     final send = await showDialog<bool>(
       context: context,
@@ -262,8 +277,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (send != true || !mounted) return;
     if (controller.text.trim().isEmpty) return;
 
-    final service = context.read<ProposalProvider>();
-    // ProposalService handles the message POST
     try {
       await ProposalService().sendMessage(
         token,
@@ -300,46 +313,83 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
+  /// Opens file URL in external app (browser, PDF viewer, etc.)
+  Future<void> _openFile(ProposalFileModel file) async {
+    final uri = Uri.parse(file.fileUrl);
+
+    try {
+      final canOpen = await canLaunchUrl(uri);
+      if (canOpen) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback — try opening in browser
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not open file. Try downloading it manually.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   @override
   Widget build(BuildContext context) {
+    final avatarUrl = _client?.profilePictureUrl;
+    final companyLogo = _clientLoading
+        ? const SizedBox(
+            width: 64,
+            height: 64,
+            child: CircularProgressIndicator(
+              color: Color(0xFF00AAA8),
+              strokeWidth: 2,
+            ),
+          )
+        : (avatarUrl != null && avatarUrl.isNotEmpty)
+        ? ClipOval(
+            child: Image.network(
+              avatarUrl,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _clientAvatarFallback(),
+            ),
+          )
+        : _clientAvatarFallback();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Teal header ────────────────────────────────────────────
             JobDetailHeader(
-              companyLogo: _client?.profilePictureUrl != null
-                  ? ClipOval(
-                      child: Image.network(
-                        _client!.profilePictureUrl!,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.business,
-                      size: 40,
-                      color: Color(0xFF00AAA8),
-                    ),
+              companyLogo: companyLogo,
               posterName: _clientLoading
                   ? '...'
                   : (_client?.displayName ?? 'Client'),
               username: _clientLoading
                   ? ''
-                  : (_client?.websiteUrl ??
-                        '@${widget.job.clientId.substring(0, 8)}'),
+                  : (_client?.websiteUrl?.isNotEmpty == true
+                        ? _client!.websiteUrl!
+                        : ''),
               jobTitle: widget.job.jobTitle,
               category: _capitalize(widget.job.projectScope),
               tags: _tags,
             ),
-
-            // ── Tab bar ────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
               child: JobDetailTabBar(
@@ -348,8 +398,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 onTabSelected: (i) => setState(() => _selectedTab = i),
               ),
             ),
-
-            // ── Tab content ────────────────────────────────────────────
             if (_selectedTab == 0) _buildBiddingTab(),
             if (_selectedTab == 1) _buildWorkersTab(),
             if (_selectedTab == 2) _buildDetailsTab(),
@@ -358,6 +406,16 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       ),
     );
   }
+
+  Widget _clientAvatarFallback() => Container(
+    width: 64,
+    height: 64,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      color: Color(0xFFE6F7F7),
+    ),
+    child: const Icon(Icons.business, size: 32, color: Color(0xFF00AAA8)),
+  );
 
   // ── Bidding Tab ────────────────────────────────────────────────────────────
   Widget _buildBiddingTab() {
@@ -416,6 +474,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Widget _buildProposalCard(ProposalModel proposal) {
     final isAccepted = proposal.status == 'accepted';
     final isRejected = proposal.status == 'rejected';
+    final roleTitle = _roleTitle(proposal.jobRoleId);
+
+    // ── Get files for this proposal from provider ────────────────────────
+    final files = context.watch<ProposalFileProvider>().filesForProposal(
+      proposal.proposalId,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -445,7 +509,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipOval(
-                  child: proposal.freelancerAvatarUrl != null
+                  child:
+                      (proposal.freelancerAvatarUrl != null &&
+                          proposal.freelancerAvatarUrl!.isNotEmpty)
                       ? Image.network(
                           proposal.freelancerAvatarUrl!,
                           width: 44,
@@ -457,23 +523,17 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        proposal.freelancerName ?? 'Freelancer',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF333333),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    proposal.freelancerName ?? 'Freelancer',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF333333),
+                    ),
                   ),
                 ),
-                // Status badge
                 if (isAccepted)
-                  _statusBadge('Accepted', const Color(0xFF00AAA8))
+                  _statusBadge('Accepted', _primary)
                 else if (isRejected)
                   _statusBadge('Rejected', Colors.red)
                 else
@@ -488,11 +548,14 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             const SizedBox(height: 10),
 
             // ── Role + Budget chips ──────────────────────────────────
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                if (proposal.jobRoleId != null) _chip('Role Applied'),
-                const SizedBox(width: 8),
-                _chip('Rp. ${proposal.proposedBudget.toStringAsFixed(0)}'),
+                if (roleTitle.isNotEmpty) _roleChip(roleTitle),
+                _budgetChip(
+                  'Rp. ${proposal.proposedBudget.toStringAsFixed(0)}',
+                ),
               ],
             ),
 
@@ -509,6 +572,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
+
+            // ── Proposal files ───────────────────────────────────────
+            if (files.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ...files.map((f) => _attachmentRow(f)),
+            ],
 
             const SizedBox(height: 6),
 
@@ -563,6 +632,71 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
+  // ── Attachment row ────────────────────────────────────────────────────────
+  Widget _attachmentRow(ProposalFileModel file) {
+    IconData icon;
+    if (file.isPdf) {
+      icon = Icons.picture_as_pdf_outlined;
+    } else if (file.isImage) {
+      icon = Icons.image_outlined;
+    } else {
+      icon = Icons.attach_file;
+    }
+
+    return GestureDetector(
+      onTap: () => _openFile(file),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _primary.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: _primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.fileName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: _primary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (file.formattedSize.isNotEmpty)
+                    Text(
+                      file.formattedSize,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFF7D7D7D),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'View',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _primary,
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 16, color: Color(0xFF00AAA8)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _avatarFallback() => Container(
     width: 44,
     height: 44,
@@ -587,7 +721,31 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     ),
   );
 
-  Widget _chip(String label) => Container(
+  Widget _roleChip(String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    decoration: BoxDecoration(
+      color: _primary.withOpacity(0.08),
+      border: Border.all(color: _primary.withOpacity(0.4)),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.work_outline, size: 11, color: Color(0xFF00AAA8)),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: _primary,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _budgetChip(String label) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     decoration: BoxDecoration(
       border: Border.all(color: const Color(0xFFF0F0F1)),

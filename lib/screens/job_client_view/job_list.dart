@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/proposal_service.dart';
 import '../dashboard/dashboard.dart';
 import '../../models/job_post_model.dart';
 import '../job_client_view/job_detail.dart';
@@ -23,14 +24,14 @@ class JobListScreenState extends State<JobListScreen> {
   bool _isLoading = true;
   String _sortOption = 'Latest';
 
+  // jobPostId → up to 3 freelancer avatar URLs
+  final Map<String, List<String?>> _proposalAvatars = {};
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearch);
-    // ← defer fetch until after the first frame is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchJobs();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchJobs());
   }
 
   @override
@@ -42,12 +43,8 @@ class JobListScreenState extends State<JobListScreen> {
   Future<void> _fetchJobs() async {
     setState(() => _isLoading = true);
     try {
-      final auth = context.read<AuthProvider>();
-      final token = auth.token!;
-
-      // ← Use clientId from clientProfile, not userId from auth
+      final token = context.read<AuthProvider>().token!;
       final clientId = context.read<ProfileProvider>().clientProfile!.clientId;
-
       final provider = context.read<JobPostProvider>();
       final jobs = await provider.fetchMyJobPosts(token, clientId);
 
@@ -56,8 +53,51 @@ class JobListScreenState extends State<JobListScreen> {
         _filteredJobs = List.from(_allJobs);
         _isLoading = false;
       });
+
+      // Load avatars after list is rendered
+      _fetchProposalAvatars(token);
     } catch (_) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  /// Fetch up to 3 real freelancer avatars per job from proposal list
+  Future<void> _fetchProposalAvatars(String token) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final proposalService = ProposalService();
+
+    for (final job in _allJobs) {
+      final jobPostId = job['job_post_id'] as String?;
+      if (jobPostId == null) continue;
+
+      final proposalCount = (job['proposal_count'] ?? 0) as int;
+      if (proposalCount == 0) continue;
+
+      try {
+        // Fetch proposals for this job
+        final proposals = await proposalService.getProposalsByJobPost(
+          token,
+          jobPostId,
+        );
+        if (!mounted) return;
+
+        // Fetch each freelancer's avatar (up to 3)
+        final avatars = <String?>[];
+        for (final proposal in proposals.take(3)) {
+          final freelancer = await profileProvider.fetchFreelancerById(
+            token: token,
+            freelancerId: proposal.freelancerId,
+          );
+          avatars.add(freelancer?.profilePictureUrl);
+        }
+
+        if (mounted) {
+          setState(() => _proposalAvatars[jobPostId] = avatars);
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch avatars for $jobPostId: $e');
+        // Non-fatal — falls back to colored circles
+      }
     }
   }
 
@@ -104,7 +144,6 @@ class JobListScreenState extends State<JobListScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // ── Back button + title ────────────────────────────────
                   Row(
                     children: [
                       IconButton(
@@ -128,9 +167,8 @@ class JobListScreenState extends State<JobListScreen> {
                       ),
                     ],
                   ),
-                  // ── Sort dropdown ──────────────────────────────────────
                   GestureDetector(
-                    onTap: () => _showSortSheet(),
+                    onTap: _showSortSheet,
                     child: Row(
                       children: [
                         Text(
@@ -152,6 +190,7 @@ class JobListScreenState extends State<JobListScreen> {
                 ],
               ),
             ),
+
             // ── Search bar ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -167,21 +206,17 @@ class JobListScreenState extends State<JobListScreen> {
                     ),
                   ],
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(fontSize: 13),
+                child: const TextField(
+                  style: TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Search jobs...',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       color: Color(0xFFB5B4B4),
                       fontSize: 13,
                     ),
-                    suffixIcon: const Icon(
-                      Icons.search,
-                      color: Color(0xFF7D7D7D),
-                    ),
+                    suffixIcon: Icon(Icons.search, color: Color(0xFF7D7D7D)),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,
                     ),
@@ -190,6 +225,7 @@ class JobListScreenState extends State<JobListScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
             // ── Job list ────────────────────────────────────────────────────
             Expanded(
               child: _isLoading
@@ -219,9 +255,18 @@ class JobListScreenState extends State<JobListScreen> {
 
   // ── Job card ──────────────────────────────────────────────────────────────
   Widget _buildJobCard(Map<String, dynamic> job) {
+    final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
-    final teamCount = job['team_count'] ?? job['member_count'] ?? '';
-    final deadline = job['deadline'] ?? job['created_at'] ?? '';
+    final roleCount = job['role_count'] ?? 0;
+    final deadline = job['deadline'] ?? '';
+    final proposalCount = (job['proposal_count'] ?? 0) as int;
+    final status = job['status'] as String? ?? 'draft';
+
+    // ── Avatar count: use real avatars if loaded, else clamp to proposalCount
+    final avatars = _proposalAvatars[jobPostId];
+    final avatarCount = avatars != null
+        ? avatars.length.clamp(0, 3)
+        : proposalCount.clamp(0, 3);
 
     return GestureDetector(
       onTap: () {
@@ -250,27 +295,37 @@ class JobListScreenState extends State<JobListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Title ────────────────────────────────────────────────────
-            Text(
-              job['job_title'] ?? 'Untitled',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A1A),
-              ),
+            // ── Title + status badge ─────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    job['job_title'] ?? 'Untitled',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _statusBadge(status),
+              ],
             ),
             const SizedBox(height: 8),
+
             // ── Meta row ─────────────────────────────────────────────────
             Row(
               children: [
                 Text(
-                  job['category'] ?? job['job_category'] ?? 'General',
+                  _capitalize(job['project_scope'] ?? ''),
                   style: const TextStyle(
                     color: Color(0xFF7D7D7D),
                     fontSize: 12,
                   ),
                 ),
-                if (isTeam && teamCount != '') ...[
+                if (isTeam && roleCount > 0) ...[
                   const SizedBox(width: 12),
                   const Icon(
                     Icons.people_outline,
@@ -279,7 +334,7 @@ class JobListScreenState extends State<JobListScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    teamCount.toString(),
+                    '$roleCount ${roleCount == 1 ? 'role' : 'roles'}',
                     style: const TextStyle(
                       color: Color(0xFF7D7D7D),
                       fontSize: 12,
@@ -288,8 +343,14 @@ class JobListScreenState extends State<JobListScreen> {
                 ],
                 if (deadline.isNotEmpty) ...[
                   const SizedBox(width: 12),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 12,
+                    color: Color(0xFF7D7D7D),
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    _formatDate(deadline.toString()),
+                    _formatDate(deadline),
                     style: const TextStyle(
                       color: Color(0xFF7D7D7D),
                       fontSize: 12,
@@ -299,6 +360,7 @@ class JobListScreenState extends State<JobListScreen> {
               ],
             ),
             const SizedBox(height: 10),
+
             // ── Project type badge ───────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -316,24 +378,32 @@ class JobListScreenState extends State<JobListScreen> {
               ),
             ),
             const SizedBox(height: 12),
+
             // ── Bidding row ──────────────────────────────────────────────
             Row(
               children: [
-                // Placeholder avatars
-                SizedBox(
-                  width: 60,
-                  height: 28,
-                  child: Stack(
-                    children: [
-                      _placeholderAvatar(0),
-                      _placeholderAvatar(1),
-                      _placeholderAvatar(2),
-                    ],
+                if (proposalCount > 0 && avatarCount > 0) ...[
+                  SizedBox(
+                    width: 20 + ((avatarCount - 1) * 18.0),
+                    height: 28,
+                    child: Stack(
+                      children: List.generate(
+                        avatarCount,
+                        (i) => _proposalAvatar(
+                          i,
+                          avatars != null && avatars.length > i
+                              ? avatars[i]
+                              : null,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 Text(
-                  '+${job['bid_count'] ?? job['proposal_count'] ?? 0} bidding',
+                  proposalCount > 0
+                      ? '$proposalCount ${proposalCount == 1 ? 'bid' : 'bids'}'
+                      : 'No bids yet',
                   style: const TextStyle(
                     color: Color(0xFF7D7D7D),
                     fontSize: 12,
@@ -347,23 +417,64 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  Widget _placeholderAvatar(int index) {
-    final colors = [
+  // ── Proposal avatar — real photo or colored fallback ─────────────────────
+  Widget _proposalAvatar(int index, String? avatarUrl) {
+    final fallbackColors = [
       const Color(0xFFB0C4DE),
       const Color(0xFF98D8C8),
       const Color(0xFFDEB0C4),
     ];
+
     return Positioned(
       left: index * 18.0,
       child: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: colors[index],
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
+          color: fallbackColors[index % fallbackColors.length],
         ),
-        child: const Icon(Icons.person, size: 14, color: Colors.white),
+        child: ClipOval(
+          child: avatarUrl != null && avatarUrl.isNotEmpty
+              ? Image.network(
+                  avatarUrl,
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.person, size: 14, color: Colors.white),
+                )
+              : const Icon(Icons.person, size: 14, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  // ── Status badge ──────────────────────────────────────────────────────────
+  Widget _statusBadge(String status) {
+    final map = {
+      'draft': (const Color(0xFFB5B4B4), const Color(0xFFF5F5F5)),
+      'open': (const Color(0xFF00AAA8), const Color(0xFFE6F7F7)),
+      'closed': (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1)),
+      'cancelled': (const Color(0xFFE53935), const Color(0xFFFFEBEE)),
+    };
+    final colors =
+        map[status] ?? (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.$2,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        _capitalize(status),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: colors.$1,
+        ),
       ),
     );
   }
@@ -429,6 +540,9 @@ class JobListScreenState extends State<JobListScreen> {
       ),
     );
   }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   String _formatDate(String raw) {
     try {
