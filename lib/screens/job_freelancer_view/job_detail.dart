@@ -7,28 +7,29 @@ import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/job_post_provider.dart';
+import '../../services/job_post_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../../widgets/role_card.dart';
-import '../../widgets/bidding_bottom_sheet.dart';
+import 'submit_proposal.dart';
 
-class TeamJobDetailScreen extends StatefulWidget {
+class JobDetailScreen extends StatefulWidget {
   final JobPostModel job;
 
-  const TeamJobDetailScreen({super.key, required this.job});
+  const JobDetailScreen({super.key, required this.job});
 
   @override
-  State<TeamJobDetailScreen> createState() => _TeamJobDetailScreenState();
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
-class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
+class _JobDetailScreenState extends State<JobDetailScreen> {
   int _selectedTab = 0;
-
   ClientModel? _client;
   bool _clientLoading = true;
   List<JobRoleModel> _roles = [];
   bool _rolesLoading = true;
+
+  bool get _isTeam => widget.job.projectType.toLowerCase() == 'team';
 
   List<String> get _tabs => [
     'Details',
@@ -38,6 +39,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
 
   List<String> get _tags {
     final tags = <String>[];
+    tags.add(_isTeam ? 'Team' : 'Individual');
     if (widget.job.deadline != null) tags.add(widget.job.deadline!);
     if (widget.job.workingDays != null) {
       tags.add('${widget.job.workingDays} days');
@@ -64,25 +66,40 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
       token: token,
       clientId: widget.job.clientId,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _client = client;
         _clientLoading = false;
       });
+    }
   }
 
   Future<void> _fetchRoles() async {
     final token = context.read<AuthProvider>().token!;
-    await context.read<JobPostProvider>().fetchJobRoles(
-      token,
-      widget.job.jobPostId,
-    );
-    if (mounted) {
-      setState(() {
-        _roles = context.read<JobPostProvider>().jobRoles;
-        _rolesLoading = false;
-      });
+    try {
+      final roles = await JobPostService().getJobRoles(
+        token,
+        widget.job.jobPostId,
+      );
+      if (mounted) {
+        setState(() {
+          _roles = roles;
+          _rolesLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('_fetchRoles error: $e');
+      if (mounted) setState(() => _rolesLoading = false);
     }
+  }
+
+  void _onApplyRole(JobRoleModel role) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubmitProposalScreen(job: widget.job, role: role),
+      ),
+    );
   }
 
   String _capitalize(String s) =>
@@ -90,7 +107,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
 
   String _formatBudget(JobRoleModel role) {
     if (role.roleBudget == null) return 'Negotiable';
-    return 'Rp. ${role.roleBudget!.toStringAsFixed(0)}';
+    return '${role.budgetCurrency} ${role.roleBudget!.toStringAsFixed(0)}';
   }
 
   @override
@@ -101,7 +118,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Teal header ──────────────────────────────────────────
+            // ── Header ───────────────────────────────────────────────
             JobDetailHeader(
               companyLogo: _client?.profilePictureUrl != null
                   ? ClipOval(
@@ -120,10 +137,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
               posterName: _clientLoading
                   ? '...'
                   : (_client?.displayName ?? 'Client'),
-              username: _clientLoading
-                  ? ''
-                  : (_client?.websiteUrl ??
-                        '#${widget.job.clientId.substring(0, 8)}'),
+              username: _clientLoading ? '' : (_client?.websiteUrl ?? ''),
               jobTitle: widget.job.jobTitle,
               category: _capitalize(widget.job.projectScope),
               tags: _tags,
@@ -142,14 +156,14 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
             // ── Tab content ──────────────────────────────────────────
             if (_selectedTab == 0) _buildDetailsTab(),
             if (_selectedTab == 1) _buildTermsTab(),
-            if (_selectedTab == 2) _buildPlaceholderTab('Bidding'),
+            if (_selectedTab == 2) _buildBiddingTab(),
           ],
         ),
       ),
     );
   }
 
-  // ── Details tab ────────────────────────────────────────────────────────────
+  // ── Details tab ──────────────────────────────────────────────────────────
   Widget _buildDetailsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
@@ -183,7 +197,8 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
           ],
 
           const SizedBox(height: 28),
-          _sectionTitle('Roles'),
+          // ── Section title changes based on type ──────────────────
+          _sectionTitle(_isTeam ? 'Roles' : 'Role'),
           const SizedBox(height: 12),
 
           // ── Roles list ───────────────────────────────────────────
@@ -212,7 +227,9 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
                   roleDescription:
                       role.roleDescription ?? 'No description provided.',
                   salary: _formatBudget(role),
-                  onApply: () => showBiddingBottomSheet(context),
+                  // ── Individual: show inline Apply button on the card
+                  // ── Team: show Apply button on each role card too
+                  onApply: () => _onApplyRole(role),
                 ),
               );
             }),
@@ -221,7 +238,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
     );
   }
 
-  // ── Terms tab ──────────────────────────────────────────────────────────────
+  // ── Terms tab ────────────────────────────────────────────────────────────
   Widget _buildTermsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
@@ -264,12 +281,13 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
     );
   }
 
-  Widget _buildPlaceholderTab(String label) {
+  // ── Bidding tab ──────────────────────────────────────────────────────────
+  Widget _buildBiddingTab() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Center(
         child: Text(
-          '$label content coming soon',
+          'Bidding content coming soon',
           style: GoogleFonts.poppins(
             fontSize: 13,
             color: const Color(0xFF7D7D7D),
@@ -279,6 +297,7 @@ class _TeamJobDetailScreenState extends State<TeamJobDetailScreen> {
     );
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
   Widget _sectionTitle(String title) => Text(
     title,
     style: GoogleFonts.poppins(

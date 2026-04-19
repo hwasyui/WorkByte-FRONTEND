@@ -7,8 +7,7 @@ import '../../providers/job_post_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/top_bar.dart';
-import 'team_job_detail.dart';
-import 'single_job_detail.dart';
+import 'job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -97,7 +96,6 @@ class _JobListScreenState extends State<JobListScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Title + sort
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -205,7 +203,8 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _buildJobCard(JobPostModel job) {
-    final isTeam = job.projectType == 'team';
+    final isTeam = job.projectType.toLowerCase() == 'team';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: JobListCard(
@@ -214,21 +213,17 @@ class _JobListScreenState extends State<JobListScreen> {
           size: 35,
           color: Color(0xFF00AAA8),
         ),
-        posterName: 'Client',
+        posterName: job.clientName ?? 'Client',
         title: job.jobTitle,
         category: job.projectScope,
-        teamSize: 1,
+        teamSize: job.roleCount,
         typeTag: isTeam ? 'Team' : null,
         salaryTag: null,
         bidderAvatars: const [],
         biddingsLabel: '+${job.proposalCount} biddings',
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => isTeam
-                ? TeamJobDetailScreen(job: job) // ← pass job
-                : SingleJobDetailScreen(job: job),
-          ),
+          MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
         ),
       ),
     );

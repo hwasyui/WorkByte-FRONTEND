@@ -1,11 +1,8 @@
-// ── lib/screens/job_post/job_detail.dart ────────────────────────────────────
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/job_post_provider.dart';
+import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
-import 'team_roles.dart';
-import 'summary.dart';
+import 'job_roles.dart';
 
 class PostNewJobJobDetail extends StatefulWidget {
   const PostNewJobJobDetail({super.key});
@@ -17,13 +14,9 @@ class PostNewJobJobDetail extends StatefulWidget {
 class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   static const Color _primary = Color(0xFF00AAA8);
 
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descController = TextEditingController();
-  final TextEditingController _daysController = TextEditingController(
-    text: '7',
-  );
-  final TextEditingController _roleController = TextEditingController();
-  final TextEditingController _budgetController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _descController = TextEditingController();
+  final _daysController = TextEditingController(text: '7');
 
   String _projectType = 'individual';
   String _projectScope = 'small';
@@ -36,12 +29,9 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     _titleController.dispose();
     _descController.dispose();
     _daysController.dispose();
-    _roleController.dispose();
-    _budgetController.dispose();
     super.dispose();
   }
 
-  // ─── Date picker ──────────────────────────────────────────────────────────
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -51,7 +41,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       builder: (context, child) => Theme(
         data: Theme.of(
           context,
-        ).copyWith(colorScheme: const ColorScheme.light(primary: _primary)),
+        ).copyWith(colorScheme: ColorScheme.light(primary: _primary)),
         child: child!,
       ),
     );
@@ -65,16 +55,8 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         '${_deadline!.year}';
   }
 
-  // ─── Validation ───────────────────────────────────────────────────────────
   String? _validate() {
     if (_titleController.text.trim().isEmpty) return 'Title is required';
-    if (_projectType == 'individual') {
-      if (_roleController.text.trim().isEmpty) return 'Role is required';
-      if (_budgetController.text.trim().isEmpty) return 'Budget is required';
-      if (double.tryParse(_budgetController.text.trim()) == null) {
-        return 'Budget must be a valid number';
-      }
-    }
     if (_descController.text.trim().isEmpty) return 'Description is required';
     if (_daysController.text.trim().isEmpty) return 'Working days is required';
     if (int.tryParse(_daysController.text.trim()) == null) {
@@ -84,10 +66,8 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     return null;
   }
 
-  // ─── Next button handler ──────────────────────────────────────────────────
   void _onNext() {
     setState(() => _submitted = true);
-
     final error = _validate();
     if (error != null) {
       ScaffoldMessenger.of(
@@ -96,7 +76,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       return;
     }
 
-    final draftData = {
+    context.read<JobPostProvider>().setDraftJobData({
       'job_title': _titleController.text.trim(),
       'job_description': _descController.text.trim(),
       'project_type': _projectType,
@@ -106,39 +86,16 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       'deadline':
           '${_deadline!.year}-${_deadline!.month.toString().padLeft(2, '0')}-${_deadline!.day.toString().padLeft(2, '0')}',
       'status': 'draft',
-    };
+    });
 
-    context.read<JobPostProvider>().setDraftJobData(draftData);
-
-    // ── Store individual role as a single draft role ───────────────────────
-    if (_projectType == 'individual') {
-      context.read<JobPostProvider>().setDraftRoles([
-        {
-          'role_title': _roleController.text.trim(),
-          'role_budget': double.parse(_budgetController.text.trim()),
-          'budget_currency': 'IDR',
-          'budget_type': 'fixed',
-          'positions_available': 1,
-          'is_required': true,
-          'display_order': 0,
-        },
-      ]);
-    }
-
-    if (_projectType == 'team') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PostNewJobTeamRoles()),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PostNewJobSummary()),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PostNewJobRoles(projectType: _projectType),
+      ),
+    );
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,35 +111,19 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                   children: [
                     _buildProjectTypeToggle(),
                     _buildHint(
-                      'Individual, if your scope project can be done with 1 freelancer\n'
-                      'Team, if your scope project can be done with 2 or more freelancers',
+                      _projectType == 'individual'
+                          ? 'Individual: completed by 1 freelancer'
+                          : 'Team: completed by 2 or more freelancers',
                     ),
                     _buildLabel('Title'),
                     _buildTextField(
                       controller: _titleController,
-                      hint: 'Create a logo for my company',
+                      hint: 'e.g. Create a logo for my company',
                     ),
-
-                    // ── Individual-only fields ─────────────────────────────
-                    if (_projectType == 'individual') ...[
-                      _buildLabel('Role'),
-                      _buildTextField(
-                        controller: _roleController,
-                        hint: 'e.g. UI Designer, Frontend Developer',
-                      ),
-                      _buildLabel('Budget (IDR)'),
-                      _buildTextField(
-                        controller: _budgetController,
-                        hint: 'e.g. 1500000',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ],
-
                     _buildLabel('Description'),
                     _buildTextField(
                       controller: _descController,
-                      hint:
-                          'I need a freelancer who has experience with logo design...',
+                      hint: 'Describe what you need...',
                       maxLines: 5,
                     ),
                     _buildLabel('Project Scope'),
@@ -202,24 +143,25 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                     _buildLabel('Working Days'),
                     _buildWorkingDaysField(),
                     _buildHint(
-                      'Working days will start when you have chosen a freelancer',
+                      'Working days start when a freelancer is chosen',
                     ),
                     _buildLabel('Deadline'),
                     _buildDeadlinePicker(),
                     _buildHint(
-                      'The date by which freelancers must submit their proposals',
+                      'Date by which freelancers must submit proposals',
                     ),
                     const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 29),
                       child: SizedBox(
                         width: double.infinity,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: _onNext,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _primary,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -244,62 +186,58 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     );
   }
 
-  // ─── Header ───────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
-    return Container(
-      color: _primary,
-      padding: const EdgeInsets.only(top: 23, bottom: 29),
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, color: Colors.white, size: 24),
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+  Widget _buildHeader() => Container(
+    color: _primary,
+    padding: const EdgeInsets.only(top: 23, bottom: 29),
+    width: double.infinity,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white, size: 24),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(left: 29),
+          child: Text(
+            'Post new job',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.only(left: 29),
-            child: Text(
-              'Post new job',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+        ),
+        const SizedBox(height: 4),
+        const Padding(
+          padding: EdgeInsets.only(left: 29),
+          child: Text(
+            'Job Detail',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          const SizedBox(height: 4),
-          const Padding(
-            padding: EdgeInsets.only(left: 29),
-            child: Text(
-              'Job Detail',
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 
-  Widget _buildProjectTypeToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      margin: const EdgeInsets.only(top: 20, bottom: 12, left: 28, right: 28),
-      child: Row(
-        children: [
-          _typeOption('Individual', 'individual'),
-          _typeOption('Team', 'team'),
-        ],
-      ),
-    );
-  }
+  Widget _buildProjectTypeToggle() => Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      color: Colors.white,
+      border: Border.all(color: const Color(0xFFF0F0F1)),
+    ),
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    margin: const EdgeInsets.only(top: 20, bottom: 12, left: 28, right: 28),
+    child: Row(
+      children: [
+        _typeOption('Individual', 'individual'),
+        _typeOption('Team', 'team'),
+      ],
+    ),
+  );
 
   Widget _typeOption(String label, String value) {
     final selected = _projectType == value;
@@ -318,6 +256,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
             style: TextStyle(
               color: selected ? Colors.white : const Color(0xFF333333),
               fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ),

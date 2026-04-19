@@ -4,6 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/job_post_model.dart';
 import '../models/job_role_model.dart';
+import '../models/job_role_skill_model.dart';
+import '../models/job_file_model.dart';
 
 class JobPostService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -148,6 +150,99 @@ class JobPostService {
     if (res.statusCode != 200) {
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to delete job role');
+    }
+  }
+
+  // ─── Job Role Skills ──────────────────────────────────────────────────────
+  Future<List<JobRoleSkillModel>> getJobRoleSkills(
+    String token,
+    String jobRoleId,
+  ) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-role-skills/job-role/$jobRoleId'),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('GET /job-role-skills/job-role/$jobRoleId: $body');
+    if (res.statusCode == 200) {
+      final list = body['details'] ?? body['data'] ?? [];
+      return (list as List)
+          .map((e) => JobRoleSkillModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load job role skills');
+  }
+
+  Future<JobRoleSkillModel> createJobRoleSkill(
+    String token,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/job-role-skills'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return JobRoleSkillModel.fromJson(
+        body['details'] ?? body['data'] ?? body,
+      );
+    }
+    throw Exception(body['details'] ?? 'Failed to create job role skill');
+  }
+
+  Future<void> deleteJobRoleSkill(String token, String jobRoleSkillId) async {
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body);
+      throw Exception(body['details'] ?? 'Failed to delete job role skill');
+    }
+  }
+
+  // ─── Job Files ────────────────────────────────────────────────────────────
+  Future<List<JobFileModel>> getJobFiles(String token, String jobPostId) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-files/job-post/$jobPostId'),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('GET /job-files/job-post/$jobPostId: $body');
+    if (res.statusCode == 200) {
+      final list = body['details'] ?? body['data'] ?? [];
+      return (list as List)
+          .map((e) => JobFileModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load job files');
+  }
+
+  Future<JobFileModel> createJobFile(
+    String token,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/job-files'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return JobFileModel.fromJson(body['details'] ?? body['data'] ?? body);
+    }
+    throw Exception(body['details'] ?? 'Failed to create job file');
+  }
+
+  Future<void> deleteJobFile(String token, String jobFileId) async {
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/job-files/$jobFileId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body);
+      throw Exception(body['details'] ?? 'Failed to delete job file');
     }
   }
 }
