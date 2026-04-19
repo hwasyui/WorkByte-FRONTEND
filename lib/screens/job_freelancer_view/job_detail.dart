@@ -11,23 +11,45 @@ import '../../services/job_post_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../../widgets/role_card.dart';
-import '../../widgets/bidding_bottom_sheet.dart';
+import 'submit_proposal.dart';
 
-class SingleJobDetailScreen extends StatefulWidget {
+class JobDetailScreen extends StatefulWidget {
   final JobPostModel job;
 
-  const SingleJobDetailScreen({super.key, required this.job});
+  const JobDetailScreen({super.key, required this.job});
 
   @override
-  State<SingleJobDetailScreen> createState() => _SingleJobDetailScreenState();
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
 }
 
-class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
+class _JobDetailScreenState extends State<JobDetailScreen> {
   int _selectedTab = 0;
   ClientModel? _client;
   bool _clientLoading = true;
   List<JobRoleModel> _roles = [];
   bool _rolesLoading = true;
+
+  bool get _isTeam => widget.job.projectType.toLowerCase() == 'team';
+
+  List<String> get _tabs => [
+    'Details',
+    'Terms',
+    'Bidding (${widget.job.proposalCount})',
+  ];
+
+  List<String> get _tags {
+    final tags = <String>[];
+    tags.add(_isTeam ? 'Team' : 'Individual');
+    if (widget.job.deadline != null) tags.add(widget.job.deadline!);
+    if (widget.job.workingDays != null) {
+      tags.add('${widget.job.workingDays} days');
+    }
+    tags.add(_capitalize(widget.job.projectScope));
+    if (widget.job.experienceLevel != null) {
+      tags.add(_capitalize(widget.job.experienceLevel!));
+    }
+    return tags;
+  }
 
   @override
   void initState() {
@@ -71,23 +93,13 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
     }
   }
 
-  List<String> get _tabs => [
-    'Details',
-    'Terms',
-    'Bidding (${widget.job.proposalCount})',
-  ];
-
-  List<String> get _tags {
-    final tags = <String>[];
-    if (widget.job.deadline != null) tags.add(widget.job.deadline!);
-    if (widget.job.workingDays != null) {
-      tags.add('${widget.job.workingDays} days');
-    }
-    tags.add(_capitalize(widget.job.projectScope));
-    if (widget.job.experienceLevel != null) {
-      tags.add(_capitalize(widget.job.experienceLevel!));
-    }
-    return tags;
+  void _onApplyRole(JobRoleModel role) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubmitProposalScreen(job: widget.job, role: role),
+      ),
+    );
   }
 
   String _capitalize(String s) =>
@@ -95,102 +107,66 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
 
   String _formatBudget(JobRoleModel role) {
     if (role.roleBudget == null) return 'Negotiable';
-    return 'Rp. ${role.roleBudget!.toStringAsFixed(0)}';
+    return '${role.budgetCurrency} ${role.roleBudget!.toStringAsFixed(0)}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Teal header ────────────────────────────────────
-                  JobDetailHeader(
-                    companyLogo: _client?.profilePictureUrl != null
-                        ? ClipOval(
-                            child: Image.network(
-                              _client!.profilePictureUrl!,
-                              width: 64,
-                              height: 64,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.business,
-                            size: 40,
-                            color: Color(0xFF00AAA8),
-                          ),
-                    posterName: _clientLoading
-                        ? '...'
-                        : (_client?.displayName ?? 'Client'),
-                    username: _clientLoading
-                        ? ''
-                        : (_client?.websiteUrl ??
-                              '#${widget.job.clientId.substring(0, 8)}'),
-                    jobTitle: widget.job.jobTitle,
-                    category: _capitalize(widget.job.projectScope),
-                    tags: _tags,
-                  ),
-
-                  // ── Tab bar ────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
-                    child: JobDetailTabBar(
-                      tabs: _tabs,
-                      selectedIndex: _selectedTab,
-                      onTabSelected: (i) => setState(() => _selectedTab = i),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ───────────────────────────────────────────────
+            JobDetailHeader(
+              companyLogo: _client?.profilePictureUrl != null
+                  ? ClipOval(
+                      child: Image.network(
+                        _client!.profilePictureUrl!,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.business,
+                      size: 40,
+                      color: Color(0xFF00AAA8),
                     ),
-                  ),
+              posterName: _clientLoading
+                  ? '...'
+                  : (_client?.displayName ?? 'Client'),
+              username: _clientLoading ? '' : (_client?.websiteUrl ?? ''),
+              jobTitle: widget.job.jobTitle,
+              category: _capitalize(widget.job.projectScope),
+              tags: _tags,
+            ),
 
-                  // ── Tab content ────────────────────────────────────
-                  if (_selectedTab == 0) _buildDetailsTab(),
-                  if (_selectedTab == 1) _buildTermsTab(),
-                  if (_selectedTab == 2) _buildPlaceholderTab('Bidding'),
-                ],
+            // ── Tab bar ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
+              child: JobDetailTabBar(
+                tabs: _tabs,
+                selectedIndex: _selectedTab,
+                onTabSelected: (i) => setState(() => _selectedTab = i),
               ),
             ),
-          ),
 
-          // ── Sticky Apply button ────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => showBiddingBottomSheet(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text(
-                  'Apply',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+            // ── Tab content ──────────────────────────────────────────
+            if (_selectedTab == 0) _buildDetailsTab(),
+            if (_selectedTab == 1) _buildTermsTab(),
+            if (_selectedTab == 2) _buildBiddingTab(),
+          ],
+        ),
       ),
     );
   }
 
-  // ── Details tab ────────────────────────────────────────────────────────────
+  // ── Details tab ──────────────────────────────────────────────────────────
   Widget _buildDetailsTab() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
+      padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -221,10 +197,11 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
           ],
 
           const SizedBox(height: 28),
-          _sectionTitle('Role'),
+          // ── Section title changes based on type ──────────────────
+          _sectionTitle(_isTeam ? 'Roles' : 'Role'),
           const SizedBox(height: 12),
 
-          // ── Roles list ─────────────────────────────────────────────
+          // ── Roles list ───────────────────────────────────────────
           if (_rolesLoading)
             const Center(
               child: Padding(
@@ -234,7 +211,7 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
             )
           else if (_roles.isEmpty)
             Text(
-              'No role listed for this job.',
+              'No roles listed for this job.',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 color: const Color(0xFF7D7D7D),
@@ -250,32 +227,18 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
                   roleDescription:
                       role.roleDescription ?? 'No description provided.',
                   salary: _formatBudget(role),
-                  onApply: () => showBiddingBottomSheet(context),
+                  // ── Individual: show inline Apply button on the card
+                  // ── Team: show Apply button on each role card too
+                  onApply: () => _onApplyRole(role),
                 ),
               );
             }),
-
-          if (widget.job.experienceLevel != null) ...[
-            const SizedBox(height: 28),
-            _sectionTitle('Experience Level'),
-            const SizedBox(height: 8),
-            Text(
-              _capitalize(widget.job.experienceLevel!),
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3EB489),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // ── Terms tab ──────────────────────────────────────────────────────────────
+  // ── Terms tab ────────────────────────────────────────────────────────────
   Widget _buildTermsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
@@ -318,6 +281,32 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
     );
   }
 
+  // ── Bidding tab ──────────────────────────────────────────────────────────
+  Widget _buildBiddingTab() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(
+        child: Text(
+          'Bidding content coming soon',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: const Color(0xFF7D7D7D),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: GoogleFonts.poppins(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: const Color(0xFF333333),
+    ),
+  );
+
   Widget _termRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -346,32 +335,6 @@ class _SingleJobDetailScreenState extends State<SingleJobDetailScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderTab(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Center(
-        child: Text(
-          '$label content coming soon',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: const Color(0xFF7D7D7D),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: const Color(0xFF333333),
       ),
     );
   }

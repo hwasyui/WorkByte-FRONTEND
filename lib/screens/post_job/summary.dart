@@ -95,10 +95,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
           final uploaded = await uploadService.uploadFile(
             token,
             File(localPath),
+            bucket: 'job-files',
           );
-          if (!mounted) return;
 
           if (uploaded != null) {
+            // ← add back null check
             await provider.createJobFile(token, {
               'job_post_id': created.jobPostId,
               'file_name': uploaded['file_name'],
@@ -106,7 +107,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
               'file_type': uploaded['file_type'],
               'file_size': uploaded['file_size'],
             });
-            if (!mounted) return;
           }
         } catch (e) {
           // Non-fatal: show warning but continue

@@ -7,8 +7,7 @@ import '../../providers/job_post_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/top_bar.dart';
-import 'team_job_detail.dart';
-import 'single_job_detail.dart';
+import 'job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
   const JobListScreen({super.key});
@@ -214,7 +213,7 @@ class _JobListScreenState extends State<JobListScreen> {
           size: 35,
           color: Color(0xFF00AAA8),
         ),
-        posterName: 'Client',
+        posterName: job.clientName ?? 'Client',
         title: job.jobTitle,
         category: job.projectScope,
         teamSize: job.roleCount,
@@ -224,11 +223,7 @@ class _JobListScreenState extends State<JobListScreen> {
         biddingsLabel: '+${job.proposalCount} biddings',
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => isTeam
-                ? TeamJobDetailScreen(job: job)
-                : SingleJobDetailScreen(job: job),
-          ),
+          MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
         ),
       ),
     );
