@@ -9,13 +9,17 @@ import '../../core/constants/colors.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_card.dart';
-import '../../widgets/freelancer_card.dart';
 import '../../widgets/category_tile.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
 import '../../widgets/home_header.dart';
 import '../freelancer_profile/freelancer_profile.dart';
+import '../client_profile/client_profile.dart';
 import '../../screens/job_freelancer_view/job_list.dart';
 import '../../screens/job_client_view/job_list.dart' as client_job_list;
+import '../people_list/people_list_screen.dart';
+import '../../services/api_service.dart';
+import '../../models/job_post_model.dart';
+import '../../models/freelancer_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +30,69 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
+  List<JobPostModel> _popularJobs = [];
+  bool _isLoadingJobs = true;
+  List<FreelancerModel> _topFreelancers = [];
+  bool _isLoadingFreelancers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPopularJobs();
+    _loadTopFreelancers();
+  }
+
+  Future<void> _loadPopularJobs() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token != null) {
+      try {
+        final jobsData = await ApiService.getAllJobPosts(auth.token!, limit: 10);
+        if (mounted) {
+          setState(() {
+            _popularJobs = jobsData.map((job) => JobPostModel.fromJson(job)).toList();
+            _isLoadingJobs = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoadingJobs = false;
+          });
+        }
+        print('Error loading popular jobs: $e');
+      }
+    } else {
+      setState(() {
+        _isLoadingJobs = false;
+      });
+    }
+  }
+
+  Future<void> _loadTopFreelancers() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token != null) {
+      try {
+        final freelancersData = await ApiService.getAllFreelancers(auth.token!, limit: 10);
+        if (mounted) {
+          setState(() {
+            _topFreelancers = freelancersData.map((freelancer) => FreelancerModel.fromJson(freelancer)).toList();
+            _isLoadingFreelancers = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoadingFreelancers = false;
+          });
+        }
+        print('Error loading top freelancers: $e');
+      }
+    } else {
+      setState(() {
+        _isLoadingFreelancers = false;
+      });
+    }
+  }
 
   void _handleNavigation(int index) {
     if (index == 1) {
@@ -43,11 +110,29 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(builder: (context) => const JobListScreen()),
         );
       }
-    } else if (index == 4) {
+    } else if (index == 3) {
+      final profile = context.read<ProfileProvider>();
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        MaterialPageRoute(
+          builder: (context) => PeopleListScreen(
+            showClients: !profile.isClient,
+          ),
+        ),
       );
+    } else if (index == 4) {
+      final profile = context.read<ProfileProvider>();
+      if (profile.isClient) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ClientProfileScreen()),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
+      }
     } else {
       setState(() {
         _currentNavIndex = index;
@@ -127,107 +212,134 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SearchBarWidget(),
                   const SizedBox(height: 26),
 
-                  // Popular jobs
-                  SectionHeader(title: 'Popular Jobs', onViewAll: () {}),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 178,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        JobCard(
-                          posterName: 'Alexa Doe',
-                          posterAvatar: Image.network(
-                            'https://www.google.com/favicon.ico',
-                            width: 35,
-                            height: 35,
+                  // Popular jobs - Only show for freelancers
+                  Consumer<ProfileProvider>(
+                    builder: (context, profile, child) {
+                      if (profile.isClient) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionHeader(title: 'Popular Jobs', onViewAll: () {}),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 178,
+                            child: _isLoadingJobs
+                                ? const Center(child: CircularProgressIndicator())
+                                : _popularJobs.isEmpty
+                                    ? const Center(child: Text('No jobs available'))
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _popularJobs.length,
+                                        itemBuilder: (context, index) {
+                                          final job = _popularJobs[index];
+                                          return Row(
+                                            children: [
+                                              JobCard(
+                                                posterName: 'Client', // We don't have client name in job model
+                                                posterAvatar: Container(
+                                                  width: 35,
+                                                  height: 35,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF227C9D),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.business,
+                                                    color: Colors.white,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                title: job.jobTitle,
+                                                category: job.projectType.toUpperCase(),
+                                                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                                                salary: job.projectScope.toUpperCase(),
+                                                jobType: job.projectType == 'team' ? 'Team' : 'Individual',
+                                              ),
+                                              if (index < _popularJobs.length - 1) const SizedBox(width: 12),
+                                            ],
+                                          );
+                                        },
+                                      ),
                           ),
-                          title:
-                              'Need freelancer to revamp and redesign our website',
-                          category: 'Web Development',
-                          biddings: '10 biddings',
-                          salary: 'Rp. 15.000.000',
-                          jobType: 'Team',
-                        ),
-                        const SizedBox(width: 12),
-                        JobCard(
-                          posterName: 'Benjamin',
-                          posterAvatar: Container(
-                            width: 35,
-                            height: 35,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF227C9D),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.business,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          title: 'Freelancer with UI Design skills needed',
-                          category: 'UI Design',
-                          biddings: '5 biddings',
-                          salary: 'Rp. 15.000.000',
-                          jobType: 'Team',
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 26),
+                        ],
+                      );
+                    },
                   ),
 
-                  const SizedBox(height: 26),
 
-                  // Top Freelancers
-                  SectionHeader(title: 'Top Freelancers', onViewAll: () {}),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 175,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        FreelancerCard(
-                          name: 'Dennis Wang',
-                          username: '@denswang',
-                          role: 'UI/UX Designer',
-                          rating: 5,
-                          avatar: Image.network(
-                            'https://i.pravatar.cc/90?img=11',
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
+                  // Top freelancers - Only show for clients
+                  Consumer<ProfileProvider>(
+                    builder: (context, profile, child) {
+                      if (!profile.isClient) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionHeader(title: 'Top Freelancers', onViewAll: () {}),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 178,
+                            child: _isLoadingFreelancers
+                                ? const Center(child: CircularProgressIndicator())
+                                : _topFreelancers.isEmpty
+                                    ? const Center(child: Text('No freelancers available'))
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _topFreelancers.length,
+                                        itemBuilder: (context, index) {
+                                          final freelancer = _topFreelancers[index];
+                                          return Row(
+                                            children: [
+                                              JobCard(
+                                                posterName: freelancer.displayName,
+                                                posterAvatar: Container(
+                                                  width: 35,
+                                                  height: 35,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF227C9D),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    image: freelancer.profilePictureUrl != null && 
+                                                           freelancer.profilePictureUrl!.isNotEmpty
+                                                        ? DecorationImage(
+                                                            image: freelancer.profilePictureUrl!.startsWith('http')
+                                                                ? NetworkImage(freelancer.profilePictureUrl!)
+                                                                : FileImage(File(freelancer.profilePictureUrl!)) as ImageProvider,
+                                                            fit: BoxFit.cover,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                  child: freelancer.profilePictureUrl == null || 
+                                                         freelancer.profilePictureUrl!.isEmpty
+                                                      ? const Icon(
+                                                          Icons.person,
+                                                          color: Colors.white,
+                                                          size: 20,
+                                                        )
+                                                      : null,
+                                                ),
+                                                title: freelancer.displayName,
+                                                category: freelancer.jobTitle,
+                                                biddings: freelancer.totalProjects > 0 
+                                                    ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
+                                                    : 'New freelancer',
+                                                salary: freelancer.formattedRate,
+                                                jobType: 'Freelancer',
+                                              ),
+                                              if (index < _topFreelancers.length - 1) const SizedBox(width: 12),
+                                            ],
+                                          );
+                                        },
+                                      ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        FreelancerCard(
-                          name: 'Ais Vadelia',
-                          username: '@aisvadelia',
-                          role: 'Web Designer',
-                          rating: 5,
-                          avatar: Image.network(
-                            'https://i.pravatar.cc/90?img=5',
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        FreelancerCard(
-                          name: 'Hansen Nugraha',
-                          username: '@hansen',
-                          role: 'Web Developer',
-                          rating: 4,
-                          avatar: Image.network(
-                            'https://i.pravatar.cc/90?img=8',
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 26),
+                        ],
+                      );
+                    },
                   ),
-
-                  const SizedBox(height: 26),
 
                   // Popular categories
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
@@ -275,6 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _handleNavigation,
+        showCenterButton: context.watch<ProfileProvider>().isClient,
       ),
     );
   }

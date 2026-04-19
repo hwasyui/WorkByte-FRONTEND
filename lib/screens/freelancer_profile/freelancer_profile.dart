@@ -8,6 +8,7 @@ import '../../widgets/add_skill.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/api_service.dart';
+import '../../screens/auth/login.dart';
 import 'upload_cv.dart';
 import 'dart:io';
 
@@ -244,6 +245,46 @@ class _ProfileScreenState extends State<ProfileScreen>
     aboutController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final profile = Provider.of<ProfileProvider>(context, listen: false);
+              
+              // Clear auth and profile state
+              auth.logout(profileProvider: profile);
+              
+              if (mounted) {
+                Navigator.pop(context); // Close dialog
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEditProfile() {
@@ -684,11 +725,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onPressed: () {},
                     ),
                     IconButton(
-                      icon: const Icon(
-                        Icons.bookmark_border,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {},
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      onPressed: () {
+                        _showLogoutDialog(context);
+                      },
                     ),
                   ],
                 ),

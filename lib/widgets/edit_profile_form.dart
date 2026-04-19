@@ -123,12 +123,17 @@ class _EditProfileFormState extends State<EditProfileForm> {
     }
   }
 
-  Widget _input(TextEditingController c, String label) {
+  Widget _input(TextEditingController c, String label, {bool isRequired = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: c,
-        validator: (v) => v!.isEmpty ? "Required" : null,
+        validator: (v) {
+          if (isRequired && v!.isEmpty) {
+            return "Required";
+          }
+          return null;
+        },
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(
@@ -180,7 +185,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
                 _input(nameCtrl, "Display Name"),
                 _input(usernameCtrl, "Username"),
-                _input(jobCtrl, "Job Title"),
+                _input(jobCtrl, "Job Title", isRequired: false),
 
                 SizedBox(
                   width: double.infinity,

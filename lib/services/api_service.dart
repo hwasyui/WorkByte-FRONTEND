@@ -367,4 +367,180 @@ class ApiService {
     }
     return null;
   }
+
+  // Job Posts API
+  static Future<List<Map<String, dynamic>>> getClientPostedJobs(String token, String clientId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/job-posts/client/$clientId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get client posted jobs: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting client posted jobs: $e');
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getJobPostById(String token, String jobPostId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? {};
+        return Map<String, dynamic>.from(details);
+      } else {
+        print('Failed to get job post: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting job post: $e');
+      return null;
+    }
+  }
+
+  // Client Profile Upload
+  static Future<Map<String, dynamic>?> uploadClientProfilePicture(
+      String token, String clientId, String imagePath) async {
+    try {
+      final file = File(imagePath);
+      if (!file.existsSync()) {
+        print('File does not exist: $imagePath');
+        return null;
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/clients/$clientId/upload-profile-picture'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        http.MultipartFile(
+          'file',
+          file.readAsBytes().asStream(),
+          file.lengthSync(),
+          filename: imagePath.split('/').last,
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        final details = data['details'] ?? data['data'] ?? {};
+        return Map<String, dynamic>.from(details);
+      } else {
+        print('Failed to upload profile picture: $responseBody');
+        return null;
+      }
+    } catch (e) {
+      print('Error uploading profile picture: $e');
+      return null;
+    }
+  }
+
+  // Job Posts API
+  static Future<List<Map<String, dynamic>>> getAllJobPosts(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get job posts: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting job posts: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllFreelancers(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/freelancers/browse/all').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get freelancers: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting freelancers: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllClients(String token, {int? limit}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/clients/browse/all').replace(queryParameters: {
+        if (limit != null) 'limit': limit.toString(),
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? [];
+        return List<Map<String, dynamic>>.from(details);
+      } else {
+        print('Failed to get clients: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting clients: $e');
+      return [];
+    }
+  }
 }
