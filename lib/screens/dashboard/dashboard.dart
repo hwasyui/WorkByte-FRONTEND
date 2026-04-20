@@ -14,9 +14,11 @@ import '../../widgets/home_bottom_nav_bar.dart';
 import '../../widgets/home_header.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../client_profile/client_profile.dart';
+import '../../screens/post_job/job_detail.dart';
 import '../../screens/job_freelancer_view/job_list.dart';
 import '../../screens/job_client_view/job_list.dart' as client_job_list;
 import '../people_list/people_list_screen.dart';
+import '../workspace/workspace.dart';
 import '../../services/api_service.dart';
 import '../../models/job_post_model.dart';
 import '../../models/freelancer_model.dart';
@@ -32,9 +34,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
+
   List<AIJobMatchModel> _recommendedJobs = [];
   bool _isLoadingJobs = true;
   bool _noEmbeddingYet = false;
+
   List<FreelancerModel> _topFreelancers = [];
   bool _isLoadingFreelancers = true;
 
@@ -52,7 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     try {
-      final result = await ApiService.getAIJobRecommendations(auth.token!, limit: 10);
+      final result = await ApiService.getAIJobRecommendations(
+        auth.token!,
+        limit: 10,
+      );
       if (!mounted) return;
       if (result.isEmpty) {
         setState(() {
@@ -70,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       if (mounted) setState(() => _isLoadingJobs = false);
-      print('Error loading AI recommendations: $e');
+      debugPrint('Error loading AI recommendations: $e');
     }
   }
 
@@ -87,7 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRecommendedJobsList() {
     if (_isLoadingJobs) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+          strokeWidth: 2,
+        ),
+      );
     }
     if (_noEmbeddingYet) {
       return Center(
@@ -137,7 +149,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 title: job.jobTitle,
                 category: job.projectType.toUpperCase(),
-                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                biddings:
+                    '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
                 matchScore: job.matchScoreInt,
@@ -154,78 +167,96 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token != null) {
       try {
-        final freelancersData = await ApiService.getAllFreelancers(auth.token!, limit: 10);
+        final freelancersData = await ApiService.getAllFreelancers(
+          auth.token!,
+          limit: 10,
+        );
         if (mounted) {
           setState(() {
-            _topFreelancers = freelancersData.map((freelancer) => FreelancerModel.fromJson(freelancer)).toList();
+            _topFreelancers = freelancersData
+                .map((f) => FreelancerModel.fromJson(f))
+                .toList();
             _isLoadingFreelancers = false;
           });
         }
       } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoadingFreelancers = false;
-          });
-        }
-        print('Error loading top freelancers: $e');
+        if (mounted) setState(() => _isLoadingFreelancers = false);
+        debugPrint('Error loading top freelancers: $e');
       }
     } else {
-      setState(() {
-        _isLoadingFreelancers = false;
-      });
+      setState(() => _isLoadingFreelancers = false);
     }
   }
 
   void _handleNavigation(int index) {
     if (index == 1) {
       final profile = context.read<ProfileProvider>();
-      if (profile.isClient) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const client_job_list.JobListScreen(),
-          ),
-        );
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const JobListScreen()),
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => profile.isClient
+              ? const client_job_list.JobListScreen()
+              : const JobListScreen(),
+        ),
+      );
+    } else if (index == 2) {
+      // Workspace — both roles
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
+      );
     } else if (index == 3) {
       final profile = context.read<ProfileProvider>();
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PeopleListScreen(
-            showClients: !profile.isClient,
-          ),
+          builder: (_) => PeopleListScreen(showClients: !profile.isClient),
         ),
       );
     } else if (index == 4) {
       final profile = context.read<ProfileProvider>();
-      if (profile.isClient) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ClientProfileScreen()),
-        );
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => profile.isClient
+              ? const ClientProfileScreen()
+              : const ProfileScreen(),
+        ),
+      );
     } else {
-      setState(() {
-        _currentNavIndex = index;
-      });
+      setState(() => _currentNavIndex = index);
     }
+  }
+
+  void _navigateToPostJob() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PostNewJobJobDetail()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isClient = context.watch<ProfileProvider>().isClient;
+
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: isClient
+          ? FloatingActionButton(
+              onPressed: _navigateToPostJob,
+              backgroundColor: AppColors.primary,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           _TealHeader(),
@@ -239,21 +270,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
                       final imageUrl = profile.profilePictureUrl;
-                      
                       Widget displayImage;
                       if (imageUrl != null && imageUrl.isNotEmpty) {
                         if (imageUrl.startsWith('http')) {
-                          final urlWithBustingCache = '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+                          final urlWithCache =
+                              '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
                           displayImage = Image.network(
-                            urlWithBustingCache,
+                            urlWithCache,
                             width: 32,
                             height: 32,
                             fit: BoxFit.cover,
                             cacheWidth: 64,
                             cacheHeight: 64,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.person, size: 32, color: Colors.white);
-                            },
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: Colors.white,
+                            ),
                           );
                         } else if (File(imageUrl).existsSync()) {
                           displayImage = Image.file(
@@ -263,9 +296,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             fit: BoxFit.cover,
                             cacheWidth: 64,
                             cacheHeight: 64,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.person, size: 32, color: Colors.white);
-                            },
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: Colors.white,
+                            ),
                           );
                         } else {
                           displayImage = const Icon(
@@ -281,7 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.white,
                         );
                       }
-                      
                       return HomeHeader(
                         userName: profile.displayName,
                         userAvatar: displayImage,
@@ -290,20 +324,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 22),
 
-                  // Search bar
                   const SearchBarWidget(),
                   const SizedBox(height: 26),
 
-                  // AI Recommended Jobs - Only show for freelancers
+                  // AI Recommended Jobs — freelancers only
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
-                      if (profile.isClient) {
-                        return const SizedBox.shrink();
-                      }
+                      if (profile.isClient) return const SizedBox.shrink();
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionHeader(title: 'Recommended for You', onViewAll: () {}),
+                          SectionHeader(
+                            title: 'Recommended for You',
+                            onViewAll: () {},
+                          ),
                           const SizedBox(height: 12),
                           SizedBox(
                             height: 178,
@@ -315,71 +349,104 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-
-                  // Top freelancers - Only show for clients
+                  // Top Freelancers — clients only
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
-                      if (!profile.isClient) {
-                        return const SizedBox.shrink();
-                      }
+                      if (!profile.isClient) return const SizedBox.shrink();
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionHeader(title: 'Top Freelancers', onViewAll: () {}),
+                          SectionHeader(
+                            title: 'Top Freelancers',
+                            onViewAll: () {},
+                          ),
                           const SizedBox(height: 12),
                           SizedBox(
                             height: 178,
                             child: _isLoadingFreelancers
-                                ? const Center(child: CircularProgressIndicator())
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : _topFreelancers.isEmpty
-                                    ? const Center(child: Text('No freelancers available'))
-                                    : ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: _topFreelancers.length,
-                                        itemBuilder: (context, index) {
-                                          final freelancer = _topFreelancers[index];
-                                          return Row(
-                                            children: [
-                                              JobCard(
-                                                posterName: freelancer.displayName,
-                                                posterAvatar: Container(
-                                                  width: 35,
-                                                  height: 35,
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFF227C9D),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    image: freelancer.profilePictureUrl != null && 
-                                                           freelancer.profilePictureUrl!.isNotEmpty
-                                                        ? DecorationImage(
-                                                            image: freelancer.profilePictureUrl!.startsWith('http')
-                                                                ? NetworkImage(freelancer.profilePictureUrl!)
-                                                                : FileImage(File(freelancer.profilePictureUrl!)) as ImageProvider,
-                                                            fit: BoxFit.cover,
-                                                          )
-                                                        : null,
-                                                  ),
-                                                  child: freelancer.profilePictureUrl == null || 
-                                                         freelancer.profilePictureUrl!.isEmpty
-                                                      ? const Icon(
-                                                          Icons.person,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        )
-                                                      : null,
-                                                ),
-                                                title: freelancer.displayName,
-                                                category: freelancer.jobTitle,
-                                                biddings: freelancer.totalProjects > 0 
-                                                    ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
-                                                    : 'New freelancer',
-                                                salary: freelancer.formattedRate,
-                                                jobType: 'Freelancer',
+                                ? const Center(
+                                    child: Text('No freelancers available'),
+                                  )
+                                : ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _topFreelancers.length,
+                                    itemBuilder: (context, index) {
+                                      final freelancer = _topFreelancers[index];
+                                      return Row(
+                                        children: [
+                                          JobCard(
+                                            posterName: freelancer.displayName,
+                                            posterAvatar: Container(
+                                              width: 35,
+                                              height: 35,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF227C9D),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                image:
+                                                    freelancer.profilePictureUrl !=
+                                                            null &&
+                                                        freelancer
+                                                            .profilePictureUrl!
+                                                            .isNotEmpty
+                                                    ? DecorationImage(
+                                                        image:
+                                                            freelancer
+                                                                .profilePictureUrl!
+                                                                .startsWith(
+                                                                  'http',
+                                                                )
+                                                            ? NetworkImage(
+                                                                freelancer
+                                                                    .profilePictureUrl!,
+                                                              )
+                                                            : FileImage(
+                                                                    File(
+                                                                      freelancer
+                                                                          .profilePictureUrl!,
+                                                                    ),
+                                                                  )
+                                                                  as ImageProvider,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : null,
                                               ),
-                                              if (index < _topFreelancers.length - 1) const SizedBox(width: 12),
-                                            ],
-                                          );
-                                        },
-                                      ),
+                                              child:
+                                                  freelancer.profilePictureUrl ==
+                                                          null ||
+                                                      freelancer
+                                                          .profilePictureUrl!
+                                                          .isEmpty
+                                                  ? const Icon(
+                                                      Icons.person,
+                                                      color: Colors.white,
+                                                      size: 20,
+                                                    )
+                                                  : null,
+                                            ),
+                                            title: freelancer.displayName,
+                                            category: freelancer.jobTitle,
+                                            biddings:
+                                                freelancer.totalProjects > 0
+                                                ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
+                                                : 'New freelancer',
+                                            salary: freelancer.formattedRate,
+                                            jobType: 'Freelancer',
+                                          ),
+                                          if (index <
+                                              _topFreelancers.length - 1)
+                                            const SizedBox(width: 12),
+                                        ],
+                                      );
+                                    },
+                                  ),
                           ),
                           const SizedBox(height: 26),
                         ],
@@ -387,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // Popular categories
+                  // Popular Categories
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
                   const SizedBox(height: 12),
                   CategoryTile(
@@ -422,7 +489,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     subcategories: 'Figma, Photoshop, Slicing HTML, UI, ...',
                     jobCount: 10,
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
@@ -433,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _handleNavigation,
-        showCenterButton: context.watch<ProfileProvider>().isClient,
+        showCenterButton: false,
       ),
     );
   }
@@ -443,7 +509,6 @@ class _TealHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-
     return ClipPath(
       clipper: _EllipseClipper(),
       child: Container(
