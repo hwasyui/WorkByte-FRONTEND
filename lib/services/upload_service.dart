@@ -43,4 +43,29 @@ class UploadService {
     if (file.path == null) throw Exception('File path is null');
     return uploadFile(token, File(file.path!), bucket: bucket);
   }
+
+  /// Upload a CV file for the authenticated freelancer
+  /// Returns: {file_url, file_name, file_type, parsed_profile}
+  Future<Map<String, dynamic>?> uploadCV(
+    String token,
+    File cvFile, {
+    bool useLLM = false,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/cv_upload');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['use_llm'] = useLLM.toString()
+      ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    final body = jsonDecode(res.body);
+
+    debugPrint('POST /cv_upload → ${res.statusCode}');
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return body['details'] as Map<String, dynamic>?;
+    }
+    throw Exception(body['details'] ?? body['message'] ?? 'CV upload failed');
+  }
 }

@@ -417,48 +417,6 @@ class ApiService {
     }
   }
 
-  // Client Profile Upload
-  static Future<Map<String, dynamic>?> uploadClientProfilePicture(
-      String token, String clientId, String imagePath) async {
-    try {
-      final file = File(imagePath);
-      if (!file.existsSync()) {
-        print('File does not exist: $imagePath');
-        return null;
-      }
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/clients/$clientId/upload-profile-picture'),
-      );
-
-      request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(
-        http.MultipartFile(
-          'file',
-          file.readAsBytes().asStream(),
-          file.lengthSync(),
-          filename: imagePath.split('/').last,
-        ),
-      );
-
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(responseBody);
-        final details = data['details'] ?? data['data'] ?? {};
-        return Map<String, dynamic>.from(details);
-      } else {
-        print('Failed to upload profile picture: $responseBody');
-        return null;
-      }
-    } catch (e) {
-      print('Error uploading profile picture: $e');
-      return null;
-    }
-  }
-
   // Job Posts API
   static Future<List<Map<String, dynamic>>> getAllJobPosts(String token, {int? limit}) async {
     try {

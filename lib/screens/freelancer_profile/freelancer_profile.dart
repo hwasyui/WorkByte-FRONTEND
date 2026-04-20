@@ -8,6 +8,7 @@ import '../../widgets/add_skill.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/upload_service.dart';
 import '../../screens/auth/login.dart';
 import 'upload_cv.dart';
 import 'dart:io';
@@ -318,22 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               // Already a remote URL — save directly
               fields['profile_picture_url'] = imageVal;
             } else {
-              // TODO: Replace this block with Supabase upload when ready:
-              // final uploadedUrl = await SupabaseService.uploadProfilePicture(
-              //   token: auth.token!,
-              //   filePath: imageVal,
-              // );
-              // if (uploadedUrl != null) {
-              //   fields['profile_picture_url'] = uploadedUrl;
-              // } else {
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     const SnackBar(content: Text('Failed to upload profile picture')),
-              //   );
-              //   return;
-              // }
-
-              // ⚠️ Temporary: save local path until Supabase upload is ready
-              // Note: this path only works on this device
+              
               fields['profile_picture_url'] = imageVal;
             }
           }
@@ -570,31 +556,57 @@ class _ProfileScreenState extends State<ProfileScreen>
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx'],
     );
+    
     if (result != null) {
+      final file = File(result.files.single.path!);
       final fileName = result.files.single.name;
-      final identifier =
-          profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
-      final updateFields = {"cv_file_url": fileName};
-      print(
-        'Sending CV upload update: identifier=$identifier, fields=$updateFields',
-      );
-      final success = await profile.updateProfile(
-        token: auth.token!,
-        identifier: identifier,
-        fields: updateFields,
-      );
-      if (success) {
-        setState(() {
-          uploadedCVPath = fileName;
-          _cvRemoved = false;
-        });
+      
+      try {
+        // Show loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('CV uploaded and saved: $fileName')),
+          const SnackBar(
+            content: Text('Uploading CV...'),
+            duration: Duration(minutes: 1),
+          ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(profile.error ?? 'Failed to save CV')),
+
+        // Upload CV to backend (which uploads to Supabase and saves to DB)
+        final uploadService = UploadService();
+        final response = await uploadService.uploadCV(
+          auth.token!,
+          file,
+          useLLM: false,
         );
+
+        if (response != null && mounted) {
+          final fileUrl = response['file_url'] as String?;
+          
+          // Refresh profile to get the updated cv_file_url from database
+          await profile.fetchProfile(
+            token: auth.token!,
+            userId: auth.currentUser!.userId,
+            userType: auth.currentUser!.type,
+          );
+
+          if (mounted) {
+            setState(() {
+              uploadedCVPath = fileUrl ?? fileName;
+              _cvRemoved = false;
+            });
+            
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('CV uploaded successfully: $fileName')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload CV: ${e.toString()}')),
+          );
+        }
       }
     }
   }

@@ -243,44 +243,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               data['image'] != profile.profilePictureUrl) {
             // Check if it's a local file (not HTTP URL)
             if (!data['image'].toString().startsWith('http')) {
-              // Upload the local image file
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uploading profile picture...')),
-                );
-              }
-              
-              final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-              final uploadResult = await ApiService.uploadClientProfilePicture(
-                auth.token!,
-                identifier,
-                data['image'],
-              );
-
-              if (uploadResult != null) {
-                final uploadedUrl = uploadResult['profile_picture_url'] as String?;
-                if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-                  // Image already updated in database by upload endpoint
-                  // Just refresh the profile to get the latest data
-                  await _refreshProfile();
-                  profile.forceRefreshProfilePicture();
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile picture updated successfully')),
-                    );
-                    Navigator.pop(context);
-                  }
-                  return;
-                }
-              } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to upload profile picture')),
-                  );
-                }
-                return;
-              }
+              // For now, just save the local path
+              // TODO: Implement Supabase upload here
+              fields['profile_picture_url'] = data['image'];
             } else {
               // It's already an HTTP URL
               fields['profile_picture_url'] = data['image'];
@@ -289,6 +254,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           // Update the rest of the profile data (name, etc.)
           final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
+          
           final success = await profile.updateProfile(
             token: auth.token!,
             identifier: identifier,
