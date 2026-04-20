@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -124,7 +123,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse(
           '$_baseUrl/freelancers/$freelancerId/skills',
-        ), 
+        ), // ✅ dedicated endpoint
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -330,42 +329,10 @@ class ApiService {
     }
   }
 
-  static String _getMimeTypeForFile(String filePath) {
-    final normalizedPath = filePath.replaceAll('\\', '/');
-    final fileName = normalizedPath.split('/').last;
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : '';
-
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'heic':
-      case 'heif':
-        return 'image/heic';
-      case 'bmp':
-        return 'image/bmp';
-      case 'tiff':
-      case 'tif':
-        return 'image/tiff';
-      default:
-        return 'application/octet-stream';
-    }
-  }
-
-  static Future<String?> uploadProfilePicture({
-    required String token,
-    required String userType,
-    required String identifier,
-    required String filePath,
-  }) async {
+  static Future<String?> uploadProfilePicture(
+    String token,
+    String filePath,
+  ) async {
     try {
       final file = File(filePath);
       if (!file.existsSync()) {
@@ -373,41 +340,24 @@ class ApiService {
         return null;
       }
 
-      final endpoint = userType == 'client'
-          ? '$_baseUrl/clients/$identifier/profile-picture'
-          : '$_baseUrl/freelancers/$identifier/profile-picture';
-
-      final mimeType = _getMimeTypeForFile(filePath);
-      final contentType = MediaType(
-        mimeType.split('/').first,
-        mimeType.split('/').last,
-      );
-
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse(endpoint),
+        Uri.parse('$_baseUrl/upload/profile-picture'),
       );
       request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          filePath,
-          contentType: contentType,
-        ),
-      );
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
       final data = jsonDecode(responseBody);
-      final details = data['details'] ?? data;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (details is Map<String, dynamic>) {
-          final url = details['profile_picture_url'] ?? details['url'];
-          if (url != null) {
-            print('Profile picture uploaded successfully: $url');
-            return url as String;
-          }
+        // Extract the URL from the response
+        final url =
+            data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
+        if (url != null) {
+          print('Profile picture uploaded successfully: $url');
+          return url as String;
         }
       } else {
         print('Failed to upload profile picture: $responseBody');
@@ -416,38 +366,6 @@ class ApiService {
       print('Error uploading profile picture: $e');
     }
     return null;
-  }
-
-  static Future<bool> deleteProfilePicture({
-    required String token,
-    required String userType,
-    required String identifier,
-  }) async {
-    try {
-      final endpoint = userType == 'client'
-          ? '$_baseUrl/clients/$identifier/profile-picture'
-          : '$_baseUrl/freelancers/$identifier/profile-picture';
-
-      final response = await http.delete(
-        Uri.parse(endpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print('Profile picture deleted successfully');
-        return true;
-      } else {
-        print('Failed to delete profile picture: ${response.body}');
-        return false;
-      }
-    } catch (e) {
-      print('Error deleting profile picture: $e');
-      return false;
-    }
   }
 
   // Job Posts API
@@ -495,6 +413,48 @@ class ApiService {
       }
     } catch (e) {
       print('Error getting job post: $e');
+      return null;
+    }
+  }
+
+  // Client Profile Upload
+  static Future<Map<String, dynamic>?> uploadClientProfilePicture(
+      String token, String clientId, String imagePath) async {
+    try {
+      final file = File(imagePath);
+      if (!file.existsSync()) {
+        print('File does not exist: $imagePath');
+        return null;
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/clients/$clientId/upload-profile-picture'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        http.MultipartFile(
+          'file',
+          file.readAsBytes().asStream(),
+          file.lengthSync(),
+          filename: imagePath.split('/').last,
+        ),
+      );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        final details = data['details'] ?? data['data'] ?? {};
+        return Map<String, dynamic>.from(details);
+      } else {
+        print('Failed to upload profile picture: $responseBody');
+        return null;
+      }
+    } catch (e) {
+      print('Error uploading profile picture: $e');
       return null;
     }
   }
@@ -553,6 +513,65 @@ class ApiService {
     } catch (e) {
       print('Error getting freelancers: $e');
       return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>?> analyzeJobMatch(
+    String token,
+    String jobPostId,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/ai/job_matching/analyse/job/$jobPostId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
+      } else {
+        print('AI analysis failed (${response.statusCode}): ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error calling AI analysis: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAIJobRecommendations(
+    String token, {
+    int limit = 10,
+    String? experienceLevel,
+  }) async {
+    try {
+      final queryParams = <String, String>{'limit': limit.toString()};
+      if (experienceLevel != null) queryParams['experience_level'] = experienceLevel;
+
+      final uri = Uri.parse('$_baseUrl/ai/job_matching/match/freelancer-to-jobs')
+          .replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final details = data['details'] ?? data['data'] ?? {};
+        return Map<String, dynamic>.from(details);
+      } else {
+        print('AI recommendations failed: ${response.body}');
+        return {};
+      }
+    } catch (e) {
+      print('Error getting AI recommendations: $e');
+      return {};
     }
   }
 
