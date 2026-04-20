@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/top_bar.dart';
@@ -81,19 +83,61 @@ class _JobListScreenState extends State<JobListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top bar ───────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ScreenTopBar(
-                    userAvatar: Image.network(
-                      'https://i.pravatar.cc/40?img=8',
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                    ),
+                  Consumer2<AuthProvider, ProfileProvider>(
+                    builder: (context, auth, profile, child) {
+                      final imageUrl = profile.profilePictureUrl;
+                      
+                      Widget displayImage;
+                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                        if (imageUrl.startsWith('http')) {
+                          final urlWithBustingCache = '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+                          displayImage = Image.network(
+                            urlWithBustingCache,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            cacheWidth: 56,
+                            cacheHeight: 56,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.person, size: 28, color: Colors.white);
+                            },
+                          );
+                        } else if (File(imageUrl).existsSync()) {
+                          displayImage = Image.file(
+                            File(imageUrl),
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            cacheWidth: 56,
+                            cacheHeight: 56,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.person, size: 28, color: Colors.white);
+                            },
+                          );
+                        } else {
+                          displayImage = const Icon(
+                            Icons.person,
+                            size: 28,
+                            color: Colors.white,
+                          );
+                        }
+                      } else {
+                        displayImage = const Icon(
+                          Icons.person,
+                          size: 28,
+                          color: Colors.white,
+                        );
+                      }
+                      
+                      return ScreenTopBar(
+                        userAvatar: displayImage,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -135,7 +179,6 @@ class _JobListScreenState extends State<JobListScreen> {
               ),
             ),
 
-            // ── Search bar ────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(29, 12, 29, 0),
               child: Container(
@@ -175,7 +218,6 @@ class _JobListScreenState extends State<JobListScreen> {
               ),
             ),
 
-            // ── Job list ──────────────────────────────────────────────
             Expanded(
               child: _isLoading
                   ? const Center(
