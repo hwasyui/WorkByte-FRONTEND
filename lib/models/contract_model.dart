@@ -123,8 +123,7 @@ class ContractModel {
     totalHoursWorked: totalHoursWorked,
     totalPaid: totalPaid,
     contractPdfUrl: contractPdfUrl ?? this.contractPdfUrl,
-    contractPdfGeneratedAt:
-        contractPdfGeneratedAt ?? this.contractPdfGeneratedAt,
+    contractPdfGeneratedAt: contractPdfGeneratedAt ?? this.contractPdfGeneratedAt,
     createdAt: createdAt,
     updatedAt: updatedAt,
     freelancerName: freelancerName ?? this.freelancerName,

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
+import '../screens/post_job/job_detail.dart' show PostNewJobJobDetail;
 
 class HomeBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
-  final bool showCenterButton; // kept for API compatibility, no longer used
+  final bool showCenterButton;
 
   const HomeBottomNavBar({
     super.key,
     this.currentIndex = 0,
     this.onTap,
-    this.showCenterButton = false,
+    this.showCenterButton = true,
   });
 
   @override
@@ -31,39 +32,72 @@ class HomeBottomNavBar extends StatelessWidget {
           topRight: Radius.circular(5),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          _NavItem(
-            icon: Icons.home_outlined,
-            activeIcon: Icons.home_rounded,
-            isSelected: currentIndex == 0,
-            onTap: () => onTap?.call(0),
+          // Nav icons row
+          Positioned.fill(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.home_outlined,
+                  isSelected: currentIndex == 0,
+                  onTap: () => onTap?.call(0),
+                ),
+                _NavItem(
+                  icon: Icons.list_alt_outlined,
+                  isSelected: currentIndex == 1,
+                  onTap: () => onTap?.call(1),
+                ),
+                if (showCenterButton) const SizedBox(width: 60),
+                _NavItem(
+                  icon: Icons.group_outlined,
+                  isSelected: currentIndex == 3,
+                  onTap: () => onTap?.call(3),
+                ),
+                _NavItem(
+                  icon: Icons.person_outline,
+                  isSelected: currentIndex == 4,
+                  onTap: () => onTap?.call(4),
+                ),
+              ],
+            ),
           ),
-          _NavItem(
-            icon: Icons.list_alt_outlined,
-            activeIcon: Icons.list_alt_rounded,
-            isSelected: currentIndex == 1,
-            onTap: () => onTap?.call(1),
-          ),
-          _NavItem(
-            icon: Icons.work_outline_rounded,
-            activeIcon: Icons.work_rounded,
-            isSelected: currentIndex == 2,
-            onTap: () => onTap?.call(2),
-          ),
-          _NavItem(
-            icon: Icons.group_outlined,
-            activeIcon: Icons.group_rounded,
-            isSelected: currentIndex == 3,
-            onTap: () => onTap?.call(3),
-          ),
-          _NavItem(
-            icon: Icons.person_outline,
-            activeIcon: Icons.person_rounded,
-            isSelected: currentIndex == 4,
-            onTap: () => onTap?.call(4),
-          ),
+          // Floating center button - Navigate to Post Job
+          if (showCenterButton)
+            Positioned(
+              top: -20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    // Navigate to job_detail page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PostNewJobJobDetail()),
+                    );
+                  },
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.25),
+                          blurRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 28),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -72,16 +106,10 @@ class HomeBottomNavBar extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
-  final IconData activeIcon;
   final bool isSelected;
   final VoidCallback? onTap;
 
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    this.isSelected = false,
-    this.onTap,
-  });
+  const _NavItem({required this.icon, this.isSelected = false, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +119,7 @@ class _NavItem extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Icon(
-          isSelected ? activeIcon : icon,
+          icon,
           size: 25,
           color: isSelected ? AppColors.primary : const Color(0xFF7D7D7D),
         ),

@@ -17,6 +17,7 @@ class JobDetailHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
+  final Widget? titleTrailing;
 
   const JobDetailHeader({
     super.key,
@@ -30,6 +31,7 @@ class JobDetailHeader extends StatelessWidget {
     this.onBack,
     this.onShare,
     this.onBookmark,
+    this.titleTrailing,
   });
 
   @override
@@ -142,14 +144,25 @@ class JobDetailHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Job title
-              Text(
-                jobTitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF333333),
-                  height: 30 / 20,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      jobTitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF333333),
+                        height: 30 / 20,
+                      ),
+                    ),
+                  ),
+                  if (titleTrailing != null) ...[
+                    const SizedBox(width: 10),
+                    titleTrailing!,
+                  ],
+                ],
               ),
               const SizedBox(height: 8),
               // Category

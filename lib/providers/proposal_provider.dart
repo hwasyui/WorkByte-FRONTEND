@@ -57,11 +57,9 @@ class ProposalProvider extends ChangeNotifier {
     required String proposalId,
   }) async {
     try {
-      final updated = await _service.updateProposalStatus(
-        token,
-        proposalId,
-        'accepted',
-      );
+      final updated = await _service.updateProposal(token, proposalId, {
+        'status': 'accepted',
+      });
       _proposals = _proposals
           .map(
             (p) => p.proposalId == proposalId
@@ -84,11 +82,9 @@ class ProposalProvider extends ChangeNotifier {
     required String proposalId,
   }) async {
     try {
-      final updated = await _service.updateProposalStatus(
-        token,
-        proposalId,
-        'rejected',
-      );
+      final updated = await _service.updateProposal(token, proposalId, {
+        'status': 'rejected',
+      });
       _proposals = _proposals
           .map(
             (p) => p.proposalId == proposalId

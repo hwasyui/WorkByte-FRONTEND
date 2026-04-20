@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:provider/provider.dart';
 import 'analyze_cv.dart';
 import 'dart:io';
-import '../../services/upload_service.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/profile_provider.dart';
 
 class UploadCVScreen extends StatefulWidget {
   const UploadCVScreen({Key? key}) : super(key: key);
@@ -51,50 +47,17 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
       _isUploading = true;
     });
 
-    try {
-      final auth = context.read<AuthProvider>();
-      final profile = context.read<ProfileProvider>();
+    // Navigate to analyzing screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AnalyzingCVScreen(file: _selectedFile!),
+      ),
+    );
 
-      if (auth.token == null) {
-        throw Exception('Authentication required');
-      }
-
-      final uploadService = UploadService();
-      final response = await uploadService.uploadCV(
-        auth.token!,
-        _selectedFile!,
-        useLLM: false,
-      );
-
-      if (!mounted) return;
-
-      await profile.fetchProfile(
-        token: auth.token!,
-        userId: auth.currentUser!.userId,
-        userType: auth.currentUser!.type,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AnalyzingCVScreen(file: _selectedFile!),
-        ),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CV uploaded successfully to Supabase')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isUploading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CV upload failed: ${e.toString()}')),
-      );
-    }
+    setState(() {
+      _isUploading = false;
+    });
   }
 
   void _removeFile() {

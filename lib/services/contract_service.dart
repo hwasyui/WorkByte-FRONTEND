@@ -98,9 +98,7 @@ class ContractService {
       headers: _headers(token),
     );
     final body = jsonDecode(res.body);
-    debugPrint(
-      'GET /contracts/$contractId/generation-data → ${res.statusCode}',
-    );
+    debugPrint('GET /contracts/$contractId/generation-data → ${res.statusCode}');
     if (res.statusCode == 200) {
       return body['data'] ?? body['details'] ?? {};
     }
@@ -117,8 +115,7 @@ class ContractService {
     debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
     if (res.statusCode == 200) {
       final data = (body['details'] ?? body['data']) as Map<String, dynamic>?;
-      final pdfUrl =
-          data?['pdf_url'] as String? ?? data?['contract_pdf_url'] as String?;
+      final pdfUrl = data?['pdf_url'] as String? ?? data?['contract_pdf_url'] as String?;
       if (pdfUrl == null || pdfUrl.isEmpty) {
         throw Exception('PDF URL not found');
       }
@@ -185,26 +182,5 @@ class ContractService {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
     throw Exception(body['details'] ?? 'Failed to update contract');
-  }
-
-  Future<ContractModel> cancelContract(String token, String contractId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/contracts/$contractId/cancel'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    final body = jsonDecode(res.body);
-
-    if (res.statusCode == 200) {
-      final raw = body['details'] ?? body['data'] ?? body;
-      return ContractModel.fromJson(raw as Map<String, dynamic>);
-    }
-
-    throw Exception(
-      body['details'] ?? body['message'] ?? 'Failed to cancel contract',
-    );
   }
 }
