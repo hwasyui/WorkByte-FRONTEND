@@ -10,14 +10,10 @@ class ContractProvider extends ChangeNotifier {
   String? _error;
   bool _isLoading = false;
 
-  // ── Getters ───────────────────────────────────────────────────────────────
-
   List<ContractModel> get contracts => _contracts;
   ContractModel? get currentContract => _currentContract;
   String? get error => _error;
   bool get isLoading => _isLoading;
-
-  // ── Fetch all contracts ───────────────────────────────────────────────────
 
   Future<void> fetchAllContracts(String token) async {
     _isLoading = true;
@@ -34,8 +30,6 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch contracts for client ────────────────────────────────────────────
-
   Future<void> fetchContractsByClient(String token, String clientId) async {
     _isLoading = true;
     _error = null;
@@ -51,7 +45,6 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch contracts for freelancer ────────────────────────────────────────
 
   Future<void> fetchContractsByFreelancer(
     String token,
@@ -71,7 +64,6 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch single contract ─────────────────────────────────────────────────
 
   Future<void> fetchContractById(String token, String contractId) async {
     _isLoading = true;
@@ -88,8 +80,6 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch generation data ─────────────────────────────────────────────────
-
   Future<Map<String, dynamic>> fetchGenerationData(
     String token,
     String contractId,
@@ -103,8 +93,6 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  // ── Fetch PDF URL ─────────────────────────────────────────────────────────
-
   Future<String> fetchPdfUrl(String token, String contractId) async {
     try {
       return await _service.getContractPdfUrl(token, contractId);
@@ -114,8 +102,6 @@ class ContractProvider extends ChangeNotifier {
       rethrow;
     }
   }
-
-  // ── Create contract ───────────────────────────────────────────────────────
 
   Future<ContractModel?> createContract(
     String token,
@@ -133,8 +119,6 @@ class ContractProvider extends ChangeNotifier {
       return null;
     }
   }
-
-  // ── Generate contract PDF ─────────────────────────────────────────────────
 
   Future<bool> generateContractPdf(
     String token,
@@ -161,8 +145,6 @@ class ContractProvider extends ChangeNotifier {
       return false;
     }
   }
-
-  // ── Update contract status (accept, reject, etc.) ─────────────────────────
 
   Future<bool> updateContract(
     String token,
@@ -210,26 +192,18 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  // ── Accept contract ───────────────────────────────────────────────────────
-
   Future<bool> acceptContract(String token, String contractId) async {
     return updateContractStatus(token, contractId, 'accepted');
   }
-
-  // ── Reject contract ───────────────────────────────────────────────────────
 
   Future<bool> rejectContract(String token, String contractId) async {
     return updateContractStatus(token, contractId, 'rejected');
   }
 
-  // ── Clear error ───────────────────────────────────────────────────────────
-
   void clearError() {
     _error = null;
     notifyListeners();
   }
-
-  // ── Clear current contract ────────────────────────────────────────────────
 
   void clearCurrentContract() {
     _currentContract = null;

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants/colors.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../services/message_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class GenerateContractScreen extends StatefulWidget {
   final String contractId;
@@ -253,20 +254,33 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
     try {
       final pdfUrl = await contractProvider.fetchPdfUrl(token, widget.contractId);
-      final uri = Uri.parse(pdfUrl);
       
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
+      // Download the PDF
+      final response = await http.get(Uri.parse(pdfUrl));
+      if (response.statusCode == 200) {
+        final directory = await getApplicationDocumentsDirectory();
+        final fileName = 'contract_${widget.contractId}.pdf';
+        final filePath = '${directory.path}/$fileName';
+
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open PDF', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.red,
+            content: Text('PDF downloaded successfully to $filePath', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.green,
           ),
         );
+      } else {
+        throw Exception('Failed to download PDF');
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download PDF: $e', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -495,9 +509,9 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                       if (_contract?.contractPdfUrl != null) ...[
                         ElevatedButton.icon(
                           onPressed: _openContractPdf,
-                          icon: const Icon(Icons.picture_as_pdf),
+                          icon: const Icon(Icons.download),
                           label: Text(
-                            'View Generated PDF',
+                            'Download Generated PDF',
                             style: GoogleFonts.poppins(),
                           ),
                           style: ElevatedButton.styleFrom(

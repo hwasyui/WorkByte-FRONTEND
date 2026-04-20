@@ -114,7 +114,12 @@ class ContractService {
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
     if (res.statusCode == 200) {
-      return body['data']['pdf_url'] as String? ?? '';
+      final data = (body['details'] ?? body['data']) as Map<String, dynamic>?;
+      final pdfUrl = data?['pdf_url'] as String? ?? data?['contract_pdf_url'] as String?;
+      if (pdfUrl == null || pdfUrl.isEmpty) {
+        throw Exception('PDF URL not found');
+      }
+      return pdfUrl;
     }
     throw Exception(body['details'] ?? 'Failed to get PDF URL');
   }
