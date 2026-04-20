@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../models/proposal_model.dart';
-import 'upload_service.dart';
 
 class ProposalService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -12,10 +13,12 @@ class ProposalService {
     '',
   );
 
-  final _uploadService = UploadService(); 
-
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  Map<String, String> _authHeader(String token) => {
     'Authorization': 'Bearer $token',
   };
 
@@ -106,51 +109,77 @@ class ProposalService {
         'proposed_duration': proposedDuration,
     });
 
-    for (final file in files) {
-      if (file.path == null) continue;
-      await _uploadProposalFile(
-        token: token,
-        proposalId: proposal.proposalId,
-        file: file,
-      );
+    // Step 2 — upload all files in one multipart POST to /proposal-files
+    if (files.isNotEmpty) {
+      final dartFiles = files
+          .where((f) => f.path != null)
+          .map((f) => File(f.path!))
+          .toList();
+
+      if (dartFiles.isNotEmpty) {
+        await _uploadProposalFiles(
+          token: token,
+          proposalId: proposal.proposalId,
+          files: dartFiles,
+        );
+      }
     }
 
     return proposal;
   }
 
-  Future<void> _uploadProposalFile({
+  /// Single multipart POST — backend handles Supabase upload + DB record creation
+  Future<void> _uploadProposalFiles({
     required String token,
     required String proposalId,
-    required PlatformFile file,
+    required List<File> files,
   }) async {
-    final uploaded = await _uploadService.uploadPlatformFile(
-      token,
-      file,
-      bucket: 'proposal-files',
-    );
+    final uri = Uri.parse('$_baseUrl/proposal-files');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_authHeader(token))
+      ..fields['proposal_id'] = proposalId;
 
-    if (uploaded == null)
-      throw Exception('Upload returned null for ${file.name}');
-
-    final res = await http.post(
-      Uri.parse('$_baseUrl/proposal-files'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'proposal_id': proposalId,
-        'file_url': uploaded['file_url'],
-        'file_name': uploaded['file_name'],
-        'file_type': uploaded['file_type'],
-        'file_size': uploaded['file_size'],
-      }),
-    );
-
-    debugPrint('POST /proposal-files → ${res.statusCode}');
-    if (res.statusCode != 200 && res.statusCode != 201) {
-      final body = jsonDecode(res.body);
-      throw Exception(
-        body['details'] ?? 'Failed to register file ${file.name}',
+    for (final file in files) {
+      final fileName = file.path.split('/').last;
+      final mimeType = _guessMime(fileName);
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'files',
+          file.path,
+          contentType: MediaType.parse(mimeType),
+          filename: fileName,
+        ),
       );
     }
+
+    debugPrint('Uploading ${files.length} file(s) to /proposal-files');
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    debugPrint('POST /proposal-files → ${res.statusCode}: ${res.body}');
+
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      final body = jsonDecode(res.body);
+      throw Exception(body['details'] ?? 'Failed to upload proposal files');
+    }
+  }
+
+  String _guessMime(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    const map = {
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'docx':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'doc': 'application/msword',
+      'xlsx':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xls': 'application/vnd.ms-excel',
+      'txt': 'text/plain',
+      'zip': 'application/zip',
+    };
+    return map[ext] ?? 'application/octet-stream';
   }
 
   Future<ProposalModel> updateProposal(

@@ -5,7 +5,7 @@ import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/notification_provider.dart';
-import '../../services/message_service.dart';
+import '../../providers/contract_message_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -63,7 +63,9 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _confidentialityTextController = TextEditingController();
     _additionalClausesController = TextEditingController();
     _paymentScheduleController = TextEditingController();
-    _revisionRoundsController = TextEditingController(text: _revisionRounds.toString());
+    _revisionRoundsController = TextEditingController(
+      text: _revisionRounds.toString(),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadContract();
@@ -91,15 +93,20 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     try {
       setState(() => _loading = true);
       await contractProvider.fetchContractById(token, widget.contractId);
-      
+
       if (mounted) {
         _contract = contractProvider.currentContract;
         if (_contract != null) {
           _contractTitleController.text = _contract!.contractTitle;
           _roleTitleController.text = _contract!.roleTitle;
-          _agreedBudgetController.text = _contract!.agreedBudget.toStringAsFixed(0);
-          _selectedBudgetCurrency = _contract!.budgetCurrency.isNotEmpty ? _contract!.budgetCurrency : 'IDR';
-          _selectedPaymentStructure = _contract!.paymentStructure.isNotEmpty ? _contract!.paymentStructure : 'full_payment';
+          _agreedBudgetController.text = _contract!.agreedBudget
+              .toStringAsFixed(0);
+          _selectedBudgetCurrency = _contract!.budgetCurrency.isNotEmpty
+              ? _contract!.budgetCurrency
+              : 'IDR';
+          _selectedPaymentStructure = _contract!.paymentStructure.isNotEmpty
+              ? _contract!.paymentStructure
+              : 'full_payment';
           _endDateController.text = _contract!.endDate ?? '';
           _agreedDurationController.text = _contract!.agreedDuration ?? '';
         }
@@ -132,12 +139,17 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
     final token = context.read<AuthProvider>().token!;
     final contractProvider = context.read<ContractProvider>();
-    final agreedBudget = double.tryParse(_agreedBudgetController.text.replaceAll(',', ''));
+    final agreedBudget = double.tryParse(
+      _agreedBudgetController.text.replaceAll(',', ''),
+    );
 
     if (agreedBudget == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a valid budget amount', style: GoogleFonts.poppins()),
+          content: Text(
+            'Please enter a valid budget amount',
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -185,7 +197,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       final generationData = {
         'end_date': _endDateController.text,
         'agreed_duration': _agreedDurationController.text,
-        'termination_notice': int.tryParse(_selectedTerminationNotice ?? '30') ?? 30,
+        'termination_notice':
+            int.tryParse(_selectedTerminationNotice ?? '30') ?? 30,
         'governing_law': 'Indonesian Law',
         'confidentiality': _confidentiality,
         'confidentiality_text': _confidentialityTextController.text,
@@ -207,7 +220,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Contract generated successfully!', style: GoogleFonts.poppins()),
+            content: Text(
+              'Contract generated successfully!',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: _primary,
           ),
         );
@@ -238,7 +254,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   Future<void> _openContractPdf() async {
-    if (_contract?.contractPdfUrl == null || _contract!.contractPdfUrl!.isEmpty) {
+    if (_contract?.contractPdfUrl == null ||
+        _contract!.contractPdfUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No PDF available', style: GoogleFonts.poppins()),
@@ -252,9 +269,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     final contractProvider = context.read<ContractProvider>();
 
     try {
-      final pdfUrl = await contractProvider.fetchPdfUrl(token, widget.contractId);
-      
-      // Download the PDF
+      final pdfUrl = await contractProvider.fetchPdfUrl(
+        token,
+        widget.contractId,
+      );
+
       final response = await http.get(Uri.parse(pdfUrl));
       if (response.statusCode == 200) {
         final directory = await getApplicationDocumentsDirectory();
@@ -266,7 +285,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF downloaded successfully to $filePath', style: GoogleFonts.poppins()),
+            content: Text(
+              'PDF downloaded successfully to $filePath',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -276,7 +298,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to download PDF: $e', style: GoogleFonts.poppins()),
+          content: Text(
+            'Failed to download PDF: $e',
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -287,17 +312,24 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     if (_contract == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Contract data not available', style: GoogleFonts.poppins()),
+          content: Text(
+            'Contract data not available',
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (_contract!.contractPdfUrl == null || _contract!.contractPdfUrl!.isEmpty) {
+    if (_contract!.contractPdfUrl == null ||
+        _contract!.contractPdfUrl!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Contract PDF must be generated first', style: GoogleFonts.poppins()),
+          content: Text(
+            'Contract PDF must be generated first',
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -305,55 +337,51 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     }
 
     final token = context.read<AuthProvider>().token!;
-    final authProvider = context.read<AuthProvider>();
-    final messageService = MessageService();
+    final messageProvider = context.read<ContractMessageProvider>();
 
     setState(() => _sending = true);
 
     try {
-      final currentUserId = authProvider.userId;
-      if (currentUserId == null) {
-        throw Exception('User ID not found');
-      }
-
-      final message = 'Your contract PDF is ready. Please review it.';
-      
-      await messageService.sendMessage(
-        token,
-        currentUserId,
-        _contract!.freelancerId,
-        message,
+      final sent = await messageProvider.sendMessage(
+        token: token,
         contractId: widget.contractId,
-      );
-
-      // Send notification to freelancer
-      final notificationProvider = context.read<NotificationProvider>();
-      await notificationProvider.createNotification(
-        token,
-        _contract!.freelancerId,
-        'Contract Approval',
-        'Your contract has been generated and is ready for approval. Tap to view the document.',
-        'contract_approval',
-        data: {'contract_id': widget.contractId},
+        messageText: 'Your contract PDF is ready. Please review it.',
       );
 
       if (!mounted) return;
 
       setState(() => _sending = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Contract sent to freelancer successfully!', style: GoogleFonts.poppins()),
-          backgroundColor: const Color(0xFF00AAA8),
-        ),
-      );
+      if (sent != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Contract sent to freelancer successfully!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: const Color(0xFF00AAA8),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              messageProvider.error ?? 'Failed to send contract',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _sending = false);
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send contract: $e', style: GoogleFonts.poppins()),
+            content: Text(
+              'Failed to send contract: $e',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -387,163 +415,144 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                         decoration: BoxDecoration(
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                          ),
                         ),
                         child: Text(
                           _error!,
-                          style: GoogleFonts.poppins(color: Colors.red, fontSize: 12),
+                          style: GoogleFonts.poppins(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
                     ],
                     if (_contract != null) ...[
-                      _buildSection(
-                        'Agreement Details',
-                        [
-                          _buildTextField(
-                            'Contract Title',
-                            _contractTitleController,
-                            'e.g. Website Development Agreement',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            'Role Title',
-                            _roleTitleController,
-                            'e.g. Frontend Developer',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            'Agreed Budget',
-                            _agreedBudgetController,
-                            'e.g. 5000000',
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDropdown(
-                            'Budget Currency',
-                            _selectedBudgetCurrency,
-                            ['IDR', 'USD'],
-                            (value) => setState(() => _selectedBudgetCurrency = value ?? 'IDR'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDropdown(
-                            'Payment Structure',
-                            _selectedPaymentStructure,
-                            ['full_payment', 'milestone_based'],
-                            (value) => setState(() => _selectedPaymentStructure = value ?? 'full_payment'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSection(
-                        'Contract Terms',
-                        [
-                          _buildTextField(
-                            'End Date',
-                            _endDateController,
-                            'YYYY-MM-DD',
-                            onTap: _selectDate,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            'Duration (e.g., "3 months")',
-                            _agreedDurationController,
-                            'e.g., 3 months',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDropdown(
-                            'Termination Notice (days)',
-                            _selectedTerminationNotice,
-                            ['7', '14', '30'],
-                            (value) => setState(() => _selectedTerminationNotice = value),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDropdown(
-                            'Dispute Resolution',
-                            _selectedDisputeResolution,
-                            ['negotiation', 'mediation', 'arbitration'],
-                            (value) => setState(() => _selectedDisputeResolution = value),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSection(
-                        'Additional Terms',
-                        [
-                          _buildTextField(
-                            'Payment Schedule / Milestones',
-                            _paymentScheduleController,
-                            'e.g. 50% upfront, 50% on completion',
-                            maxLines: 3,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildCheckbox(
-                            'Confidentiality Clause',
-                            _confidentiality,
-                            (value) => setState(() => _confidentiality = value ?? false),
-                          ),
-                          if (_confidentiality) ...[
-                            const SizedBox(height: 12),
-                            _buildTextField(
-                              'Confidentiality Details',
-                              _confidentialityTextController,
-                              'Enter any confidentiality terms...',
-                              maxLines: 3,
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          _buildCheckbox(
-                            'Late Payment Penalty',
-                            _latepaymentPenalty,
-                            (value) => setState(() => _latepaymentPenalty = value ?? false),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            'Revision Rounds',
-                            _revisionRoundsController,
-                            '0',
-                            onChanged: (value) {
-                              _revisionRounds = int.tryParse(value);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            'Additional Clauses',
-                            _additionalClausesController,
-                            'Add any additional terms...',
-                            maxLines: 3,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      if (_contract?.contractPdfUrl == null || _contract!.contractPdfUrl!.isEmpty) ...[
-                        ElevatedButton(
-                          onPressed: _generating ? null : _generateContract,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _primary,
-                            minimumSize: const Size(double.infinity, 48),
-                            disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-                          ),
-                          child: _generating
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white.withOpacity(0.7),
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  'Generate Contract PDF',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                      _buildSection('Agreement Details', [
+                        _buildTextField(
+                          'Contract Title',
+                          _contractTitleController,
+                          'e.g. Website Development Agreement',
                         ),
-                      ] else ...[
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          'Role Title',
+                          _roleTitleController,
+                          'e.g. Frontend Developer',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          'Agreed Budget',
+                          _agreedBudgetController,
+                          'e.g. 5000000',
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown(
+                          'Budget Currency',
+                          _selectedBudgetCurrency,
+                          ['IDR', 'USD'],
+                          (value) => setState(
+                            () => _selectedBudgetCurrency = value ?? 'IDR',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown(
+                          'Payment Structure',
+                          _selectedPaymentStructure,
+                          ['full_payment', 'milestone_based'],
+                          (value) => setState(
+                            () => _selectedPaymentStructure =
+                                value ?? 'full_payment',
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 24),
+                      _buildSection('Contract Terms', [
+                        _buildTextField(
+                          'End Date',
+                          _endDateController,
+                          'YYYY-MM-DD',
+                          onTap: _selectDate,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          'Duration (e.g., "3 months")',
+                          _agreedDurationController,
+                          'e.g., 3 months',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown(
+                          'Termination Notice (days)',
+                          _selectedTerminationNotice,
+                          ['7', '14', '30'],
+                          (value) => setState(
+                            () => _selectedTerminationNotice = value,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown(
+                          'Dispute Resolution',
+                          _selectedDisputeResolution,
+                          ['negotiation', 'mediation', 'arbitration'],
+                          (value) => setState(
+                            () => _selectedDisputeResolution = value,
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 24),
+                      _buildSection('Additional Terms', [
+                        _buildTextField(
+                          'Payment Schedule / Milestones',
+                          _paymentScheduleController,
+                          'e.g. 50% upfront, 50% on completion',
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildCheckbox(
+                          'Confidentiality Clause',
+                          _confidentiality,
+                          (value) =>
+                              setState(() => _confidentiality = value ?? false),
+                        ),
+                        if (_confidentiality) ...[
+                          const SizedBox(height: 12),
+                          _buildTextField(
+                            'Confidentiality Details',
+                            _confidentialityTextController,
+                            'Enter any confidentiality terms...',
+                            maxLines: 3,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        _buildCheckbox(
+                          'Late Payment Penalty',
+                          _latepaymentPenalty,
+                          (value) => setState(
+                            () => _latepaymentPenalty = value ?? false,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          'Revision Rounds',
+                          _revisionRoundsController,
+                          '0',
+                          onChanged: (value) {
+                            _revisionRounds = int.tryParse(value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          'Additional Clauses',
+                          _additionalClausesController,
+                          'Add any additional terms...',
+                          maxLines: 3,
+                        ),
+                      ]),
+                      const SizedBox(height: 24),
+                      if (_contract?.contractPdfUrl != null) ...[
                         ElevatedButton.icon(
                           onPressed: _openContractPdf,
                           icon: const Icon(Icons.download),
@@ -552,15 +561,55 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                             style: GoogleFonts.poppins(),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor: Colors.blue,
                             minimumSize: const Size(double.infinity, 48),
                           ),
                         ),
                         const SizedBox(height: 12),
+                      ],
+                      ElevatedButton(
+                        onPressed: _generating ? null : _generateContract,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          minimumSize: const Size(double.infinity, 48),
+                          disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                        ),
+                        child: _generating
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white.withOpacity(0.7),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                'Generate Contract PDF',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                      if (_contract?.contractPdfUrl != null &&
+                          _contract!.contractPdfUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: _sending ? null : _sendToFreelancer,
-                          icon: const Icon(Icons.send),
+                          icon: _sending
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.send),
                           label: Text(
                             'Send to Freelancer',
                             style: GoogleFonts.poppins(
@@ -571,7 +620,9 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             minimumSize: const Size(double.infinity, 48),
-                            disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                            disabledBackgroundColor: Colors.grey.withOpacity(
+                              0.3,
+                            ),
                           ),
                         ),
                       ],
@@ -609,11 +660,17 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF7D7D7D)),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: const Color(0xFF7D7D7D),
+            ),
           ),
           Text(
             value,
-            style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -647,7 +704,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           style: GoogleFonts.poppins(fontSize: 12),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFFB5B4B4)),
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 12,
+              color: const Color(0xFFB5B4B4),
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFF0F0F1)),
@@ -699,22 +759,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     );
   }
 
-  Widget _buildCheckbox(
-    String label,
-    bool value,
-    Function(bool?)? onChanged,
-  ) {
+  Widget _buildCheckbox(String label, bool value, Function(bool?)? onChanged) {
     return Row(
       children: [
-        Checkbox(
-          value: value,
-          onChanged: onChanged,
-          activeColor: _primary,
-        ),
-        Text(
-          label,
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
+        Checkbox(value: value, onChanged: onChanged, activeColor: _primary),
+        Text(label, style: GoogleFonts.poppins(fontSize: 12)),
       ],
     );
   }
