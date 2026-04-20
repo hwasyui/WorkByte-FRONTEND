@@ -61,7 +61,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Fetch posted jobs for this client
       final jobsList = await ApiService.getClientPostedJobs(
         auth.token!,
         profile.clientProfile!.clientId,
@@ -236,59 +235,56 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             "full_name": data['name'],
           };
 
-          // Handle image upload or deletion
+          final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
+          final selectedImage = data['image'] as String?;
+
           if (data['imageDeleted'] == true) {
-            fields['profile_picture_url'] = null;
-          } else if (data['image'] != null && data['image'].isNotEmpty &&
-              data['image'] != profile.profilePictureUrl) {
-            // Check if it's a local file (not HTTP URL)
-            if (!data['image'].toString().startsWith('http')) {
-              // Upload the local image file
+            // Delete profile picture from both Supabase and database
+            final deleteSuccess = await ApiService.deleteProfilePicture(
+              token: auth.token!,
+              userType: 'client',
+              identifier: identifier,
+            );
+            
+            if (!deleteSuccess) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uploading profile picture...')),
+                  const SnackBar(
+                    content: Text('Failed to delete profile photo. Please try again.'),
+                  ),
                 );
               }
-              
-              final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-              final uploadResult = await ApiService.uploadClientProfilePicture(
-                auth.token!,
-                identifier,
-                data['image'],
+              return;
+            }
+            
+            fields['profile_picture_url'] = '';
+          } else if (selectedImage != null && selectedImage.isNotEmpty &&
+              selectedImage != profile.profilePictureUrl) {
+            if (!selectedImage.startsWith('http') && File(selectedImage).existsSync()) {
+              final uploadedUrl = await ApiService.uploadProfilePicture(
+                token: auth.token!,
+                userType: 'client',
+                identifier: identifier,
+                filePath: selectedImage,
               );
 
-              if (uploadResult != null) {
-                final uploadedUrl = uploadResult['profile_picture_url'] as String?;
-                if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-                  // Image already updated in database by upload endpoint
-                  // Just refresh the profile to get the latest data
-                  await _refreshProfile();
-                  profile.forceRefreshProfilePicture();
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile picture updated successfully')),
-                    );
-                    Navigator.pop(context);
-                  }
-                  return;
-                }
-              } else {
+              if (uploadedUrl == null) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to upload profile picture')),
+                    const SnackBar(
+                      content: Text('Failed to upload profile photo. Please try again.'),
+                    ),
                   );
                 }
                 return;
               }
-            } else {
-              // It's already an HTTP URL
-              fields['profile_picture_url'] = data['image'];
+
+              fields['profile_picture_url'] = uploadedUrl;
+            } else if (selectedImage.startsWith('http')) {
+              fields['profile_picture_url'] = selectedImage;
             }
           }
 
-          // Update the rest of the profile data (name, etc.)
-          final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
           final success = await profile.updateProfile(
             token: auth.token!,
             identifier: identifier,
@@ -350,11 +346,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
               
-              // Clear auth and profile state
               auth.logout(profileProvider: profile);
               
               if (mounted) {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); 
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
@@ -610,7 +605,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
         children: [
-          // About Section with Edit
           _buildSection(
             title: 'About',
             hasEdit: true,
@@ -627,7 +621,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Website Section with Edit
           _buildSection(
             title: 'Website',
             hasEdit: true,
@@ -649,7 +642,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Statistics Section
           _buildSection(
             title: 'Statistics',
             child: Padding(
@@ -805,7 +797,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   biddingsLabel:
                       '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                   onTap: () {
-                    // Navigate to job detail
                   },
                   bookmarked: false,
                 ),
