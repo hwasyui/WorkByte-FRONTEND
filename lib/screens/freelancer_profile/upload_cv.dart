@@ -59,7 +59,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
         throw Exception('Authentication required');
       }
 
-      // Upload CV to backend
       final uploadService = UploadService();
       final response = await uploadService.uploadCV(
         auth.token!,
@@ -69,7 +68,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
 
       if (!mounted) return;
 
-      // Refresh profile after upload
       await profile.fetchProfile(
         token: auth.token!,
         userId: auth.currentUser!.userId,
@@ -78,7 +76,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
 
       if (!mounted) return;
 
-      // Navigate to analyzing screen after successful upload
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

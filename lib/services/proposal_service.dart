@@ -12,16 +12,13 @@ class ProposalService {
     '',
   );
 
-  final _uploadService = UploadService(); // ← single instance
+  final _uploadService = UploadService(); 
 
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
   };
 
-  // ── Proposals ─────────────────────────────────────────────────────────────
-
-  /// GET /proposals/job-post/:jobPostId
   Future<List<ProposalModel>> getProposalsByJobPost(
     String token,
     String jobPostId,
@@ -41,7 +38,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to load proposals');
   }
 
-  /// GET /proposals/freelancer/:freelancerId
   Future<List<ProposalModel>> getProposalsByFreelancer(
     String token,
     String freelancerId,
@@ -61,7 +57,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to load proposals');
   }
 
-  /// GET /proposals/:proposalId
   Future<ProposalModel> getProposalById(String token, String proposalId) async {
     final res = await http.get(
       Uri.parse('$_baseUrl/proposals/$proposalId'),
@@ -74,7 +69,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to load proposal');
   }
 
-  /// POST /proposals
   Future<ProposalModel> createProposal(
     String token,
     Map<String, dynamic> data,
@@ -92,7 +86,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to create proposal');
   }
 
-  /// Full submit: create proposal → upload files → register in DB
   Future<ProposalModel> submitProposal({
     required String token,
     required String jobPostId,
@@ -103,7 +96,6 @@ class ProposalService {
     String? proposedDuration,
     List<PlatformFile> files = const [],
   }) async {
-    // Step 1 — create proposal record
     final proposal = await createProposal(token, {
       'job_post_id': jobPostId,
       'job_role_id': jobRoleId,
@@ -114,7 +106,6 @@ class ProposalService {
         'proposed_duration': proposedDuration,
     });
 
-    // Step 2 — upload each file, then register in proposal_file table
     for (final file in files) {
       if (file.path == null) continue;
       await _uploadProposalFile(
@@ -127,14 +118,11 @@ class ProposalService {
     return proposal;
   }
 
-  // ── File Upload ───────────────────────────────────────────────────────────
-
   Future<void> _uploadProposalFile({
     required String token,
     required String proposalId,
     required PlatformFile file,
   }) async {
-    // Step 1 — upload via UploadService to proposal-files bucket
     final uploaded = await _uploadService.uploadPlatformFile(
       token,
       file,
@@ -165,9 +153,6 @@ class ProposalService {
     }
   }
 
-  // ── Other endpoints ───────────────────────────────────────────────────────
-
-  /// PUT /proposals/:proposalId
   Future<ProposalModel> updateProposal(
     String token,
     String proposalId,
@@ -186,7 +171,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to update proposal');
   }
 
-  /// PATCH /proposals/:proposalId/status
   Future<ProposalModel> updateProposalStatus(
     String token,
     String proposalId,
@@ -204,7 +188,6 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to update proposal status');
   }
 
-  /// DELETE /proposals/:proposalId"
   Future<void> deleteProposal(String token, String proposalId) async {
     final res = await http.delete(
       Uri.parse('$_baseUrl/proposals/$proposalId'),
@@ -216,7 +199,6 @@ class ProposalService {
     }
   }
 
-  /// POST /messages
   Future<void> sendMessage(
     String token, {
     required String senderId,

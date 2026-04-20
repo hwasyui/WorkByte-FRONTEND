@@ -123,7 +123,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse(
           '$_baseUrl/freelancers/$freelancerId/skills',
-        ), // ✅ dedicated endpoint
+        ), 
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -352,7 +352,6 @@ class ApiService {
       final data = jsonDecode(responseBody);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Extract the URL from the response
         final url =
             data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
         if (url != null) {

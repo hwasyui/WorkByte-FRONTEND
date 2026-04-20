@@ -119,7 +119,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final raw = context.read<ProposalProvider>().proposals;
     final profileProvider = context.read<ProfileProvider>();
 
-    // Enrich proposals with freelancer info
     final enriched = await Future.wait(
       raw.map((p) async {
         final freelancer = await profileProvider.fetchFreelancerById(
@@ -141,7 +140,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       _proposalsLoading = false;
     });
 
-    // ── Fetch proposal files for all proposals in parallel ───────────────
     await context.read<ProposalFileProvider>().fetchFilesForProposals(
       token,
       enriched.map((p) => p.proposalId).toList(),
@@ -151,7 +149,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Future<void> _acceptBid(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
 
-    // First confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -188,7 +185,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    // Second dialog - asking to proceed to contract generation
     final proceedToContract = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -225,7 +221,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (!mounted) return;
 
-    // Accept the proposal (update status to accepted)
     final success = await context.read<ProposalProvider>().acceptProposal(
       token: token,
       proposalId: proposal.proposalId,
@@ -271,7 +266,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (proceedToContract != true) return;
 
-    // Create contract and navigate to generation screen
     if (!mounted) return;
     _createAndNavigateToContract(proposal);
   }
@@ -293,7 +287,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         'budget_currency': 'IDR',
         'payment_structure': 'full_payment',
         'status': 'active',
-        'start_date': DateTime.now().toString().substring(0, 10), // YYYY-MM-DD
+        'start_date': DateTime.now().toString().substring(0, 10), 
       };
 
       final contract = await contractProvider.createContract(token, contractData);
@@ -301,7 +295,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       if (!mounted) return;
 
       if (contract != null) {
-        // Navigate to contract generation screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -434,7 +427,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
-  /// Opens file URL in external app (browser, PDF viewer, etc.)
   Future<void> _openFile(ProposalFileModel file) async {
     final uri = Uri.parse(file.fileUrl);
 
@@ -443,7 +435,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       if (canOpen) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        // Fallback — try opening in browser
         await launchUrl(uri, mode: LaunchMode.platformDefault);
       }
     } catch (e) {
@@ -538,7 +529,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: const Icon(Icons.business, size: 32, color: Color(0xFF00AAA8)),
   );
 
-  // ── Bidding Tab ────────────────────────────────────────────────────────────
   Widget _buildBiddingTab() {
     if (_proposalsLoading) {
       return const Padding(
@@ -597,7 +587,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isRejected = proposal.status == 'rejected';
     final roleTitle = _roleTitle(proposal.jobRoleId);
 
-    // ── Get files for this proposal from provider ────────────────────────
     final files = context.watch<ProposalFileProvider>().filesForProposal(
       proposal.proposalId,
     );
@@ -625,7 +614,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Freelancer row ───────────────────────────────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -668,7 +656,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
             const SizedBox(height: 10),
 
-            // ── Role + Budget chips ──────────────────────────────────
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -682,7 +669,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
             const SizedBox(height: 10),
 
-            // ── Cover letter ─────────────────────────────────────────
             Text(
               proposal.coverLetter,
               style: GoogleFonts.poppins(
@@ -694,7 +680,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               overflow: TextOverflow.ellipsis,
             ),
 
-            // ── Proposal files ───────────────────────────────────────
             if (files.isNotEmpty) ...[
               const SizedBox(height: 10),
               ...files.map((f) => _attachmentRow(f)),
@@ -702,7 +687,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
             const SizedBox(height: 6),
 
-            // ── Timestamp ────────────────────────────────────────────
             if (proposal.submittedAt != null)
               Text(
                 _formatDate(proposal.submittedAt!),
@@ -714,7 +698,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
             const SizedBox(height: 14),
 
-            // ── Action buttons ───────────────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -741,7 +724,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     icon: Icons.person_outline,
                     label: 'Profile',
                     onTap: () {
-                      // TODO: navigate to freelancer public profile
                     },
                   ),
                 ),
@@ -753,7 +735,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Attachment row ────────────────────────────────────────────────────────
   Widget _attachmentRow(ProposalFileModel file) {
     IconData icon;
     if (file.isPdf) {
@@ -911,7 +892,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Workers Tab ────────────────────────────────────────────────────────────
   Widget _buildWorkersTab() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -927,7 +907,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Details Tab ────────────────────────────────────────────────────────────
   Widget _buildDetailsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),

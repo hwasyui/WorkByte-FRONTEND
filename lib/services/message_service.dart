@@ -14,8 +14,6 @@ class MessageService {
     'Authorization': 'Bearer $token',
   };
 
-  /// POST /messages
-  /// Send a message to another user
   Future<Map<String, dynamic>> sendMessage(
     String token,
     String senderId,

@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 'freelancer_skill_id': skill['freelancer_skill_id'],
                 'skill_name':
                     skill['skill_name'] ??
-                    'Unknown Skill', // ✅ always populated now
+                    'Unknown Skill', 
                 'proficiency_level': skill['proficiency_level'] ?? 'beginner',
               },
             )
@@ -263,12 +263,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             onPressed: () {
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
-              
-              // Clear auth and profile state
+
               auth.logout(profileProvider: profile);
               
               if (mounted) {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); 
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
@@ -308,7 +307,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           final fields = <String, dynamic>{"full_name": data['name']};
 
           if (data['imageDeleted'] == true) {
-            // User explicitly deleted their profile picture
             fields['profile_picture_url'] = null;
           } else if (data['image'] != null &&
               data['image'].toString().isNotEmpty &&
@@ -316,7 +314,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             final imageVal = data['image'].toString();
 
             if (imageVal.startsWith('http')) {
-              // Already a remote URL — save directly
               fields['profile_picture_url'] = imageVal;
             } else {
               
@@ -343,7 +340,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               profile.clearProfilePicture();
             } else if (fields.containsKey('profile_picture_url') &&
                 fields['profile_picture_url'] != null) {
-              // Update local state with whatever URL/path was saved
               profile.updateProfilePictureUrl(fields['profile_picture_url']);
             }
 
@@ -447,7 +443,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        // ← renamed, stops shadowing
         title: const Text('Edit About'),
         content: TextField(
           controller: aboutController,
@@ -466,8 +461,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             onPressed: () async {
               final newBio = aboutController.text.trim();
               final bioValue = newBio.isEmpty ? null : newBio;
-
-              // ✅ These now use the SCREEN's context, not the dialog's
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(
                 context,
@@ -478,7 +471,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   profile.freelancerProfile?.freelancerId ??
                   auth.currentUser!.userId;
 
-              Navigator.pop(dialogContext); // ← pop using dialog's context
+              Navigator.pop(dialogContext); 
 
               final success = await profile.updateProfile(
                 token: auth.token!,
@@ -488,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               if (success) {
                 setState(() => aboutText = newBio);
-                await _refreshProfile(); // ✅ uses screen's context internally
+                await _refreshProfile(); 
                 messenger.showSnackBar(
                   const SnackBar(content: Text('About saved successfully')),
                 );
@@ -562,15 +555,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       final fileName = result.files.single.name;
       
       try {
-        // Show loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Uploading CV...'),
             duration: Duration(minutes: 1),
           ),
         );
-
-        // Upload CV to backend (which uploads to Supabase and saves to DB)
         final uploadService = UploadService();
         final response = await uploadService.uploadCV(
           auth.token!,
@@ -580,8 +570,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         if (response != null && mounted) {
           final fileUrl = response['file_url'] as String?;
-          
-          // Refresh profile to get the updated cv_file_url from database
           await profile.fetchProfile(
             token: auth.token!,
             userId: auth.currentUser!.userId,

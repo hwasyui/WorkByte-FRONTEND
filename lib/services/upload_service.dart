@@ -11,7 +11,6 @@ class UploadService {
     '',
   );
 
-  /// Upload a [File] to the specified bucket
   Future<Map<String, dynamic>?> uploadFile(
     String token,
     File file, {
@@ -34,7 +33,6 @@ class UploadService {
     throw Exception(body['details'] ?? 'Upload failed');
   }
 
-  /// Upload a [PlatformFile] (from file_picker) — convenience wrapper
   Future<Map<String, dynamic>?> uploadPlatformFile(
     String token,
     PlatformFile file, {
@@ -44,8 +42,6 @@ class UploadService {
     return uploadFile(token, File(file.path!), bucket: bucket);
   }
 
-  /// Upload a CV file for the authenticated freelancer
-  /// Returns: {file_url, file_name, file_type, parsed_profile}
   Future<Map<String, dynamic>?> uploadCV(
     String token,
     File cvFile, {
