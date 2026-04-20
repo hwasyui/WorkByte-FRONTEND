@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../services/message_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -94,7 +95,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       if (mounted) {
         _contract = contractProvider.currentContract;
         if (_contract != null) {
-          // Populate form with contract data
           _contractTitleController.text = _contract!.contractTitle;
           _roleTitleController.text = _contract!.roleTitle;
           _agreedBudgetController.text = _contract!.agreedBudget.toStringAsFixed(0);
@@ -211,8 +211,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             backgroundColor: _primary,
           ),
         );
-        
-        // Refresh contract data
+
         await contractProvider.fetchContractById(token, widget.contractId);
         if (mounted) {
           setState(() {
@@ -325,6 +324,17 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         _contract!.freelancerId,
         message,
         contractId: widget.contractId,
+      );
+
+      // Send notification to freelancer
+      final notificationProvider = context.read<NotificationProvider>();
+      await notificationProvider.createNotification(
+        token,
+        _contract!.freelancerId,
+        'Contract Approval',
+        'Your contract has been generated and is ready for approval. Tap to view the document.',
+        'contract_approval',
+        data: {'contract_id': widget.contractId},
       );
 
       if (!mounted) return;
@@ -506,7 +516,34 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      if (_contract?.contractPdfUrl != null) ...[
+                      if (_contract?.contractPdfUrl == null || _contract!.contractPdfUrl!.isEmpty) ...[
+                        ElevatedButton(
+                          onPressed: _generating ? null : _generateContract,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primary,
+                            minimumSize: const Size(double.infinity, 48),
+                            disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                          ),
+                          child: _generating
+                              ? SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white.withOpacity(0.7),
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Generate Contract PDF',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ] else ...[
                         ElevatedButton.icon(
                           onPressed: _openContractPdf,
                           icon: const Icon(Icons.download),
@@ -515,39 +552,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                             style: GoogleFonts.poppins(),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
                             minimumSize: const Size(double.infinity, 48),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                      ],
-                      ElevatedButton(
-                        onPressed: _generating ? null : _generateContract,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primary,
-                          minimumSize: const Size(double.infinity, 48),
-                          disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-                        ),
-                        child: _generating
-                            ? SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white.withOpacity(0.7),
-                                  ),
-                                ),
-                              )
-                            : Text(
-                                'Generate Contract PDF',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                      ),
-                      if (_contract?.contractPdfUrl != null && _contract!.contractPdfUrl!.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: _sending ? null : _sendToFreelancer,

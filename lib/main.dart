@@ -8,6 +8,7 @@ import 'providers/profile_provider.dart';
 import 'providers/proposal_provider.dart';
 import 'providers/proposal_file_provider.dart';
 import 'providers/skill_provider.dart';
+import 'providers/notification_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -29,6 +30,7 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProposalProvider()),
         ChangeNotifierProvider(create: (_) => ContractProvider()),
         ChangeNotifierProvider(create: (_) => ProposalFileProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
