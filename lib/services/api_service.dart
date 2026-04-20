@@ -123,7 +123,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse(
           '$_baseUrl/freelancers/$freelancerId/skills',
-        ), // ✅ dedicated endpoint
+        ), 
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -352,7 +352,6 @@ class ApiService {
       final data = jsonDecode(responseBody);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Extract the URL from the response
         final url =
             data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
         if (url != null) {
@@ -413,48 +412,6 @@ class ApiService {
       }
     } catch (e) {
       print('Error getting job post: $e');
-      return null;
-    }
-  }
-
-  // Client Profile Upload
-  static Future<Map<String, dynamic>?> uploadClientProfilePicture(
-      String token, String clientId, String imagePath) async {
-    try {
-      final file = File(imagePath);
-      if (!file.existsSync()) {
-        print('File does not exist: $imagePath');
-        return null;
-      }
-
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/clients/$clientId/upload-profile-picture'),
-      );
-
-      request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(
-        http.MultipartFile(
-          'file',
-          file.readAsBytes().asStream(),
-          file.lengthSync(),
-          filename: imagePath.split('/').last,
-        ),
-      );
-
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(responseBody);
-        final details = data['details'] ?? data['data'] ?? {};
-        return Map<String, dynamic>.from(details);
-      } else {
-        print('Failed to upload profile picture: $responseBody');
-        return null;
-      }
-    } catch (e) {
-      print('Error uploading profile picture: $e');
       return null;
     }
   }
