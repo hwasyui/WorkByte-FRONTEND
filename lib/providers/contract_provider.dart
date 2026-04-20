@@ -45,7 +45,6 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-
   Future<void> fetchContractsByFreelancer(
     String token,
     String freelancerId,
@@ -63,7 +62,6 @@ class ContractProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
-
 
   Future<void> fetchContractById(String token, String contractId) async {
     _isLoading = true;
@@ -208,5 +206,23 @@ class ContractProvider extends ChangeNotifier {
   void clearCurrentContract() {
     _currentContract = null;
     notifyListeners();
+  }
+
+  Future<bool> cancelContract(String token, String contractId) async {
+    try {
+      final updated = await _service.cancelContract(token, contractId);
+      if (_currentContract?.contractId == contractId) {
+        _currentContract = updated;
+      }
+      _contracts = _contracts
+          .map((c) => c.contractId == contractId ? updated : c)
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
   }
 }
