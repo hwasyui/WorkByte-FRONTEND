@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/splash/splash_screen.dart';
 import 'providers/auth_provider.dart';
+import 'providers/contract_provider.dart';
 import 'providers/job_post_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/proposal_provider.dart';
 import 'providers/proposal_file_provider.dart';
 import 'providers/skill_provider.dart';
+import 'providers/notification_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -26,7 +28,9 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => SkillProvider()),
         ChangeNotifierProvider(create: (_) => ProposalProvider()),
+        ChangeNotifierProvider(create: (_) => ContractProvider()),
         ChangeNotifierProvider(create: (_) => ProposalFileProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

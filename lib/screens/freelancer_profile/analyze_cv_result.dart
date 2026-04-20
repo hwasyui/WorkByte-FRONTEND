@@ -4,11 +4,13 @@ import 'dart:math' as math;
 class CVAnalysisResultScreen extends StatefulWidget {
   final int score;
   final String status;
+  final List<String> recommendations;
   
   const CVAnalysisResultScreen({
     Key? key,
     required this.score,
     required this.status,
+    this.recommendations = const [],
   }) : super(key: key);
 
   @override
@@ -42,11 +44,11 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
 
   Color _getStatusColor() {
     if (widget.score >= 75) {
-      return const Color(0xFF4CAF50); // Green
+      return const Color(0xFF4CAF50); 
     } else if (widget.score >= 50) {
-      return const Color(0xFFFFA726); // Amber
+      return const Color(0xFFFFA726); 
     } else {
-      return const Color(0xFFEF5350); // Red
+      return const Color(0xFFEF5350); 
     }
   }
 
@@ -65,35 +67,35 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                
-                // Main Content Card
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!, width: 0.5),
-                  ),
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      // CV Score Label
-                      const Text(
-                        'CV SCORE',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                          letterSpacing: 0.5,
-                        ),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40), 
+
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!, width: 0.5),
                       ),
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'CV SCORE',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                       
                       const SizedBox(height: 16),
-                      
-                      // Circular Progress
+
                       SizedBox(
                         width: 160,
                         height: 160,
@@ -136,7 +138,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
                       
                       const SizedBox(height: 24),
                       
-                      // Status Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -169,13 +170,11 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
                       ),
                       
                       const SizedBox(height: 24),
-                      
-                      // Divider
+
                       Divider(color: Colors.grey[300], height: 1, thickness: 0.5),
                       
                       const SizedBox(height: 24),
-                      
-                      // Suggestions Section
+
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -188,26 +187,57 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
                       ),
                       
                       const SizedBox(height: 12),
-                      
-                      // Suggestion Items
-                      _buildSuggestionItem(
-                        'Add more quantifiable achievements in your work experience',
-                      ),
-                      _buildSuggestionItem(
-                        'Include specific metrics and results from your projects',
-                      ),
-                      _buildSuggestionItem(
-                        'Consider adding a brief professional summary at the top',
-                      ),
-                      _buildSuggestionItem(
-                        'Highlight relevant certifications and courses',
-                      ),
+ 
+                      if (widget.recommendations.isEmpty) ...[
+                        _buildSuggestionItem(
+                          'Add more quantifiable achievements in your work experience',
+                        ),
+                        _buildSuggestionItem(
+                          'Include specific metrics and results from your projects',
+                        ),
+                        _buildSuggestionItem(
+                          'Consider adding a brief professional summary at the top',
+                        ),
+                        _buildSuggestionItem(
+                          'Highlight relevant certifications and courses',
+                        ),
+                      ] else ...widget.recommendations
+                          .map((text) => _buildSuggestionItem(text))
+                          .toList(),
                     ],
                   ),
                 ),
               ],
             ),
+            ),
           ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.close,
+                  color: Color(0xFF008B8B),
+                  size: 24,
+                ),
+                onPressed: () => Navigator.pop(context),
+                splashRadius: 24,
+              ),
+            ),
+          ),
+        ],
         ),
       ),
     );
@@ -244,7 +274,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen> with Si
   }
 }
 
-// Custom Painter for Circular Progress
 class CircularProgressPainter extends CustomPainter {
   final double progress;
   final Color progressColor;
@@ -262,7 +291,6 @@ class CircularProgressPainter extends CustomPainter {
     final radius = (size.width - 12) / 2;
     final strokeWidth = 12.0;
 
-    // Background circle
     final backgroundPaint = Paint()
       ..color = backgroundColor
       ..style = PaintingStyle.stroke
@@ -270,7 +298,6 @@ class CircularProgressPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, backgroundPaint);
 
-    // Progress arc
     final progressPaint = Paint()
       ..color = progressColor
       ..style = PaintingStyle.stroke

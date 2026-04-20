@@ -20,8 +20,6 @@ import '../people_list/people_list_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/job_post_model.dart';
 import '../../models/freelancer_model.dart';
-import '../../models/ai_job_match_model.dart';
-import '../job_freelancer_view/job_detail.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,122 +30,42 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
-  List<AIJobMatchModel> _recommendedJobs = [];
+  List<JobPostModel> _popularJobs = [];
   bool _isLoadingJobs = true;
-  bool _noEmbeddingYet = false;
   List<FreelancerModel> _topFreelancers = [];
   bool _isLoadingFreelancers = true;
 
   @override
   void initState() {
     super.initState();
-    _loadRecommendedJobs();
+    _loadPopularJobs();
     _loadTopFreelancers();
   }
 
-  Future<void> _loadRecommendedJobs() async {
+  Future<void> _loadPopularJobs() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    if (auth.token == null) {
-      setState(() => _isLoadingJobs = false);
-      return;
-    }
-    try {
-      final result = await ApiService.getAIJobRecommendations(auth.token!, limit: 10);
-      if (!mounted) return;
-      if (result.isEmpty) {
-        setState(() {
-          _noEmbeddingYet = true;
-          _isLoadingJobs = false;
-        });
-        return;
+    if (auth.token != null) {
+      try {
+        final jobsData = await ApiService.getAllJobPosts(auth.token!, limit: 10);
+        if (mounted) {
+          setState(() {
+            _popularJobs = jobsData.map((job) => JobPostModel.fromJson(job)).toList();
+            _isLoadingJobs = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoadingJobs = false;
+          });
+        }
+        print('Error loading popular jobs: $e');
       }
-      final matches = result['matches'] as List? ?? [];
+    } else {
       setState(() {
-        _recommendedJobs = matches
-            .map((m) => AIJobMatchModel.fromJson(Map<String, dynamic>.from(m)))
-            .toList();
         _isLoadingJobs = false;
       });
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingJobs = false);
-      print('Error loading AI recommendations: $e');
     }
-  }
-
-  Future<void> _tapJob(AIJobMatchModel match) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final data = await ApiService.getJobPostById(auth.token!, match.jobPostId);
-    if (!mounted || data == null) return;
-    final job = JobPostModel.fromJson(data);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-    );
-  }
-
-  Widget _buildRecommendedJobsList() {
-    if (_isLoadingJobs) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_noEmbeddingYet) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Complete your profile to get AI job recommendations',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
-          ),
-        ),
-      );
-    }
-    if (_recommendedJobs.isEmpty) {
-      return Center(
-        child: Text(
-          'No recommendations yet',
-          style: TextStyle(color: Colors.grey[500]),
-        ),
-      );
-    }
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      itemCount: _recommendedJobs.length,
-      itemBuilder: (context, index) {
-        final job = _recommendedJobs[index];
-        return Row(
-          children: [
-            GestureDetector(
-              onTap: () => _tapJob(job),
-              child: JobCard(
-                posterName: job.experienceLevel != null
-                    ? job.experienceLevel!.toUpperCase()
-                    : 'ANY LEVEL',
-                posterAvatar: Container(
-                  width: 35,
-                  height: 35,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF227C9D),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    Icons.business,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                title: job.jobTitle,
-                category: job.projectType.toUpperCase(),
-                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
-                salary: job.projectScope.toUpperCase(),
-                jobType: job.projectType == 'team' ? 'Team' : 'Individual',
-                matchScore: job.matchScoreInt,
-              ),
-            ),
-            if (index < _recommendedJobs.length - 1) const SizedBox(width: 12),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _loadTopFreelancers() async {
@@ -294,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SearchBarWidget(),
                   const SizedBox(height: 26),
 
-                  // AI Recommended Jobs - Only show for freelancers
+                  // Popular jobs - Only show for freelancers
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (profile.isClient) {
@@ -303,11 +221,47 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionHeader(title: 'Recommended for You', onViewAll: () {}),
+                          SectionHeader(title: 'Popular Jobs', onViewAll: () {}),
                           const SizedBox(height: 12),
                           SizedBox(
                             height: 178,
-                            child: _buildRecommendedJobsList(),
+                            child: _isLoadingJobs
+                                ? const Center(child: CircularProgressIndicator())
+                                : _popularJobs.isEmpty
+                                    ? const Center(child: Text('No jobs available'))
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _popularJobs.length,
+                                        itemBuilder: (context, index) {
+                                          final job = _popularJobs[index];
+                                          return Row(
+                                            children: [
+                                              JobCard(
+                                                posterName: 'Client', // We don't have client name in job model
+                                                posterAvatar: Container(
+                                                  width: 35,
+                                                  height: 35,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF227C9D),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.business,
+                                                    color: Colors.white,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                title: job.jobTitle,
+                                                category: job.projectType.toUpperCase(),
+                                                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                                                salary: job.projectScope.toUpperCase(),
+                                                jobType: job.projectType == 'team' ? 'Team' : 'Individual',
+                                              ),
+                                              if (index < _popularJobs.length - 1) const SizedBox(width: 12),
+                                            ],
+                                          );
+                                        },
+                                      ),
                           ),
                           const SizedBox(height: 26),
                         ],
