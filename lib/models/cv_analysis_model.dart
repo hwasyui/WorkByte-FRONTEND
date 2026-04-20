@@ -1,12 +1,12 @@
 class CVAnalysisResult {
-  final String score; // "good", "enough", "bad"
+  final String score; 
   final String scoreExplanation;
   final List<String> strengths;
   final List<String> weaknesses;
   final List<String> recommendations;
   final List<String> skillsExtracted;
-  final String experienceLevel; // "entry", "mid", "senior", "expert"
-  final int completenessScore; // 0-100
+  final String experienceLevel; 
+  final int completenessScore;
   final Map<String, dynamic>? profileComparison;
   final int cvTextLength;
   final String fileProcessed;

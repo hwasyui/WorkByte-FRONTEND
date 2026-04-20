@@ -61,7 +61,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Fetch posted jobs for this client
       final jobsList = await ApiService.getClientPostedJobs(
         auth.token!,
         profile.clientProfile!.clientId,
@@ -236,23 +235,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             "full_name": data['name'],
           };
 
-          // Handle image upload or deletion
           if (data['imageDeleted'] == true) {
             fields['profile_picture_url'] = null;
           } else if (data['image'] != null && data['image'].isNotEmpty &&
               data['image'] != profile.profilePictureUrl) {
-            // Check if it's a local file (not HTTP URL)
             if (!data['image'].toString().startsWith('http')) {
-              // For now, just save the local path
-              // TODO: Implement Supabase upload here
               fields['profile_picture_url'] = data['image'];
             } else {
-              // It's already an HTTP URL
               fields['profile_picture_url'] = data['image'];
             }
           }
 
-          // Update the rest of the profile data (name, etc.)
           final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
           
           final success = await profile.updateProfile(
@@ -316,11 +309,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
               
-              // Clear auth and profile state
               auth.logout(profileProvider: profile);
               
               if (mounted) {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); 
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
@@ -576,7 +568,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
         children: [
-          // About Section with Edit
           _buildSection(
             title: 'About',
             hasEdit: true,
@@ -593,7 +584,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Website Section with Edit
           _buildSection(
             title: 'Website',
             hasEdit: true,
@@ -615,7 +605,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Statistics Section
           _buildSection(
             title: 'Statistics',
             child: Padding(
@@ -771,7 +760,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   biddingsLabel:
                       '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                   onTap: () {
-                    // Navigate to job detail
                   },
                   bookmarked: false,
                 ),
