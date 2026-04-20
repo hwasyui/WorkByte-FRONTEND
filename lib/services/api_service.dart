@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -329,10 +330,42 @@ class ApiService {
     }
   }
 
-  static Future<String?> uploadProfilePicture(
-    String token,
-    String filePath,
-  ) async {
+  static String _getMimeTypeForFile(String filePath) {
+    final normalizedPath = filePath.replaceAll('\\', '/');
+    final fileName = normalizedPath.split('/').last;
+    final extension = fileName.contains('.')
+        ? fileName.split('.').last.toLowerCase()
+        : '';
+
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+      case 'heif':
+        return 'image/heic';
+      case 'bmp':
+        return 'image/bmp';
+      case 'tiff':
+      case 'tif':
+        return 'image/tiff';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  static Future<String?> uploadProfilePicture({
+    required String token,
+    required String userType,
+    required String identifier,
+    required String filePath,
+  }) async {
     try {
       final file = File(filePath);
       if (!file.existsSync()) {
@@ -340,23 +373,41 @@ class ApiService {
         return null;
       }
 
+      final endpoint = userType == 'client'
+          ? '$_baseUrl/clients/$identifier/profile-picture'
+          : '$_baseUrl/freelancers/$identifier/profile-picture';
+
+      final mimeType = _getMimeTypeForFile(filePath);
+      final contentType = MediaType(
+        mimeType.split('/').first,
+        mimeType.split('/').last,
+      );
+
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$_baseUrl/upload/profile-picture'),
+        Uri.parse(endpoint),
       );
       request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: contentType,
+        ),
+      );
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
       final data = jsonDecode(responseBody);
+      final details = data['details'] ?? data;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final url =
-            data['url'] ?? data['file_url'] ?? data['profile_picture_url'];
-        if (url != null) {
-          print('Profile picture uploaded successfully: $url');
-          return url as String;
+        if (details is Map<String, dynamic>) {
+          final url = details['profile_picture_url'] ?? details['url'];
+          if (url != null) {
+            print('Profile picture uploaded successfully: $url');
+            return url as String;
+          }
         }
       } else {
         print('Failed to upload profile picture: $responseBody');
@@ -365,6 +416,38 @@ class ApiService {
       print('Error uploading profile picture: $e');
     }
     return null;
+  }
+
+  static Future<bool> deleteProfilePicture({
+    required String token,
+    required String userType,
+    required String identifier,
+  }) async {
+    try {
+      final endpoint = userType == 'client'
+          ? '$_baseUrl/clients/$identifier/profile-picture'
+          : '$_baseUrl/freelancers/$identifier/profile-picture';
+
+      final response = await http.delete(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Profile picture deleted successfully');
+        return true;
+      } else {
+        print('Failed to delete profile picture: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error deleting profile picture: $e');
+      return false;
+    }
   }
 
   // Job Posts API

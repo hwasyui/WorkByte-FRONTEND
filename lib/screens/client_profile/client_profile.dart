@@ -235,19 +235,56 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             "full_name": data['name'],
           };
 
+          final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
+          final selectedImage = data['image'] as String?;
+
           if (data['imageDeleted'] == true) {
-            fields['profile_picture_url'] = null;
-          } else if (data['image'] != null && data['image'].isNotEmpty &&
-              data['image'] != profile.profilePictureUrl) {
-            if (!data['image'].toString().startsWith('http')) {
-              fields['profile_picture_url'] = data['image'];
-            } else {
-              fields['profile_picture_url'] = data['image'];
+            // Delete profile picture from both Supabase and database
+            final deleteSuccess = await ApiService.deleteProfilePicture(
+              token: auth.token!,
+              userType: 'client',
+              identifier: identifier,
+            );
+            
+            if (!deleteSuccess) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to delete profile photo. Please try again.'),
+                  ),
+                );
+              }
+              return;
+            }
+            
+            fields['profile_picture_url'] = '';
+          } else if (selectedImage != null && selectedImage.isNotEmpty &&
+              selectedImage != profile.profilePictureUrl) {
+            if (!selectedImage.startsWith('http') && File(selectedImage).existsSync()) {
+              final uploadedUrl = await ApiService.uploadProfilePicture(
+                token: auth.token!,
+                userType: 'client',
+                identifier: identifier,
+                filePath: selectedImage,
+              );
+
+              if (uploadedUrl == null) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to upload profile photo. Please try again.'),
+                    ),
+                  );
+                }
+                return;
+              }
+
+              fields['profile_picture_url'] = uploadedUrl;
+            } else if (selectedImage.startsWith('http')) {
+              fields['profile_picture_url'] = selectedImage;
             }
           }
 
-          final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-          
           final success = await profile.updateProfile(
             token: auth.token!,
             identifier: identifier,

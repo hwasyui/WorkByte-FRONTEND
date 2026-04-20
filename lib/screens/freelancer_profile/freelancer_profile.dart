@@ -306,24 +306,58 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final fields = <String, dynamic>{"full_name": data['name']};
 
-          if (data['imageDeleted'] == true) {
-            fields['profile_picture_url'] = null;
-          } else if (data['image'] != null &&
-              data['image'].toString().isNotEmpty &&
-              data['image'] != profile.profilePictureUrl) {
-            final imageVal = data['image'].toString();
-
-            if (imageVal.startsWith('http')) {
-              fields['profile_picture_url'] = imageVal;
-            } else {
-              
-              fields['profile_picture_url'] = imageVal;
-            }
-          }
-
           final identifier =
               profile.freelancerProfile?.freelancerId ??
               auth.currentUser!.userId;
+          final selectedImage = data['image'] as String?;
+
+          if (data['imageDeleted'] == true) {
+            // Delete profile picture from both Supabase and database
+            final deleteSuccess = await ApiService.deleteProfilePicture(
+              token: auth.token!,
+              userType: 'freelancer',
+              identifier: identifier,
+            );
+            
+            if (!deleteSuccess) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to delete profile photo. Please try again.'),
+                  ),
+                );
+              }
+              return;
+            }
+            
+            fields['profile_picture_url'] = '';
+          } else if (selectedImage != null &&
+              selectedImage.isNotEmpty &&
+              selectedImage != profile.profilePictureUrl) {
+            if (!selectedImage.startsWith('http') && File(selectedImage).existsSync()) {
+              final uploadedUrl = await ApiService.uploadProfilePicture(
+                token: auth.token!,
+                userType: 'freelancer',
+                identifier: identifier,
+                filePath: selectedImage,
+              );
+
+              if (uploadedUrl == null) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to upload profile photo. Please try again.'),
+                    ),
+                  );
+                }
+                return;
+              }
+
+              fields['profile_picture_url'] = uploadedUrl;
+            } else if (selectedImage.startsWith('http')) {
+              fields['profile_picture_url'] = selectedImage;
+            }
+          }
 
           final success = await profile.updateProfile(
             token: auth.token!,
