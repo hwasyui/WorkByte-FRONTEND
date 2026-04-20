@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:async';
-import '../../services/cv_analysis_service.dart';
-import '../../providers/auth_provider.dart';
 import 'analyze_cv_result.dart';
 
 class AnalyzingCVScreen extends StatefulWidget {
@@ -44,21 +41,9 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen> with SingleTicker
   }
 
   Future<void> _startAnalysis() async {
-    final token = context.read<AuthProvider>().token;
-    if (token == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication required to analyze CV')),
-        );
-        Navigator.pop(context);
-      }
-      return;
-    }
-
-    final analysisFuture = CvAnalysisService().analyzeCV(token, widget.file);
-
+    // Simulate AI analysis process
     for (int i = 0; i < _steps.length; i++) {
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         setState(() {
           _currentStep = i;
@@ -66,31 +51,20 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen> with SingleTicker
       }
     }
 
-    try {
-      final result = await analysisFuture;
-      if (!mounted) return;
-
-      final status = (result['scoring'] as String?)?.toUpperCase() ?? 'UNKNOWN';
-      final similarity = (result['similarity_score'] as num?)?.toDouble() ?? 0.0;
-      final score = (similarity * 100).round();
-      final recommendations = List<String>.from(result['recommendations'] ?? []);
-
+    // Wait a bit then navigate to results
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (mounted) {
+      // Here you would pass the actual analysis result
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => CVAnalysisResultScreen(
-            score: score,
-            status: status,
-            recommendations: recommendations,
+          builder: (context) => const CVAnalysisResultScreen(
+            score: 78,
+            status: 'Good',
           ),
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CV analysis failed: ${e.toString()}')),
-      );
-      Navigator.pop(context);
     }
   }
 
