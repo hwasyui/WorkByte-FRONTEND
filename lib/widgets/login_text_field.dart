@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 
 class LoginTextField extends StatefulWidget {
@@ -43,19 +44,43 @@ class _LoginTextFieldState extends State<LoginTextField> {
         GestureDetector(
           onTap: () => _focusNode.requestFocus(),
           child: Container(
-            height: 54,
+            height: 56,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              color: Colors.white, 
+              borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: hasError ? Colors.red : const Color(0xFFF0F0F1),
+                color: hasError
+                    ? Colors.red
+                    : const Color(0xFFE5E7EB),
               ),
+              boxShadow: [
+                BoxShadow( 
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                const SizedBox(width: 13),
-                SizedBox(width: 30, height: 30, child: widget.prefixIcon),
-                const SizedBox(width: 8),
+                const SizedBox(width: 18), 
+
+                // ICON
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: IconTheme( 
+                    data: const IconThemeData(
+                      color: Color(0xFF4F46E5),
+                      size: 22,
+                    ),
+                    child: widget.prefixIcon,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // TEXTFIELD
                 Expanded(
                   child: TextField(
                     focusNode: _focusNode,
@@ -63,47 +88,56 @@ class _LoginTextFieldState extends State<LoginTextField> {
                     obscureText: widget.isPassword && _obscure,
                     keyboardType: widget.keyboardType,
                     style: AppText.caption.copyWith(
-                      color: const Color(0xFF333333),
+                      color: const Color(0xFF111827),
+                      fontSize: 14, 
                     ),
                     decoration: InputDecoration(
                       hintText: widget.hintText,
                       hintStyle: AppText.caption.copyWith(
-                        color: const Color(0xFF7D7D7D),
+                        color: const Color(0xFF9CA3AF),
+                        fontSize: 14,
                       ),
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16, 
+                      ),
                     ),
                   ),
                 ),
+
+                // PASSWORD ICON
                 if (widget.isPassword) ...[
                   GestureDetector(
                     onTap: () => setState(() => _obscure = !_obscure),
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 13),
+                      padding: const EdgeInsets.only(right: 16),
                       child: Icon(
                         _obscure
-                            ? Icons.remove_red_eye_outlined
+                            ? Icons.visibility_outlined 
                             : Icons.visibility_off_outlined,
-                        size: 25,
-                        color: const Color(0xFF7D7D7D),
+                        size: 22,
+                        color: const Color(0xFF4F46E5), 
                       ),
                     ),
                   ),
                 ] else
-                  const SizedBox(width: 13),
+                  const SizedBox(width: 16),
               ],
             ),
           ),
         ),
 
-        // ─── Inline error message ─────────────────────────────────────────
+        // ERROR TEXT
         if (hasError)
           Padding(
-            padding: const EdgeInsets.only(top: 5, left: 14),
+            padding: const EdgeInsets.only(top: 6, left: 18), 
             child: Text(
               widget.errorText!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
             ),
           ),
       ],

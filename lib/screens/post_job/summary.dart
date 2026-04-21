@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -14,7 +15,7 @@ class PostNewJobSummary extends StatefulWidget {
 }
 
 class PostNewJobSummaryState extends State<PostNewJobSummary> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
   bool _isSubmitting = false;
   String _submitStatus = '';
 
@@ -257,7 +258,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                     '${role['budget_currency'] ?? 'IDR'} ${(role['role_budget'] as double).toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF00AAA8),
+                                      color: AppColors.primary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -276,7 +277,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE6F7F7),
+                                          color: AppColors.secondary,
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
@@ -285,7 +286,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                           name,
                                           style: const TextStyle(
                                             fontSize: 10,
-                                            color: Color(0xFF00AAA8),
+                                            color: AppColors.primary,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -338,7 +339,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                             const Icon(
                               Icons.attach_file,
                               size: 14,
-                              color: Color(0xFF00AAA8),
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -376,7 +377,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       child: Text(
                         _submitStatus,
                         style: const TextStyle(
-                          color: Color(0xFF00AAA8),
+                          color: AppColors.primary,
                           fontSize: 11,
                         ),
                       ),

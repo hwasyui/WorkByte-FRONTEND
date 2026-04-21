@@ -211,7 +211,7 @@ class _StackedAvatars extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFF9F9F9), width: 1),
-                color: const Color(0xFFE0E0E0),
+                color: AppColors.secondary,
               ),
               child: ClipOval(child: avatars[i]),
             ),

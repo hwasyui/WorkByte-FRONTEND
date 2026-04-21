@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -13,7 +14,7 @@ class PostNewJobFiles extends StatefulWidget {
 }
 
 class _PostNewJobFilesState extends State<PostNewJobFiles> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   // Each entry: { file_name, file_type, file_size, local_path }
   // file_url is NOT set yet — that happens in summary.dart on submit

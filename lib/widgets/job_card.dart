@@ -32,8 +32,8 @@ class JobCard extends StatelessWidget {
       width: 253,
       height: 178,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFF0F0F1)),
+        color: AppColors.secondary,
+        border: Border.all(color: AppColors.secondary),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(14),
@@ -117,7 +117,7 @@ class _MatchBadge extends StatelessWidget {
   const _MatchBadge({required this.score});
 
   Color get _color {
-    if (score >= 65) return const Color(0xFF00AAA8);
+    if (score >= 65) return AppColors.primary;
     if (score >= 40) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
   }

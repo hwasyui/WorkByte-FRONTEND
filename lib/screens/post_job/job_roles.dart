@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_post_provider.dart';
@@ -46,7 +47,7 @@ class PostNewJobRoles extends StatefulWidget {
 }
 
 class _PostNewJobRolesState extends State<PostNewJobRoles> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
   static const Color _bg = Color(0xFFF9F9F9);
 
   final List<_RoleDraft> _roles = [];
@@ -284,7 +285,7 @@ class _RoleCard extends StatefulWidget {
 }
 
 class _RoleCardState extends State<_RoleCard> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
@@ -909,7 +910,7 @@ class _SkillPicker extends StatelessWidget {
                     padding: EdgeInsets.all(16),
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(0xFF00AAA8),
+                      color: AppColors.primary,
                     ),
                   ),
                 );
@@ -955,13 +956,13 @@ class _SkillPicker extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: selected
-                            ? const Color(0xFF00AAA8)
+                            ? AppColors.primary
                             : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: selected
-                              ? const Color(0xFF00AAA8)
-                              : const Color(0xFFE0E0E0),
+                              ? AppColors.primary
+                              : AppColors.secondary,
                         ),
                       ),
                       child: Text(
@@ -1004,21 +1005,21 @@ class _AddRoleButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           border: Border.all(
-            color: const Color(0xFF00AAA8),
+            color: AppColors.primary,
             style: BorderStyle.solid,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: const Color(0xFF00AAA8).withOpacity(0.04),
+          color: AppColors.primary.withOpacity(0.04),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded, color: Color(0xFF00AAA8), size: 18),
+            Icon(Icons.add_rounded, color: AppColors.primary, size: 18),
             SizedBox(width: 6),
             Text(
               'Add Role',
               style: TextStyle(
-                color: Color(0xFF00AAA8),
+                color: AppColors.primary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),

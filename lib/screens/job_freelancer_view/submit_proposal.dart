@@ -132,7 +132,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
               'Proposal submitted successfully!',
               style: GoogleFonts.poppins(fontSize: 13),
             ),
-            backgroundColor: const Color(0xFF00AAA8),
+            backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -253,7 +253,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F7F7),
+        color: AppColors.secondary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -261,7 +261,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF00AAA8),
+          color: AppColors.primary,
         ),
       ),
     );
@@ -341,10 +341,10 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F7F7),
+              color: AppColors.secondary,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: const Color(0xFF00AAA8).withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.3),
               ),
             ),
             child: Row(
@@ -352,7 +352,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                 const Icon(
                   Icons.lock_outline,
                   size: 16,
-                  color: Color(0xFF00AAA8),
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -361,7 +361,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF00AAA8),
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -399,7 +399,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             suffixStyle: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF00AAA8),
+              color: AppColors.primary,
             ),
           ),
           validator: (v) {
@@ -444,18 +444,18 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             children: List.generate(_attachedFiles.length, (i) {
               final file = _attachedFiles[i];
               return Chip(
-                backgroundColor: const Color(0xFFE8F7F7),
+                backgroundColor: AppColors.secondary,
                 label: Text(
                   file.name,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    color: const Color(0xFF00AAA8),
+                    color: AppColors.primary,
                   ),
                 ),
                 deleteIcon: const Icon(
                   Icons.close,
                   size: 14,
-                  color: Color(0xFF00AAA8),
+                  color: AppColors.primary,
                 ),
                 onDeleted: () => _removeFile(i),
                 side: BorderSide.none,
@@ -472,7 +472,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF00AAA8)),
+              border: Border.all(color: AppColors.primary),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -480,7 +480,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                 const Icon(
                   Icons.attach_file,
                   size: 18,
-                  color: Color(0xFF00AAA8),
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -488,7 +488,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF00AAA8),
+                    color: AppColors.primary,
                   ),
                 ),
               ],
@@ -550,8 +550,8 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         child: ElevatedButton(
           onPressed: _isSubmitting ? null : _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00AAA8),
-            disabledBackgroundColor: const Color(0xFF00AAA8).withOpacity(0.6),
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -599,7 +599,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFF00AAA8)),
+        borderSide: const BorderSide(color: AppColors.primary),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),

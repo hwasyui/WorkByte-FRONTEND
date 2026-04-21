@@ -17,17 +17,27 @@ class SocialButton extends StatelessWidget {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: 50,
-        height: 50,
-        decoration: const BoxDecoration(
+        width: 60, 
+        height: 60, 
+        decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
+          border: Border.all( 
+            color: const Color(0xFFE5E7EB),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Center(
           child: Image.asset(
             assetPath,
-            width: iconSize,
-            height: iconSize,
+            width: iconSize - 6, 
+            height: iconSize - 6,
             fit: BoxFit.contain,
           ),
         ),

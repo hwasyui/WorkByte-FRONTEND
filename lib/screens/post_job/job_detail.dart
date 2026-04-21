@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
@@ -12,7 +13,7 @@ class PostNewJobJobDetail extends StatefulWidget {
 }
 
 class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   final _titleController = TextEditingController();
   final _descController = TextEditingController();

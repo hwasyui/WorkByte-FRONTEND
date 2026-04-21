@@ -136,7 +136,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0E0E0),
+                  color: AppColors.secondary,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -150,7 +150,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       // ── Header ──
                       Row(
                         children: [
-                          const Icon(Icons.auto_awesome, color: Color(0xFF00AAA8), size: 20),
+                          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             'AI Match Analysis',
@@ -166,7 +166,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0FAFA),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF00AAA8).withOpacity(0.3)),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +262,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             const SizedBox(height: 12),
             _analysisLabel('Strengths'),
             const SizedBox(height: 6),
-            ...strengths.map((s) => _bulletItem(s, color: const Color(0xFF00AAA8))),
+            ...strengths.map((s) => _bulletItem(s, color: AppColors.primary)),
           ],
           if (gaps.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -307,7 +307,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF00AAA8),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -371,7 +371,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   : const Icon(
                       Icons.business,
                       size: 40,
-                      color: Color(0xFF00AAA8),
+                      color: AppColors.primary,
                     ),
               posterName: _clientLoading
                   ? '...'
@@ -451,7 +451,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: Color(0xFF00AAA8)),
+                child: CircularProgressIndicator(color: AppColors.primary),
               ),
             )
           else if (_roles.isEmpty)
@@ -613,7 +613,7 @@ class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.score});
 
   Color get _color {
-    if (score >= 65) return const Color(0xFF00AAA8);
+    if (score >= 65) return AppColors.primary;
     if (score >= 40) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
   }
@@ -641,7 +641,7 @@ class _RecommendationChip extends StatelessWidget {
 
   Color get _color {
     switch (recommendation.toLowerCase()) {
-      case 'apply': return const Color(0xFF00AAA8);
+      case 'apply': return AppColors.primary;
       case 'consider': return const Color(0xFFF59E0B);
       default: return const Color(0xFFEF4444);
     }
@@ -680,7 +680,7 @@ class _SkillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = matched ? const Color(0xFF00AAA8) : const Color(0xFFEF4444);
+    final color = matched ? AppColors.primary : const Color(0xFFEF4444);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

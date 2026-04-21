@@ -385,7 +385,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F7F7),
+                      color: AppColors.secondary,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -576,7 +576,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   Color _statusColor(String status) {
     switch (status) {
       case 'active':
-        return const Color(0xFF00AAA8);
+        return AppColors.primary;
       case 'under_review':
         return const Color(0xFF2196F3);
       case 'revision_requested':

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
@@ -25,7 +26,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   bool _isLoading = false;
   late TabController _tabController;
 
-  static const Color primaryColor = Color(0xFF00AAA8);
+  static const Color primaryColor = AppColors.primary;
 
   final TextEditingController bioController = TextEditingController();
   final TextEditingController websiteController = TextEditingController();
@@ -421,7 +422,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF00AAA8), Color(0xFF008C8A)],
+                    colors: [AppColors.primary, AppColors.primary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),

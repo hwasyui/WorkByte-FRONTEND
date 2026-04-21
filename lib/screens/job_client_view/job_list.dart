@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
@@ -16,7 +17,7 @@ class JobListScreen extends StatefulWidget {
 }
 
 class JobListScreenState extends State<JobListScreen> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _allJobs = [];
@@ -231,7 +232,7 @@ class JobListScreenState extends State<JobListScreen> {
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF00AAA8),
+                        color: AppColors.primary,
                       ),
                     )
                   : _filteredJobs.isEmpty
@@ -371,7 +372,7 @@ class JobListScreenState extends State<JobListScreen> {
               child: Text(
                 isTeam ? 'Team' : 'Individual',
                 style: const TextStyle(
-                  color: Color(0xFF00AAA8),
+                  color: AppColors.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -455,7 +456,7 @@ class JobListScreenState extends State<JobListScreen> {
   Widget _statusBadge(String status) {
     final map = {
       'draft': (const Color(0xFFB5B4B4), const Color(0xFFF5F5F5)),
-      'open': (const Color(0xFF00AAA8), const Color(0xFFE6F7F7)),
+      'open': (AppColors.primary, AppColors.secondary),
       'closed': (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1)),
       'cancelled': (const Color(0xFFE53935), const Color(0xFFFFEBEE)),
     };
@@ -528,7 +529,7 @@ class JobListScreenState extends State<JobListScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(option, style: const TextStyle(fontSize: 13)),
                 trailing: _sortOption == option
-                    ? const Icon(Icons.check, color: Color(0xFF00AAA8))
+                    ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {
                   Navigator.pop(context);

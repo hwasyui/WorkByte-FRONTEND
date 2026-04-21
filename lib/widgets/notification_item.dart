@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class NotificationItem extends StatelessWidget {
@@ -41,7 +42,7 @@ class NotificationItem extends StatelessWidget {
         // Avatar
         CircleAvatar(
           radius: 12.5,
-          backgroundColor: const Color(0xFFE0E0E0),
+          backgroundColor: AppColors.secondary,
           child: ClipOval(child: avatar),
         ),
         const SizedBox(width: 13),

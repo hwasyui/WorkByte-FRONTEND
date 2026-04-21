@@ -138,12 +138,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 35,
                   height: 35,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF227C9D),
+                    color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Icon(
                     Icons.business,
-                    color: Colors.white,
+                    color: AppColors.primary,
                     size: 20,
                   ),
                 ),
@@ -317,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }
                       return HomeHeader(
-                        userName: profile.displayName,
+                        userName: 'Hi, ${profile.displayName}',
                         userAvatar: displayImage,
                       );
                     },
@@ -387,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               width: 35,
                                               height: 35,
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF227C9D),
+                                                color: AppColors.secondary,
                                                 borderRadius:
                                                     BorderRadius.circular(6),
                                                 image:
@@ -426,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                           .isEmpty
                                                   ? const Icon(
                                                       Icons.person,
-                                                      color: Colors.white,
+                                                      color: AppColors.primary,
                                                       size: 20,
                                                     )
                                                   : null,
@@ -460,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   CategoryTile(
                     icon: const Icon(
                       Icons.code,
-                      color: Color(0xFF00AAA8),
+                      color: AppColors.primary,
                       size: 22,
                     ),
                     categoryName: 'Web Development',
@@ -471,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   CategoryTile(
                     icon: const Icon(
                       Icons.campaign_outlined,
-                      color: Color(0xFF00AAA8),
+                      color: AppColors.primary,
                       size: 22,
                     ),
                     categoryName: 'Marketing',
@@ -482,7 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   CategoryTile(
                     icon: const Icon(
                       Icons.design_services_outlined,
-                      color: Color(0xFF00AAA8),
+                      color: AppColors.primary,
                       size: 22,
                     ),
                     categoryName: 'UI/UX Design',

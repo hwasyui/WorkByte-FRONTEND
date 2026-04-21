@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/contract_model.dart';
@@ -25,7 +26,7 @@ class GenerateContractScreen extends StatefulWidget {
 }
 
 class _GenerateContractScreenState extends State<GenerateContractScreen> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   ContractModel? _contract;
   bool _loading = true;
@@ -359,7 +360,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
               'Contract sent to freelancer successfully!',
               style: GoogleFonts.poppins(),
             ),
-            backgroundColor: const Color(0xFF00AAA8),
+            backgroundColor: AppColors.primary,
           ),
         );
       } else {
@@ -714,7 +715,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00AAA8)),
+              borderSide: const BorderSide(color: AppColors.primary),
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
@@ -750,7 +751,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF00AAA8)),
+              borderSide: const BorderSide(color: AppColors.primary),
             ),
             contentPadding: const EdgeInsets.all(12),
           ),

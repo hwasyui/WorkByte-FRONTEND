@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/education_profile.dart';
@@ -30,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   final TextEditingController aboutController = TextEditingController();
   late TabController _tabController;
 
-  static const Color primaryColor = Color(0xFF00AAA8);
+  static const Color primaryColor = AppColors.primary;
 
   final List<Map<String, dynamic>> _reviews = [];
   List<Map<String, dynamic>> educations = [];
@@ -695,7 +696,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -712,37 +713,102 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  Widget _buildDotGrid() {
+    return Column(
+      children: List.generate(
+        4,
+        (row) => Row(
+          children: List.generate(
+            5,
+            (col) => Padding(
+              padding: const EdgeInsets.all(3),
+              child: Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.35),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStickyHeader() {
     return Container(
-      color: Colors.grey[100],
+      color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF00AAA8), Color(0xFF008C8A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              // ── Banner ────────────────────────────────────────────────
+              ClipPath(
+                clipper: _ProfileBannerClipper(),
+                child: Container(
+                  height: 185,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    image: DecorationImage(
+                      image: AssetImage('assets/profile.png'),
+                      fit: BoxFit.cover,
+                      opacity: 0.18,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Decorative circles bottom-left
+                      Positioned(
+                        bottom: 10,
+                        left: -45,
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 40,
+                        left: 30,
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      // Dot pattern top-right
+                      Positioned(
+                        top: 16,
+                        right: 56,
+                        child: _buildDotGrid(),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              // ── Nav buttons ───────────────────────────────────────────
               Positioned(
-                top: 8,
-                left: 8,
+                top: 0,
+                left: 0,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.maybePop(context),
                 ),
               ),
               Positioned(
-                top: 8,
-                right: 8,
+                top: 0,
+                right: 0,
                 child: Row(
                   children: [
                     IconButton(
@@ -751,15 +817,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     IconButton(
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      onPressed: () {
-                        _showLogoutDialog(context);
-                      },
+                      onPressed: () => _showLogoutDialog(context),
                     ),
                   ],
                 ),
               ),
+              // ── Profile avatar ────────────────────────────────────────
               Positioned(
-                bottom: -44,
+                bottom: -48,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -767,12 +832,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
+                      color: AppColors.secondary,
                     ),
                     child: Consumer<ProfileProvider>(
                       builder: (context, profile, child) {
                         final profileImage = profile.profilePictureUrl;
                         return CircleAvatar(
                           radius: 44,
+                          backgroundColor: AppColors.secondary,
                           backgroundImage: profileImage != null
                               ? (profileImage.startsWith('http')
                                     ? NetworkImage(profileImage)
@@ -780,11 +847,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
-                          child:
-                              profileImage == null ||
+                          child: profileImage == null ||
                                   (!profileImage.startsWith('http') &&
                                       !File(profileImage).existsSync())
-                              ? const Icon(Icons.person, size: 44)
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 44,
+                                  color: AppColors.primary,
+                                )
                               : null,
                         );
                       },
@@ -795,44 +865,41 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
 
-          const SizedBox(height: 52),
+          const SizedBox(height: 58),
 
           Center(
             child: _buildStarRating(rating: _getAverageRating(), size: 18),
           ),
           const SizedBox(height: 6),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Consumer2<AuthProvider, ProfileProvider>(
-                builder: (context, auth, profile, child) {
-                  return Column(
-                    children: [
-                      Text(
-                        profile.displayName,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        auth.currentUser?.email ?? '',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        profile.jobTitle,
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
+          Consumer2<AuthProvider, ProfileProvider>(
+            builder: (context, auth, profile, child) {
+              return Column(
+                children: [
+                  Text(
+                    profile.displayName,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    auth.currentUser?.email ?? '',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  if (profile.jobTitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      profile.jobTitle,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -846,9 +913,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -868,10 +935,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     label: const Text('Analyze CV'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       side: const BorderSide(color: primaryColor),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -894,10 +961,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 fontSize: 14,
               ),
               unselectedLabelStyle: const TextStyle(fontSize: 14),
-              tabs: const [
-                Tab(text: 'About'),
-                Tab(text: 'Reviews'),
-              ],
+              tabs: const [Tab(text: 'About'), Tab(text: 'Reviews')],
             ),
           ),
         ],
@@ -921,10 +985,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               // About
               _buildSection(
                 title: 'About',
+                icon: Icons.person_outline,
                 hasEdit: true,
                 onEdit: _editAbout,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Text(
                     bioText.isEmpty ? 'No information added yet' : bioText,
                     style: TextStyle(
@@ -936,50 +1001,101 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               const SizedBox(height: 16),
 
-              // Upload CV
-              _buildSection(
-                title: 'Upload CV',
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (cvPath == null)
-                        OutlinedButton.icon(
-                          onPressed: _uploadCV,
-                          icon: const Icon(Icons.upload_file),
-                          label: const Text('Upload CV'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: primaryColor,
-                            side: const BorderSide(color: primaryColor),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+              // Upload CV — custom card layout
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Upload CV',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        )
-                      else
-                        Row(
-                          children: [
-                            const Icon(Icons.description, color: primaryColor),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                cvDisplayName,
-                                style: const TextStyle(fontSize: 14),
+                          if (cvPath != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              cvDisplayName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.grey),
-                              onPressed: _removeCV,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (cvPath != null)
+                      GestureDetector(
+                        onTap: _removeCV,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
                         ),
-                    ],
-                  ),
+                      )
+                    else
+                      OutlinedButton(
+                        onPressed: _uploadCV,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryColor,
+                          side: const BorderSide(color: primaryColor),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Upload',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 
@@ -987,29 +1103,42 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               _buildSection(
                 title: 'Skills',
+                icon: Icons.star_outline,
                 actionButton: _buildAddButton('Add Skill', _showSkillForm),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: skills
-                        .map(
-                          (s) => _SkillChip(
-                            label: s['skill_name'],
-                            proficiency: s['proficiency_level'],
-                            onDelete: () =>
-                                _deleteSkill(s['freelancer_skill_id']),
+                child: skills.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Text(
+                          'No skills added yet',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: skills.map((s) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: _SkillChip(
+                                  label: s['skill_name'],
+                                  proficiency: s['proficiency_level'],
+                                  onDelete: () =>
+                                      _deleteSkill(s['freelancer_skill_id']),
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        )
-                        .toList(),
-                  ),
-                ),
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
 
               _buildSection(
                 title: 'Experiences',
+                icon: Icons.work_outline,
                 actionButton: _buildAddButton(
                   'Add Experiences',
                   _showExperienceForm,
@@ -1034,6 +1163,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               _buildSection(
                 title: 'Education',
+                icon: Icons.school_outlined,
                 actionButton: _buildAddButton(
                   'Add Education',
                   _showEducationForm,
@@ -1451,6 +1581,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildSection({
     required String title,
     required Widget child,
+    IconData? icon,
     bool hasEdit = false,
     VoidCallback? onEdit,
     Widget? actionButton,
@@ -1472,12 +1603,24 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
+                    if (icon != null) ...[
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     Text(
                       title,
                       style: const TextStyle(
@@ -1544,17 +1687,17 @@ class _ExperienceItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: logoColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(logo, color: logoColor, size: 24),
+            child: Icon(logo, color: AppColors.primary, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1613,25 +1756,20 @@ class _EducationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Center(
-              child: Text(
-                degree.contains('Bachelor') ? '2008' : '2005',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
-              ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: AppColors.primary,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
@@ -1686,12 +1824,36 @@ class _SkillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      label: Text('$label ($proficiency)'),
-      deleteIcon: onDelete != null ? const Icon(Icons.delete, size: 18) : null,
-      onDeleted: onDelete,
-      backgroundColor: const Color(0xFF00AAA8).withOpacity(0.1),
-      labelStyle: const TextStyle(color: Color(0xFF00AAA8)),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.secondary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label ($proficiency)',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (onDelete != null) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: onDelete,
+              child: const Icon(
+                Icons.close,
+                size: 14,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -1699,7 +1861,7 @@ class _SkillChip extends StatelessWidget {
 // ── Trust Score Card ──────────────────────────────────────────────────────────
 class _TrustScoreCard extends StatelessWidget {
   final TrustScore trustScore;
-  static const Color primaryColor = Color(0xFF00AAA8);
+  static const Color primaryColor = AppColors.primary;
 
   const _TrustScoreCard({required this.trustScore});
 
@@ -1712,7 +1874,7 @@ class _TrustScoreCard extends StatelessWidget {
     Color scoreColor;
     String scoreLabel;
     if (score >= 80) {
-      scoreColor = const Color(0xFF00AAA8);
+      scoreColor = AppColors.primary;
       scoreLabel = 'Excellent';
     } else if (score >= 60) {
       scoreColor = Colors.amber.shade700;
@@ -1903,7 +2065,7 @@ class _ScoreBar extends StatelessWidget {
                 value: v,
                 minHeight: 6,
                 backgroundColor: Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF00AAA8)),
+                valueColor: const AlwaysStoppedAnimation(AppColors.primary),
               ),
             ),
           ),
@@ -1920,4 +2082,25 @@ class _ScoreBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ProfileBannerClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, 0);
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(
+      size.width / 2,
+      size.height + 20,
+      size.width,
+      size.height - 30,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_ProfileBannerClipper oldClipper) => false;
 }

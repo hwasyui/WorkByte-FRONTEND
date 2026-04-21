@@ -222,13 +222,13 @@ class _JobListScreenState extends State<JobListScreen> {
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF00AAA8),
+                        color: AppColors.primary,
                       ),
                     )
                   : _filteredJobs.isEmpty
                   ? _buildEmptyState()
                   : RefreshIndicator(
-                      color: const Color(0xFF00AAA8),
+                      color: AppColors.primary,
                       onRefresh: _fetchJobs,
                       child: ListView.builder(
                         padding: const EdgeInsets.fromLTRB(29, 16, 29, 16),
@@ -253,7 +253,7 @@ class _JobListScreenState extends State<JobListScreen> {
         posterLogo: const Icon(
           Icons.business,
           size: 35,
-          color: Color(0xFF00AAA8),
+          color: AppColors.primary,
         ),
         posterName: job.clientName ?? 'Client',
         title: job.jobTitle,
@@ -324,7 +324,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(option, style: GoogleFonts.poppins(fontSize: 13)),
                 trailing: _sortOption == option
-                    ? const Icon(Icons.check, color: Color(0xFF00AAA8))
+                    ? const Icon(Icons.check, color: AppColors.primary)
                     : null,
                 onTap: () {
                   Navigator.pop(context);

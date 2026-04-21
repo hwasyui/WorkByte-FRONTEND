@@ -76,6 +76,10 @@ flutter:
   assets:
     - assets/google.png
     - assets/linkedin.png
+    - assets/workbyte-logo.png
+    - assets/login-header.png
+    - assets/profile.png
+    - assets/dashboard.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

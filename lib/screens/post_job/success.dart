@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/colors.dart';
 import '../../screens/job_client_view/job_list.dart';
 import 'job_detail.dart';
 
@@ -53,7 +54,7 @@ class Frame1State extends State<Frame1> {
                                     child: const Text(
                                       "Your job has been posted!",
                                       style: TextStyle(
-                                        color: Color(0xFF00AAA8),
+                                        color: AppColors.primary,
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -100,9 +101,7 @@ class Frame1State extends State<Frame1> {
                                                 decoration: BoxDecoration(
                                                   borderRadius:
                                                       BorderRadius.circular(20),
-                                                  color: const Color(
-                                                    0xFF00AAA8,
-                                                  ),
+                                                  color: AppColors.primary,
                                                 ),
                                                 padding:
                                                     const EdgeInsets.symmetric(
@@ -142,9 +141,7 @@ class Frame1State extends State<Frame1> {
                                                 decoration: BoxDecoration(
                                                   borderRadius:
                                                       BorderRadius.circular(20),
-                                                  color: const Color(
-                                                    0xFF00AAA8,
-                                                  ),
+                                                  color: AppColors.primary,
                                                 ),
                                                 padding:
                                                     const EdgeInsets.symmetric(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 
 class FreelancerCard extends StatelessWidget {
@@ -33,7 +34,7 @@ class FreelancerCard extends StatelessWidget {
           // Avatar
           CircleAvatar(
             radius: 24,
-            backgroundColor: const Color(0xFFE0E0E0),
+            backgroundColor: AppColors.secondary,
             child: ClipOval(child: avatar),
           ),
           const SizedBox(height: 8),

@@ -525,7 +525,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F7F7),
+                    color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: AppColors.primary.withOpacity(0.3),
@@ -1101,7 +1101,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F7F7),
+                color: AppColors.secondary,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -1318,7 +1318,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                               color: AppColors.primary,
                             ),
                           ),
-                          backgroundColor: const Color(0xFFE8F7F7),
+                          backgroundColor: AppColors.secondary,
                           side: BorderSide.none,
                           deleteIcon: const Icon(Icons.close, size: 14),
                           onDeleted: () =>
@@ -1598,7 +1598,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F7F7),
+        color: AppColors.secondary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -1614,7 +1614,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'active':
-        return const Color(0xFF00AAA8);
+        return AppColors.primary;
       case 'under_review':
         return const Color(0xFF2196F3);
       case 'revision_requested':

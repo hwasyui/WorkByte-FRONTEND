@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 
 class CategoryTile extends StatelessWidget {
@@ -20,8 +21,8 @@ class CategoryTile extends StatelessWidget {
     return Container(
       height: 76,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFF0F0F1)),
+        color: AppColors.secondary,
+        border: Border.all(color: AppColors.secondary),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

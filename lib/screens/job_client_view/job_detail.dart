@@ -29,7 +29,7 @@ class ClientJobDetailScreen extends StatefulWidget {
 }
 
 class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
-  static const Color _primary = Color(0xFF00AAA8);
+  static const Color _primary = AppColors.primary;
 
   int _selectedTab = 0;
 
@@ -364,7 +364,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF00AAA8)),
+              borderSide: const BorderSide(color: AppColors.primary),
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
@@ -469,7 +469,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             width: 64,
             height: 64,
             child: CircularProgressIndicator(
-              color: Color(0xFF00AAA8),
+              color: AppColors.primary,
               strokeWidth: 2,
             ),
           )
@@ -527,9 +527,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     height: 64,
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      color: Color(0xFFE6F7F7),
+      color: AppColors.secondary,
     ),
-    child: const Icon(Icons.business, size: 32, color: Color(0xFF00AAA8)),
+    child: const Icon(Icons.business, size: 32, color: AppColors.primary),
   );
 
   Widget _buildBiddingTab() {
@@ -537,7 +537,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 48),
         child: Center(
-          child: CircularProgressIndicator(color: Color(0xFF00AAA8)),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -601,7 +601,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isAccepted
-              ? const Color(0xFF00AAA8).withOpacity(0.3)
+              ? AppColors.primary.withOpacity(0.3)
               : const Color(0xFFF0F0F1),
         ),
         boxShadow: [
@@ -794,7 +794,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 color: _primary,
               ),
             ),
-            const Icon(Icons.chevron_right, size: 16, color: Color(0xFF00AAA8)),
+            const Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
           ],
         ),
       ),
@@ -835,7 +835,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.work_outline, size: 11, color: Color(0xFF00AAA8)),
+        const Icon(Icons.work_outline, size: 11, color: AppColors.primary),
         const SizedBox(width: 4),
         Text(
           label,

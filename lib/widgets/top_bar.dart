@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/colors.dart';
 import '../../screens/dashboard/notification.dart';
 
 /// Reusable top bar row used across screens.
@@ -71,7 +72,7 @@ class ScreenTopBar extends StatelessWidget {
         // User avatar
         CircleAvatar(
           radius: 14,
-          backgroundColor: const Color(0xFFE0E0E0),
+          backgroundColor: AppColors.secondary,
           child: ClipOval(child: userAvatar),
         ),
       ],

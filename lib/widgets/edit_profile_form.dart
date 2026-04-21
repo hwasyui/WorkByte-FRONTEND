@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/constants/colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -88,12 +89,12 @@ class _EditProfileFormState extends State<EditProfileForm> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: Color(0xFF00AAA8)),
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
               title: const Text('Camera'),
               onTap: _pickImageFromCamera,
             ),
             ListTile(
-              leading: const Icon(Icons.image, color: Color(0xFF00AAA8)),
+              leading: const Icon(Icons.image, color: AppColors.primary),
               title: const Text('Gallery'),
               onTap: _pickImageFromGallery,
             ),
@@ -192,7 +193,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
                   child: ElevatedButton(
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00AAA8),
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
