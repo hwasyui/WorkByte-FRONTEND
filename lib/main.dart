@@ -6,8 +6,10 @@ import 'providers/job_post_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/proposal_provider.dart';
 import 'providers/proposal_file_provider.dart';
+import 'providers/contract_provider.dart';
 import 'providers/contract_submission_provider.dart';
 import 'providers/contract_message_provider.dart';
+import 'providers/review_provider.dart';
 import 'providers/skill_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -29,8 +31,10 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SkillProvider()),
         ChangeNotifierProvider(create: (_) => ProposalProvider()),
         ChangeNotifierProvider(create: (_) => ProposalFileProvider()),
+        ChangeNotifierProvider(create: (_) => ContractProvider()),
         ChangeNotifierProvider(create: (_) => ContractSubmissionProvider()),
         ChangeNotifierProvider(create: (_) => ContractMessageProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

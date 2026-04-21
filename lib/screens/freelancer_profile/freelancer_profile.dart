@@ -7,6 +7,8 @@ import '../../widgets/edit_profile_form.dart';
 import '../../widgets/add_skill.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../models/review_model.dart';
 import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import 'upload_cv.dart';
@@ -45,11 +47,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() => aboutText = aboutController.text);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final profile = Provider.of<ProfileProvider>(context, listen: false);
       setState(() {
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
       });
+
+      _loadReviews();
     });
   }
 
@@ -79,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final identifier =
         profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
-    if (auth.token != null && identifier != null) {
+    if (auth.token != null) {
       print('Fetching profile for refresh using identifier: $identifier');
       final refreshSuccess = await profile.fetchProfile(
         token: auth.token!,
@@ -192,6 +198,27 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  Future<void> _loadReviews() async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
+
+    final freelancerId = profile.freelancerProfile?.freelancerId;
+    if (auth.token != null && freelancerId != null) {
+      await Future.wait([
+        reviewProvider.loadFreelancerReviews(
+          token: auth.token!,
+          freelancerId: freelancerId,
+        ),
+        reviewProvider.loadTrustScore(
+          token: auth.token!,
+          freelancerId: freelancerId,
+        ),
+      ]);
+    }
+  }
+
   Future<void> _deleteSkill(String freelancerSkillId) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
@@ -261,11 +288,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           ElevatedButton(
             onPressed: () {
               final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(context, listen: false);
-              
+              final profile = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
+
               // Clear auth and profile state
               auth.logout(profileProvider: profile);
-              
+
               if (mounted) {
                 Navigator.pop(context); // Close dialog
                 Navigator.of(context).pushAndRemoveUntil(
@@ -274,13 +304,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 );
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.white),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1043,116 +1068,165 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildReviewsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 16, bottom: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
+    return Consumer<ReviewProvider>(
+      builder: (context, reviewProvider, _) {
+        final isLoading =
+            reviewProvider.reviewsState == ReviewLoadState.loading ||
+            reviewProvider.trustState == ReviewLoadState.loading;
+
+        if (isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(color: primaryColor),
+          );
+        }
+
+        final reviews = reviewProvider.reviews;
+        final trustScore = reviewProvider.trustScore;
+
+        // Compute average rating inline
+        final allScores = reviews
+            .expand((r) => r.ratings)
+            .map((r) => r.score)
+            .toList();
+        final avgRating = allScores.isEmpty
+            ? 0.0
+            : allScores.reduce((a, b) => a + b) / allScores.length;
+
+        // Compute distribution inline
+        final counts = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        for (final r in reviews) {
+          if (r.ratings.isEmpty) continue;
+          final reviewAvg =
+              r.ratings.map((rt) => rt.score).reduce((a, b) => a + b) /
+              r.ratings.length;
+          final star = reviewAvg.round().clamp(1, 5);
+          counts[star] = (counts[star] ?? 0) + 1;
+        }
+        final distribution = counts.map(
+          (star, count) =>
+              MapEntry(star, reviews.isEmpty ? 0.0 : count / reviews.length),
+        );
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 16, bottom: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Trust Score Card ──────────────────────────────────────
+              if (trustScore != null) ...[
+                _TrustScoreCard(trustScore: trustScore),
+                const SizedBox(height: 16),
               ],
-            ),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    RichText(
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '0',
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' /5',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: List.generate(
-                        5,
-                        (i) =>
-                            Icon(Icons.star, color: Colors.grey[400], size: 16),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '0 reviews',
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
+
+              // ── Rating summary card ───────────────────────────────────
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    children: [5, 4, 3, 2, 1].map((star) {
-                      const Map<int, double> fractions = {
-                        5: 0.0,
-                        4: 0.0,
-                        3: 0.0,
-                        2: 0.0,
-                        1: 0.0,
-                      };
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.grey[400], size: 13),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$star',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: fractions[star]!,
-                                  minHeight: 7,
-                                  backgroundColor: Colors.grey[200],
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.grey[400]!,
-                                  ),
+                child: Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: avgRating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
                               ),
-                            ),
-                          ],
+                              const TextSpan(
+                                text: ' /5',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: List.generate(5, (i) {
+                            final filled = i < avgRating.round();
+                            return Icon(
+                              filled ? Icons.star : Icons.star_outline,
+                              color: filled ? Colors.amber : Colors.grey[300],
+                              size: 16,
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${reviews.length} review${reviews.length == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        children: [5, 4, 3, 2, 1].map((star) {
+                          final fraction = distribution[star] ?? 0.0;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star, color: Colors.amber, size: 13),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$star',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: fraction,
+                                      minHeight: 7,
+                                      backgroundColor: Colors.grey[200],
+                                      valueColor: const AlwaysStoppedAnimation(
+                                        Colors.amber,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          _reviews.isEmpty
-              ? Center(
+              // ── Reviews list ──────────────────────────────────────────
+              if (reviews.isEmpty)
+                Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Column(
@@ -1164,7 +1238,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'No reviews here',
+                          'No reviews yet',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -1175,66 +1249,61 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Reviews',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Row(
-                            children: const [
-                              Text(
-                                'Latest',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Icon(
-                                Icons.filter_list,
-                                color: Colors.grey,
-                                size: 18,
-                              ),
-                            ],
-                          ),
-                        ],
+              else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Reviews',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    ..._reviews.map((r) => _buildReviewCard(r)).toList(),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
+                      Text(
+                        '${reviews.length} total',
+                        style: const TextStyle(
                           color: Colors.grey,
-                          size: 18,
-                        ),
-                        label: const Text(
-                          'Load more',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          fontSize: 13,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-        ],
-      ),
+                const SizedBox(height: 12),
+                ...reviews.map((r) => _buildReviewCard(r)).toList(),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildReviewCard(Map<String, dynamic> r) {
+  Widget _buildReviewCard(Review review) {
+    final avg = review.ratings.isEmpty
+        ? 0.0
+        : review.ratings.map((r) => r.score).reduce((a, b) => a + b) /
+              review.ratings.length;
+    final comment = review.writtenContent?.overallComment ?? '';
+    final tags = review.skillTags.take(3).map((t) => t.skillTag).toList();
+    final publishedAt = review.publishedAt;
+
+    String timeAgo = '';
+    if (publishedAt != null) {
+      final diff = DateTime.now().difference(publishedAt);
+      if (diff.inDays >= 365)
+        timeAgo = '${(diff.inDays / 365).floor()}y ago';
+      else if (diff.inDays >= 30)
+        timeAgo = '${(diff.inDays / 30).floor()}mo ago';
+      else if (diff.inDays > 0)
+        timeAgo = '${diff.inDays}d ago';
+      else
+        timeAgo = 'Today';
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.all(16),
@@ -1252,16 +1321,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header row ────────────────────────────────────────────────
           Row(
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.grey[200],
+                backgroundColor: primaryColor.withOpacity(0.1),
                 child: Text(
-                  (r['name'] as String)[0],
-                  style: const TextStyle(
+                  review.isAnonymous ? '?' : 'C',
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: primaryColor,
                   ),
                 ),
               ),
@@ -1271,25 +1341,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      r['name'],
+                      review.isAnonymous ? 'Anonymous Client' : 'Client',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     Text(
-                      r['username'],
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      timeAgo,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
                     ),
                   ],
                 ),
               ),
+              // Star + score
               Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 16),
                   const SizedBox(width: 3),
                   Text(
-                    '${r['rating']}',
+                    avg.toStringAsFixed(1),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -1300,27 +1371,81 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
 
-          const SizedBox(height: 10),
+          // ── Category ratings row ──────────────────────────────────────
+          if (review.ratings.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: review.ratings.map((r) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_capitalizeCategory(r.category)} ${r.score.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
 
-          Text(
-            r['title'],
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
+          // ── Comment ───────────────────────────────────────────────────
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              comment,
+              style: const TextStyle(color: Colors.black87, fontSize: 13),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
 
-          Text(
-            r['body'],
-            style: const TextStyle(color: Colors.black87, fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-
-          Text(
-            r['time'],
-            style: const TextStyle(color: Colors.grey, fontSize: 11),
-          ),
+          // ── Skill tags ────────────────────────────────────────────────
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: tags.map((tag) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(fontSize: 10, color: Colors.black54),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String _capitalizeCategory(String cat) {
+    return cat
+        .split('_')
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 
   Widget _buildSection({
@@ -1567,6 +1692,232 @@ class _SkillChip extends StatelessWidget {
       onDeleted: onDelete,
       backgroundColor: const Color(0xFF00AAA8).withOpacity(0.1),
       labelStyle: const TextStyle(color: Color(0xFF00AAA8)),
+    );
+  }
+}
+
+// ── Trust Score Card ──────────────────────────────────────────────────────────
+class _TrustScoreCard extends StatelessWidget {
+  final TrustScore trustScore;
+  static const Color primaryColor = Color(0xFF00AAA8);
+
+  const _TrustScoreCard({required this.trustScore});
+
+  @override
+  Widget build(BuildContext context) {
+    final score = trustScore.overallScore;
+    final rankPct = trustScore.categoryRankPct;
+    final category = trustScore.category?.replaceAll('_', ' ') ?? '';
+
+    Color scoreColor;
+    String scoreLabel;
+    if (score >= 80) {
+      scoreColor = const Color(0xFF00AAA8);
+      scoreLabel = 'Excellent';
+    } else if (score >= 60) {
+      scoreColor = Colors.amber.shade700;
+      scoreLabel = 'Good';
+    } else if (score >= 40) {
+      scoreColor = Colors.orange;
+      scoreLabel = 'Fair';
+    } else {
+      scoreColor = Colors.red.shade400;
+      scoreLabel = 'Needs Work';
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Title row ─────────────────────────────────────────────────
+          Row(
+            children: [
+              Icon(Icons.verified, color: scoreColor, size: 18),
+              const SizedBox(width: 6),
+              const Text(
+                'AI Trust Score',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (rankPct != null && category.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Top ${(100 - rankPct).toStringAsFixed(0)}% in $category',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // ── Score circle + label ──────────────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: score / 100,
+                      strokeWidth: 7,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation(scoreColor),
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            score.toStringAsFixed(0),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: scoreColor,
+                            ),
+                          ),
+                          Text(
+                            '/100',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      scoreLabel,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: scoreColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Based on ${trustScore.totalReviews} review${trustScore.totalReviews == 1 ? '' : 's'}, delivery record & communication',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── Component bars ────────────────────────────────────────────
+          _ScoreBar(
+            label: 'Work Quality',
+            icon: Icons.workspace_premium_outlined,
+            value: trustScore.workQualityScore,
+          ),
+          _ScoreBar(
+            label: 'On-Time Delivery',
+            icon: Icons.schedule_outlined,
+            value: trustScore.revisionRateScore,
+          ),
+          _ScoreBar(
+            label: 'Responsiveness',
+            icon: Icons.chat_bubble_outline,
+            value: trustScore.responsivenessScore,
+          ),
+          _ScoreBar(
+            label: 'Communication',
+            icon: Icons.sentiment_satisfied_outlined,
+            value: trustScore.communicationSentiment,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreBar extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final double? value; // 0.0 – 1.0
+
+  const _ScoreBar({
+    required this.label,
+    required this.icon,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = (value ?? 0.0).clamp(0.0, 1.0);
+    final pct = (v * 100).toStringAsFixed(0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: Colors.grey[500]),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: v,
+                minHeight: 6,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF00AAA8)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$pct%',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

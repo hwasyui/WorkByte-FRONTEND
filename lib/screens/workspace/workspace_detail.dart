@@ -17,6 +17,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/contract_submission_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../services/proposal_service.dart';
+import '../reviews/review_form.dart';
 import 'contract_messages.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
@@ -236,6 +237,22 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
       if (contractSuccess) {
         _showSnack('Contract marked as completed!', isError: false);
+        // ── Navigate to review form ───────────────────────────────
+        await Future.delayed(
+          const Duration(milliseconds: 600),
+        ); // let snack show briefly
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReviewFormScreen(
+              contractId: _contract.contractId,
+              freelancerName: _contract.freelancerName ?? 'Freelancer',
+              projectTitle: _contract.contractTitle,
+            ),
+          ),
+        );
       } else {
         _showSnack(
           'Submission approved, but failed to update contract status.',
