@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
@@ -48,8 +49,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     _searchController.dispose();
     super.dispose();
   }
-
-  // ── Data ─────────────────────────────────────────────────────────────────
 
   String get _viewerRole {
     final profile = context.read<ProfileProvider>();
@@ -104,7 +103,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     List<ContractModel> base;
 
     if (tabIndex == 0) {
-      // Active = active, under_review, revision_requested
       base = _allContracts
           .where(
             (c) => [
@@ -115,7 +113,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
           )
           .toList();
     } else if (tabIndex == 1) {
-      // Completed = completed, cancelled, disputed
       base = _allContracts
           .where(
             (c) => ['completed', 'cancelled', 'disputed'].contains(c.status),
@@ -141,8 +138,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
 
     return base;
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -187,8 +182,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -215,12 +208,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               children: [
                 Text(
                   'Latest',
-                  style: AppText.bodySemiBold.copyWith(
-                    color: Colors.grey.shade500,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Icon(Icons.sort_rounded, size: 20, color: Colors.grey.shade500),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
               ],
             ),
           ),
@@ -228,8 +226,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       ),
     );
   }
-
-  // ── Search ────────────────────────────────────────────────────────────────
 
   Widget _buildSearchBar() {
     return Padding(
@@ -269,8 +265,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-
   Widget _buildTabBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
@@ -303,8 +297,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  // ── Contract Card ─────────────────────────────────────────────────────────
-
   Widget _buildContractCard(ContractModel contract) {
     final statusColor = _statusColor(contract.status);
     final statusLabel = _statusLabel(contract.status);
@@ -326,7 +318,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status badge + title
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
@@ -336,7 +327,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -373,7 +363,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
             ),
           ),
 
-          // Role tag + budget
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
@@ -419,7 +408,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
             ),
           ),
 
-          // Other party info
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
@@ -496,8 +484,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  // ── Empty State ───────────────────────────────────────────────────────────
-
   Widget _buildEmptyState() {
     return ListView(
       children: [
@@ -536,8 +522,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  // ── Sort Sheet ────────────────────────────────────────────────────────────
-
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
@@ -570,8 +554,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       ),
     );
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   Color _statusColor(String status) {
     switch (status) {
@@ -612,7 +594,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   String _otherPartyInitial(ContractModel contract, String role) {
-    // Placeholder — replace with actual name once you enrich the endpoint
     return role == 'freelancer' ? 'C' : 'F';
   }
 

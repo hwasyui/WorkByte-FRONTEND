@@ -25,14 +25,15 @@ class ProfileProvider extends ChangeNotifier {
     if (isClient) {
       final c = _clientProfile;
       if (c == null) return false;
-      return (c.fullName?.isNotEmpty ?? false) && (c.bio?.isNotEmpty ?? false);
+      // Bio is now optional for debugging
+      return (c.fullName?.isNotEmpty ?? false);
     }
     if (isFreelancer) {
       final f = _freelancerProfile;
       if (f == null) return false;
-      return f.fullName.isNotEmpty &&
-          (f.bio?.isNotEmpty ?? false) &&
-          f.jobTitle != '-';
+      // Bio is now optional for debugging
+      // return f.fullName.isNotEmpty && f.jobTitle != '-';
+      return f.fullName.isNotEmpty; // && f.jobTitle != '-';
     }
     return false;
   }
@@ -211,8 +212,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   void forceRefreshProfilePicture() {
-    // This method forces a rebuild without changing the URL
-    // Useful for cache busting
     imageCache.clear();
     imageCache.clearLiveImages();
     notifyListeners();

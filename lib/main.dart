@@ -11,6 +11,7 @@ import 'providers/contract_submission_provider.dart';
 import 'providers/contract_message_provider.dart';
 import 'providers/review_provider.dart';
 import 'providers/skill_provider.dart';
+import 'providers/notification_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -35,6 +36,7 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ContractSubmissionProvider()),
         ChangeNotifierProvider(create: (_) => ContractMessageProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

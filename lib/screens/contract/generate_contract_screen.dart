@@ -393,17 +393,20 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.secondary,
       appBar: AppBar(
         title: Text(
           'Generate Contract',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
         ),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.secondary,
         foregroundColor: Colors.black,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: _primary),
+            )
           : SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -416,16 +419,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                         decoration: BoxDecoration(
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
-                          ),
+                          border: Border.all(color: Colors.red.withOpacity(0.3)),
                         ),
                         child: Text(
                           _error!,
-                          style: GoogleFonts.poppins(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
+                          style: GoogleFonts.poppins(color: Colors.red, fontSize: 12),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -455,19 +453,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           'Budget Currency',
                           _selectedBudgetCurrency,
                           ['IDR', 'USD'],
-                          (value) => setState(
-                            () => _selectedBudgetCurrency = value ?? 'IDR',
-                          ),
+                          (value) => setState(() => _selectedBudgetCurrency = value ?? 'IDR'),
                         ),
                         const SizedBox(height: 12),
                         _buildDropdown(
                           'Payment Structure',
                           _selectedPaymentStructure,
                           ['full_payment', 'milestone_based'],
-                          (value) => setState(
-                            () => _selectedPaymentStructure =
-                                value ?? 'full_payment',
-                          ),
+                          (value) => setState(() => _selectedPaymentStructure = value ?? 'full_payment'),
                         ),
                       ]),
                       const SizedBox(height: 24),
@@ -477,30 +470,29 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           _endDateController,
                           'YYYY-MM-DD',
                           onTap: _selectDate,
+                          prefixIcon: Icons.calendar_today_outlined,
                         ),
                         const SizedBox(height: 12),
                         _buildTextField(
                           'Duration (e.g., "3 months")',
                           _agreedDurationController,
                           'e.g., 3 months',
+                          prefixIcon: Icons.calendar_today_outlined,
                         ),
                         const SizedBox(height: 12),
                         _buildDropdown(
                           'Termination Notice (days)',
                           _selectedTerminationNotice,
                           ['7', '14', '30'],
-                          (value) => setState(
-                            () => _selectedTerminationNotice = value,
-                          ),
+                          (value) => setState(() => _selectedTerminationNotice = value),
+                          prefixIcon: Icons.calendar_today_outlined,
                         ),
                         const SizedBox(height: 12),
                         _buildDropdown(
                           'Dispute Resolution',
                           _selectedDisputeResolution,
                           ['negotiation', 'mediation', 'arbitration'],
-                          (value) => setState(
-                            () => _selectedDisputeResolution = value,
-                          ),
+                          (value) => setState(() => _selectedDisputeResolution = value),
                         ),
                       ]),
                       const SizedBox(height: 24),
@@ -509,14 +501,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           'Payment Schedule / Milestones',
                           _paymentScheduleController,
                           'e.g. 50% upfront, 50% on completion',
-                          maxLines: 3,
+                          maxLines: 4,
+                          prefixIcon: Icons.description_outlined,
                         ),
                         const SizedBox(height: 12),
-                        _buildCheckbox(
+                        _buildCheckboxTile(
                           'Confidentiality Clause',
                           _confidentiality,
-                          (value) =>
-                              setState(() => _confidentiality = value ?? false),
+                          (value) => setState(() => _confidentiality = value ?? false),
                         ),
                         if (_confidentiality) ...[
                           const SizedBox(height: 12),
@@ -528,18 +520,18 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        _buildCheckbox(
+                        _buildCheckboxTile(
                           'Late Payment Penalty',
                           _latepaymentPenalty,
-                          (value) => setState(
-                            () => _latepaymentPenalty = value ?? false,
-                          ),
+                          (value) => setState(() => _latepaymentPenalty = value ?? false),
                         ),
                         const SizedBox(height: 12),
                         _buildTextField(
                           'Revision Rounds',
                           _revisionRoundsController,
                           '0',
+                          keyboardType: TextInputType.number,
+                          prefixIcon: Icons.sync_outlined,
                           onChanged: (value) {
                             _revisionRounds = int.tryParse(value);
                           },
@@ -549,50 +541,58 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           'Additional Clauses',
                           _additionalClausesController,
                           'Add any additional terms...',
-                          maxLines: 3,
+                          maxLines: 4,
+                          prefixIcon: Icons.description_outlined,
                         ),
-                      ]),
-                      const SizedBox(height: 24),
+                      ], icon: Icons.description_outlined),
+                      const SizedBox(height: 28),
                       if (_contract?.contractPdfUrl != null) ...[
                         ElevatedButton.icon(
                           onPressed: _openContractPdf,
-                          icon: const Icon(Icons.download),
+                          icon: const Icon(Icons.download_outlined),
                           label: Text(
                             'Download Generated PDF',
-                            style: GoogleFonts.poppins(),
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            minimumSize: const Size(double.infinity, 48),
+                            backgroundColor: _primary,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 54),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
                           ),
                         ),
                         const SizedBox(height: 12),
                       ],
-                      ElevatedButton(
+                      ElevatedButton.icon(
                         onPressed: _generating ? null : _generateContract,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primary,
-                          minimumSize: const Size(double.infinity, 48),
-                          disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-                        ),
-                        child: _generating
-                            ? SizedBox(
-                                height: 20,
-                                width: 20,
+                        icon: _generating
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(
-                                    Colors.white.withOpacity(0.7),
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation(Colors.white),
                                 ),
                               )
-                            : Text(
-                                'Generate Contract PDF',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                            : const Icon(Icons.picture_as_pdf_outlined),
+                        label: Text(
+                          'Generate Contract PDF',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                          disabledBackgroundColor: _primary.withOpacity(0.5),
+                          disabledForegroundColor: Colors.white,
+                        ),
                       ),
                       if (_contract?.contractPdfUrl != null &&
                           _contract!.contractPdfUrl!.isNotEmpty) ...[
@@ -605,28 +605,27 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : const Icon(Icons.send),
+                              : const Icon(Icons.send_outlined),
                           label: Text(
                             'Send to Freelancer',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
-                            minimumSize: const Size(double.infinity, 48),
-                            disabledBackgroundColor: Colors.grey.withOpacity(
-                              0.3,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 54),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
+                            elevation: 0,
+                            disabledBackgroundColor: Colors.green.withOpacity(0.5),
                           ),
                         ),
                       ],
+                      const SizedBox(height: 20),
                     ],
                   ],
                 ),
@@ -635,46 +634,35 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children) {
+  Widget _buildSection(String title, List<Widget> children, {IconData icon = Icons.description_outlined}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.secondary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         ...children,
       ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: const Color(0xFF7D7D7D),
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -686,13 +674,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     VoidCallback? onTap,
     Function(String)? onChanged,
     TextInputType? keyboardType,
+    IconData? prefixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -702,22 +691,30 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           onChanged: onChanged,
           keyboardType: keyboardType,
           readOnly: onTap != null,
-          style: GoogleFonts.poppins(fontSize: 12),
+          style: GoogleFonts.poppins(fontSize: 13),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.poppins(
-              fontSize: 12,
-              color: const Color(0xFFB5B4B4),
-            ),
+            hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFB5B4B4)),
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: _primary, size: 20)
+                : null,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFF0F0F1)),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: _primary, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.all(12),
+            contentPadding: prefixIcon != null
+                ? const EdgeInsets.symmetric(vertical: 14)
+                : const EdgeInsets.all(14),
+            filled: true,
+            fillColor: AppColors.secondary,
           ),
         ),
       ],
@@ -728,44 +725,77 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     String label,
     String? value,
     List<String> items,
-    Function(String?) onChanged,
-  ) {
+    Function(String?) onChanged, {
+    IconData? prefixIcon,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _primary),
           items: items
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(item, style: GoogleFonts.poppins(fontSize: 13)),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: _primary, size: 20)
+                : null,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFF0F0F1)),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: _primary, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.all(12),
+            contentPadding: prefixIcon != null
+                ? const EdgeInsets.symmetric(vertical: 14)
+                : const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            filled: true,
+            fillColor: AppColors.secondary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCheckbox(String label, bool value, Function(bool?)? onChanged) {
-    return Row(
-      children: [
-        Checkbox(value: value, onChanged: onChanged, activeColor: _primary),
-        Text(label, style: GoogleFonts.poppins(fontSize: 12)),
-      ],
+  Widget _buildCheckboxTile(
+    String label,
+    bool value,
+    Function(bool?) onChanged,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: AppColors.secondary,
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: _primary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          ),
+          Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+        ],
+      ),
     );
   }
 }

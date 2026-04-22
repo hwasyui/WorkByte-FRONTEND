@@ -68,15 +68,13 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
         return;
       }
 
-      // Post skill metadata for this role
       final skillMeta = provider.draftRoleSkillMeta[i] ?? {};
       for (final entry in skillMeta.entries) {
         await provider.createRoleSkill(token, {
           'job_role_id': roleCreated.jobRoleId,
           'skill_id': entry.key,
           'importance_level': entry.value['importance_level'] ?? 'required',
-          'is_required':
-              entry.value['importance_level'] == 'required', // ← derived
+          'is_required': entry.value['importance_level'] == 'required',
         });
         if (!mounted) return;
       }
@@ -100,7 +98,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
           );
 
           if (uploaded != null) {
-            // ← add back null check
             await provider.createJobFile(token, {
               'job_post_id': created.jobPostId,
               'file_name': uploaded['file_name'],
@@ -110,13 +107,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
             });
           }
         } catch (e) {
-          // Non-fatal: show warning but continue
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  'Warning: could not upload ${fileData['file_name']}: $e',
-                ),
+                content: Text('Warning: could not upload ${fileData['file_name']}: $e'),
                 backgroundColor: const Color(0xFFFF9800),
               ),
             );
@@ -144,282 +138,320 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     final files = provider.draftFiles;
 
     return Scaffold(
-      body: SafeArea(
-        child: Container(
-          constraints: const BoxConstraints.expand(),
-          color: const Color(0xFFFFFFFF),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 27),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Header ────────────────────────────────────────────
-                Container(
-                  color: _primary,
-                  padding: const EdgeInsets.only(top: 23),
-                  width: double.infinity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      InkWell(
-                        onTap: () => Navigator.pop(context),
-                        child: const Padding(
-                          padding: EdgeInsets.only(bottom: 15, left: 18),
-                          child: Icon(
-                            Icons.chevron_left,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
+      backgroundColor: _primary,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // ── Job detail rows ─────────────────────────────
+                    _buildRow('Title', draft['job_title'] ?? '', Icons.description_outlined),
+                    _buildRow('Description', draft['job_description'] ?? '', Icons.article_outlined),
+                    _buildRow('Project Type', _capitalize(draft['project_type'] ?? ''), Icons.person_outline),
+                    if (draft['working_days'] != null)
+                      _buildRow('Working Days', '${draft['working_days']} days', Icons.calendar_today_outlined),
+                    if (draft['deadline'] != null)
+                      _buildRow('Deadline', draft['deadline'] as String, Icons.calendar_today_outlined),
+                    if (draft['experience_level'] != null)
+                      _buildRow('Experience Level', _capitalize(draft['experience_level'] as String), Icons.bar_chart_outlined),
+                    if (draft['project_scope'] != null)
+                      _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
+
+                    // ── Roles ───────────────────────────────────────
+                    if (roles.isNotEmpty) ...[
                       const Padding(
-                        padding: EdgeInsets.only(bottom: 7, left: 29),
+                        padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
                         child: Text(
-                          'Post new job',
+                          'Roles',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 20, left: 29),
+                      ...roles.asMap().entries.map((e) {
+                        final role = e.value;
+                        final skillNames = skillNamesMap[e.key] ?? [];
+                        final title = role['role_title'] as String? ?? '';
+                        final initials = title
+                            .trim()
+                            .split(' ')
+                            .where((w) => w.isNotEmpty)
+                            .take(2)
+                            .map((w) => w[0].toUpperCase())
+                            .join();
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: AppColors.primary,
+                                  child: Text(
+                                    initials,
+                                    style: const TextStyle(
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        skillNames.isNotEmpty
+                                            ? skillNames.join(', ')
+                                            : 'No skills specified',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF9CA3AF),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (role['role_budget'] != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${role['budget_currency'] ?? 'IDR'} ${(role['role_budget'] as double).toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+
+                    // ── Attachments ─────────────────────────────────
+                    if (files.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
                         child: Text(
-                          'Summary',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                          'Attachments (${files.length} file${files.length == 1 ? '' : 's'})',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      ...files.map(
+                        (f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8, left: 20, right: 20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.attach_file, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    f['file_name'] as String,
+                                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  (f['file_type'] as String).toUpperCase(),
+                                  style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
 
-                const SizedBox(height: 25),
-
-                // ── Job detail rows ───────────────────────────────────
-                _buildRow('Title', draft['job_title'] ?? ''),
-                _buildRow('Description', draft['job_description'] ?? ''),
-                _buildRow(
-                  'Project Type',
-                  _capitalize(draft['project_type'] ?? ''),
-                ),
-                if (draft['working_days'] != null)
-                  _buildRow('Working Days', '${draft['working_days']} days'),
-                if (draft['deadline'] != null)
-                  _buildRow('Deadline', draft['deadline'] as String),
-                if (draft['experience_level'] != null)
-                  _buildRow(
-                    'Experience Level',
-                    _capitalize(draft['experience_level'] as String),
-                  ),
-                if (draft['project_scope'] != null)
-                  _buildRow(
-                    'Project Scope',
-                    _capitalize(draft['project_scope'] as String),
-                  ),
-
-                // ── Roles + Skills ────────────────────────────────────
-                if (roles.isNotEmpty) ...[
-                  _sectionLabel('Roles'),
-                  ...roles.asMap().entries.map((e) {
-                    final role = e.value;
-                    final skillNames = skillNamesMap[e.key] ?? [];
-                    return Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: 14,
-                        left: 29,
-                        right: 29,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9F9F9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFF0F0F1)),
+                    // ── Submit status ───────────────────────────────
+                    if (_isSubmitting && _submitStatus.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16, bottom: 4),
+                        child: Center(
+                          child: Text(
+                            _submitStatus,
+                            style: const TextStyle(color: AppColors.primary, fontSize: 12),
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    role['role_title'] as String? ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF333333),
-                                    ),
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Post button ─────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSubmitting ? null : _onPostJob,
+                          icon: _isSubmitting
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                                ),
-                                if (role['role_budget'] != null)
-                                  Text(
-                                    '${role['budget_currency'] ?? 'IDR'} ${(role['role_budget'] as double).toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                              ],
+                                )
+                              : const Icon(Icons.send_outlined, size: 18),
+                          label: const Text(
+                            'Post new job',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            if (skillNames.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: skillNames
-                                    .map(
-                                      (name) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.secondary,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          name,
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ] else
-                              const Padding(
-                                padding: EdgeInsets.only(top: 6),
-                                child: Text(
-                                  'No skills specified',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFFB5B4B4),
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                       ),
-                    );
-                  }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: _primary,
+      width: double.infinity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: -40,
+            top: -20,
+            child: Container(
+              width: 190,
+              height: 190,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 24,
+            top: 52,
+            child: _buildDotGrid(),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 20),
+                    child: Text(
+                      'Post new job',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 20),
+                    child: Text(
+                      'Summary',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ),
                 ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                // ── Attachments ───────────────────────────────────────
-                if (files.isNotEmpty) ...[
-                  _sectionLabel(
-                    'Attachments (${files.length} file${files.length == 1 ? '' : 's'})',
-                  ),
-                  ...files.map(
-                    (f) => Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: 8,
-                        left: 29,
-                        right: 29,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9F9F9),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFF0F0F1)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.attach_file,
-                              size: 14,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                f['file_name'] as String,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF333333),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              (f['file_type'] as String).toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFFB5B4B4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                const SizedBox(height: 16),
-
-                // ── Submit status ─────────────────────────────────────
-                if (_isSubmitting && _submitStatus.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Center(
-                      child: Text(
-                        _submitStatus,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // ── Post button ───────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 29),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSubmitting ? null : _onPostJob,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: _primary.withOpacity(0.6),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Post new job',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
+  Widget _buildDotGrid() {
+    return Column(
+      children: List.generate(
+        4,
+        (row) => Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: List.generate(
+              3,
+              (col) => Container(
+                width: 4,
+                height: 4,
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -427,43 +459,56 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     );
   }
 
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
-  Widget _sectionLabel(String text) => Container(
-    margin: const EdgeInsets.only(bottom: 10, left: 29, top: 4),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Color(0xFF7D7D7D),
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  );
-
-  Widget _buildRow(String label, String value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        margin: const EdgeInsets.only(bottom: 6, left: 29),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF7D7D7D),
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
+  Widget _buildRow(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-      Container(
-        margin: const EdgeInsets.only(bottom: 20, left: 29, right: 44),
-        width: double.infinity,
-        child: Text(
-          value,
-          style: const TextStyle(color: Color(0xFFB5B4B4), fontSize: 12),
-        ),
-      ),
-    ],
-  );
+        const Divider(height: 1, color: Color(0xFFF0F0F0), indent: 20, endIndent: 20),
+      ],
+    );
+  }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }

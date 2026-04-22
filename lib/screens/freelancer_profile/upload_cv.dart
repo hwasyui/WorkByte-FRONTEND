@@ -68,10 +68,7 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ── Header (same style as profile page) ────────────────────────
           _buildHeader(context),
-
-          // ── Scrollable body ────────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
@@ -95,13 +92,9 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // ── Drop zone ─────────────────────────────────────────
                   _buildDropZone(),
 
                   const SizedBox(height: 32),
-
-                  // ── Supported formats ──────────────────────────────────
                   Text(
                     'Supported formats',
                     style: GoogleFonts.poppins(
@@ -115,32 +108,10 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
 
                   const SizedBox(height: 32),
 
-                  // ── Analyze button ────────────────────────────────────
                   _buildAnalyzeButton(),
 
                   const SizedBox(height: 14),
 
-                  // ── Secure label ──────────────────────────────────────
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.lock_outline,
-                          size: 13,
-                          color: AppColors.primary.withOpacity(0.7),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Secure analysis powered by AI',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.primary.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -150,7 +121,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
     return ClipPath(
@@ -168,7 +138,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
         ),
         child: Stack(
           children: [
-            // Decorative circles
             Positioned(
               bottom: 10,
               left: -45,
@@ -193,13 +162,11 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                 ),
               ),
             ),
-            // Dot pattern top-right
             Positioned(
               top: topPadding + 16,
               right: 24,
               child: _buildDotGrid(),
             ),
-            // Back button + title
             Positioned(
               top: topPadding + 4,
               left: 4,
@@ -255,7 +222,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     );
   }
 
-  // ── Drop zone ───────────────────────────────────────────────────────────────
   Widget _buildDropZone() {
     return GestureDetector(
       onTap: _pickFile,
@@ -284,7 +250,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // CV illustration
         Stack(
           alignment: Alignment.center,
           children: [
@@ -296,7 +261,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                 shape: BoxShape.circle,
               ),
             ),
-            // Document icon
             Positioned(
               top: 16,
               child: Container(
@@ -356,7 +320,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                 ),
               ),
             ),
-            // Upload cloud arrow (bottom of circle)
             Positioned(
               bottom: 4,
               right: 8,
@@ -381,7 +344,7 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                 ),
               ),
             ),
-            // Sparkles
+
             Positioned(
               top: 10,
               left: 8,
@@ -411,7 +374,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
         ),
         const SizedBox(height: 12),
 
-        // "or" divider
         Row(
           children: [
             Expanded(
@@ -440,7 +402,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Browse button (outlined)
         OutlinedButton.icon(
           onPressed: _pickFile,
           icon: const Icon(Icons.upload_file_outlined, size: 18),
@@ -532,7 +493,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     );
   }
 
-  // ── Supported formats ───────────────────────────────────────────────────────
   Widget _buildSupportedFormats() {
     return Row(
       children: [
@@ -642,7 +602,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     );
   }
 
-  // ── Analyze button ──────────────────────────────────────────────────────────
   Widget _buildAnalyzeButton() {
     return SizedBox(
       width: double.infinity,
@@ -680,7 +639,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
   }
 }
 
-// ── Banner wave clipper (same curve as profile page) ──────────────────────────
 class _BannerClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

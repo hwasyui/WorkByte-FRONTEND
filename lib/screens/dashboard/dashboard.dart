@@ -93,10 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRecommendedJobsList() {
     if (_isLoadingJobs) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 2,
-        ),
+        child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
       );
     }
     if (_noEmbeddingYet) {
@@ -139,16 +136,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.business,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
+                  child: const Icon(Icons.business, color: AppColors.primary, size: 20),
                 ),
                 title: job.jobTitle,
                 category: job.projectType.toUpperCase(),
-                biddings:
-                    '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
                 matchScore: job.matchScoreInt,
@@ -165,15 +157,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token != null) {
       try {
-        final freelancersData = await ApiService.getAllFreelancers(
-          auth.token!,
-          limit: 10,
-        );
+        final freelancersData = await ApiService.getAllFreelancers(auth.token!, limit: 10);
         if (mounted) {
           setState(() {
-            _topFreelancers = freelancersData
-                .map((f) => FreelancerModel.fromJson(f))
-                .toList();
+            _topFreelancers = freelancersData.map((f) => FreelancerModel.fromJson(f)).toList();
             _isLoadingFreelancers = false;
           });
         }
@@ -207,14 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PeopleListScreen(showClients: !profile.isClient),
-        ),
-      );
-    } else if (index == 4) {
-      final profile = context.read<ProfileProvider>();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
           builder: (_) => profile.isClient
               ? const ClientProfileScreen()
               : const ProfileScreen(),
@@ -223,6 +202,13 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       setState(() => _currentNavIndex = index);
     }
+  }
+
+  void _handleCenterButton() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
+    );
   }
 
   void _navigateToPostJob() {
@@ -280,27 +266,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isClient = context.watch<ProfileProvider>().isClient;
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: isClient
-          ? FloatingActionButton(
-              onPressed: _navigateToPostJob,
-              backgroundColor: AppColors.primary,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: null,
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -324,11 +294,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 38,
                             height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              size: 24,
-                              color: AppColors.primary,
-                            ),
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.person, size: 24, color: AppColors.primary),
                           );
                         } else if (File(imageUrl).existsSync()) {
                           displayImage = Image.file(
@@ -336,101 +303,92 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 38,
                             height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              size: 24,
-                              color: AppColors.primary,
-                            ),
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.person, size: 24, color: AppColors.primary),
                           );
                         } else {
-                          displayImage = const Icon(
-                            Icons.person,
-                            size: 24,
-                            color: AppColors.primary,
-                          );
+                          displayImage =
+                              const Icon(Icons.person, size: 24, color: AppColors.primary);
                         }
                       } else {
-                        displayImage = const Icon(
-                          Icons.person,
-                          size: 24,
-                          color: AppColors.primary,
-                        );
+                        displayImage =
+                            const Icon(Icons.person, size: 24, color: AppColors.primary);
                       }
 
                       return Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: displayImage,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Hi, ${profile.displayName}!',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF333333),
-                                    ),
+                            clipBehavior: Clip.antiAlias,
+                            child: displayImage,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hi, ${profile.displayName}!',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF333333),
                                   ),
-                                  Text(
-                                    "Let's find your next opportunity",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: const Color(0xFF7D7D7D),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const _NotificationPlaceholder(),
                                 ),
-                              ),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.secondary,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.notifications_outlined,
-                                      size: 20,
-                                      color: AppColors.primary,
-                                    ),
+                                Text(
+                                  "Let's find your next opportunity",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: const Color(0xFF7D7D7D),
                                   ),
-                                  Positioned(
-                                    top: 6,
-                                    right: 6,
-                                    child: Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFEC1B1B),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const _NotificationPlaceholder(),
                               ),
                             ),
-                          ],
-                        );
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondary,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.notifications_outlined,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFEC1B1B),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
                     },
                   ),
 
@@ -446,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.secondary,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           children: [
@@ -454,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.12),
+                                color: AppColors.primary.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -519,6 +477,61 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
 
                   const SearchBarWidget(),
+                  const SizedBox(height: 20),
+
+                  // Quick-access cards: Jobs | Freelancers | Clients
+                  Consumer<ProfileProvider>(
+                    builder: (context, profile, _) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _QuickAccessCard(
+                              icon: Icons.work_rounded,
+                              label: 'Jobs',
+                              subtitle: 'View all jobs',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => profile.isClient
+                                      ? const client_job_list.JobListScreen()
+                                      : const JobListScreen(),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _QuickAccessCard(
+                              icon: Icons.person_rounded,
+                              label: 'Freelancers',
+                              subtitle: 'View all freelancers',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PeopleListScreen(showClients: false),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _QuickAccessCard(
+                              icon: Icons.business_rounded,
+                              label: 'Clients',
+                              subtitle: 'View all clients',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PeopleListScreen(showClients: true),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+
                   const SizedBox(height: 24),
 
                   // Recommended Jobs — freelancers only
@@ -530,7 +543,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           SectionHeader(
                             title: 'Recommended for You',
-                            onViewAll: () {},
+                            onViewAll: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const JobListScreen()),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
@@ -552,7 +568,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           SectionHeader(
                             title: 'Top Freelancers',
-                            onViewAll: () {},
+                            onViewAll: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PeopleListScreen(showClients: false),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
@@ -565,81 +586,67 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   )
                                 : _topFreelancers.isEmpty
-                                ? const Center(
-                                    child: Text('No freelancers available'),
-                                  )
-                                : ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: _topFreelancers.length,
-                                    itemBuilder: (context, index) {
-                                      final freelancer = _topFreelancers[index];
-                                      return Row(
-                                        children: [
-                                          JobCard(
-                                            posterName: freelancer.displayName,
-                                            posterAvatar: Container(
-                                              width: 35,
-                                              height: 35,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.secondary,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                image:
-                                                    freelancer.profilePictureUrl !=
-                                                            null &&
-                                                        freelancer
-                                                            .profilePictureUrl!
-                                                            .isNotEmpty
-                                                    ? DecorationImage(
-                                                        image: freelancer
-                                                                .profilePictureUrl!
-                                                                .startsWith(
-                                                                  'http',
-                                                                )
-                                                            ? NetworkImage(
-                                                                freelancer
-                                                                    .profilePictureUrl!,
-                                                              )
-                                                            : FileImage(
-                                                                    File(
-                                                                      freelancer
-                                                                          .profilePictureUrl!,
-                                                                    ),
-                                                                  )
-                                                                  as ImageProvider,
-                                                        fit: BoxFit.cover,
-                                                      )
-                                                    : null,
+                                    ? const Center(child: Text('No freelancers available'))
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        itemCount: _topFreelancers.length,
+                                        itemBuilder: (context, index) {
+                                          final freelancer = _topFreelancers[index];
+                                          return Row(
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => PeopleProfileScreen(
+                                                      isClient: false,
+                                                      freelancer: freelancer,
+                                                    ),
+                                                  ),
+                                                ),
+                                                child: JobCard(
+                                                  posterName: freelancer.displayName,
+                                                  posterAvatar: Container(
+                                                    width: 35,
+                                                    height: 35,
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.secondary,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      image: freelancer.profilePictureUrl != null &&
+                                                              freelancer.profilePictureUrl!.isNotEmpty
+                                                          ? DecorationImage(
+                                                              image: freelancer.profilePictureUrl!
+                                                                      .startsWith('http')
+                                                                  ? NetworkImage(
+                                                                          freelancer.profilePictureUrl!)
+                                                                      as ImageProvider
+                                                                  : FileImage(File(
+                                                                      freelancer.profilePictureUrl!)),
+                                                              fit: BoxFit.cover,
+                                                            )
+                                                          : null,
+                                                    ),
+                                                    child: freelancer.profilePictureUrl == null ||
+                                                            freelancer.profilePictureUrl!.isEmpty
+                                                        ? const Icon(Icons.person,
+                                                            color: AppColors.primary, size: 20)
+                                                        : null,
+                                                  ),
+                                                  title: freelancer.displayName,
+                                                  category: freelancer.jobTitle,
+                                                  biddings: freelancer.totalProjects > 0
+                                                      ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
+                                                      : 'New freelancer',
+                                                  salary: freelancer.formattedRate,
+                                                  jobType: 'Freelancer',
+                                                ),
                                               ),
-                                              child:
-                                                  freelancer.profilePictureUrl ==
-                                                          null ||
-                                                      freelancer
-                                                          .profilePictureUrl!
-                                                          .isEmpty
-                                                  ? const Icon(
-                                                      Icons.person,
-                                                      color: AppColors.primary,
-                                                      size: 20,
-                                                    )
-                                                  : null,
-                                            ),
-                                            title: freelancer.displayName,
-                                            category: freelancer.jobTitle,
-                                            biddings:
-                                                freelancer.totalProjects > 0
-                                                ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
-                                                : 'New freelancer',
-                                            salary: freelancer.formattedRate,
-                                            jobType: 'Freelancer',
-                                          ),
-                                          if (index <
-                                              _topFreelancers.length - 1)
-                                            const SizedBox(width: 12),
-                                        ],
-                                      );
-                                    },
-                                  ),
+                                              if (index < _topFreelancers.length - 1)
+                                                const SizedBox(width: 12),
+                                            ],
+                                          );
+                                        },
+                                      ),
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -702,19 +709,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: HomeBottomNavBar(
-        currentIndex: _currentNavIndex,
-        onTap: _handleNavigation,
-        showCenterButton: false,
+      bottomNavigationBar: Consumer<AuthProvider>(
+        builder: (context, auth, _) => HomeBottomNavBar(
+          currentIndex: _currentNavIndex,
+          onTap: _handleNavigation,
+          onCenterTap: _handleCenterButton,
+          showCenterButton: !auth.currentUser!.isFreelancer,
+        ),
       ),
     );
   }
@@ -732,6 +740,90 @@ class _DashboardHeader extends StatelessWidget {
         'assets/dashboard.png',
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
+      ),
+    );
+  }
+}
+
+// ── Quick-access card ─────────────────────────────────────────────────────────
+class _QuickAccessCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _QuickAccessCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 9,
+                color: const Color(0xFF7D7D7D),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -765,7 +857,7 @@ class _CategoryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -810,7 +902,7 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-// Placeholder screen so the notification tap doesn't crash
+// ── Notification placeholder ───────────────────────────────────────────────────
 class _NotificationPlaceholder extends StatelessWidget {
   const _NotificationPlaceholder();
 
@@ -829,10 +921,7 @@ class _NotificationPlaceholder extends StatelessWidget {
       body: Center(
         child: Text(
           'No notifications yet',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: const Color(0xFF7D7D7D),
-          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF7D7D7D)),
         ),
       ),
     );
