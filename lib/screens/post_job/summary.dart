@@ -168,8 +168,8 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       _buildRow('Deadline', draft['deadline'] as String, Icons.calendar_today_outlined),
                     if (draft['experience_level'] != null)
                       _buildRow('Experience Level', _capitalize(draft['experience_level'] as String), Icons.bar_chart_outlined),
-                    if (draft['project_scope'] != null)
-                      _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
+                    // if (draft['project_scope'] != null)
+                    //   _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
 
                     // ── Roles ───────────────────────────────────────
                     if (roles.isNotEmpty) ...[

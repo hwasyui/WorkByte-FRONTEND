@@ -502,7 +502,6 @@ class _RoleCardState extends State<_RoleCard> {
                           controller: _budgetCtrl,
                           hint: 'Amount',
                           keyboardType: TextInputType.number,
-                          prefixIcon: Icons.monetization_on_outlined,
                           bottomMargin: 0,
                         ),
                       ),
@@ -728,24 +727,24 @@ class _RoleCardState extends State<_RoleCard> {
                           ),
                           color: AppColors.secondary.withOpacity(0.3),
                         ),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.secondary,
-                              ),
-                              child: const Icon(Icons.add_rounded, color: _primary, size: 20),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Add skills to this role',
-                              style: TextStyle(color: _primary, fontSize: 13, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
+                        // child: Column(
+                        //   children: [
+                        //     Container(
+                        //       width: 36,
+                        //       height: 36,
+                        //       decoration: BoxDecoration(
+                        //         shape: BoxShape.circle,
+                        //         color: AppColors.secondary,
+                        //       ),
+                        //       child: const Icon(Icons.add_rounded, color: _primary, size: 20),
+                        //     ),
+                        //     const SizedBox(height: 8),
+                        //     const Text(
+                        //       'Add skills to this role',
+                        //       style: TextStyle(color: _primary, fontSize: 13, fontWeight: FontWeight.w500),
+                        //     ),
+                        //   ],
+                        // ),
                       ),
                     ),
                   ],

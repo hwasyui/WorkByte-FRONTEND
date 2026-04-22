@@ -15,9 +15,7 @@ class ContractService {
     'Authorization': 'Bearer $token',
   };
 
-  // ── GET /contracts ────────────────────────────────────────────────────────
-
-  /// GET /contracts
+  /// GET /contracts - Get all contracts for current user
   Future<List<ContractModel>> getAllContracts(String token) async {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts'),
@@ -26,7 +24,10 @@ class ContractService {
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts → ${res.statusCode}');
     if (res.statusCode == 200) {
-      final list = body['data'] ?? body['details'] ?? [];
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null) 
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
       return (list as List)
           .map((e) => ContractModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -46,7 +47,10 @@ class ContractService {
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/client/$clientId → ${res.statusCode}');
     if (res.statusCode == 200) {
-      final list = body['data'] ?? body['details'] ?? [];
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null) 
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
       return (list as List)
           .map((e) => ContractModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -66,7 +70,10 @@ class ContractService {
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
-      final list = body['data'] ?? body['details'] ?? [];
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null) 
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
       return (list as List)
           .map((e) => ContractModel.fromJson(e as Map<String, dynamic>))
           .toList();

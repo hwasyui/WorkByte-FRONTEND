@@ -528,7 +528,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _termRow('Project Type', _capitalize(widget.job.projectType)),
-          _termRow('Project Scope', _capitalize(widget.job.projectScope)),
+          // _termRow('Project Scope', _capitalize(widget.job.projectScope)),
           if (widget.job.workingDays != null)
             _termRow('Working Days', '${widget.job.workingDays} days'),
           if (widget.job.deadline != null)

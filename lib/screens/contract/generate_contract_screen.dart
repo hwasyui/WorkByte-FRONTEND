@@ -594,8 +594,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           disabledForegroundColor: Colors.white,
                         ),
                       ),
-                      if (_contract?.contractPdfUrl != null &&
-                          _contract!.contractPdfUrl!.isNotEmpty) ...[
+                      if (_contract?.contractPdfUrl != null) ...[
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: _sending ? null : _sendToFreelancer,
@@ -714,7 +713,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                 ? const EdgeInsets.symmetric(vertical: 14)
                 : const EdgeInsets.all(14),
             filled: true,
-            fillColor: AppColors.secondary,
+            fillColor: Colors.white,
           ),
         ),
       ],
@@ -768,7 +767,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                 ? const EdgeInsets.symmetric(vertical: 14)
                 : const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             filled: true,
-            fillColor: AppColors.secondary,
+            fillColor: Colors.white,
           ),
         ),
       ],

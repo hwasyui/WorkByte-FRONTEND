@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token != null) {
       try {
-        final freelancersData = await ApiService.getAllFreelancers(auth.token!, limit: 10);
+        final freelancersData = await ApiService.getAllFreelancers(auth.token!, pageSize: 10);
         if (mounted) {
           setState(() {
             _topFreelancers = freelancersData.map((f) => FreelancerModel.fromJson(f)).toList();
@@ -205,10 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleCenterButton() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
-    );
+    _navigateToPostJob();
   }
 
   void _navigateToPostJob() {

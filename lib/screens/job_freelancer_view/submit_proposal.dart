@@ -33,6 +33,9 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
 
   List<PlatformFile> _attachedFiles = [];
   bool _isSubmitting = false;
+  
+  String _durationNumber = '1';
+  String _durationUnit = 'day';
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -111,6 +114,8 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
           ? widget.role.roleBudget!
           : double.parse(_budgetController.text.trim());
 
+      final proposedDuration = '$_durationNumber $_durationUnit${_durationNumber != '1' ? 's' : ''}';
+      
       await ProposalService().submitProposal(
         token: token,
         jobPostId: widget.job.jobPostId,
@@ -118,9 +123,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         freelancerId: freelancerId,
         coverLetter: _coverLetterController.text.trim(),
         proposedBudget: proposedBudget,
-        proposedDuration: _durationController.text.trim().isEmpty
-            ? null
-            : _durationController.text.trim(),
+        proposedDuration: proposedDuration,
         files: _attachedFiles,
       );
 
@@ -426,10 +429,59 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
   }
 
   Widget _buildDurationField() {
-    return TextFormField(
-      controller: _durationController,
-      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
-      decoration: _inputDecoration(hint: 'e.g. 3 days, 2 weeks, 1 month'),
+    return Row(
+      children: [
+        // Number dropdown (1-31)
+        Expanded(
+          flex: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _durationNumber,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
+                isExpanded: true,
+                items: List.generate(31, (i) {
+                  final num = (i + 1).toString();
+                  return DropdownMenuItem(value: num, child: Text(num));
+                }).toList(),
+                onChanged: (v) => setState(() => _durationNumber = v!),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Unit dropdown (day, week, month)
+        Expanded(
+          flex: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _durationUnit,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'day', child: Text('Day')),
+                  DropdownMenuItem(value: 'week', child: Text('Week')),
+                  DropdownMenuItem(value: 'month', child: Text('Month')),
+                ],
+                onChanged: (v) => setState(() => _durationUnit = v!),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

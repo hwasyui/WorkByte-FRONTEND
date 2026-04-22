@@ -21,7 +21,6 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   final _daysController = TextEditingController(text: '7');
 
   String _projectType = 'individual';
-  String _projectScope = 'small';
   String _experienceLevel = 'entry';
   DateTime? _deadline;
   bool _submitted = false;
@@ -80,7 +79,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       'job_title': _titleController.text.trim(),
       'job_description': _descController.text.trim(),
       'project_type': _projectType,
-      'project_scope': _projectScope,
+      'project_scope': 'medium',
       'working_days': int.parse(_daysController.text.trim()),
       'experience_level': _experienceLevel,
       'deadline':
@@ -129,14 +128,6 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                     maxLines: 5,
                     prefixIcon: Icons.description_outlined,
                   ),
-                  _buildLabel('Project Scope'),
-                  _buildDropdown<String>(
-                    value: _projectScope,
-                    items: const ['small', 'medium', 'large'],
-                    labels: const ['Small', 'Medium', 'Large'],
-                    prefixIcon: Icons.gps_fixed,
-                    onChanged: (v) => setState(() => _projectScope = v!),
-                  ),
                   _buildLabel('Experience Level'),
                   _buildDropdown<String>(
                     value: _experienceLevel,
@@ -159,7 +150,6 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                       height: 54,
                       child: ElevatedButton.icon(
                         onPressed: _onNext,
-                        icon: const Icon(Icons.send_outlined, size: 18),
                         label: const Text(
                           'Next',
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),

@@ -109,7 +109,7 @@ class JobPostProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      _jobPosts = await _jobPostService.getAllJobPosts(token);
+      _jobPosts = await _jobPostService.getAllJobPosts(token, pageSize: 100);
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }

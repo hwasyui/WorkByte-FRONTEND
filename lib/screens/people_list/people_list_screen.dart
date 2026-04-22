@@ -62,8 +62,8 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
 
     try {
       final rawItems = widget.showClients
-          ? await ApiService.getAllClients(auth.token!)
-          : await ApiService.getAllFreelancers(auth.token!);
+          ? await ApiService.getAllClients(auth.token!, pageSize: 100)
+          : await ApiService.getAllFreelancers(auth.token!, pageSize: 100);
 
       final mapped = widget.showClients
           ? rawItems.map((e) => ClientModel.fromJson(e)).toList()

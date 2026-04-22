@@ -19,18 +19,49 @@ class JobPostService {
   };
 
   // ─── Job Posts ────────────────────────────────────────────────────────────
-  Future<List<JobPostModel>> getAllJobPosts(String token) async {
+  Future<List<JobPostModel>> getAllJobPosts(String token, {int page = 1, int pageSize = 20}) async {
     final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts'),
+      Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      }),
       headers: _headers(token),
     );
     final body = jsonDecode(res.body);
     debugPrint('GET /job-posts: $body');
     if (res.statusCode == 200) {
-      final list = body['details'] ?? body['data'] ?? [];
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null) 
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
       return (list as List)
           .map((e) => JobPostModel.fromJson(e as Map<String, dynamic>))
           .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load job posts');
+  }
+
+  Future<Map<String, dynamic>> getAllJobPostsWithPagination(String token, {int page = 1, int pageSize = 20}) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      }),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null) 
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
+      final items = (list as List)
+          .map((e) => JobPostModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final pagination = (details is Map && details['pagination'] != null)
+          ? details['pagination']
+          : {'page': page, 'page_size': pageSize, 'total': 0, 'total_pages': 0};
+      return {'items': items, 'pagination': pagination};
     }
     throw Exception(body['details'] ?? 'Failed to load job posts');
   }

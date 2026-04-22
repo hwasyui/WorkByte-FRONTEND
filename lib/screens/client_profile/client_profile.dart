@@ -110,54 +110,164 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     bioController.text = bioText;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit About'),
-        content: TextField(
-          controller: bioController,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Tell us about your company...',
-            border: OutlineInputBorder(),
+      barrierColor: Colors.black45,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE0E7FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit_outlined,
+                        color: Color(0xFF4F46E5), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Edit About',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(dialogContext),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE0E7FF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close,
+                          color: Color(0xFF4F46E5), size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Tell us about your company',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bioController,
+                maxLines: 7,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                decoration: InputDecoration(
+                  hintText: 'Tell us about your company...',
+                  hintStyle: const TextStyle(
+                      color: Color(0xFF9CA3AF), fontSize: 14),
+                  filled: true,
+                  fillColor: const Color(0xFFEEF0FF),
+                  contentPadding: const EdgeInsets.all(16),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF4F46E5), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF4F46E5), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                height: 1,
+                color: const Color(0xFFE5E7EB),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Color(0xFF4F46E5),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final newBio = bioController.text;
+                        final bioValue = newBio.trim().isEmpty ? null : newBio;
+                        setState(() => bioText = newBio);
+
+                        final auth =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final profile = Provider.of<ProfileProvider>(context,
+                            listen: false);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final identifier =
+                            profile.clientProfile?.clientId ??
+                                auth.currentUser!.userId;
+
+                        Navigator.pop(dialogContext);
+
+                        final success = await profile.updateProfile(
+                          token: auth.token!,
+                          identifier: identifier,
+                          fields: {'bio': bioValue},
+                        );
+                        if (success) await _refreshProfile();
+                        if (mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(success
+                                  ? 'About saved successfully'
+                                  : profile.error ?? 'Failed to save About'),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 28, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newBio = bioController.text;
-              final bioValue = newBio.trim().isEmpty ? null : newBio;
-              setState(() => bioText = newBio);
-
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(context, listen: false);
-              final messenger = ScaffoldMessenger.of(context);
-              final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-
-              Navigator.pop(dialogContext);
-
-              final success = await profile.updateProfile(
-                token: auth.token!,
-                identifier: identifier,
-                fields: {'bio': bioValue},
-              );
-              if (success) await _refreshProfile();
-              if (mounted) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? 'About saved successfully'
-                        : profile.error ?? 'Failed to save About'),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
