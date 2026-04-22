@@ -21,6 +21,22 @@ class ProfileProvider extends ChangeNotifier {
   bool get isClient => _userType == 'client';
   bool get isFreelancer => _userType == 'freelancer';
 
+  bool get isProfileComplete {
+    if (isClient) {
+      final c = _clientProfile;
+      if (c == null) return false;
+      return (c.fullName?.isNotEmpty ?? false) && (c.bio?.isNotEmpty ?? false);
+    }
+    if (isFreelancer) {
+      final f = _freelancerProfile;
+      if (f == null) return false;
+      return f.fullName.isNotEmpty &&
+          (f.bio?.isNotEmpty ?? false) &&
+          f.jobTitle != '-';
+    }
+    return false;
+  }
+
   String get displayName {
     if (isClient) return _clientProfile?.displayName ?? 'User';
     return _freelancerProfile?.displayName ?? 'User';

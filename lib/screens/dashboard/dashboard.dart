@@ -9,9 +9,7 @@ import '../../core/constants/colors.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_card.dart';
-import '../../widgets/category_tile.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
-import '../../widgets/home_header.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../client_profile/client_profile.dart';
 import '../../screens/post_job/job_detail.dart';
@@ -200,7 +198,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } else if (index == 2) {
-      // Workspace — both roles
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
@@ -229,9 +226,55 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToPostJob() {
+    final profile = context.read<ProfileProvider>();
+    if (!profile.isProfileComplete) {
+      _showIncompleteProfileDialog(isClient: true);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PostNewJobJobDetail()),
+    );
+  }
+
+  void _showIncompleteProfileDialog({required bool isClient}) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Profile Incomplete',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          isClient
+              ? 'Please complete your profile before posting a job.'
+              : 'Please complete your profile before applying to jobs.',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF7D7D7D)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              final p = context.read<ProfileProvider>();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => p.isClient ? const ClientProfileScreen() : const ProfileScreen(),
+                ),
+              );
+            },
+            child: Text(
+              'Complete Now',
+              style: GoogleFonts.poppins(color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -257,77 +300,228 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: Column(
-        children: [
-          _TealHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 29),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DashboardHeader(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
+
+                  // Greeting row
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
                       final imageUrl = profile.profilePictureUrl;
                       Widget displayImage;
                       if (imageUrl != null && imageUrl.isNotEmpty) {
                         if (imageUrl.startsWith('http')) {
-                          final urlWithCache =
-                              '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
                           displayImage = Image.network(
-                            urlWithCache,
-                            width: 32,
-                            height: 32,
+                            '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}',
+                            width: 38,
+                            height: 38,
                             fit: BoxFit.cover,
-                            cacheWidth: 64,
-                            cacheHeight: 64,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.person,
-                              size: 32,
-                              color: Colors.white,
+                              size: 24,
+                              color: AppColors.primary,
                             ),
                           );
                         } else if (File(imageUrl).existsSync()) {
                           displayImage = Image.file(
                             File(imageUrl),
-                            width: 32,
-                            height: 32,
+                            width: 38,
+                            height: 38,
                             fit: BoxFit.cover,
-                            cacheWidth: 64,
-                            cacheHeight: 64,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.person,
-                              size: 32,
-                              color: Colors.white,
+                              size: 24,
+                              color: AppColors.primary,
                             ),
                           );
                         } else {
                           displayImage = const Icon(
                             Icons.person,
-                            size: 32,
-                            color: Colors.white,
+                            size: 24,
+                            color: AppColors.primary,
                           );
                         }
                       } else {
                         displayImage = const Icon(
                           Icons.person,
-                          size: 32,
-                          color: Colors.white,
+                          size: 24,
+                          color: AppColors.primary,
                         );
                       }
-                      return HomeHeader(
-                        userName: 'Hi, ${profile.displayName}',
-                        userAvatar: displayImage,
+
+                      return Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: displayImage,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hi, ${profile.displayName}!',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF333333),
+                                    ),
+                                  ),
+                                  Text(
+                                    "Let's find your next opportunity",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: const Color(0xFF7D7D7D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const _NotificationPlaceholder(),
+                                ),
+                              ),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.secondary,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.notifications_outlined,
+                                      size: 20,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEC1B1B),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Complete profile banner
+                  Consumer<ProfileProvider>(
+                    builder: (context, profile, _) {
+                      if (profile.isProfileComplete) return const SizedBox.shrink();
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.person_outline_rounded,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Complete your profile',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1A1A2E),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Unlock all features & opportunities',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: const Color(0xFF7D7D7D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => profile.isClient
+                                      ? const ClientProfileScreen()
+                                      : const ProfileScreen(),
+                                ),
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Complete now',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
-                  const SizedBox(height: 22),
 
                   const SearchBarWidget(),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 24),
 
-                  // AI Recommended Jobs — freelancers only
+                  // Recommended Jobs — freelancers only
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (profile.isClient) return const SizedBox.shrink();
@@ -343,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             height: 178,
                             child: _buildRecommendedJobsList(),
                           ),
-                          const SizedBox(height: 26),
+                          const SizedBox(height: 24),
                         ],
                       );
                     },
@@ -397,8 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                             .profilePictureUrl!
                                                             .isNotEmpty
                                                     ? DecorationImage(
-                                                        image:
-                                                            freelancer
+                                                        image: freelancer
                                                                 .profilePictureUrl!
                                                                 .startsWith(
                                                                   'http',
@@ -448,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     },
                                   ),
                           ),
-                          const SizedBox(height: 26),
+                          const SizedBox(height: 24),
                         ],
                       );
                     },
@@ -457,44 +650,66 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Popular Categories
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
                   const SizedBox(height: 12),
-                  CategoryTile(
-                    icon: const Icon(
-                      Icons.code,
-                      color: AppColors.primary,
-                      size: 22,
+                  SizedBox(
+                    height: 120,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: const [
+                        _CategoryCard(
+                          icon: Icons.code_rounded,
+                          iconColor: Color(0xFF4F46E5),
+                          iconBg: Color(0xFFE0E7FF),
+                          label: 'Web Dev',
+                          jobCount: 25,
+                          countColor: Color(0xFF4F46E5),
+                        ),
+                        SizedBox(width: 12),
+                        _CategoryCard(
+                          icon: Icons.campaign_outlined,
+                          iconColor: Color(0xFF059669),
+                          iconBg: Color(0xFFD1FAE5),
+                          label: 'Marketing',
+                          jobCount: 5,
+                          countColor: Color(0xFF059669),
+                        ),
+                        SizedBox(width: 12),
+                        _CategoryCard(
+                          icon: Icons.design_services_outlined,
+                          iconColor: Color(0xFFD97706),
+                          iconBg: Color(0xFFFEF3C7),
+                          label: 'UI/UX',
+                          jobCount: 10,
+                          countColor: Color(0xFFD97706),
+                        ),
+                        SizedBox(width: 12),
+                        _CategoryCard(
+                          icon: Icons.bar_chart_rounded,
+                          iconColor: Color(0xFFDC2626),
+                          iconBg: Color(0xFFFEE2E2),
+                          label: 'Data Science',
+                          jobCount: 8,
+                          countColor: Color(0xFFDC2626),
+                        ),
+                        SizedBox(width: 12),
+                        _CategoryCard(
+                          icon: Icons.shield_outlined,
+                          iconColor: Color(0xFF0891B2),
+                          iconBg: Color(0xFFCFFAFE),
+                          label: 'Cyber Security',
+                          jobCount: 6,
+                          countColor: Color(0xFF0891B2),
+                        ),
+                      ],
                     ),
-                    categoryName: 'Web Development',
-                    subcategories: 'Company profile, Ecommerce, Ecatalog, ...',
-                    jobCount: 25,
                   ),
-                  const SizedBox(height: 10),
-                  CategoryTile(
-                    icon: const Icon(
-                      Icons.campaign_outlined,
-                      color: AppColors.primary,
-                      size: 22,
-                    ),
-                    categoryName: 'Marketing',
-                    subcategories: 'Telemarketing, Digital Marketing, SEO, ...',
-                    jobCount: 5,
-                  ),
-                  const SizedBox(height: 10),
-                  CategoryTile(
-                    icon: const Icon(
-                      Icons.design_services_outlined,
-                      color: AppColors.primary,
-                      size: 22,
-                    ),
-                    categoryName: 'UI/UX Design',
-                    subcategories: 'Figma, Photoshop, Slicing HTML, UI, ...',
-                    jobCount: 10,
-                  ),
+                  const SizedBox(height: 24),
+
                   const SizedBox(height: 24),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
@@ -505,51 +720,121 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _TealHeader extends StatelessWidget {
+// ── Dashboard header ───────────────────────────────────────────────────────────
+class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    return ClipPath(
-      clipper: _EllipseClipper(),
-      child: Container(
-        width: double.infinity,
-        color: AppColors.primary,
-        padding: EdgeInsets.only(
-          top: topPadding + 16,
-          bottom: 36,
-          left: 29,
-          right: 29,
-        ),
-        child: Text(
-          'Find your dream job',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-            color: Colors.white,
-          ),
-        ),
+    return SizedBox(
+      width: double.infinity,
+      height: topPadding + 190,
+      child: Image.asset(
+        'assets/dashboard.png',
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
       ),
     );
   }
 }
 
-class _EllipseClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, 0);
-    path.lineTo(0, size.height - 20);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height + 20,
-      size.width,
-      size.height - 20,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
+// ── Horizontal category card ──────────────────────────────────────────────────
+class _CategoryCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final int jobCount;
+  final Color countColor;
+
+  const _CategoryCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.jobCount,
+    required this.countColor,
+  });
 
   @override
-  bool shouldReclip(_EllipseClipper oldClipper) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      width: 90,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$jobCount jobs',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: countColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Placeholder screen so the notification tap doesn't crash
+class _NotificationPlaceholder extends StatelessWidget {
+  const _NotificationPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Notifications',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF333333),
+        elevation: 0,
+      ),
+      body: Center(
+        child: Text(
+          'No notifications yet',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: const Color(0xFF7D7D7D),
+          ),
+        ),
+      ),
+    );
+  }
 }

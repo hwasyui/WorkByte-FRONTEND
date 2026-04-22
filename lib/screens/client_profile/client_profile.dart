@@ -62,7 +62,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Fetch posted jobs for this client
       final jobsList = await ApiService.getClientPostedJobs(
         auth.token!,
         profile.clientProfile!.clientId,
@@ -70,9 +69,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
       if (mounted) {
         setState(() {
-          postedJobs = jobsList
-              .map((job) => JobPostModel.fromJson(job))
-              .toList();
+          postedJobs = jobsList.map((job) => JobPostModel.fromJson(job)).toList();
           _isLoading = false;
         });
       }
@@ -92,8 +89,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final userType = profile.userType ?? 'client';
 
     final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-    if (auth.token != null && identifier != null) {
-      final refreshSuccess = await profile.fetchProfile(
+    if (auth.token != null) {
+      await profile.fetchProfile(
         token: auth.token!,
         userId: identifier,
         userType: userType,
@@ -113,7 +110,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     bioController.text = bioText;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Edit About'),
         content: TextField(
           controller: bioController,
@@ -125,7 +122,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -133,22 +130,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               final newBio = bioController.text;
               final bioValue = newBio.trim().isEmpty ? null : newBio;
               setState(() => bioText = newBio);
-              Navigator.pop(context);
 
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
+              final messenger = ScaffoldMessenger.of(context);
               final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-              final updateFields = {"bio": bioValue};
+
+              Navigator.pop(dialogContext);
+
               final success = await profile.updateProfile(
                 token: auth.token!,
                 identifier: identifier,
-                fields: updateFields,
+                fields: {'bio': bioValue},
               );
-              if (success) {
-                await _refreshProfile();
-              }
+              if (success) await _refreshProfile();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(success
                         ? 'About saved successfully'
@@ -169,7 +166,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     websiteController.text = websiteUrl;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Edit Website'),
         content: TextField(
           controller: websiteController,
@@ -180,7 +177,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -188,22 +185,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               final newUrl = websiteController.text;
               final urlValue = newUrl.trim().isEmpty ? null : newUrl;
               setState(() => websiteUrl = newUrl);
-              Navigator.pop(context);
 
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
+              final messenger = ScaffoldMessenger.of(context);
               final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-              final updateFields = {"website_url": urlValue};
+
+              Navigator.pop(dialogContext);
+
               final success = await profile.updateProfile(
                 token: auth.token!,
                 identifier: identifier,
-                fields: updateFields,
+                fields: {'website_url': urlValue},
               );
-              if (success) {
-                await _refreshProfile();
-              }
+              if (success) await _refreshProfile();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(success
                         ? 'Website saved successfully'
@@ -233,24 +230,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          final fields = {
-            "full_name": data['name'],
-          };
+          final fields = <String, dynamic>{"full_name": data['name']};
 
-          // Handle image upload or deletion
           if (data['imageDeleted'] == true) {
             fields['profile_picture_url'] = null;
-          } else if (data['image'] != null && data['image'].isNotEmpty &&
+          } else if (data['image'] != null &&
+              data['image'].toString().isNotEmpty &&
               data['image'] != profile.profilePictureUrl) {
-            // Check if it's a local file (not HTTP URL)
             if (!data['image'].toString().startsWith('http')) {
-              // Upload the local image file
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Uploading profile picture...')),
                 );
               }
-              
+
               final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
               final uploadResult = await ApiService.uploadClientProfilePicture(
                 auth.token!,
@@ -261,11 +254,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               if (uploadResult != null) {
                 final uploadedUrl = uploadResult['profile_picture_url'] as String?;
                 if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-                  // Image already updated in database by upload endpoint
-                  // Just refresh the profile to get the latest data
                   await _refreshProfile();
                   profile.forceRefreshProfilePicture();
-
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Profile picture updated successfully')),
@@ -283,12 +273,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 return;
               }
             } else {
-              // It's already an HTTP URL
               fields['profile_picture_url'] = data['image'];
             }
           }
 
-          // Update the rest of the profile data (name, etc.)
           final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
           final success = await profile.updateProfile(
             token: auth.token!,
@@ -327,14 +315,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  @override
-  void dispose() {
-    bioController.dispose();
-    websiteController.dispose();
-    _tabController.dispose();
-    super.dispose();
-  }
-
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -350,25 +330,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             onPressed: () {
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final profile = Provider.of<ProfileProvider>(context, listen: false);
-              
-              // Clear auth and profile state
+
               auth.logout(profileProvider: profile);
-              
+
               if (mounted) {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.white),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -376,15 +350,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   @override
+  void dispose() {
+    bioController.dispose();
+    websiteController.dispose();
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.background,
       body: Consumer<ProfileProvider>(
         builder: (context, profile, child) {
           if (!profile.isClient || profile.clientProfile == null) {
-            return const Center(
-              child: Text('Client profile not available'),
-            );
+            return const Center(child: Text('Client profile not available'));
           }
 
           return SafeArea(
@@ -408,37 +388,100 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
+  Widget _buildDotGrid() {
+    return Column(
+      children: List.generate(
+        4,
+        (row) => Row(
+          children: List.generate(
+            5,
+            (col) => Padding(
+              padding: const EdgeInsets.all(3),
+              child: Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.35),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStickyHeader() {
     return Container(
-      color: Colors.grey[100],
+      color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              // ── Banner ─────────────────────────────────────────────────
+              ClipPath(
+                clipper: _ProfileBannerClipper(),
+                child: Container(
+                  height: 185,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    image: DecorationImage(
+                      image: AssetImage('assets/profile.png'),
+                      fit: BoxFit.cover,
+                      opacity: 0.18,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        bottom: 10,
+                        left: -45,
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 40,
+                        left: 30,
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        right: 56,
+                        child: _buildDotGrid(),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              // ── Nav buttons ────────────────────────────────────────────
               Positioned(
-                top: 8,
-                left: 8,
+                top: 0,
+                left: 0,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.maybePop(context),
                 ),
               ),
               Positioned(
-                top: 8,
-                right: 8,
+                top: 0,
+                right: 0,
                 child: Row(
                   children: [
                     IconButton(
@@ -447,15 +490,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     ),
                     IconButton(
                       icon: const Icon(Icons.logout, color: Colors.white),
-                      onPressed: () {
-                        _showLogoutDialog(context);
-                      },
+                      onPressed: () => _showLogoutDialog(context),
                     ),
                   ],
                 ),
               ),
+              // ── Profile avatar ─────────────────────────────────────────
               Positioned(
-                bottom: -44,
+                bottom: -48,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -463,23 +505,29 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
+                      color: AppColors.secondary,
                     ),
                     child: Consumer<ProfileProvider>(
                       builder: (context, profile, child) {
                         final profileImage = profile.profilePictureUrl;
                         return CircleAvatar(
                           radius: 44,
+                          backgroundColor: AppColors.secondary,
                           backgroundImage: profileImage != null
                               ? (profileImage.startsWith('http')
-                                  ? NetworkImage(profileImage)
-                                  : (File(profileImage).existsSync()
-                                      ? FileImage(File(profileImage))
-                                      : null))
+                                    ? NetworkImage(profileImage)
+                                    : (File(profileImage).existsSync()
+                                          ? FileImage(File(profileImage))
+                                          : null))
                               : null,
                           child: profileImage == null ||
                                   (!profileImage.startsWith('http') &&
                                       !File(profileImage).existsSync())
-                              ? const Icon(Icons.person, size: 44)
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 44,
+                                  color: AppColors.primary,
+                                )
                               : null,
                         );
                       },
@@ -490,7 +538,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ],
           ),
 
-          const SizedBox(height: 52),
+          const SizedBox(height: 58),
 
           Center(
             child: _buildStarRating(
@@ -503,43 +551,34 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
           const SizedBox(height: 6),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Consumer2<AuthProvider, ProfileProvider>(
-                builder: (context, auth, profile, child) {
-                  return Column(
-                    children: [
-                      Text(
-                        profile.displayName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        auth.currentUser?.email ?? '',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        profile.jobTitle,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
+          Consumer2<AuthProvider, ProfileProvider>(
+            builder: (context, auth, profile, child) {
+              return Column(
+                children: [
+                  Text(
+                    profile.displayName,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    auth.currentUser?.email ?? '',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  if (profile.jobTitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      profile.jobTitle,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -553,9 +592,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -611,38 +650,38 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
         children: [
-          // About Section with Edit
           _buildSection(
             title: 'About',
+            icon: Icons.person_outline,
             hasEdit: true,
             onEdit: _editAbout,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 bioText.isEmpty ? 'No information added yet' : bioText,
                 style: TextStyle(
-                    color: bioText.isEmpty ? Colors.grey : Colors.black87,
-                    fontSize: 14,
-                    height: 1.5),
+                  color: bioText.isEmpty ? Colors.grey : Colors.black87,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          // Website Section with Edit
+
           _buildSection(
             title: 'Website',
+            icon: Icons.language_outlined,
             hasEdit: true,
             onEdit: _editWebsite,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 websiteUrl.isEmpty ? 'No website added' : websiteUrl,
                 style: TextStyle(
                   color: websiteUrl.isEmpty ? Colors.grey : primaryColor,
                   fontSize: 14,
-                  decoration: websiteUrl.isNotEmpty
-                      ? TextDecoration.underline
-                      : null,
+                  decoration: websiteUrl.isNotEmpty ? TextDecoration.underline : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -650,74 +689,27 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // Statistics Section
+
           _buildSection(
             title: 'Statistics',
+            icon: Icons.bar_chart_outlined,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Column(
-                    children: [
-                      Text(
-                        '${profile.clientProfile?.totalJobsPosted ?? 0}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Jobs Posted',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+                  _buildStatItem(
+                    label: 'Jobs Posted',
+                    value: '${profile.clientProfile?.totalJobsPosted ?? 0}',
                   ),
-                  Column(
-                    children: [
-                      Text(
-                        '${profile.clientProfile?.totalProjectsCompleted ?? 0}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Completed',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+                  _buildStatItem(
+                    label: 'Completed',
+                    value: '${profile.clientProfile?.totalProjectsCompleted ?? 0}',
                   ),
                   if (profile.clientProfile?.averageRatingGiven != null)
-                    Column(
-                      children: [
-                        Text(
-                          '${profile.clientProfile?.averageRatingGiven?.toStringAsFixed(1) ?? '-'}',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Rating',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
+                    _buildStatItem(
+                      label: 'Rating',
+                      value: profile.clientProfile!.averageRatingGiven!.toStringAsFixed(1),
                     ),
                 ],
               ),
@@ -725,6 +717,26 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatItem({required String label, required String value}) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      ],
     );
   }
 
@@ -742,11 +754,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.work_outline,
-              size: 64,
-              color: Colors.grey[300],
-            ),
+            Icon(Icons.work_outline, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text(
               'No jobs posted yet',
@@ -759,10 +767,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             const SizedBox(height: 8),
             Text(
               'Start posting jobs to find freelancers',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: Colors.grey[500],
-              ),
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -770,10 +775,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 16,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         children: [
           ...postedJobs.asMap().entries.map((entry) {
@@ -799,15 +801,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   category: job.projectType.toUpperCase(),
                   teamSize: 1,
                   salaryTag: job.projectScope.toUpperCase(),
-                  typeTag: job.projectType == 'team'
-                      ? 'Team'
-                      : 'Individual',
+                  typeTag: job.projectType == 'team' ? 'Team' : 'Individual',
                   bidderAvatars: const [],
                   biddingsLabel:
                       '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
-                  onTap: () {
-                    // Navigate to job detail
-                  },
+                  onTap: () {},
                   bookmarked: false,
                 ),
                 const SizedBox(height: 12),
@@ -822,6 +820,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   Widget _buildSection({
     required String title,
     required Widget child,
+    IconData? icon,
     bool hasEdit = false,
     VoidCallback? onEdit,
     Widget? actionButton,
@@ -843,20 +842,40 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    if (hasEdit) ...[const SizedBox(width: 8),
+                    if (icon != null) ...[
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (hasEdit) ...[
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: onEdit,
-                        child: const Icon(Icons.edit,
-                            size: 18, color: primaryColor),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 18,
+                          color: primaryColor,
+                        ),
                       ),
                     ],
                   ],
@@ -870,4 +889,25 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       ),
     );
   }
+}
+
+class _ProfileBannerClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, 0);
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(
+      size.width / 2,
+      size.height + 20,
+      size.width,
+      size.height - 30,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_ProfileBannerClipper oldClipper) => false;
 }

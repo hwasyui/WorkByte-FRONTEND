@@ -1114,23 +1114,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       )
                     : Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: skills.map((s) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _SkillChip(
-                                  label: s['skill_name'],
-                                  proficiency: s['proficiency_level'],
-                                  onDelete: () =>
-                                      _deleteSkill(s['freelancer_skill_id']),
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: skills.map((s) {
+                            return _SkillChip(
+                              label: s['skill_name'],
+                              proficiency: s['proficiency_level'],
+                              onDelete: () =>
+                                  _deleteSkill(s['freelancer_skill_id']),
+                            );
+                          }).toList(),
                         ),
                       ),
               ),
@@ -1213,29 +1208,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         final reviews = reviewProvider.reviews;
         final trustScore = reviewProvider.trustScore;
 
-        // Compute average rating inline
-        final allScores = reviews
-            .expand((r) => r.ratings)
-            .map((r) => r.score)
-            .toList();
-        final avgRating = allScores.isEmpty
-            ? 0.0
-            : allScores.reduce((a, b) => a + b) / allScores.length;
-
-        // Compute distribution inline
-        final counts = <int, int>{1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-        for (final r in reviews) {
-          if (r.ratings.isEmpty) continue;
-          final reviewAvg =
-              r.ratings.map((rt) => rt.score).reduce((a, b) => a + b) /
-              r.ratings.length;
-          final star = reviewAvg.round().clamp(1, 5);
-          counts[star] = (counts[star] ?? 0) + 1;
-        }
-        final distribution = counts.map(
-          (star, count) =>
-              MapEntry(star, reviews.isEmpty ? 0.0 : count / reviews.length),
-        );
 
         return SingleChildScrollView(
           padding: const EdgeInsets.only(top: 16, bottom: 32),
@@ -1247,110 +1219,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _TrustScoreCard(trustScore: trustScore),
                 const SizedBox(height: 16),
               ],
-
-              // ── Rating summary card ───────────────────────────────────
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: avgRating.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const TextSpan(
-                                text: ' /5',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: List.generate(5, (i) {
-                            final filled = i < avgRating.round();
-                            return Icon(
-                              filled ? Icons.star : Icons.star_outline,
-                              color: filled ? Colors.amber : Colors.grey[300],
-                              size: 16,
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${reviews.length} review${reviews.length == 1 ? '' : 's'}',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        children: [5, 4, 3, 2, 1].map((star) {
-                          final fraction = distribution[star] ?? 0.0;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                Icon(Icons.star, color: Colors.amber, size: 13),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$star',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: fraction,
-                                      minHeight: 7,
-                                      backgroundColor: Colors.grey[200],
-                                      valueColor: const AlwaysStoppedAnimation(
-                                        Colors.amber,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
               const SizedBox(height: 20),
 
@@ -1907,12 +1775,6 @@ class _TrustScoreCard extends StatelessWidget {
           // ── Title row ─────────────────────────────────────────────────
           Row(
             children: [
-              Icon(Icons.verified, color: scoreColor, size: 18),
-              const SizedBox(width: 6),
-              const Text(
-                'AI Trust Score',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
               const Spacer(),
               if (rankPct != null && category.isNotEmpty)
                 Container(

@@ -146,9 +146,9 @@ class _JobListScreenState extends State<JobListScreen> {
                       Text(
                         'Available jobs',
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
+                          fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF333333),
+                          color: const Color(0xFF1A1A2E),
                         ),
                       ),
                       const Spacer(),
@@ -159,18 +159,31 @@ class _JobListScreenState extends State<JobListScreen> {
                             Text(
                               _sortOption,
                               style: GoogleFonts.poppins(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF7D7D7D),
+                                color: AppColors.primary,
                               ),
                             ),
-                            const SizedBox(width: 6),
                             const Icon(
-                              Icons.filter_list,
-                              size: 20,
-                              color: Color(0xFF333333),
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                              color: AppColors.primary,
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          size: 18,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -245,24 +258,18 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _buildJobCard(JobPostModel job) {
-    final isTeam = job.projectType.toLowerCase() == 'team';
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: JobListCard(
         posterLogo: const Icon(
-          Icons.business,
-          size: 35,
+          Icons.business_rounded,
+          size: 28,
           color: AppColors.primary,
         ),
         posterName: job.clientName ?? 'Client',
         title: job.jobTitle,
         category: job.projectScope,
         teamSize: job.roleCount,
-        typeTag: isTeam ? 'Team' : null,
-        salaryTag: null,
-        bidderAvatars: const [],
-        biddingsLabel: '+${job.proposalCount} biddings',
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),

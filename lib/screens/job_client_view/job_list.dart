@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -134,94 +135,107 @@ class JobListScreenState extends State<JobListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 24, 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const HomeScreen()),
-                        ),
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: Color(0xFF1A1A1A),
-                          size: 28,
-                        ),
-                      ),
-                      const Text(
-                        'My jobs',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF1A1A2E),
+                      size: 22,
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'My Jobs',
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const Spacer(),
                   GestureDetector(
                     onTap: _showSortSheet,
                     child: Row(
                       children: [
                         Text(
                           _sortOption,
-                          style: const TextStyle(
-                            color: Color(0xFF7D7D7D),
+                          style: GoogleFonts.poppins(
                             fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(width: 4),
                         const Icon(
-                          Icons.sort,
-                          color: Color(0xFF7D7D7D),
+                          Icons.keyboard_arrow_down_rounded,
                           size: 18,
+                          color: AppColors.primary,
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      size: 18,
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 12),
 
             // ── Search bar ──────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
+                height: 54,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(color: const Color(0xFFF0F0F1)),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const TextField(
-                  style: TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Search jobs...',
-                    hintStyle: TextStyle(
-                      color: Color(0xFFB5B4B4),
-                      fontSize: 13,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: const Color(0xFF1A1A2E),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search jobs...',
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFFB5B4B4),
+                          ),
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                    suffixIcon: Icon(Icons.search, color: Color(0xFF7D7D7D)),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                  ),
+                    const Icon(Icons.search, color: AppColors.primary, size: 22),
+                  ],
                 ),
               ),
             ),
@@ -259,11 +273,10 @@ class JobListScreenState extends State<JobListScreen> {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
     final roleCount = job['role_count'] ?? 0;
-    final deadline = job['deadline'] ?? '';
     final proposalCount = (job['proposal_count'] ?? 0) as int;
     final status = job['status'] as String? ?? 'draft';
+    final scope = _capitalize(job['project_scope'] ?? '');
 
-    // ── Avatar count: use real avatars if loaded, else clamp to proposalCount
     final avatars = _proposalAvatars[jobPostId];
     final avatarCount = avatars != null
         ? avatars.length.clamp(0, 3)
@@ -280,137 +293,123 @@ class JobListScreenState extends State<JobListScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: Colors.white,
+          border: Border.all(color: const Color(0xFFEEEEF5)),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── Title + status badge ─────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    job['job_title'] ?? 'Untitled',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _statusBadge(status),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // ── Meta row ─────────────────────────────────────────────────
-            Row(
-              children: [
-                Text(
-                  _capitalize(job['project_scope'] ?? ''),
-                  style: const TextStyle(
-                    color: Color(0xFF7D7D7D),
-                    fontSize: 12,
-                  ),
-                ),
-                if (isTeam && roleCount > 0) ...[
-                  const SizedBox(width: 12),
-                  const Icon(
-                    Icons.people_outline,
-                    size: 14,
-                    color: Color(0xFF7D7D7D),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$roleCount ${roleCount == 1 ? 'role' : 'roles'}',
-                    style: const TextStyle(
-                      color: Color(0xFF7D7D7D),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-                if (deadline.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 12,
-                    color: Color(0xFF7D7D7D),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDate(deadline),
-                    style: const TextStyle(
-                      color: Color(0xFF7D7D7D),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // ── Project type badge ───────────────────────────────────────
+            // ── Logo container ───────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                border: Border.all(color: _primary),
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                isTeam ? 'Team' : 'Individual',
-                style: const TextStyle(
+              child: const Center(
+                child: Icon(
+                  Icons.work_rounded,
+                  size: 28,
                   color: AppColors.primary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(width: 14),
 
-            // ── Bidding row ──────────────────────────────────────────────
-            Row(
-              children: [
-                if (proposalCount > 0 && avatarCount > 0) ...[
-                  SizedBox(
-                    width: 20 + ((avatarCount - 1) * 18.0),
-                    height: 28,
-                    child: Stack(
-                      children: List.generate(
-                        avatarCount,
-                        (i) => _proposalAvatar(
-                          i,
-                          avatars != null && avatars.length > i
-                              ? avatars[i]
-                              : null,
+            // ── Content ──────────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title + status badge
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          job['job_title'] ?? 'Untitled',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A2E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      _statusBadge(status),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // Sub-title: project type
+                  Text(
+                    isTeam ? 'Team Project' : 'Individual Project',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: const Color(0xFF7D7D7D),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  proposalCount > 0
-                      ? '$proposalCount ${proposalCount == 1 ? 'bid' : 'bids'}'
-                      : 'No bids yet',
-                  style: const TextStyle(
-                    color: Color(0xFF7D7D7D),
-                    fontSize: 12,
+                  const SizedBox(height: 10),
+
+                  // Tags row: scope badge + role/bid count
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          scope,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.group_outlined,
+                          size: 15, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        isTeam ? '$roleCount' : '$proposalCount',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF7D7D7D),
+                        ),
+                      ),
+                      if (proposalCount > 0 && avatarCount > 0) ...[
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 20 + ((avatarCount - 1) * 18.0),
+                          height: 24,
+                          child: Stack(
+                            children: List.generate(
+                              avatarCount,
+                              (i) => _proposalAvatar(
+                                i,
+                                avatars != null && avatars.length > i
+                                    ? avatars[i]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

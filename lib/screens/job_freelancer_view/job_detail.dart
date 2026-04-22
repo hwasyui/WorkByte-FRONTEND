@@ -7,6 +7,7 @@ import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../freelancer_profile/freelancer_profile.dart';
 import '../../services/job_post_service.dart';
 import '../../services/api_service.dart';
 import '../../widgets/job_detail_header.dart';
@@ -333,6 +334,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   void _onApplyRole(JobRoleModel role) {
+    final profile = context.read<ProfileProvider>();
+    if (!profile.isProfileComplete) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Profile Incomplete',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+          content: Text(
+            'Please complete your profile before applying to jobs.',
+            style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF7D7D7D)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D))),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              child: Text(
+                'Complete Now',
+                style: GoogleFonts.poppins(color: AppColors.primary, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
