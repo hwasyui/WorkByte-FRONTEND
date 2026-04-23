@@ -138,15 +138,27 @@ class ProfileProvider extends ChangeNotifier {
 
       debugPrint('PUT profile endpoint: $endpoint');
       debugPrint('PUT profile payload: $fields');
-      final response = await http.put(
-        Uri.parse(endpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(fields),
-      );
-
+      
+      // Create multipart request for form-data
+      final uri = Uri.parse(endpoint);
+      final request = http.MultipartRequest('PUT', uri);
+      
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      // Add form fields from the fields map
+      fields.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+      
+      debugPrint('Sending multipart request with fields: ${request.fields}');
+      
+      // Send the request
+      final streamResponse = await request.send();
+      final response = await http.Response.fromStream(streamResponse);
+      
       final data = jsonDecode(response.body);
       debugPrint('Update profile response: ${response.statusCode}, data: $data');
 
