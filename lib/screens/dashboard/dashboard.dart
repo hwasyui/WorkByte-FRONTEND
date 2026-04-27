@@ -204,6 +204,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onDashboardSearch(String query) {
+    final profile = context.read<ProfileProvider>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => profile.isClient
+            ? client_job_list.JobListScreen(initialQuery: query)
+            : JobListScreen(initialQuery: query),
+      ),
+    );
+  }
+
   void _handleCenterButton() {
     _navigateToPostJob();
   }
@@ -473,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  const SearchBarWidget(),
+                  SearchBarWidget(onSearch: _onDashboardSearch),
                   const SizedBox(height: 20),
 
                   // Quick-access cards: Jobs | Freelancers | Clients

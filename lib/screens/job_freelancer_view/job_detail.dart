@@ -13,6 +13,7 @@ import '../../services/api_service.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../../widgets/role_card.dart';
+import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
 
 class JobDetailScreen extends StatefulWidget {
@@ -465,18 +466,52 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
           ),
 
-          if (_client?.bio != null) ...[
+          if (_client != null) ...[
             const SizedBox(height: 28),
-            _sectionTitle('About the Client'),
-            const SizedBox(height: 8),
-            Text(
-              _client!.bio!,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: const Color(0xFF7D7D7D),
-                height: 18 / 12,
-              ),
+            Row(
+              children: [
+                Expanded(child: _sectionTitle('About the Client')),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PeopleProfileScreen(
+                        isClient: true,
+                        client: _client,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'View Profile',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (_client!.bio != null)
+              Text(
+                _client!.bio!,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF7D7D7D),
+                  height: 18 / 12,
+                ),
+              ),
           ],
 
           const SizedBox(height: 28),

@@ -12,7 +12,9 @@ import '../../widgets/top_bar.dart';
 import 'job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
-  const JobListScreen({super.key});
+  final String? initialQuery;
+
+  const JobListScreen({super.key, this.initialQuery});
 
   @override
   State<JobListScreen> createState() => _JobListScreenState();
@@ -28,6 +30,9 @@ class _JobListScreenState extends State<JobListScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _searchController.text = widget.initialQuery!;
+    }
     _searchController.addListener(_onSearch);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchJobs());
   }

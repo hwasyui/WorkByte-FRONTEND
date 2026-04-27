@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
@@ -278,37 +279,161 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFFF3F1FF),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 120,
+                width: 120,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFDDD8FA),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.logout_rounded,
+                        color: AppColors.primary,
+                        size: 36,
+                      ),
+                    ),
+                    const Positioned(
+                      top: 6,
+                      left: 10,
+                      child: Text('✦',
+                          style: TextStyle(
+                              color: AppColors.primary, fontSize: 14)),
+                    ),
+                    const Positioned(
+                      top: 6,
+                      right: 10,
+                      child: Text('✦',
+                          style: TextStyle(
+                              color: Color(0xFFB8B0F0), fontSize: 10)),
+                    ),
+                    const Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Text('✦',
+                          style: TextStyle(
+                              color: AppColors.primary, fontSize: 12)),
+                    ),
+                    const Positioned(
+                      top: 30,
+                      left: 2,
+                      child: CircleAvatar(
+                          radius: 3,
+                          backgroundColor: Color(0xFFB8B0F0)),
+                    ),
+                    const Positioned(
+                      bottom: 26,
+                      right: 0,
+                      child: CircleAvatar(
+                          radius: 2.5,
+                          backgroundColor: Color(0xFFB8B0F0)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Logout',
+                style: GoogleFonts.poppins(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Are you sure you want to logout?',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: const Color(0xFF6B7280),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final auth = Provider.of<AuthProvider>(
+                            context,
+                            listen: false);
+                        final profile = Provider.of<ProfileProvider>(
+                            context,
+                            listen: false);
+                        auth.logout(profileProvider: profile);
+                        if (mounted) {
+                          Navigator.pop(context);
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                                builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Logout',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(
-                context,
-                listen: false,
-              );
-
-              // Clear auth and profile state
-              auth.logout(profileProvider: profile);
-
-              if (mounted) {
-                Navigator.pop(context); // Close dialog
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+        ),
       ),
     );
   }

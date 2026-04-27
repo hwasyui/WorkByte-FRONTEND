@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
+import '../../models/job_role_skill_model.dart';
+import '../../models/skill_model.dart';
+import '../../models/job_file_model.dart';
 import '../../models/client_model.dart';
 import '../../models/proposal_model.dart';
 import '../../models/proposal_file_model.dart';
@@ -14,10 +17,13 @@ import '../../providers/job_post_provider.dart';
 import '../../providers/proposal_provider.dart';
 import '../../providers/proposal_file_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/skill_provider.dart';
 import '../../services/proposal_service.dart';
+import '../../models/freelancer_model.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
+import '../people_list/people_list_screen.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
   final JobPostModel job;
@@ -41,6 +47,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   List<ProposalModel> _proposals = [];
   bool _proposalsLoading = true;
+
+  Map<String, List<JobRoleSkillModel>> _roleSkillsMap = {};
+  List<SkillModel> _allSkills = [];
+  List<JobFileModel> _jobFiles = [];
+  bool _filesLoading = true;
 
   List<String> get _tabs => [
     'Bidding (${widget.job.proposalCount})',
@@ -75,6 +86,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       _fetchClient();
       _fetchRoles();
       _fetchProposals();
+      _fetchAllSkills();
+      _fetchJobFiles();
     });
   }
 
@@ -98,11 +111,73 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       token,
       widget.job.jobPostId,
     );
-    if (mounted) {
-      setState(() {
-        _roles = context.read<JobPostProvider>().jobRoles;
-        _rolesLoading = false;
-      });
+    if (!mounted) return;
+    setState(() {
+      _roles = context.read<JobPostProvider>().jobRoles;
+      _rolesLoading = false;
+    });
+    await _fetchRoleSkills(token);
+  }
+
+  Future<void> _fetchRoleSkills(String token) async {
+    final provider = context.read<JobPostProvider>();
+    for (final role in _roles) {
+      await provider.fetchRoleSkills(token, role.jobRoleId);
+    }
+    if (!mounted) return;
+    setState(() {
+      _roleSkillsMap = {
+        for (final role in _roles)
+          role.jobRoleId: provider.skillsForRole(role.jobRoleId),
+      };
+    });
+  }
+
+  Future<void> _fetchAllSkills() async {
+    final token = context.read<AuthProvider>().token!;
+    await context.read<SkillProvider>().fetchAllSkills(token);
+    if (!mounted) return;
+    setState(() {
+      _allSkills = context.read<SkillProvider>().skills;
+    });
+  }
+
+  Future<void> _fetchJobFiles() async {
+    final token = context.read<AuthProvider>().token!;
+    await context.read<JobPostProvider>().fetchJobFiles(
+      token,
+      widget.job.jobPostId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _jobFiles = context.read<JobPostProvider>().filesForJob(
+        widget.job.jobPostId,
+      );
+      _filesLoading = false;
+    });
+  }
+
+  Future<void> _openJobFile(JobFileModel file) async {
+    final uri = Uri.parse(file.fileUrl);
+    try {
+      final canOpen = await canLaunchUrl(uri);
+      if (canOpen) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not open file.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -334,6 +409,67 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
+  Future<void> _viewFreelancerProfile(ProposalModel proposal) async {
+    final token = context.read<AuthProvider>().token!;
+    final profileProvider = context.read<ProfileProvider>();
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      final FreelancerModel? freelancer =
+          await profileProvider.fetchFreelancerById(
+        token: token,
+        freelancerId: proposal.freelancerId,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (freelancer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not load profile.',
+              style: GoogleFonts.poppins(fontSize: 12),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PeopleProfileScreen(
+            isClient: false,
+            freelancer: freelancer,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not load profile.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _messageBidder(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
     final currentUserId =
@@ -342,52 +478,210 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final controller = TextEditingController();
     final send = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Message ${proposal.freelancerName ?? 'Freelancer'}',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14),
-        ),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          style: GoogleFonts.poppins(fontSize: 12),
-          decoration: InputDecoration(
-            hintText: 'Write your message...',
-            hintStyle: GoogleFonts.poppins(
-              fontSize: 12,
-              color: const Color(0xFFB5B4B4),
+      barrierColor: Colors.black54,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFF0F0F1)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D)),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Send',
-              style: GoogleFonts.poppins(
-                color: _primary,
-                fontWeight: FontWeight.w600,
+            backgroundColor: Colors.white,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Close button
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context, false),
+                      child: const Icon(Icons.close,
+                          size: 20, color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Icon + Title + Subtitle
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEEEBFF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Message ${proposal.freelancerName ?? 'Freelancer'}',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Introduce yourself and discuss the project.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Textarea
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0EEFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: controller,
+                          maxLines: 6,
+                          maxLength: 500,
+                          onChanged: (_) => setModalState(() {}),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF111827),
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Write your message...',
+                            hintStyle: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: const Color(0xFFB0ABCF),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.fromLTRB(
+                                16, 16, 16, 0),
+                            counterText: '',
+                          ),
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                          child: Row(
+                            children: [
+                              const Spacer(),
+                              const Icon(Icons.attach_file_rounded,
+                                  size: 20, color: AppColors.primary),
+                              const SizedBox(width: 10),
+                              const Icon(
+                                  Icons.sentiment_satisfied_alt_outlined,
+                                  size: 20,
+                                  color: AppColors.primary),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${controller.text.length}/500',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Professional note
+                  Row(
+                    children: [
+                      const Icon(Icons.shield_outlined,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Be professional and respectful when messaging.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                  const SizedBox(height: 16),
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                                color: AppColors.primary, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.pop(context, true),
+                          icon: const Icon(Icons.send_rounded,
+                              size: 18, color: Colors.white),
+                          label: Text(
+                            'Send',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
 
@@ -726,7 +1020,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   child: _actionButton(
                     icon: Icons.person_outline,
                     label: 'Profile',
-                    onTap: () {},
+                    onTap: () => _viewFreelancerProfile(proposal),
                   ),
                 ),
               ],
@@ -925,19 +1219,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               height: 20 / 13,
             ),
           ),
-          if (_client?.bio != null) ...[
-            const SizedBox(height: 28),
-            _sectionTitle('About the Client'),
-            const SizedBox(height: 8),
-            Text(
-              _client!.bio!,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: const Color(0xFF7D7D7D),
-                height: 18 / 12,
-              ),
-            ),
-          ],
           const SizedBox(height: 28),
           _sectionTitle('Terms'),
           const SizedBox(height: 12),
@@ -956,22 +1237,369 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             ),
           if (widget.job.postedAt != null)
             _termRow('Posted At', _formatDate(widget.job.postedAt!)),
-          if (!_rolesLoading && _roles.isNotEmpty) ...[
+          if (_client?.bio != null) ...[
+            const SizedBox(height: 28),
+            _sectionTitle('About the Client'),
             const SizedBox(height: 8),
-            _sectionTitle('Roles'),
-            const SizedBox(height: 12),
-            ..._roles.map(
-              (r) => _termRow(
-                r.roleTitle,
-                r.roleBudget != null
-                    ? 'Rp. ${r.roleBudget!.toStringAsFixed(0)}'
-                    : 'Negotiable',
+            Text(
+              _client!.bio!,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF7D7D7D),
+                height: 18 / 12,
               ),
             ),
+          ],
+          const SizedBox(height: 28),
+          _sectionTitle(
+            'Roles & Skills${_rolesLoading ? '' : ' (${_roles.length})'}',
+          ),
+          const SizedBox(height: 12),
+          _buildRolesSection(),
+          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            _sectionTitle('Attachments (${_jobFiles.length})'),
+            const SizedBox(height: 12),
+            ..._jobFiles.map((f) => _buildJobFileRow(f)),
           ],
         ],
       ),
     );
+  }
+
+  Widget _buildRolesSection() {
+    if (_rolesLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    if (_roles.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'No roles specified.',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: const Color(0xFF7D7D7D),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: _roles.map((r) => _buildRoleCard(r)).toList(),
+    );
+  }
+
+  Widget _buildRoleCard(JobRoleModel role) {
+    final skills = _roleSkillsMap[role.jobRoleId] ?? [];
+    final skillLookup = {for (final s in _allSkills) s.skillId: s};
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF0F0F1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: _primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.work_outline,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        role.roleTitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF333333),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          _miniChip(
+                            role.isRequired ? 'Required' : 'Optional',
+                            role.isRequired
+                                ? _primary
+                                : const Color(0xFF7D7D7D),
+                          ),
+                          _miniChip(
+                            role.budgetType == 'hourly' ? 'Hourly' : 'Fixed',
+                            const Color(0xFF7D7D7D),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      role.roleBudget != null
+                          ? '${role.budgetCurrency} ${_formatNumber(role.roleBudget!)}'
+                          : 'Negotiable',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _primary,
+                      ),
+                    ),
+                    if (role.roleBudget != null)
+                      Text(
+                        role.budgetType == 'hourly' ? '/hour' : 'fixed',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: const Color(0xFF7D7D7D),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            if (role.roleDescription != null &&
+                role.roleDescription!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                role.roleDescription!,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF7D7D7D),
+                  height: 1.6,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Divider(color: Color(0xFFF0F0F1), height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(
+                  Icons.group_outlined,
+                  size: 14,
+                  color: Color(0xFF7D7D7D),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${role.positionsAvailable} position${role.positionsAvailable > 1 ? 's' : ''} available',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF7D7D7D),
+                  ),
+                ),
+                if (role.positionsFilled > 0) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '· ${role.positionsFilled} filled',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: _primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Required Skills',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (skills.isEmpty)
+              Text(
+                'No specific skills listed.',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFFB5B4B4),
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: skills.map((s) {
+                  final skill = skillLookup[s.skillId];
+                  final name = skill?.skillName ?? s.skillId;
+                  final importance = s.importanceLevel;
+                  final isRequired = s.isRequired;
+                  return _skillChip(name, isRequired, importance);
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJobFileRow(JobFileModel file) {
+    final IconData icon;
+    switch (file.fileTypeIcon) {
+      case 'pdf':
+        icon = Icons.picture_as_pdf_outlined;
+      case 'image':
+        icon = Icons.image_outlined;
+      case 'word':
+        icon = Icons.description_outlined;
+      case 'archive':
+        icon = Icons.folder_zip_outlined;
+      default:
+        icon = Icons.attach_file;
+    }
+
+    return GestureDetector(
+      onTap: () => _openJobFile(file),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _primary.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: _primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.fileName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: _primary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (file.fileSizeFormatted.isNotEmpty)
+                    Text(
+                      '${file.fileType.toUpperCase()} · ${file.fileSizeFormatted}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFF7D7D7D),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'View',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _primary,
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _miniChip(String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Text(
+      label,
+      style: GoogleFonts.poppins(
+        fontSize: 9,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    ),
+  );
+
+  Widget _skillChip(String name, bool isRequired, String? importance) {
+    final color = isRequired ? _primary : const Color(0xFF7D7D7D);
+    final importanceLabel = importance != null && importance.isNotEmpty
+        ? ' · ${importance[0].toUpperCase()}${importance.substring(1)}'
+        : '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isRequired ? Icons.star_rounded : Icons.star_border_rounded,
+            size: 11,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$name$importanceLabel',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatNumber(double n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(0)}K';
+    return n.toStringAsFixed(0);
   }
 
   Widget _sectionTitle(String title) => Text(

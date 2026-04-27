@@ -7,6 +7,8 @@ import '../../core/constants/colors.dart';
 import '../../models/client_model.dart';
 import '../../models/freelancer_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
+import '../../screens/client_history/client_history_screen.dart';
 import '../../services/api_service.dart';
 
 class PeopleListScreen extends StatefulWidget {
@@ -133,6 +135,40 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                           color: const Color(0xFF1A1A2E),
                         ),
                       ),
+                      if (!widget.showClients && context.watch<ProfileProvider>().isClient) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ClientHistoryScreen(),
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: AppColors.primary.withOpacity(0.16)),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'History',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
