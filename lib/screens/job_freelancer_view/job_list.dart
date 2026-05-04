@@ -6,6 +6,7 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/top_bar.dart';
@@ -263,23 +264,29 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _buildJobCard(JobPostModel job) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: JobListCard(
-        posterLogo: const Icon(
-          Icons.business_rounded,
-          size: 28,
-          color: AppColors.primary,
-        ),
-        posterName: job.clientName ?? 'Client',
-        title: job.jobTitle,
-        category: job.projectScope,
-        teamSize: job.roleCount,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-        ),
-      ),
+    return Consumer<SavedItemsProvider>(
+      builder: (context, saved, _) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: JobListCard(
+            posterLogo: const Icon(
+              Icons.business_rounded,
+              size: 28,
+              color: AppColors.primary,
+            ),
+            posterName: job.clientName ?? 'Client',
+            title: job.jobTitle,
+            category: job.projectScope,
+            teamSize: job.roleCount,
+            bookmarked: saved.isJobSaved(job.jobPostId),
+            onBookmark: () => saved.toggleSaveJob(job),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
+            ),
+          ),
+        );
+      },
     );
   }
 

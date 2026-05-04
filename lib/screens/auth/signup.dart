@@ -6,6 +6,7 @@ import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/login.dart';
+import '../../screens/auth/verify_email.dart';
 import '../../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -95,12 +96,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (success) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful! Please login.')),
-      );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(email: email),
+        ),
       );
     } else {
       if (!mounted) return;

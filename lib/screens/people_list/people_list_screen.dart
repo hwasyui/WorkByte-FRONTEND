@@ -8,6 +8,7 @@ import '../../models/client_model.dart';
 import '../../models/freelancer_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../services/api_service.dart';
 
@@ -651,6 +652,39 @@ class PeopleProfileScreen extends StatelessWidget {
                 child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
               ),
             ),
+            actions: [
+              Consumer<SavedItemsProvider>(
+                builder: (context, saved, _) {
+                  final isSaved = isClient
+                      ? saved.isClientSaved(client?.clientId ?? '')
+                      : saved.isFreelancerSaved(freelancer?.freelancerId ?? '');
+                  return GestureDetector(
+                    onTap: () {
+                      if (isClient && client != null) {
+                        saved.toggleSaveClient(client!);
+                      } else if (!isClient && freelancer != null) {
+                        saved.toggleSaveFreelancer(freelancer!);
+                      }
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(

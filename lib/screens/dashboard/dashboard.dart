@@ -667,7 +667,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 120,
+                    height: 128,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: const [

@@ -13,6 +13,7 @@ class JobListCard extends StatelessWidget {
   final String? salaryTag;
   final String? typeTag;
   final bool bookmarked;
+  final bool showBookmark;
   final VoidCallback? onBookmark;
   final VoidCallback? onTap;
 
@@ -28,6 +29,7 @@ class JobListCard extends StatelessWidget {
     this.salaryTag,
     this.typeTag,
     this.bookmarked = false,
+    this.showBookmark = true,
     this.onBookmark,
     this.onTap,
   });
@@ -83,16 +85,17 @@ class JobListCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      GestureDetector(
-                        onTap: onBookmark,
-                        child: Icon(
-                          bookmarked
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                          size: 22,
-                          color: AppColors.primary,
+                      if (showBookmark)
+                        GestureDetector(
+                          onTap: onBookmark,
+                          child: Icon(
+                            bookmarked
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            size: 22,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 3),

@@ -7,6 +7,7 @@ import '../../models/job_role_model.dart';
 import '../../models/client_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../../services/job_post_service.dart';
 import '../../services/api_service.dart';
@@ -390,6 +391,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final saved = context.watch<SavedItemsProvider>();
+    final profile = context.watch<ProfileProvider>();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
@@ -419,12 +422,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               jobTitle: widget.job.jobTitle,
               category: _capitalize(widget.job.projectScope),
               tags: _tags,
-              titleTrailing: Consumer<ProfileProvider>(
-                builder: (context, profile, _) {
-                  if (profile.isClient) return const SizedBox.shrink();
-                  return _buildAnalyzeButton();
-                },
-              ),
+              bookmarked: saved.isJobSaved(widget.job.jobPostId),
+              onBookmark: () => saved.toggleSaveJob(widget.job),
+              titleTrailing: profile.isClient
+                  ? null
+                  : _buildAnalyzeButton(),
             ),
 
             // ── Tab bar ──────────────────────────────────────────────

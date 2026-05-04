@@ -67,6 +67,51 @@ class AuthService {
     );
   }
 
+  Future<void> verifyEmail({
+    required String email,
+    required String otp,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/verify-email'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+
+    throw Exception(
+      data['details'] ??
+          data['message'] ??
+          data['detail'] ??
+          'Verification failed',
+    );
+  }
+
+  Future<void> resendVerification({required String email}) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/resend-verification'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+
+    throw Exception(
+      data['details'] ??
+          data['message'] ??
+          data['detail'] ??
+          'Failed to resend code',
+    );
+  }
+
   Future<UserModel> getMe(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/auth/me'),

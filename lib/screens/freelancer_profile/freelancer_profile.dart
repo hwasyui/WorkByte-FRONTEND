@@ -10,6 +10,7 @@ import '../../widgets/add_skill.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/review_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../models/review_model.dart';
 import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
@@ -41,7 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadEducations();
     _loadSkills();
     _loadExperiences();
@@ -829,7 +830,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [_buildAboutTab(), _buildReviewsTab()],
+                children: [
+                  _buildAboutTab(),
+                  _buildReviewsTab(),
+                  _buildSavedTab(),
+                ],
               ),
             ),
           ],
@@ -937,8 +942,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.share, color: Colors.white),
-                      onPressed: () {},
+                      icon: const Icon(
+                          Icons.bookmarks_outlined, color: Colors.white),
+                      onPressed: () => _tabController.animateTo(2),
                     ),
                     IconButton(
                       icon: const Icon(Icons.logout, color: Colors.white),
@@ -1086,7 +1092,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 fontSize: 14,
               ),
               unselectedLabelStyle: const TextStyle(fontSize: 14),
-              tabs: const [Tab(text: 'About'), Tab(text: 'Reviews')],
+              tabs: const [
+                Tab(text: 'About'),
+                Tab(text: 'Reviews'),
+                Tab(text: 'Saved'),
+              ],
             ),
           ),
         ],
@@ -1405,6 +1415,218 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  Widget _buildSavedTab() {
+    return Consumer<SavedItemsProvider>(
+      builder: (context, saved, _) {
+        final jobs = saved.savedJobs;
+        final clients = saved.savedClients;
+
+        if (jobs.isEmpty && clients.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bookmarks_outlined,
+                      size: 52, color: Colors.grey[300]),
+                  const SizedBox(height: 14),
+                  Text(
+                    'No saved items yet',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Save jobs or clients to see them here.',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 16, bottom: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (jobs.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Saved Jobs',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${jobs.length}',
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                ...jobs.map((job) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.work_outline,
+                                  color: AppColors.primary, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    job.jobTitle,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    job.clientName ?? 'Client',
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => saved.toggleSaveJob(job),
+                              child: const Icon(Icons.bookmark_rounded,
+                                  color: AppColors.primary, size: 22),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+              ],
+              if (clients.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Saved Clients',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${clients.length}',
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                ...clients.map((c) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: AppColors.secondary,
+                              backgroundImage: c.profilePictureUrl != null &&
+                                      c.profilePictureUrl!.startsWith('http')
+                                  ? NetworkImage(c.profilePictureUrl!)
+                                  : null,
+                              child: c.profilePictureUrl == null ||
+                                      !c.profilePictureUrl!.startsWith('http')
+                                  ? const Icon(Icons.business,
+                                      color: AppColors.primary, size: 22)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    c.displayName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  const Text(
+                                    'Client',
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => saved.toggleSaveClient(c),
+                              child: const Icon(Icons.bookmark_rounded,
+                                  color: AppColors.primary, size: 22),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildReviewCard(Review review) {
     final avg = review.ratings.isEmpty
         ? 0.0
@@ -1569,6 +1791,72 @@ class _ProfileScreenState extends State<ProfileScreen>
         .split('_')
         .map((w) => w[0].toUpperCase() + w.substring(1))
         .join(' ');
+  }
+
+  Widget _buildEmptyBio(VoidCallback onAdd) {
+    return GestureDetector(
+      onTap: onAdd,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.25),
+            style: BorderStyle.solid,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.edit_note_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add your bio',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Tell clients about yourself, your skills, and experience.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSection({

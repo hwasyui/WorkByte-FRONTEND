@@ -25,15 +25,12 @@ class ProfileProvider extends ChangeNotifier {
     if (isClient) {
       final c = _clientProfile;
       if (c == null) return false;
-      // Bio is now optional for debugging
-      return (c.fullName?.isNotEmpty ?? false);
+      return (c.fullName?.isNotEmpty ?? false) && c.jobTitle != '-' && (c.bio?.isNotEmpty ?? false);
     }
     if (isFreelancer) {
       final f = _freelancerProfile;
       if (f == null) return false;
-      // Bio is now optional for debugging
-      // return f.fullName.isNotEmpty && f.jobTitle != '-';
-      return f.fullName.isNotEmpty; // && f.jobTitle != '-';
+      return f.fullName.isNotEmpty && f.jobTitle != '-' && (f.bio?.isNotEmpty ?? false);
     }
     return false;
   }
