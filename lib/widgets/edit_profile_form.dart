@@ -21,6 +21,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController nameCtrl;
+  late TextEditingController jobTitleCtrl;
 
   String? imagePath;
   String? imageUrl;
@@ -30,6 +31,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
   void initState() {
     super.initState();
     nameCtrl = TextEditingController(text: widget.initialData['name']);
+    jobTitleCtrl = TextEditingController(text: widget.initialData['job'] ?? '');
     imageUrl = widget.initialData['image'];
     imagePath = imageUrl;
     imageDeleted = false;
@@ -111,6 +113,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
     if (_formKey.currentState!.validate()) {
       widget.onSave({
         "name": nameCtrl.text,
+        "job": jobTitleCtrl.text,
         "image": imagePath,
         "imageUrl": imageUrl,
         "imageDeleted": imageDeleted ?? false,
@@ -186,6 +189,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 const SizedBox(height: 16),
 
                 _input(nameCtrl, "Display Name"),
+                _input(jobTitleCtrl, "Job Title", isRequired: false),
 
                 SizedBox(
                   width: double.infinity,

@@ -364,9 +364,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         initialData: {
           "name": profile.clientProfile?.fullName,
           "username": auth.currentUser?.email ?? '',
+          "job": profile.jobTitle,
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
+          if (data['job'] != null) profile.updateJobTitle(data['job']);
           final identifier =
               profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
@@ -763,20 +765,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               Positioned(
                 top: 0,
                 right: 0,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.bookmarks_outlined,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => _tabController.animateTo(2),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      onPressed: () => _showLogoutDialog(context),
-                    ),
-                  ],
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.bookmarks_outlined,
+                    color: Colors.white,
+                  ),
+                  onPressed: () => _tabController.animateTo(2),
                 ),
               ),
               // ── Profile avatar ─────────────────────────────────────────

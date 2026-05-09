@@ -2,6 +2,8 @@ class UserModel {
   final String userId;
   final String email;
   final String type;
+  final String? clientId;
+  final String? freelancerId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -9,6 +11,8 @@ class UserModel {
     required this.userId,
     required this.email,
     required this.type,
+    this.clientId,
+    this.freelancerId,
     this.createdAt,
     this.updatedAt,
   });
@@ -17,6 +21,8 @@ class UserModel {
     userId: json['user_id'] as String,
     email: json['email'] as String,
     type: _extractUserType(json),
+    clientId: json['client_id'] as String?,
+    freelancerId: json['freelancer_id'] as String?,
     createdAt: json['created_at'] != null
         ? DateTime.tryParse(json['created_at'].toString())
         : null,

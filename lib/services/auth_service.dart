@@ -112,6 +112,32 @@ class AuthService {
     );
   }
 
+  Future<Map<String, dynamic>> addRole({
+    required String token,
+    required String role,
+    required String fullName,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/add-role'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'role': role, 'full_name': fullName}),
+    );
+
+    final body = jsonDecode(response.body);
+    debugPrint('POST /auth/add-role response: $body');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return body['details'] ?? body['data'] ?? body;
+    }
+
+    throw Exception(
+      body['details'] ?? body['message'] ?? body['detail'] ?? 'Failed to add role',
+    );
+  }
+
   Future<UserModel> getMe(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/auth/me'),

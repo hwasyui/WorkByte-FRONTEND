@@ -77,15 +77,6 @@ class HomeBottomNavBar extends StatelessWidget {
                     onTap: () => onTap?.call(3),
                   ),
                 ),
-                Expanded(
-                  child: _NavItem(
-                    icon: Icons.person_outline_rounded,
-                    activeIcon: Icons.person_rounded,
-                    label: 'Profile',
-                    isSelected: currentIndex == 4,
-                    onTap: () => onTap?.call(4),
-                  ),
-                ),
               ],
             ),
           ),

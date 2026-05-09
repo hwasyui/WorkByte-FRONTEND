@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? uploadedCVPath;
   bool _cvRemoved = false;
   final TextEditingController aboutController = TextEditingController();
+  final TextEditingController hourlyController = TextEditingController();
   late TabController _tabController;
 
   static const Color primaryColor = AppColors.primary;
@@ -60,6 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        hourlyController.text = profile.freelancerProfile?.estimatedRate?.toString() ?? '';
       });
 
       if (auth.token != null && profile.isFreelancer) {
@@ -93,6 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        hourlyController.text = profile.freelancerProfile?.estimatedRate?.toString() ?? '';
       });
     }
   }
@@ -574,6 +578,284 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  void _editHourly() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEECFB),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.schedule_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Edit Hourly Rate',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF111827),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Set your desired hourly rate.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(dialogContext),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Color(0xFF9CA3AF),
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Label
+                Text(
+                  'Hourly Rate (USD / hour)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Input field
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEECFB),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: hourlyController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*'),
+                            ),
+                          ],
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF111827),
+                          ),
+                          decoration: InputDecoration(
+                            hintText: '0.00',
+                            hintStyle: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: const Color(0xFF9CA3AF),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDDD8FA),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'USD',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Info hint
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Enter the amount you want to earn per hour.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFF0F0F1)),
+                const SizedBox(height: 16),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final newHourly = hourlyController.text.trim();
+                          final hourlyValue =
+                              newHourly.isEmpty
+                                  ? null
+                                  : double.tryParse(newHourly);
+
+                          final auth = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final profile = Provider.of<ProfileProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final messenger = ScaffoldMessenger.of(context);
+                          final identifier =
+                              profile.freelancerProfile?.freelancerId ??
+                              auth.currentUser!.userId;
+
+                          Navigator.pop(dialogContext);
+
+                          final fields = <String, dynamic>{};
+                          if (hourlyValue != null) {
+                            fields['estimated_rate'] = hourlyValue;
+                            fields['rate_time'] = 'hourly';
+                            fields['rate_currency'] = 'USD';
+                          }
+
+                          final success = await profile.updateProfile(
+                            token: auth.token!,
+                            identifier: identifier,
+                            fields: fields,
+                          );
+
+                          if (success) {
+                            await _refreshProfile();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Hourly rate saved successfully'),
+                              ),
+                            );
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  profile.error ??
+                                      'Failed to save hourly rate',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Save',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showSkillForm() {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
@@ -902,20 +1184,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               Positioned(
                 top: 0,
                 right: 0,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.bookmarks_outlined,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => _tabController.animateTo(2),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      onPressed: () => _showLogoutDialog(context),
-                    ),
-                  ],
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.bookmarks_outlined,
+                    color: Colors.white,
+                  ),
+                  onPressed: () => _tabController.animateTo(2),
                 ),
               ),
               Positioned(
@@ -1091,6 +1365,22 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             children: [
+              _buildSection(
+                title: 'Hourly Rate',
+                icon: Icons.attach_money,
+                hasEdit: true,
+                onEdit: _editHourly,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Text(
+                    hourlyController.text.isEmpty ? 'No rate set' : 'USD ${hourlyController.text} / hour',
+                    style: TextStyle(
+                      color: hourlyController.text.isEmpty ? Colors.grey : Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildSection(
                 title: 'About',
                 icon: Icons.person_outline,

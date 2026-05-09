@@ -49,7 +49,8 @@ class SettingsScreen extends StatelessWidget {
                 isClientActive: profile.isClient,
                 hasClientRole: hasClientRole,
                 hasFreelancerRole: hasFreelancerRole,
-                onCreateAccount: () => _showAddRoleDialog(context, auth, profile),
+                onCreateAccount: () =>
+                    _showAddRoleDialog(context, auth, profile),
               ),
               const SizedBox(height: 32),
             ],
@@ -66,50 +67,73 @@ class SettingsScreen extends StatelessWidget {
   ) {
     final isClientActive = profile.isClient;
     final targetRole = isClientActive ? 'freelancer' : 'client';
-    final dialogTitle = isClientActive ? 'Create a freelancer account' : 'Create a client account';
+    final dialogTitle = isClientActive
+        ? 'Create a freelancer account'
+        : 'Create a client account';
     final dialogSubtitle = isClientActive
         ? 'Setup a freelancer account if you want to apply to jobs and showcase your skills.'
         : 'Setup a client account if you want to post jobs and hire talents.';
     final fieldLabel = isClientActive ? 'Full Name' : 'Company Name';
-    final fieldHint = isClientActive ? 'Enter your full name' : 'Enter your company name';
+    final fieldHint =
+        isClientActive ? 'Enter your full name' : 'Enter your company name';
+    final buttonLabel =
+        isClientActive ? 'New Freelancer Account' : 'New Client Account';
     final noteText = isClientActive
-        ? 'Your name will not appear on job applications unless you complete your profile.'
-        : 'Your company name will not appear on job posts unless you previously worked with the talent or agency.';
+        ? 'Your name will NOT appear on job applications unless you complete your freelancer profile.'
+        : 'Your company name will NOT appear on job posts unless you have previously worked with the talent or agency on WorkByte.';
 
     final controller = TextEditingController();
     String? fieldError;
 
-    showDialog<void>(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
                 ),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       dialogTitle,
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textDark,
+                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
                       dialogSubtitle,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w400,
                         color: const Color(0xFF6B7280),
                         height: 1.6,
@@ -127,17 +151,49 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     TextField(
                       controller: controller,
+                      autofocus: true,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: AppColors.textDark,
+                      ),
                       decoration: InputDecoration(
                         hintText: fieldHint,
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFF9CA3AF),
+                        ),
                         errorText: fieldError,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFDC2626),
+                          ),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFDC2626),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
@@ -151,16 +207,16 @@ class SettingsScreen extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
+                            onPressed: () => Navigator.pop(sheetContext),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.primary),
+                              side: const BorderSide(
+                                color: AppColors.primary,
+                              ),
                               foregroundColor: AppColors.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -179,72 +235,103 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final input = controller.text.trim();
-                              if (input.isEmpty) {
-                                setState(() {
-                                  fieldError = '$fieldLabel is required';
-                                });
-                                return;
-                              }
+                          child: Consumer<AuthProvider>(
+                            builder: (context, authState, _) {
+                              return ElevatedButton(
+                                onPressed: authState.isLoading
+                                    ? null
+                                    : () async {
+                                        final input =
+                                            controller.text.trim();
+                                        if (input.isEmpty) {
+                                          setState(() {
+                                            fieldError =
+                                                '$fieldLabel is required';
+                                          });
+                                          return;
+                                        }
+                                        setState(() => fieldError = null);
 
-                              final success = await auth.addRole(
-                                role: targetRole,
-                                fullName: input,
-                                profileProvider: profile,
+                                        final success = await auth.addRole(
+                                          role: targetRole,
+                                          fullName: input,
+                                          profileProvider: profile,
+                                        );
+
+                                        if (success) {
+                                          if (sheetContext.mounted) {
+                                            Navigator.pop(sheetContext);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    targetRole == 'client'
+                                                        ? 'Client account created successfully.'
+                                                        : 'Freelancer account created successfully.',
+                                                    style:
+                                                        GoogleFonts.poppins(
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                  behavior:
+                                                      SnackBarBehavior
+                                                          .floating,
+                                                  shape:
+                                                      RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                  backgroundColor:
+                                                      AppColors.primary,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        } else {
+                                          if (context.mounted) {
+                                            setState(() {
+                                              fieldError =
+                                                  auth.error ??
+                                                  'Could not create account';
+                                            });
+                                          }
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  disabledBackgroundColor:
+                                      AppColors.primary.withValues(alpha: 0.6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: authState.isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        buttonLabel,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                               );
-
-                              if (success) {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '${dialogTitle.replaceFirst('Create a ', '')} created successfully.',
-                                        style: GoogleFonts.poppins(fontSize: 13),
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: AppColors.primary,
-                                    ),
-                                  );
-                                }
-                              } else {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        auth.error ?? 'Could not create account',
-                                        style: GoogleFonts.poppins(fontSize: 13),
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: const Color(0xFFDC2626),
-                                    ),
-                                  );
-                                }
-                              }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              'Create Account',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
                           ),
                         ),
                       ],
@@ -380,16 +467,19 @@ class _AdditionalAccountsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canCreateClient = !hasClientRole && !isClientActive;
     final hasBothRoles = hasClientRole && hasFreelancerRole;
+    final canCreateClient = !hasClientRole;
+    final canCreateFreelancer = !hasFreelancerRole;
+
     final accountLabel = canCreateClient ? 'Client Account' : 'Freelancer Account';
     final description = canCreateClient
         ? 'Hire, manage and pay as a different company. Each client company has its own freelancers, payment methods and reports.'
         : 'Apply to jobs and build your portfolio as a freelancer. Use this account to showcase your experience and skills.';
-    final buttonLabel = canCreateClient ? 'Create Client Account' : 'Create Freelancer Account';
+    final buttonLabel =
+        canCreateClient ? 'New Client Account' : 'New Freelancer Account';
     final helpText = canCreateClient
-        ? 'Your company name will not appear on job posts unless you have previously worked with the talent or agency on WorkByte.'
-        : 'Your name will not appear on job applications until you complete your freelancer profile.';
+        ? 'Your company name will NOT appear on job posts unless you have previously worked with the talent or agency on WorkByte.'
+        : 'Your name will NOT appear on job applications until you complete your freelancer profile.';
 
     return Container(
       color: Colors.white,
@@ -422,32 +512,55 @@ class _AdditionalAccountsSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFF),
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Your account has both Freelancer and Company access.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: AppColors.primary,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Use the side menu to switch between your active Freelancer and Company profiles.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF6B7280),
-                      height: 1.5,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Both accounts active',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Switch between Freelancer and Company from the side menu.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF6B7280),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ] else ...[
+          ] else if (canCreateClient || canCreateFreelancer) ...[
             Text(
               accountLabel,
               style: GoogleFonts.poppins(

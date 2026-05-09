@@ -79,6 +79,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     context.read<JobPostProvider>().setDraftJobData({
       'job_title': _titleController.text.trim(),
       'job_description': _descController.text.trim(),
+      'project_category': 'general',
       'project_type': _projectType,
       'project_scope': 'medium',
       'working_days': int.parse(_daysController.text.trim()),

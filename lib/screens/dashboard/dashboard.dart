@@ -10,6 +10,7 @@ import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_card.dart';
 import '../../widgets/home_bottom_nav_bar.dart';
+import '../../widgets/side_drawer.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../client_profile/client_profile.dart';
 import '../../screens/post_job/job_detail.dart';
@@ -33,6 +34,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<AIJobMatchModel> _recommendedJobs = [];
   bool _isLoadingJobs = true;
@@ -208,16 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const DMThreadListScreen()),
       );
-    } else if (index == 4) {
-      final profile = context.read<ProfileProvider>();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => profile.isClient
-              ? const ClientProfileScreen()
-              : const ProfileScreen(),
-        ),
-      );
     } else {
       setState(() => _currentNavIndex = index);
     }
@@ -294,7 +286,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.background,
+      drawer: const SideDrawer(),
       floatingActionButton: null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 100),
@@ -355,15 +349,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       return Row(
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary,
-                              borderRadius: BorderRadius.circular(12),
+                          GestureDetector(
+                            onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: displayImage,
                             ),
-                            clipBehavior: Clip.antiAlias,
-                            child: displayImage,
                           ),
                           const SizedBox(width: 12),
                           Expanded(

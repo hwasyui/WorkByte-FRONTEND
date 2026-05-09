@@ -95,6 +95,12 @@ class ProfileProvider extends ChangeNotifier {
     return null;
   }
 
+  // Getters for both profiles (used in account switcher)
+  String get freelancerDisplayName => _freelancerProfile?.displayName ?? 'Freelancer Account';
+  String get clientDisplayName => _clientProfile?.displayName ?? 'Company Account';
+  String? get freelancerProfilePictureUrl => _freelancerProfile?.profilePictureUrl;
+  String? get clientProfilePictureUrl => _clientProfile?.profilePictureUrl;
+
   String? get bio {
     if (isClient) return _clientProfile?.bio;
     if (isFreelancer) return _freelancerProfile?.bio;
@@ -122,7 +128,6 @@ class ProfileProvider extends ChangeNotifier {
     try {
       if (userType == 'client') {
         _clientProfile = await _service.fetchClientProfile(token, userId);
-        _freelancerProfile = null;
         _educations = [];
         _experiences = [];
         _skills = [];
@@ -131,7 +136,6 @@ class ProfileProvider extends ChangeNotifier {
           token,
           userId,
         );
-        _clientProfile = null;
         await refreshFreelancerDetails(token);
       }
 
@@ -446,6 +450,15 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> switchRole({
+    required String token,
+    required String userId,
+    required String newRole,
+  }) async {
+    if (_userType == newRole) return true;
+    return await fetchProfile(token: token, userId: userId, userType: newRole);
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
@@ -459,7 +472,7 @@ class ProfileProvider extends ChangeNotifier {
     _educations = const [];
     _experiences = const [];
     _skills = const [];
-    notifyListeners();
+    notifyListeners();  // resets both profiles on logout
   }
 
   void _clearImageCache() {

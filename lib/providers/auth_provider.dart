@@ -120,6 +120,30 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> addRole({
+    required String role,
+    required String fullName,
+    ProfileProvider? profileProvider,
+  }) async {
+    if (_token == null) return false;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.addRole(token: _token!, role: role, fullName: fullName);
+      _currentUser = await _service.getMe(_token!);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   void logout({ProfileProvider? profileProvider}) {
     _token = null;
     _currentUser = null;

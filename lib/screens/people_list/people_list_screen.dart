@@ -1,17 +1,20 @@
 import 'dart:io';
 
-import 'package:app/screens/people_list/freelancer_public_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../models/client_model.dart';
+import '../../models/education_model.dart';
+import '../../models/experience_model.dart';
 import '../../models/freelancer_model.dart';
+import '../../models/freelancer_skill_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../services/api_service.dart';
+import '../../services/profile_service.dart';
 
 class PeopleListScreen extends StatefulWidget {
   final bool showClients;
@@ -338,10 +341,10 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          FreelancerPublicProfileScreen(
-                                            freelancerId: person.freelancerId,
-                                          ),
+                                      builder: (_) => PeopleProfileScreen(
+                                        isClient: false,
+                                        freelancer: person,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -629,7 +632,7 @@ class _StatChip extends StatelessWidget {
 }
 
 // ── Profile detail screen ──────────────────────────────────────────────────────
-class PeopleProfileScreen extends StatelessWidget {
+class PeopleProfileScreen extends StatefulWidget {
   final bool isClient;
   final ClientModel? client;
   final FreelancerModel? freelancer;
@@ -642,22 +645,61 @@ class PeopleProfileScreen extends StatelessWidget {
   });
 
   @override
+  State<PeopleProfileScreen> createState() => _PeopleProfileScreenState();
+}
+
+class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
+  List<FreelancerSkillModel> _skills = [];
+  List<EducationModel> _educations = [];
+  List<ExperienceModel> _experiences = [];
+  bool _loadingDetails = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isClient && widget.freelancer != null) {
+      _fetchFreelancerDetails();
+    }
+  }
+
+  Future<void> _fetchFreelancerDetails() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    final freelancerId = widget.freelancer!.freelancerId;
+    setState(() => _loadingDetails = true);
+    final service = ProfileService();
+    final results = await Future.wait([
+      service.getFreelancerSkills(token, freelancerId),
+      service.getEducations(token, freelancerId),
+      service.getWorkExperiences(token, freelancerId),
+    ]);
+    if (mounted) {
+      setState(() {
+        _skills = results[0] as List<FreelancerSkillModel>;
+        _educations = results[1] as List<EducationModel>;
+        _experiences = results[2] as List<ExperienceModel>;
+        _loadingDetails = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final name = isClient
-        ? client?.displayName ?? 'Client'
-        : freelancer?.displayName ?? 'Freelancer';
-    final avatarUrl = isClient
-        ? client?.profilePictureUrl
-        : freelancer?.profilePictureUrl;
-    final bio = isClient
-        ? (client?.bio ?? 'No description available.')
-        : (freelancer?.bio ?? 'No description available.');
-    final badge = isClient
-        ? client?.averageRatingGiven != null
-              ? '★ ${client!.averageRatingGiven!.toStringAsFixed(1)}'
+    final name = widget.isClient
+        ? widget.client?.displayName ?? 'Client'
+        : widget.freelancer?.displayName ?? 'Freelancer';
+    final avatarUrl = widget.isClient
+        ? widget.client?.profilePictureUrl
+        : widget.freelancer?.profilePictureUrl;
+    final bio = widget.isClient
+        ? (widget.client?.bio ?? 'No description available.')
+        : (widget.freelancer?.bio ?? 'No description available.');
+    final badge = widget.isClient
+        ? widget.client?.averageRatingGiven != null
+              ? '★ ${widget.client!.averageRatingGiven!.toStringAsFixed(1)}'
               : 'No rating yet'
-        : freelancer?.estimatedRate != null
-        ? freelancer!.formattedRate
+        : widget.freelancer?.estimatedRate != null
+        ? widget.freelancer!.formattedRate
         : 'Rate not set';
 
     return Scaffold(
@@ -686,15 +728,17 @@ class PeopleProfileScreen extends StatelessWidget {
             actions: [
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {
-                  final isSaved = isClient
-                      ? saved.isClientSaved(client?.clientId ?? '')
-                      : saved.isFreelancerSaved(freelancer?.freelancerId ?? '');
+                  final isSaved = widget.isClient
+                      ? saved.isClientSaved(widget.client?.clientId ?? '')
+                      : saved.isFreelancerSaved(
+                          widget.freelancer?.freelancerId ?? '',
+                        );
                   return GestureDetector(
                     onTap: () {
-                      if (isClient && client != null) {
-                        saved.toggleSaveClient(client!);
-                      } else if (!isClient && freelancer != null) {
-                        saved.toggleSaveFreelancer(freelancer!);
+                      if (widget.isClient && widget.client != null) {
+                        saved.toggleSaveClient(widget.client!);
+                      } else if (!widget.isClient && widget.freelancer != null) {
+                        saved.toggleSaveFreelancer(widget.freelancer!);
                       }
                     },
                     child: Container(
@@ -774,11 +818,11 @@ class PeopleProfileScreen extends StatelessWidget {
                   // Stats row
                   Row(
                     children: [
-                      if (isClient) ...[
+                      if (widget.isClient) ...[
                         Expanded(
                           child: _StatCard(
                             label: 'Jobs Posted',
-                            value: '${client?.totalJobsPosted ?? 0}',
+                            value: '${widget.client?.totalJobsPosted ?? 0}',
                             icon: Icons.work_outline_rounded,
                           ),
                         ),
@@ -786,7 +830,8 @@ class PeopleProfileScreen extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             label: 'Completed',
-                            value: '${client?.totalProjectsCompleted ?? 0}',
+                            value:
+                                '${widget.client?.totalProjectsCompleted ?? 0}',
                             icon: Icons.check_circle_outline_rounded,
                           ),
                         ),
@@ -794,7 +839,7 @@ class PeopleProfileScreen extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             label: 'Projects',
-                            value: '${freelancer?.totalProjects ?? 0}',
+                            value: '${widget.freelancer?.totalProjects ?? 0}',
                             icon: Icons.folder_outlined,
                           ),
                         ),
@@ -802,8 +847,9 @@ class PeopleProfileScreen extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             label: 'Rate',
-                            value: freelancer?.estimatedRate != null
-                                ? freelancer!.estimatedRate!.toStringAsFixed(0)
+                            value: widget.freelancer?.estimatedRate != null
+                                ? widget.freelancer!.estimatedRate!
+                                    .toStringAsFixed(0)
                                 : 'N/A',
                             icon: Icons.attach_money_rounded,
                           ),
@@ -876,26 +922,124 @@ class PeopleProfileScreen extends StatelessWidget {
                       children: [
                         _DetailRow(label: 'Name', value: name),
                         const Divider(height: 20, color: Color(0xFFF0F0F1)),
-                        if (isClient) ...[
+                        if (widget.isClient) ...[
                           _DetailRow(
                             label: 'Website',
-                            value: client?.websiteUrl ?? 'Not provided',
+                            value:
+                                widget.client?.websiteUrl ?? 'Not provided',
                           ),
                           const Divider(height: 20, color: Color(0xFFF0F0F1)),
                           _DetailRow(label: 'Rating', value: badge),
                         ] else ...[
                           _DetailRow(label: 'Rate', value: badge),
-                          if (freelancer?.rateTime != null) ...[
+                          if (widget.freelancer?.rateTime != null) ...[
                             const Divider(height: 20, color: Color(0xFFF0F0F1)),
                             _DetailRow(
                               label: 'Period',
-                              value: freelancer!.rateTime!,
+                              value: widget.freelancer!.rateTime!,
                             ),
                           ],
                         ],
                       ],
                     ),
                   ),
+
+                  // Freelancer-only sections
+                  if (!widget.isClient) ...[
+                    const SizedBox(height: 20),
+                    if (_loadingDetails)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    else ...[
+                      // Skills
+                      _SectionHeader(
+                        label: 'Skills',
+                        icon: Icons.psychology_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_skills.isEmpty)
+                        _EmptyHint(text: 'No skills listed.')
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _skills.map((s) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                s.skillName ?? s.skillId,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 20),
+
+                      // Education
+                      _SectionHeader(
+                        label: 'Education',
+                        icon: Icons.school_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_educations.isEmpty)
+                        _EmptyHint(text: 'No education added.')
+                      else
+                        Column(
+                          children: _educations.map((e) {
+                            final period =
+                                '${e.startDate.substring(0, 4)} – ${e.isCurrent ? 'Present' : (e.endDate?.substring(0, 4) ?? '?')}';
+                            return _TimelineCard(
+                              title: e.degree,
+                              subtitle: e.institutionName,
+                              trailing: period,
+                              description: e.fieldOfStudy,
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 20),
+
+                      // Experience
+                      _SectionHeader(
+                        label: 'Experience',
+                        icon: Icons.work_outline_rounded,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_experiences.isEmpty)
+                        _EmptyHint(text: 'No work experience added.')
+                      else
+                        Column(
+                          children: _experiences.map((e) {
+                            final period =
+                                '${e.startDate.substring(0, 4)} – ${e.isCurrent ? 'Present' : (e.endDate?.substring(0, 4) ?? '?')}';
+                            return _TimelineCard(
+                              title: e.jobTitle,
+                              subtitle: e.companyName,
+                              trailing: period,
+                              description: e.location,
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ],
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -930,6 +1074,153 @@ class PeopleProfileScreen extends StatelessWidget {
               ),
             )
           : null,
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _SectionHeader({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.secondary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.primary),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1A1A2E),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  final String text;
+  const _EmptyHint({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: const Color(0xFF9CA3AF),
+        ),
+      ),
+    );
+  }
+}
+
+class _TimelineCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String trailing;
+  final String? description;
+
+  const _TimelineCard({
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.only(top: 5),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF555555),
+                  ),
+                ),
+                if (description != null && description!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    description!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            trailing,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: const Color(0xFF9CA3AF),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
