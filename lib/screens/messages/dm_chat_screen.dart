@@ -9,7 +9,7 @@ import '../../providers/dm_provider.dart';
 import '../../services/dm_service.dart';
 
 class DmChatScreen extends StatefulWidget {
-  final DmThread thread;
+  final DMThreadModel thread;
   final String currentUserId;
 
   const DmChatScreen({
@@ -55,9 +55,7 @@ class _DmChatScreenState extends State<DmChatScreen> {
 
   void _onScroll() {
     // Load older messages when scrolled to top
-    if (_scrollController.position.pixels <= 80 &&
-        _hasMore &&
-        !_loadingMore) {
+    if (_scrollController.position.pixels <= 80 && _hasMore && !_loadingMore) {
       _loadOlderMessages();
     }
   }
@@ -73,8 +71,11 @@ class _DmChatScreenState extends State<DmChatScreen> {
     if (token == null) return;
     setState(() => _loadingMessages = true);
     try {
-      final result =
-          await DmService.getMessages(token, _thread.threadId, limit: 50);
+      final result = await DmService.getMessages(
+        token,
+        _thread.threadId,
+        limit: 50,
+      );
       final list = (result['messages'] as List? ?? [])
           .map((e) => DmMessage.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -131,16 +132,18 @@ class _DmChatScreenState extends State<DmChatScreen> {
       if (token == null) return;
       try {
         final result = await DmService.getMessages(
-            token, _thread.threadId,
-            limit: 50);
+          token,
+          _thread.threadId,
+          limit: 50,
+        );
         final list = (result['messages'] as List? ?? [])
             .map((e) => DmMessage.fromJson(e as Map<String, dynamic>))
             .toList();
         if (!mounted) return;
-        final lastKnown =
-            _messages.isNotEmpty ? _messages.last.dmMessageId : null;
-        final hasNew = list.isNotEmpty &&
-            list.last.dmMessageId != lastKnown;
+        final lastKnown = _messages.isNotEmpty
+            ? _messages.last.dmMessageId
+            : null;
+        final hasNew = list.isNotEmpty && list.last.dmMessageId != lastKnown;
         if (hasNew) {
           setState(() {
             _messages = list;
@@ -178,8 +181,7 @@ class _DmChatScreenState extends State<DmChatScreen> {
     _messageController.clear();
 
     try {
-      final msg =
-          await DmService.sendMessage(token, _thread.threadId, text);
+      final msg = await DmService.sendMessage(token, _thread.threadId, text);
       setState(() {
         _messages.add(msg);
         _isSending = false;
@@ -189,8 +191,10 @@ class _DmChatScreenState extends State<DmChatScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', ''),
-              style: GoogleFonts.poppins()),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -205,14 +209,18 @@ class _DmChatScreenState extends State<DmChatScreen> {
     final ok = await dmProvider.acceptThread(token, _thread.threadId);
     if (!mounted) return;
     if (ok) {
-      setState(() =>
-          _thread = dmProvider.threads.firstWhere(
-              (t) => t.threadId == _thread.threadId,
-              orElse: () => _thread.copyWithStatus('active')));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Request accepted!', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.green,
-      ));
+      setState(
+        () => _thread = dmProvider.threads.firstWhere(
+          (t) => t.threadId == _thread.threadId,
+          orElse: () => _thread.copyWithStatus('active'),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Request accepted!', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -223,18 +231,19 @@ class _DmChatScreenState extends State<DmChatScreen> {
     final ok = await dmProvider.declineThread(token, _thread.threadId);
     if (!mounted) return;
     if (ok) {
-      setState(() =>
-          _thread = dmProvider.threads.firstWhere(
-              (t) => t.threadId == _thread.threadId,
-              orElse: () => _thread.copyWithStatus('declined')));
+      setState(
+        () => _thread = dmProvider.threads.firstWhere(
+          (t) => t.threadId == _thread.threadId,
+          orElse: () => _thread.copyWithStatus('declined'),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final otherName = _thread.otherUser?.displayName ?? 'User';
-    final isReceiver =
-        widget.currentUserId != _thread.initiatorId;
+    final isReceiver = widget.currentUserId != _thread.initiatorId;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -243,8 +252,11 @@ class _DmChatScreenState extends State<DmChatScreen> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              size: 18, color: Color(0xFF333333)),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: Color(0xFF333333),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -260,9 +272,10 @@ class _DmChatScreenState extends State<DmChatScreen> {
                 child: Text(
                   _thread.otherUser?.initials ?? '?',
                   style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
@@ -273,15 +286,17 @@ class _DmChatScreenState extends State<DmChatScreen> {
                 Text(
                   otherName,
                   style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827)),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF111827),
+                  ),
                 ),
                 Text(
                   _threadStatusLabel(_thread.status),
                   style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: _statusColor(_thread.status)),
+                    fontSize: 11,
+                    color: _statusColor(_thread.status),
+                  ),
                 ),
               ],
             ),
@@ -296,25 +311,22 @@ class _DmChatScreenState extends State<DmChatScreen> {
         children: [
           // Request banner (shown to receiver when thread is in 'request' status)
           if (_thread.isRequest && isReceiver)
-            _RequestBanner(
-              onAccept: _acceptThread,
-              onDecline: _declineThread,
-            ),
+            _RequestBanner(onAccept: _acceptThread, onDecline: _declineThread),
 
           // Declined banner
           if (_thread.isDeclined)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: Colors.red.shade50,
               child: Text(
                 'This conversation has been declined.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.w500),
+                  fontSize: 12,
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
 
@@ -323,39 +335,40 @@ class _DmChatScreenState extends State<DmChatScreen> {
             child: _loadingMessages
                 ? const Center(
                     child: CircularProgressIndicator(
-                        color: AppColors.primary, strokeWidth: 2))
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  )
                 : _messages.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                        itemCount:
-                            _messages.length + (_loadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (_loadingMore && index == 0) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.primary),
-                                ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    itemCount: _messages.length + (_loadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_loadingMore && index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
                               ),
-                            );
-                          }
-                          final msgIndex =
-                              _loadingMore ? index - 1 : index;
-                          return _buildMessage(_messages[msgIndex]);
-                        },
-                      ),
+                            ),
+                          ),
+                        );
+                      }
+                      final msgIndex = _loadingMore ? index - 1 : index;
+                      return _buildMessage(_messages[msgIndex]);
+                    },
+                  ),
           ),
 
           // Input bar
-          if (!_thread.isDeclined)
-            _buildInputBar(),
+          if (!_thread.isDeclined) _buildInputBar(),
         ],
       ),
     );
@@ -366,18 +379,28 @@ class _DmChatScreenState extends State<DmChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline_rounded,
-              size: 56, color: Colors.grey.shade300),
+          Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 56,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 12),
-          Text('No messages yet',
-              style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500)),
+          Text(
+            'No messages yet',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('Start the conversation below.',
-              style: GoogleFonts.poppins(
-                  fontSize: 13, color: Colors.grey.shade400)),
+          Text(
+            'Start the conversation below.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey.shade400,
+            ),
+          ),
         ],
       ),
     );
@@ -392,11 +415,17 @@ class _DmChatScreenState extends State<DmChatScreen> {
     }
     if (msg.isJobPitch) {
       return _JobPitchCard(
-          metadata: msg.metadata ?? {}, isOwn: isOwn, message: msg);
+        metadata: msg.metadata ?? {},
+        isOwn: isOwn,
+        message: msg,
+      );
     }
     if (msg.isContractPdfShared) {
       return _PdfSharedCard(
-          metadata: msg.metadata ?? {}, isOwn: isOwn, message: msg);
+        metadata: msg.metadata ?? {},
+        isOwn: isOwn,
+        message: msg,
+      );
     }
 
     // Regular bubble
@@ -404,7 +433,8 @@ class _DmChatScreenState extends State<DmChatScreen> {
   }
 
   Widget _buildInputBar() {
-    final canSend = _thread.isActive ||
+    final canSend =
+        _thread.isActive ||
         (_thread.isRequest &&
             widget.currentUserId == _thread.initiatorId &&
             _messages.isEmpty);
@@ -415,7 +445,7 @@ class _DmChatScreenState extends State<DmChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, -4),
           ),
@@ -438,31 +468,31 @@ class _DmChatScreenState extends State<DmChatScreen> {
                       ? 'Type a message...'
                       : 'Waiting for request to be accepted...',
                   hintStyle: GoogleFonts.poppins(
-                      fontSize: 13, color: Colors.grey.shade400),
+                    fontSize: 13,
+                    color: Colors.grey.shade400,
+                  ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide:
-                        BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide:
-                        BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide:
-                        const BorderSide(color: AppColors.primary),
+                    borderSide: const BorderSide(color: AppColors.primary),
                   ),
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide:
-                        BorderSide(color: Colors.grey.shade100),
+                    borderSide: BorderSide(color: Colors.grey.shade100),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
@@ -473,23 +503,26 @@ class _DmChatScreenState extends State<DmChatScreen> {
               child: Material(
                 color: (canSend && !_isSending)
                     ? AppColors.primary
-                    : AppColors.primary.withValues(alpha:0.4),
+                    : AppColors.primary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(24),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(24),
-                  onTap: (canSend && !_isSending)
-                      ? _sendMessage
-                      : null,
+                  onTap: (canSend && !_isSending) ? _sendMessage : null,
                   child: _isSending
                       ? const Padding(
                           padding: EdgeInsets.all(12),
                           child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white)),
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
                         )
-                      : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
+                      : const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                 ),
               ),
             ),
@@ -530,20 +563,20 @@ class _DmChatScreenState extends State<DmChatScreen> {
 
 extension _DmThreadCopy on DmThread {
   DmThread copyWithStatus(String newStatus) => DmThread(
-        threadId: threadId,
-        userAId: userAId,
-        userBId: userBId,
-        initiatorId: initiatorId,
-        status: newStatus,
-        jobPostId: jobPostId,
-        contractId: contractId,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        otherUser: otherUser,
-        jobPost: jobPost,
-        lastMessage: lastMessage,
-        unreadCount: unreadCount,
-      );
+    threadId: threadId,
+    userAId: userAId,
+    userBId: userBId,
+    initiatorId: initiatorId,
+    status: newStatus,
+    jobPostId: jobPostId,
+    contractId: contractId,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    otherUser: otherUser,
+    jobPost: jobPost,
+    lastMessage: lastMessage,
+    unreadCount: unreadCount,
+  );
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
@@ -566,15 +599,18 @@ class _RequestBanner extends StatelessWidget {
           Text(
             'Message Request',
             style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF92400E)),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF92400E),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'This person sent you a message request. Accept to chat freely.',
             style: GoogleFonts.poppins(
-                fontSize: 12, color: const Color(0xFF78350F)),
+              fontSize: 12,
+              color: const Color(0xFF78350F),
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -586,12 +622,17 @@ class _RequestBanner extends StatelessWidget {
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  child: Text('Decline',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Decline',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -603,12 +644,17 @@ class _RequestBanner extends StatelessWidget {
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  child: Text('Accept',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Accept',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -630,16 +676,17 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment:
-            isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isOwn
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Flexible(
             child: Container(
               constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.72),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 10),
+                maxWidth: MediaQuery.of(context).size.width * 0.72,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isOwn ? AppColors.primary : Colors.white,
                 borderRadius: BorderRadius.only(
@@ -648,9 +695,7 @@ class _MessageBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(isOwn ? 18 : 4),
                   bottomRight: Radius.circular(isOwn ? 4 : 18),
                 ),
-                border: isOwn
-                    ? null
-                    : Border.all(color: Colors.grey.shade200),
+                border: isOwn ? null : Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,11 +703,10 @@ class _MessageBubble extends StatelessWidget {
                   Text(
                     msg.messageText,
                     style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: isOwn
-                            ? Colors.white
-                            : const Color(0xFF111827),
-                        height: 1.4),
+                      fontSize: 13,
+                      color: isOwn ? Colors.white : const Color(0xFF111827),
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 5),
                   Row(
@@ -671,10 +715,11 @@ class _MessageBubble extends StatelessWidget {
                       Text(
                         _formatTime(context, msg.sentAt),
                         style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: isOwn
-                                ? Colors.white.withValues(alpha:0.75)
-                                : Colors.grey.shade400),
+                          fontSize: 10,
+                          color: isOwn
+                              ? Colors.white.withValues(alpha: 0.75)
+                              : Colors.grey.shade400,
+                        ),
                       ),
                       if (isOwn) ...[
                         const SizedBox(width: 4),
@@ -685,7 +730,7 @@ class _MessageBubble extends StatelessWidget {
                           size: 13,
                           color: msg.isRead
                               ? Colors.lightBlueAccent
-                              : Colors.white.withValues(alpha:0.7),
+                              : Colors.white.withValues(alpha: 0.7),
                         ),
                       ],
                     ],
@@ -703,9 +748,7 @@ class _MessageBubble extends StatelessWidget {
     if (dt == null) return '';
     final now = DateTime.now();
     final tod = TimeOfDay.fromDateTime(dt);
-    if (dt.year == now.year &&
-        dt.month == now.month &&
-        dt.day == now.day) {
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
       return tod.format(context);
     }
     return '${dt.day}/${dt.month} ${tod.format(context)}';
@@ -721,46 +764,53 @@ class _ContractAcceptedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final contractTitle =
-        metadata['contract_title'] as String? ?? 'Contract';
+    final contractTitle = metadata['contract_title'] as String? ?? 'Contract';
     final roleTitle = metadata['role_title'] as String? ?? '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Center(
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha:0.07),
+            color: AppColors.primary.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: AppColors.primary.withValues(alpha:0.25)),
+              color: AppColors.primary.withValues(alpha: 0.25),
+            ),
           ),
           child: Column(
             children: [
-              const Icon(Icons.handshake_outlined,
-                  color: AppColors.primary, size: 28),
+              const Icon(
+                Icons.handshake_outlined,
+                color: AppColors.primary,
+                size: 28,
+              ),
               const SizedBox(height: 6),
               Text(
                 'Contract Accepted',
                 style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 contractTitle,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: const Color(0xFF374151)),
+                  fontSize: 12,
+                  color: const Color(0xFF374151),
+                ),
               ),
               if (roleTitle.isNotEmpty)
                 Text(
                   roleTitle,
                   style: GoogleFonts.poppins(
-                      fontSize: 11, color: const Color(0xFF6B7280)),
+                    fontSize: 11,
+                    color: const Color(0xFF6B7280),
+                  ),
                 ),
             ],
           ),
@@ -783,18 +833,19 @@ class _JobPitchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jobTitle =
-        metadata['job_title'] as String? ?? 'Job Opportunity';
+    final jobTitle = metadata['job_title'] as String? ?? 'Job Opportunity';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        mainAxisAlignment:
-            isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isOwn
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           Container(
             constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75),
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -802,8 +853,9 @@ class _JobPitchCard extends StatelessWidget {
               border: Border.all(color: const Color(0xFFE5E7EB)),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha:0.04),
-                    blurRadius: 8),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                ),
               ],
             ),
             child: Column(
@@ -811,15 +863,19 @@ class _JobPitchCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.work_outline_rounded,
-                        color: AppColors.primary, size: 18),
+                    const Icon(
+                      Icons.work_outline_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Job Pitch',
                       style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
@@ -827,15 +883,18 @@ class _JobPitchCard extends StatelessWidget {
                 Text(
                   jobTitle,
                   style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF111827)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF111827),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   message.messageText,
                   style: GoogleFonts.poppins(
-                      fontSize: 12, color: const Color(0xFF6B7280)),
+                    fontSize: 12,
+                    color: const Color(0xFF6B7280),
+                  ),
                 ),
               ],
             ),
@@ -864,12 +923,14 @@ class _PdfSharedCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        mainAxisAlignment:
-            isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isOwn
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           Container(
             constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75),
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -877,8 +938,9 @@ class _PdfSharedCard extends StatelessWidget {
               border: Border.all(color: const Color(0xFFE5E7EB)),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha:0.04),
-                    blurRadius: 8),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                ),
               ],
             ),
             child: Column(
@@ -886,15 +948,19 @@ class _PdfSharedCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.picture_as_pdf_outlined,
-                        color: Colors.redAccent, size: 18),
+                    const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: Colors.redAccent,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Contract PDF Shared',
                       style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.redAccent),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.redAccent,
+                      ),
                     ),
                   ],
                 ),
@@ -902,21 +968,29 @@ class _PdfSharedCard extends StatelessWidget {
                 Text(
                   message.messageText,
                   style: GoogleFonts.poppins(
-                      fontSize: 12, color: const Color(0xFF374151)),
+                    fontSize: 12,
+                    color: const Color(0xFF374151),
+                  ),
                 ),
                 if (pdfUrl.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () {
                       // URL launch handled by url_launcher if available
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('PDF URL: $pdfUrl',
-                            style: GoogleFonts.poppins(fontSize: 12)),
-                      ));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'PDF URL: $pdfUrl',
+                            style: GoogleFonts.poppins(fontSize: 12),
+                          ),
+                        ),
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
@@ -924,15 +998,19 @@ class _PdfSharedCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.open_in_new,
-                              color: Colors.white, size: 14),
+                          const Icon(
+                            Icons.open_in_new,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'View PDF',
                             style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),

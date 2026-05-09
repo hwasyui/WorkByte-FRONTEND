@@ -65,22 +65,23 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_validate()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
 
-    final success = await context.read<AuthProvider>().login(
+    final success = await authProvider.login(
       _emailController.text.trim(),
       _passwordController.text,
-      profileProvider: context.read<ProfileProvider>(),
+      profileProvider: profileProvider,
     );
 
+    if (!mounted) return;
+
     if (success) {
-      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Login failed')),
       );
@@ -105,7 +106,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 30,
+                      ),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 400),
@@ -205,7 +209,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               Consumer<AuthProvider>(
                                 builder: (context, authProvider, child) {
                                   return GestureDetector(
-                                    onTap: authProvider.isLoading ? null : _handleLogin,
+                                    onTap: authProvider.isLoading
+                                        ? null
+                                        : _handleLogin,
                                     child: Container(
                                       width: double.infinity,
                                       height: 55,
@@ -214,7 +220,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         borderRadius: BorderRadius.circular(30),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: AppColors.primary.withOpacity(0.3),
+                                            color: AppColors.primary
+                                                .withOpacity(0.3),
                                             blurRadius: 12,
                                             offset: const Offset(0, 5),
                                           ),
@@ -245,7 +252,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: Divider(color: Color(0xFFE5E7EB)),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                     child: Text(
                                       'Or continue with',
                                       style: AppText.caption.copyWith(
@@ -289,7 +298,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     /// Bottom wave (scrolls with content)
                     Builder(
                       builder: (context) {
-                        final bottomInset = MediaQuery.of(context).padding.bottom;
+                        final bottomInset = MediaQuery.of(
+                          context,
+                        ).padding.bottom;
                         return ClipPath(
                           clipper: _WaveClipper(),
                           child: Container(
@@ -313,14 +324,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const SignUpScreen(),
+                                        builder: (context) =>
+                                            const SignUpScreen(),
                                       ),
                                     );
                                   },
                                   style: TextButton.styleFrom(
                                     padding: EdgeInsets.zero,
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: Text(
                                     'Create account',

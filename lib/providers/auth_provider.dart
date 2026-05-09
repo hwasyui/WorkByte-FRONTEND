@@ -7,16 +7,55 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
 
   bool _isLoading = false;
+  bool _isRestoring = false;
   String? _error;
   String? _token;
   UserModel? _currentUser;
 
   bool get isLoading => _isLoading;
+  bool get isRestoring => _isRestoring;
   String? get error => _error;
   String? get token => _token;
   UserModel? get currentUser => _currentUser;
   String? get userId => _currentUser?.userId;
-  bool get isAuthenticated => _token != null;
+  bool get isAuthenticated => _token != null && _currentUser != null;
+
+  Future<void> restoreSession({ProfileProvider? profileProvider}) async {
+    _isRestoring = true;
+    notifyListeners();
+
+    try {
+      final savedToken = await _service.getSavedToken();
+
+      if (savedToken == null || savedToken.isEmpty) {
+        _token = null;
+        _currentUser = null;
+        _isRestoring = false;
+        notifyListeners();
+        return;
+      }
+
+      final user = await _service.getMe(savedToken);
+
+      _token = savedToken;
+      _currentUser = user;
+
+      if (profileProvider != null) {
+        await profileProvider.fetchProfile(
+          token: _token!,
+          userId: _currentUser!.userId,
+          userType: _currentUser!.type,
+        );
+      }
+    } catch (e) {
+      await _service.clearSavedToken();
+      _token = null;
+      _currentUser = null;
+    }
+
+    _isRestoring = false;
+    notifyListeners();
+  }
 
   Future<bool> login(
     String email,
@@ -29,6 +68,8 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _token = await _service.login(email, password);
+      await _service.saveToken(_token!);
+
       _currentUser = await _service.getMe(_token!);
 
       if (profileProvider != null) {
@@ -81,10 +122,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> verifyEmail({
-    required String email,
-    required String otp,
-  }) async {
+  Future<bool> verifyEmail({required String email, required String otp}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -144,9 +182,11 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void logout({ProfileProvider? profileProvider}) {
+  Future<void> logout({ProfileProvider? profileProvider}) async {
+    await _service.clearSavedToken();
     _token = null;
     _currentUser = null;
+    _error = null;
     profileProvider?.clear();
     notifyListeners();
   }

@@ -294,17 +294,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: AppColors.primary,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                      onPressed: () async {
+                        final auth = context.read<AuthProvider>();
+                        final profile = context.read<ProfileProvider>();
+
+                        await auth.logout(profileProvider: profile);
+
+                        if (!mounted) return;
+
+                        Navigator.pop(context);
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
                       child: Text(
                         'Cancel',
                         style: GoogleFonts.poppins(

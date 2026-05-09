@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -10,8 +11,11 @@ class AuthService {
     '',
   );
 
-  // local
-  // static const String _baseUrl = 'http://10.0.2.2:8000';
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  static const String _tokenKey = 'auth_token';
 
   Future<String> login(String email, String password) async {
     final response = await http.post(
@@ -21,7 +25,7 @@ class AuthService {
     );
 
     final body = jsonDecode(response.body);
-    debugPrint('POST /auth/login response: $body'); // ← add this
+    debugPrint('POST /auth/login response: $body');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final inner = body['details'] ?? body['data'] ?? body;
@@ -32,6 +36,18 @@ class AuthService {
     throw Exception(
       body['details'] ?? body['message'] ?? body['detail'] ?? 'Login failed',
     );
+  }
+
+  Future<void> saveToken(String token) async {
+    await _storage.write(key: _tokenKey, value: token);
+  }
+
+  Future<String?> getSavedToken() async {
+    return await _storage.read(key: _tokenKey);
+  }
+
+  Future<void> clearSavedToken() async {
+    await _storage.delete(key: _tokenKey);
   }
 
   Future<bool> register({
@@ -67,10 +83,7 @@ class AuthService {
     );
   }
 
-  Future<void> verifyEmail({
-    required String email,
-    required String otp,
-  }) async {
+  Future<void> verifyEmail({required String email, required String otp}) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/auth/verify-email'),
       headers: {'Content-Type': 'application/json'},
