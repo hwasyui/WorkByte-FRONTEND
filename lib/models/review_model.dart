@@ -213,7 +213,7 @@ class TrustScore {
   final String freelancerId;
   final double overallScore;
   final double? weightedReviewAvg;
-  final double? workQualityScore;
+  final double? displayStarAvg;
   final double? revisionRateScore;
   final double? responsivenessScore;
   final double? communicationSentiment;
@@ -226,7 +226,7 @@ class TrustScore {
     required this.freelancerId,
     required this.overallScore,
     this.weightedReviewAvg,
-    this.workQualityScore,
+    this.displayStarAvg,
     this.revisionRateScore,
     this.responsivenessScore,
     this.communicationSentiment,
@@ -240,7 +240,7 @@ class TrustScore {
     freelancerId: json['freelancer_id'] as String? ?? '',
     overallScore: (json['overall_score'] as num?)?.toDouble() ?? 0.0,
     weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
-    workQualityScore: (json['work_quality_score'] as num?)?.toDouble(),
+    displayStarAvg: (json['display_star_avg'] as num?)?.toDouble(),
     revisionRateScore: (json['revision_rate_score'] as num?)?.toDouble(),
     responsivenessScore: (json['responsiveness_score'] as num?)?.toDouble(),
     communicationSentiment: (json['communication_sentiment'] as num?)
@@ -254,7 +254,6 @@ class TrustScore {
   );
 
   /// Converts 0–1 component scores to 0–100 for display.
-  double get workQualityDisplay => (workQualityScore ?? 0) * 100;
   double get revisionRateDisplay => (revisionRateScore ?? 0) * 100;
   double get responsivenessDisplay => (responsivenessScore ?? 0) * 100;
   double get communicationDisplay => (communicationSentiment ?? 0) * 100;

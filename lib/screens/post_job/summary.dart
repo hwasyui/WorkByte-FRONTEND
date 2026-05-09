@@ -2,9 +2,9 @@ import 'dart:io';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
-import '../../services/upload_service.dart';
 import 'success.dart';
 
 class PostNewJobSummary extends StatefulWidget {
@@ -80,41 +80,41 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       }
     }
 
-    // ── 3. Upload files then create records ─────────────────────────
+    // ── 3. Upload files ─────────────────────────────────────────
     final draftFiles = provider.draftFiles;
+
     if (draftFiles.isNotEmpty) {
       setState(() => _submitStatus = 'Uploading files...');
-      final uploadService = UploadService();
 
-      for (final fileData in draftFiles) {
-        final localPath = fileData['local_path'] as String?;
-        if (localPath == null) continue;
+      try {
+        final filesToUpload = draftFiles
+            .map((f) => f['local_path'] as String?)
+            .where((path) => path != null)
+            .map((path) => File(path!))
+            .toList();
 
-        try {
-          final uploaded = await uploadService.uploadFile(
-            token,
-            File(localPath),
-            bucket: 'job-files',
+        final success = await provider.uploadJobFiles(
+          token,
+          created.jobPostId,
+          filesToUpload,
+        );
+
+        if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Some files failed to upload'),
+              backgroundColor: Color(0xFFFF9800),
+            ),
           );
-
-          if (uploaded != null) {
-            await provider.createJobFile(token, {
-              'job_post_id': created.jobPostId,
-              'file_name': uploaded['file_name'],
-              'file_url': uploaded['file_url'],
-              'file_type': uploaded['file_type'],
-              'file_size': uploaded['file_size'],
-            });
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Warning: could not upload ${fileData['file_name']}: $e'),
-                backgroundColor: const Color(0xFFFF9800),
-              ),
-            );
-          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Upload error: $e'),
+              backgroundColor: const Color(0xFFFF9800),
+            ),
+          );
         }
       }
     }
@@ -127,6 +127,18 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       context,
       MaterialPageRoute(builder: (_) => const Frame1()),
     );
+  }
+
+  Future<void> _openDraftFile(String localPath) async {
+    final result = await OpenFilex.open(localPath);
+    if (result.type == ResultType.done) {
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   @override
@@ -159,15 +171,39 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     const SizedBox(height: 8),
 
                     // ── Job detail rows ─────────────────────────────
-                    _buildRow('Title', draft['job_title'] ?? '', Icons.description_outlined),
-                    _buildRow('Description', draft['job_description'] ?? '', Icons.article_outlined),
-                    _buildRow('Project Type', _capitalize(draft['project_type'] ?? ''), Icons.person_outline),
+                    _buildRow(
+                      'Title',
+                      draft['job_title'] ?? '',
+                      Icons.description_outlined,
+                    ),
+                    _buildRow(
+                      'Description',
+                      draft['job_description'] ?? '',
+                      Icons.article_outlined,
+                    ),
+                    _buildRow(
+                      'Project Type',
+                      _capitalize(draft['project_type'] ?? ''),
+                      Icons.person_outline,
+                    ),
                     if (draft['working_days'] != null)
-                      _buildRow('Working Days', '${draft['working_days']} days', Icons.calendar_today_outlined),
+                      _buildRow(
+                        'Working Days',
+                        '${draft['working_days']} days',
+                        Icons.calendar_today_outlined,
+                      ),
                     if (draft['deadline'] != null)
-                      _buildRow('Deadline', draft['deadline'] as String, Icons.calendar_today_outlined),
+                      _buildRow(
+                        'Deadline',
+                        draft['deadline'] as String,
+                        Icons.calendar_today_outlined,
+                      ),
                     if (draft['experience_level'] != null)
-                      _buildRow('Experience Level', _capitalize(draft['experience_level'] as String), Icons.bar_chart_outlined),
+                      _buildRow(
+                        'Experience Level',
+                        _capitalize(draft['experience_level'] as String),
+                        Icons.bar_chart_outlined,
+                      ),
                     // if (draft['project_scope'] != null)
                     //   _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
 
@@ -197,7 +233,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                             .join();
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 6,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
@@ -221,7 +260,8 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         title,
@@ -248,7 +288,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                 if (role['role_budget'] != null) ...[
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
@@ -273,7 +316,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     // ── Attachments ─────────────────────────────────
                     if (files.isNotEmpty) ...[
                       Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
+                        padding: const EdgeInsets.only(
+                          left: 20,
+                          top: 20,
+                          bottom: 10,
+                        ),
                         child: Text(
                           'Attachments (${files.length} file${files.length == 1 ? '' : 's'})',
                           style: const TextStyle(
@@ -285,27 +332,70 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       ),
                       ...files.map(
                         (f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8, left: 20, right: 20),
+                          padding: const EdgeInsets.only(
+                            bottom: 8,
+                            left: 20,
+                            right: 20,
+                          ),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.secondary,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.attach_file, size: 16, color: AppColors.primary),
+                                const Icon(
+                                  Icons.attach_file,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     f['file_name'] as String,
-                                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Text(
                                   (f['file_type'] as String).toUpperCase(),
-                                  style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                TextButton(
+                                  onPressed: () {
+                                    final path = f['local_path'] as String?;
+                                    if (path != null) {
+                                      _openDraftFile(path);
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(0, 32),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'View',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -321,7 +411,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                         child: Center(
                           child: Text(
                             _submitStatus,
-                            style: const TextStyle(color: AppColors.primary, fontSize: 12),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -348,7 +441,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                               : const Icon(Icons.send_outlined, size: 18),
                           label: const Text(
                             'Post new job',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _primary,
@@ -390,11 +486,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
               ),
             ),
           ),
-          Positioned(
-            right: 24,
-            top: 52,
-            child: _buildDotGrid(),
-          ),
+          Positioned(right: 24, top: 52, child: _buildDotGrid()),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24),
@@ -402,7 +494,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Padding(
@@ -504,7 +600,12 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
             ],
           ),
         ),
-        const Divider(height: 1, color: Color(0xFFF0F0F0), indent: 20, endIndent: 20),
+        const Divider(
+          height: 1,
+          color: Color(0xFFF0F0F0),
+          indent: 20,
+          endIndent: 20,
+        ),
       ],
     );
   }

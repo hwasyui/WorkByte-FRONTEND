@@ -1,3 +1,4 @@
+import 'package:app/services/dm_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   int _selectedTab = 0;
 
+  final Set<String> _expandedProposalIds = {};
+
   ClientModel? _client;
   bool _clientLoading = true;
 
@@ -63,7 +66,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final tags = <String>[];
     if (widget.job.deadline != null) tags.add(widget.job.deadline!);
     tags.add(_capitalize(widget.job.projectType));
-    tags.add(_capitalize(widget.job.projectScope));
     if (widget.job.experienceLevel != null) {
       tags.add(_capitalize(widget.job.experienceLevel!));
     }
@@ -423,11 +425,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
 
     try {
-      final FreelancerModel? freelancer =
-          await profileProvider.fetchFreelancerById(
-        token: token,
-        freelancerId: proposal.freelancerId,
-      );
+      final FreelancerModel? freelancer = await profileProvider
+          .fetchFreelancerById(
+            token: token,
+            freelancerId: proposal.freelancerId,
+          );
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -448,10 +450,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PeopleProfileScreen(
-            isClient: false,
-            freelancer: freelancer,
-          ),
+          builder: (_) =>
+              PeopleProfileScreen(isClient: false, freelancer: freelancer),
         ),
       );
     } catch (_) {
@@ -486,8 +486,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               borderRadius: BorderRadius.circular(24),
             ),
             backgroundColor: Colors.white,
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 40,
+            ),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -499,8 +501,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     alignment: Alignment.topRight,
                     child: GestureDetector(
                       onTap: () => Navigator.pop(context, false),
-                      child: const Icon(Icons.close,
-                          size: 20, color: Color(0xFF6B7280)),
+                      child: const Icon(
+                        Icons.close,
+                        size: 20,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -573,23 +578,30 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.fromLTRB(
-                                16, 16, 16, 0),
+                              16,
+                              16,
+                              16,
+                              0,
+                            ),
                             counterText: '',
                           ),
                         ),
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
                           child: Row(
                             children: [
                               const Spacer(),
-                              const Icon(Icons.attach_file_rounded,
-                                  size: 20, color: AppColors.primary),
+                              const Icon(
+                                Icons.attach_file_rounded,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
                               const SizedBox(width: 10),
                               const Icon(
-                                  Icons.sentiment_satisfied_alt_outlined,
-                                  size: 20,
-                                  color: AppColors.primary),
+                                Icons.sentiment_satisfied_alt_outlined,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 '${controller.text.length}/500',
@@ -608,8 +620,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   // Professional note
                   Row(
                     children: [
-                      const Icon(Icons.shield_outlined,
-                          size: 16, color: AppColors.primary),
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -633,12 +648,13 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                           onPressed: () => Navigator.pop(context, false),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(
-                                color: AppColors.primary, width: 1.5),
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(50),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text(
                             'Cancel',
@@ -654,8 +670,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () => Navigator.pop(context, true),
-                          icon: const Icon(Icons.send_rounded,
-                              size: 18, color: Colors.white),
+                          icon: const Icon(
+                            Icons.send_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                           label: Text(
                             'Send',
                             style: GoogleFonts.poppins(
@@ -669,8 +688,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(50),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             elevation: 0,
                           ),
                         ),
@@ -689,17 +707,44 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (controller.text.trim().isEmpty) return;
 
     try {
-      await ProposalService().sendMessage(
-        token,
-        senderId: currentUserId,
-        receiverId: proposal.freelancerId,
+      final freelancer = await context
+          .read<ProfileProvider>()
+          .fetchFreelancerById(
+            token: token,
+            freelancerId: proposal.freelancerId,
+          );
+
+      if (!mounted) return;
+
+      if (freelancer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Freelancer profile not found.',
+              style: GoogleFonts.poppins(fontSize: 12),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final result = await DMService().startThread(
+        token: token,
+        participantId: freelancer.userId,
+        jobPostId: proposal.jobPostId,
         messageText: controller.text.trim(),
       );
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Message sent!',
+            result.alreadyExists
+                ? 'Conversation already exists.'
+                : 'Message sent!',
             style: GoogleFonts.poppins(fontSize: 12),
           ),
           backgroundColor: _primary,
@@ -711,6 +756,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -796,7 +842,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         ? _client!.websiteUrl!
                         : ''),
               jobTitle: widget.job.jobTitle,
-              category: _capitalize(widget.job.projectScope),
+              category: _capitalize(widget.job.projectCategory),
               tags: _tags,
             ),
             Padding(
@@ -883,6 +929,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isAccepted = proposal.status == 'accepted';
     final isRejected = proposal.status == 'rejected';
     final roleTitle = _roleTitle(proposal.jobRoleId);
+    final isExpanded = _expandedProposalIds.contains(proposal.proposalId);
 
     final files = context.watch<ProposalFileProvider>().filesForProposal(
       proposal.proposalId,
@@ -950,9 +997,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
               ],
             ),
-
             const SizedBox(height: 10),
-
             Wrap(
               spacing: 8,
               runSpacing: 6,
@@ -963,9 +1008,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
-
             Text(
               proposal.coverLetter,
               style: GoogleFonts.poppins(
@@ -973,17 +1016,38 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 color: const Color(0xFF333333),
                 height: 1.6,
               ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
+              maxLines: isExpanded ? null : 4,
+              overflow: isExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
             ),
-
+            if (proposal.coverLetter.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isExpanded) {
+                      _expandedProposalIds.remove(proposal.proposalId);
+                    } else {
+                      _expandedProposalIds.add(proposal.proposalId);
+                    }
+                  });
+                },
+                child: Text(
+                  isExpanded ? 'Show less' : 'Read more',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
             if (files.isNotEmpty) ...[
               const SizedBox(height: 10),
               ...files.map((f) => _attachmentRow(f)),
             ],
-
             const SizedBox(height: 6),
-
             if (proposal.submittedAt != null)
               Text(
                 _formatDate(proposal.submittedAt!),
@@ -992,9 +1056,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   color: const Color(0xFF7D7D7D),
                 ),
               ),
-
             const SizedBox(height: 14),
-
             Row(
               children: [
                 Expanded(
@@ -1223,7 +1285,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           _sectionTitle('Terms'),
           const SizedBox(height: 12),
           _termRow('Project Type', _capitalize(widget.job.projectType)),
-          _termRow('Project Scope', _capitalize(widget.job.projectScope)),
           if (widget.job.workingDays != null)
             _termRow('Working Days', '${widget.job.workingDays} days'),
           if (widget.job.deadline != null)
@@ -1289,9 +1350,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ),
       );
     }
-    return Column(
-      children: _roles.map((r) => _buildRoleCard(r)).toList(),
-    );
+    return Column(children: _roles.map((r) => _buildRoleCard(r)).toList());
   }
 
   Widget _buildRoleCard(JobRoleModel role) {
@@ -1358,7 +1417,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 : const Color(0xFF7D7D7D),
                           ),
                           _miniChip(
-                            role.budgetType == 'hourly' ? 'Hourly' : 'Fixed',
+                            role.budgetType == 'hourly'
+                                ? 'Hourly'
+                                : role.budgetType == 'negotiable'
+                                ? 'Negotiable'
+                                : 'Fixed',
                             const Color(0xFF7D7D7D),
                           ),
                         ],
@@ -1382,7 +1445,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ),
                     if (role.roleBudget != null)
                       Text(
-                        role.budgetType == 'hourly' ? '/hour' : 'fixed',
+                        role.budgetType == 'hourly'
+                            ? '/hour'
+                            : role.budgetType == 'negotiable'
+                            ? 'Negotiable'
+                            : 'fixed',
                         style: GoogleFonts.poppins(
                           fontSize: 10,
                           color: const Color(0xFF7D7D7D),
@@ -1534,11 +1601,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 color: _primary,
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              size: 16,
-              color: AppColors.primary,
-            ),
+            const Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
           ],
         ),
       ),

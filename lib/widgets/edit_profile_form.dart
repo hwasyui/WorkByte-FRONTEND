@@ -21,10 +21,8 @@ class _EditProfileFormState extends State<EditProfileForm> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController nameCtrl;
-  late TextEditingController usernameCtrl;
-  late TextEditingController jobCtrl;
 
-  String? imagePath; 
+  String? imagePath;
   String? imageUrl;
   bool? imageDeleted;
 
@@ -32,9 +30,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
   void initState() {
     super.initState();
     nameCtrl = TextEditingController(text: widget.initialData['name']);
-    usernameCtrl =
-        TextEditingController(text: widget.initialData['username']);
-    jobCtrl = TextEditingController(text: widget.initialData['job']);
     imageUrl = widget.initialData['image'];
     imagePath = imageUrl;
     imageDeleted = false;
@@ -46,7 +41,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
     if (image != null) {
       setState(() {
-        imagePath = image.path; 
+        imagePath = image.path;
         imageUrl = image.name;
         imageDeleted = false;
       });
@@ -60,7 +55,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
     if (image != null) {
       setState(() {
-        imagePath = image.path; 
+        imagePath = image.path;
         imageUrl = image.name;
         imageDeleted = false;
       });
@@ -100,7 +95,10 @@ class _EditProfileFormState extends State<EditProfileForm> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Photo', style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Delete Photo',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: _deleteImage,
             ),
           ],
@@ -113,9 +111,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
     if (_formKey.currentState!.validate()) {
       widget.onSave({
         "name": nameCtrl.text,
-        "username": usernameCtrl.text,
-        "job": jobCtrl.text,
-        "image": imagePath, 
+        "image": imagePath,
         "imageUrl": imageUrl,
         "imageDeleted": imageDeleted ?? false,
       });
@@ -124,7 +120,11 @@ class _EditProfileFormState extends State<EditProfileForm> {
     }
   }
 
-  Widget _input(TextEditingController c, String label, {bool isRequired = true}) {
+  Widget _input(
+    TextEditingController c,
+    String label, {
+    bool isRequired = true,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -137,9 +137,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
         },
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
@@ -152,12 +150,15 @@ class _EditProfileFormState extends State<EditProfileForm> {
           radius: 40,
           backgroundImage: imagePath != null && !imageDeleted!
               ? (imagePath!.startsWith('http')
-                  ? NetworkImage(imagePath!)
-                  : (File(imagePath!).existsSync()
-                      ? FileImage(File(imagePath!))
-                      : null))
+                    ? NetworkImage(imagePath!)
+                    : (File(imagePath!).existsSync()
+                          ? FileImage(File(imagePath!))
+                          : null))
               : null,
-          child: (imagePath == null || imageDeleted!) || (!imagePath!.startsWith('http') && !File(imagePath!).existsSync())
+          child:
+              (imagePath == null || imageDeleted!) ||
+                  (!imagePath!.startsWith('http') &&
+                      !File(imagePath!).existsSync())
               ? const Icon(Icons.person, size: 40)
               : null,
         ),
@@ -165,7 +166,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
         TextButton(
           onPressed: _showImageOptions,
           child: const Text("Change Photo"),
-        )
+        ),
       ],
     );
   }
@@ -185,8 +186,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 const SizedBox(height: 16),
 
                 _input(nameCtrl, "Display Name"),
-                _input(usernameCtrl, "Username"),
-                _input(jobCtrl, "Job Title", isRequired: false),
 
                 SizedBox(
                   width: double.infinity,

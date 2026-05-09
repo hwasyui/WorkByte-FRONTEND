@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_service.dart';
+import '../providers/profile_provider.dart';
 
 class AddSkillWidget extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
@@ -21,7 +21,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
 
   List<Map<String, dynamic>> skills = [];
 
-  List<String> proficiencyLevels = [
+  final List<String> proficiencyLevels = [
     'Beginner',
     'Intermediate',
     'Advanced',
@@ -35,7 +35,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
 
   Future<void> _loadSkills() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final skillList = await ApiService.getSkills(auth.token!);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    final skillList = await profile.getAllSkills(auth.token!);
     if (mounted) {
       setState(() {
         skills = skillList;
@@ -45,7 +47,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
   }
 
   void _submit() async {
-    if (selectedSkillId != null && selectedProficiency != null && !_isSubmitting) {
+    if (selectedSkillId != null &&
+        selectedProficiency != null &&
+        !_isSubmitting) {
       setState(() => _isSubmitting = true);
 
       try {
@@ -56,9 +60,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
 
         if (mounted) Navigator.pop(context);
       } finally {
-        if (mounted) {
-          setState(() => _isSubmitting = false);
-        }
+        if (mounted) setState(() => _isSubmitting = false);
       }
     }
   }
@@ -78,9 +80,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
               'Add Skill',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 16),
 
+            // ── Skill dropdown ─────────────────────────────────────────────
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -103,11 +105,8 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                             child: Text(skill["skill_name"] ?? "Unknown Skill"),
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedSkillId = value;
-                          });
-                        },
+                        onChanged: (value) =>
+                            setState(() => selectedSkillId = value),
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -121,16 +120,17 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF6C63FF)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF6C63FF),
+                            ),
                           ),
                         ),
                       ),
               ],
             ),
-
             const SizedBox(height: 12),
 
+            // ── Proficiency dropdown ───────────────────────────────────────
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -147,14 +147,11 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                   items: proficiencyLevels.map((level) {
                     return DropdownMenuItem(
                       value: level,
-                      child: Text(level.toLowerCase()), 
+                      child: Text(level.toLowerCase()),
                     );
                   }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedProficiency = value;
-                    });
-                  },
+                  onChanged: (value) =>
+                      setState(() => selectedProficiency = value),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -168,16 +165,15 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF6C63FF)),
+                      borderSide: const BorderSide(color: Color(0xFF6C63FF)),
                     ),
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
 
+            // ── Save button ────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -196,7 +192,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(

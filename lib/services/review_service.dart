@@ -27,7 +27,7 @@ class ReviewService {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       // Your backend wraps everything in ResponseSchema.success → {data: ...}
-      return body['data'] as Map<String, dynamic>? ?? body;
+      return body['details'] as Map<String, dynamic>? ?? body;
     }
     String message;
     try {
@@ -47,7 +47,7 @@ class ReviewService {
   List<dynamic> _parseList(http.Response res, String context) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['data'] as List<dynamic>? ?? [];
+      return body['details'] as List<dynamic>? ?? [];
     }
     String message;
     try {

@@ -4,6 +4,7 @@ class JobPostModel {
   final String? clientName;
   final String jobTitle;
   final String jobDescription;
+  final String projectCategory;
   final String projectType;
   final String projectScope;
   final String? estimatedDuration;
@@ -26,6 +27,7 @@ class JobPostModel {
     this.clientName,
     required this.jobTitle,
     required this.jobDescription,
+    required this.projectCategory,
     required this.projectType,
     required this.projectScope,
     this.estimatedDuration,
@@ -49,6 +51,7 @@ class JobPostModel {
     clientName: json['client_name'] as String?,
     jobTitle: json['job_title'] as String? ?? '',
     jobDescription: json['job_description'] as String? ?? '',
+    projectCategory: json['project_category'] ?? 'general',
     projectType: json['project_type'] as String? ?? '',
     projectScope: json['project_scope'] as String? ?? '',
     estimatedDuration: json['estimated_duration'] as String?,

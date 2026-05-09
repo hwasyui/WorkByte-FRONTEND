@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:app/models/dm_model.dart';
+import 'package:app/providers/dm_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,7 +20,7 @@ import '../../providers/contract_submission_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
-import 'contract_messages.dart';
+import '../dm/dm_chat_screen.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
@@ -512,10 +514,43 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(height: 14),
               GestureDetector(
                 onTap: () async {
-                  final url = Uri.parse(_contract.contractPdfUrl ?? '');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  } else {
+                  try {
+                    final auth = context.read<AuthProvider>();
+                    final contractProvider = context.read<ContractProvider>();
+                    final token = auth.token;
+
+                    if (token == null || token.isEmpty) {
+                      _showSnack('Missing auth token.', isError: true);
+                      return;
+                    }
+
+                    final pdfUrl = await contractProvider.fetchPdfUrl(
+                      token,
+                      _contract.contractId,
+                    );
+
+                    debugPrint('signedPdfUrl = $pdfUrl');
+
+                    final uri = Uri.tryParse(pdfUrl);
+                    if (uri == null ||
+                        !(uri.scheme == 'http' || uri.scheme == 'https')) {
+                      _showSnack('Invalid contract URL.', isError: true);
+                      return;
+                    }
+
+                    final opened = await launchUrl(
+                      uri,
+                      mode: LaunchMode.externalApplication,
+                    );
+
+                    if (!opened) {
+                      _showSnack(
+                        'Could not open contract file.',
+                        isError: true,
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('open contract pdf error: $e');
                     _showSnack('Could not open contract file.', isError: true);
                   }
                 },
@@ -867,23 +902,34 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   Widget _buildMessagesButton() {
     return GestureDetector(
-      onTap: () {
-        final currentUserId =
-            context.read<AuthProvider>().currentUser?.userId ?? '';
+      onTap: () async {
+        final auth = context.read<AuthProvider>();
+        final dmProvider = context.read<DMProvider>();
+        final token = auth.token;
+        final currentUserId = auth.currentUser?.userId ?? '';
 
-        if (currentUserId.isEmpty) {
+        if (currentUserId.isEmpty || token == null) {
           _showSnack('Unable to open messages. User not found.', isError: true);
           return;
         }
 
+        await dmProvider.fetchThreads(token);
+
+        final thread = dmProvider.threads.cast<DMThreadModel?>().firstWhere(
+          (t) => t?.contractId == _contract.contractId,
+          orElse: () => null,
+        );
+
+        if (thread == null) {
+          _showSnack('Chat thread not found.', isError: true);
+          return;
+        }
+
+        if (!mounted) return;
+
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => ContractMessagesScreen(
-              contractId: _contract.contractId,
-              currentUserId: currentUserId,
-            ),
-          ),
+          MaterialPageRoute(builder: (_) => DMChatScreen(thread: thread)),
         );
       },
       child: Container(

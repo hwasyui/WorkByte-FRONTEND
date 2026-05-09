@@ -5,7 +5,6 @@ import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
 import 'job_roles.dart';
 
-
 class PostNewJobJobDetail extends StatefulWidget {
   const PostNewJobJobDetail({super.key});
 
@@ -40,9 +39,9 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
       builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: _primary),
-        ),
+        data: Theme.of(
+          context,
+        ).copyWith(colorScheme: const ColorScheme.light(primary: _primary)),
         child: child!,
       ),
     );
@@ -71,7 +70,9 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     setState(() => _submitted = true);
     final error = _validate();
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
@@ -138,7 +139,9 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                   ),
                   _buildLabel('Working Days'),
                   _buildWorkingDaysField(),
-                  _buildInfoBanner('Working days start when a freelancer is chosen'),
+                  _buildInfoBanner(
+                    'Working days start when a freelancer is chosen',
+                  ),
                   const SizedBox(height: 4),
                   _buildLabel('Deadline'),
                   _buildDeadlinePicker(),
@@ -152,7 +155,10 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                         onPressed: _onNext,
                         label: const Text(
                           'Next',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primary,
@@ -193,11 +199,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
               ),
             ),
           ),
-          Positioned(
-            right: 24,
-            top: 52,
-            child: _buildDotGrid(),
-          ),
+          Positioned(right: 24, top: 52, child: _buildDotGrid()),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 28),
@@ -205,7 +207,11 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -298,11 +304,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? Colors.white : _primary,
-              ),
+              Icon(icon, size: 18, color: selected ? Colors.white : _primary),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -334,10 +336,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: _primary,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: _primary, fontSize: 12),
             ),
           ),
         ],
@@ -419,7 +418,10 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
               child: DropdownButton<T>(
                 value: value,
                 isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _primary),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: _primary,
+                ),
                 style: const TextStyle(color: Color(0xFF333333), fontSize: 13),
                 padding: EdgeInsets.only(
                   left: prefixIcon != null ? 10 : 16,
@@ -456,7 +458,11 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Icon(Icons.calendar_today_outlined, color: _primary, size: 20),
+            child: Icon(
+              Icons.calendar_today_outlined,
+              color: _primary,
+              size: 20,
+            ),
           ),
           Expanded(
             child: TextField(
@@ -510,7 +516,11 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           children: [
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-              child: Icon(Icons.calendar_today_outlined, color: _primary, size: 20),
+              child: Icon(
+                Icons.calendar_today_outlined,
+                color: _primary,
+                size: 20,
+              ),
             ),
             Expanded(
               child: Text(
@@ -525,7 +535,11 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-              child: Icon(Icons.calendar_today_outlined, color: _primary, size: 20),
+              child: Icon(
+                Icons.calendar_today_outlined,
+                color: _primary,
+                size: 20,
+              ),
             ),
           ],
         ),

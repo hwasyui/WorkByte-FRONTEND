@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/screens/people_list/freelancer_public_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -136,7 +137,8 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                           color: const Color(0xFF1A1A2E),
                         ),
                       ),
-                      if (!widget.showClients && context.watch<ProfileProvider>().isClient) ...[
+                      if (!widget.showClients &&
+                          context.watch<ProfileProvider>().isClient) ...[
                         const SizedBox(width: 10),
                         GestureDetector(
                           onTap: () => Navigator.push(
@@ -146,10 +148,15 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                             ),
                           ),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              border: Border.all(color: AppColors.primary.withOpacity(0.16)),
+                              border: Border.all(
+                                color: AppColors.primary.withOpacity(0.16),
+                              ),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
@@ -172,7 +179,10 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                       ],
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.secondary,
                           borderRadius: BorderRadius.circular(20),
@@ -207,7 +217,11 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Row(
                       children: [
-                        const Icon(Icons.search_rounded, size: 20, color: Color(0xFF9CA3AF)),
+                        const Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: Color(0xFF9CA3AF),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
@@ -245,92 +259,95 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                       ),
                     )
                   : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.error_outline_rounded,
-                                  size: 48, color: Colors.grey.shade300),
-                              const SizedBox(height: 12),
-                              Text(
-                                _error!,
-                                style: GoogleFonts.poppins(
-                                  color: const Color(0xFF7D7D7D),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline_rounded,
+                            size: 48,
+                            color: Colors.grey.shade300,
                           ),
-                        )
-                      : _filtered.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    widget.showClients
-                                        ? Icons.business_outlined
-                                        : Icons.person_outline_rounded,
-                                    size: 56,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No ${title.toLowerCase()} found',
-                                    style: GoogleFonts.poppins(
-                                      color: const Color(0xFF7D7D7D),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Try adjusting your search.',
-                                    style: GoogleFonts.poppins(
-                                      color: const Color(0xFFB5B4B4),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : RefreshIndicator(
-                              color: AppColors.primary,
-                              onRefresh: _loadPeople,
-                              child: ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                                itemCount: _filtered.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final person = _filtered[index];
-                                  return widget.showClients
-                                      ? _ClientCard(
-                                          client: person as ClientModel,
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => PeopleProfileScreen(
-                                                isClient: true,
-                                                client: person,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : _FreelancerCard(
-                                          freelancer: person as FreelancerModel,
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => PeopleProfileScreen(
-                                                isClient: false,
-                                                freelancer: person,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                },
-                              ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF7D7D7D),
+                              fontSize: 13,
                             ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _filtered.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            widget.showClients
+                                ? Icons.business_outlined
+                                : Icons.person_outline_rounded,
+                            size: 56,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No ${title.toLowerCase()} found',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF7D7D7D),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Try adjusting your search.',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFB5B4B4),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: _loadPeople,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        itemCount: _filtered.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final person = _filtered[index];
+                          return widget.showClients
+                              ? _ClientCard(
+                                  client: person as ClientModel,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PeopleProfileScreen(
+                                        isClient: true,
+                                        client: person,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _FreelancerCard(
+                                  freelancer: person as FreelancerModel,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          FreelancerPublicProfileScreen(
+                                            freelancerId: person.freelancerId,
+                                          ),
+                                    ),
+                                  ),
+                                );
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -548,7 +565,9 @@ class _Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
-        image: provider != null ? DecorationImage(image: provider, fit: BoxFit.cover) : null,
+        image: provider != null
+            ? DecorationImage(image: provider, fit: BoxFit.cover)
+            : null,
       ),
       child: provider == null
           ? Center(
@@ -572,7 +591,11 @@ class _StatChip extends StatelessWidget {
   final String label;
   final bool isHighlight;
 
-  const _StatChip({required this.icon, required this.label, this.isHighlight = false});
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    this.isHighlight = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -620,18 +643,22 @@ class PeopleProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = isClient ? client?.displayName ?? 'Client' : freelancer?.displayName ?? 'Freelancer';
-    final avatarUrl = isClient ? client?.profilePictureUrl : freelancer?.profilePictureUrl;
+    final name = isClient
+        ? client?.displayName ?? 'Client'
+        : freelancer?.displayName ?? 'Freelancer';
+    final avatarUrl = isClient
+        ? client?.profilePictureUrl
+        : freelancer?.profilePictureUrl;
     final bio = isClient
         ? (client?.bio ?? 'No description available.')
         : (freelancer?.bio ?? 'No description available.');
     final badge = isClient
         ? client?.averageRatingGiven != null
-            ? '★ ${client!.averageRatingGiven!.toStringAsFixed(1)}'
-            : 'No rating yet'
+              ? '★ ${client!.averageRatingGiven!.toStringAsFixed(1)}'
+              : 'No rating yet'
         : freelancer?.estimatedRate != null
-            ? freelancer!.formattedRate
-            : 'Rate not set';
+        ? freelancer!.formattedRate
+        : 'Rate not set';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -649,7 +676,11 @@ class PeopleProfileScreen extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
             actions: [
@@ -675,7 +706,9 @@ class PeopleProfileScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(6),
                         child: Icon(
-                          isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          isSaved
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
                           color: Colors.white,
                           size: 20,
                         ),
@@ -710,7 +743,10 @@ class PeopleProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -851,7 +887,10 @@ class PeopleProfileScreen extends StatelessWidget {
                           _DetailRow(label: 'Rate', value: badge),
                           if (freelancer?.rateTime != null) ...[
                             const Divider(height: 20, color: Color(0xFFF0F0F1)),
-                            _DetailRow(label: 'Period', value: freelancer!.rateTime!),
+                            _DetailRow(
+                              label: 'Period',
+                              value: freelancer!.rateTime!,
+                            ),
                           ],
                         ],
                       ],
@@ -900,7 +939,11 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _StatCard({required this.label, required this.value, required this.icon});
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {

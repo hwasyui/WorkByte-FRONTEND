@@ -17,6 +17,7 @@ import '../../screens/job_freelancer_view/job_list.dart';
 import '../../screens/job_client_view/job_list.dart' as client_job_list;
 import '../people_list/people_list_screen.dart';
 import '../workspace/workspace.dart';
+import '../dm/dm_thread_list.dart';
 import '../../services/api_service.dart';
 import '../../models/job_post_model.dart';
 import '../../models/freelancer_model.dart';
@@ -93,7 +94,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRecommendedJobsList() {
     if (_isLoadingJobs) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+          strokeWidth: 2,
+        ),
       );
     }
     if (_noEmbeddingYet) {
@@ -136,11 +140,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.business, color: AppColors.primary, size: 20),
+                  child: const Icon(
+                    Icons.business,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
                 title: job.jobTitle,
                 category: job.projectType.toUpperCase(),
-                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                biddings:
+                    '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
                 matchScore: job.matchScoreInt,
@@ -157,10 +166,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token != null) {
       try {
-        final freelancersData = await ApiService.getAllFreelancers(auth.token!, pageSize: 10);
+        final freelancersData = await ApiService.getAllFreelancers(
+          auth.token!,
+          pageSize: 10,
+        );
         if (mounted) {
           setState(() {
-            _topFreelancers = freelancersData.map((f) => FreelancerModel.fromJson(f)).toList();
+            _topFreelancers = freelancersData
+                .map((f) => FreelancerModel.fromJson(f))
+                .toList();
             _isLoadingFreelancers = false;
           });
         }
@@ -190,6 +204,11 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
       );
     } else if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const DMThreadListScreen()),
+      );
+    } else if (index == 4) {
       final profile = context.read<ProfileProvider>();
       Navigator.push(
         context,
@@ -202,18 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       setState(() => _currentNavIndex = index);
     }
-  }
-
-  void _onDashboardSearch(String query) {
-    final profile = context.read<ProfileProvider>();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => profile.isClient
-            ? client_job_list.JobListScreen(initialQuery: query)
-            : JobListScreen(initialQuery: query),
-      ),
-    );
   }
 
   void _handleCenterButton() {
@@ -245,12 +252,18 @@ class _HomeScreenState extends State<HomeScreen> {
           isClient
               ? 'Please complete your profile before posting a job.'
               : 'Please complete your profile before applying to jobs.',
-          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF7D7D7D)),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: const Color(0xFF7D7D7D),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D))),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D)),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -259,13 +272,18 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => p.isClient ? const ClientProfileScreen() : const ProfileScreen(),
+                  builder: (_) => p.isClient
+                      ? const ClientProfileScreen()
+                      : const ProfileScreen(),
                 ),
               );
             },
             child: Text(
               'Complete Now',
-              style: GoogleFonts.poppins(color: AppColors.primary, fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -291,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 16),
 
-                  // Greeting row
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
                       final imageUrl = profile.profilePictureUrl;
@@ -303,8 +320,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 38,
                             height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.person, size: 24, color: AppColors.primary),
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              size: 24,
+                              color: AppColors.primary,
+                            ),
                           );
                         } else if (File(imageUrl).existsSync()) {
                           displayImage = Image.file(
@@ -312,16 +332,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 38,
                             height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.person, size: 24, color: AppColors.primary),
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              size: 24,
+                              color: AppColors.primary,
+                            ),
                           );
                         } else {
-                          displayImage =
-                              const Icon(Icons.person, size: 24, color: AppColors.primary);
+                          displayImage = const Icon(
+                            Icons.person,
+                            size: 24,
+                            color: AppColors.primary,
+                          );
                         }
                       } else {
-                        displayImage =
-                            const Icon(Icons.person, size: 24, color: AppColors.primary);
+                        displayImage = const Icon(
+                          Icons.person,
+                          size: 24,
+                          color: AppColors.primary,
+                        );
                       }
 
                       return Row(
@@ -362,7 +391,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           GestureDetector(
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const _NotificationPlaceholder(),
+                                builder: (_) =>
+                                    const _NotificationPlaceholder(),
                               ),
                             ),
                             child: Stack(
@@ -403,17 +433,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Complete profile banner
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
-                      if (profile.isProfileComplete) return const SizedBox.shrink();
+                      if (profile.isProfileComplete) {
+                        return const SizedBox.shrink();
+                      }
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.secondary,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -421,7 +457,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.12),
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.12,
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -464,7 +502,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.primary,
                                   borderRadius: BorderRadius.circular(20),
@@ -485,10 +526,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  SearchBarWidget(onSearch: _onDashboardSearch),
+                  const SearchBarWidget(),
                   const SizedBox(height: 20),
 
-                  // Quick-access cards: Jobs | Freelancers | Clients
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
                       return Row(
@@ -517,7 +557,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PeopleListScreen(showClients: false),
+                                  builder: (_) => const PeopleListScreen(
+                                    showClients: false,
+                                  ),
                                 ),
                               ),
                             ),
@@ -531,7 +573,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PeopleListScreen(showClients: true),
+                                  builder: (_) =>
+                                      const PeopleListScreen(showClients: true),
                                 ),
                               ),
                             ),
@@ -543,7 +586,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Recommended Jobs — freelancers only
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (profile.isClient) return const SizedBox.shrink();
@@ -554,7 +596,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: 'Recommended for You',
                             onViewAll: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const JobListScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const JobListScreen(),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -568,7 +612,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // Top Freelancers — clients only
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (!profile.isClient) return const SizedBox.shrink();
@@ -580,7 +623,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             onViewAll: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const PeopleListScreen(showClients: false),
+                                builder: (_) =>
+                                    const PeopleListScreen(showClients: false),
                               ),
                             ),
                           ),
@@ -595,67 +639,96 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   )
                                 : _topFreelancers.isEmpty
-                                    ? const Center(child: Text('No freelancers available'))
-                                    : ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: _topFreelancers.length,
-                                        itemBuilder: (context, index) {
-                                          final freelancer = _topFreelancers[index];
-                                          return Row(
-                                            children: [
-                                              GestureDetector(
-                                                onTap: () => Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) => PeopleProfileScreen(
+                                ? const Center(
+                                    child: Text('No freelancers available'),
+                                  )
+                                : ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _topFreelancers.length,
+                                    itemBuilder: (context, index) {
+                                      final freelancer = _topFreelancers[index];
+                                      return Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    PeopleProfileScreen(
                                                       isClient: false,
                                                       freelancer: freelancer,
                                                     ),
-                                                  ),
-                                                ),
-                                                child: JobCard(
-                                                  posterName: freelancer.displayName,
-                                                  posterAvatar: Container(
-                                                    width: 35,
-                                                    height: 35,
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.secondary,
-                                                      borderRadius: BorderRadius.circular(6),
-                                                      image: freelancer.profilePictureUrl != null &&
-                                                              freelancer.profilePictureUrl!.isNotEmpty
-                                                          ? DecorationImage(
-                                                              image: freelancer.profilePictureUrl!
-                                                                      .startsWith('http')
-                                                                  ? NetworkImage(
-                                                                          freelancer.profilePictureUrl!)
-                                                                      as ImageProvider
-                                                                  : FileImage(File(
-                                                                      freelancer.profilePictureUrl!)),
-                                                              fit: BoxFit.cover,
-                                                            )
-                                                          : null,
-                                                    ),
-                                                    child: freelancer.profilePictureUrl == null ||
-                                                            freelancer.profilePictureUrl!.isEmpty
-                                                        ? const Icon(Icons.person,
-                                                            color: AppColors.primary, size: 20)
-                                                        : null,
-                                                  ),
-                                                  title: freelancer.displayName,
-                                                  category: freelancer.jobTitle,
-                                                  biddings: freelancer.totalProjects > 0
-                                                      ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
-                                                      : 'New freelancer',
-                                                  salary: freelancer.formattedRate,
-                                                  jobType: 'Freelancer',
-                                                ),
                                               ),
-                                              if (index < _topFreelancers.length - 1)
-                                                const SizedBox(width: 12),
-                                            ],
-                                          );
-                                        },
-                                      ),
+                                            ),
+                                            child: JobCard(
+                                              posterName:
+                                                  freelancer.displayName,
+                                              posterAvatar: Container(
+                                                width: 35,
+                                                height: 35,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.secondary,
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  image:
+                                                      freelancer.profilePictureUrl !=
+                                                              null &&
+                                                          freelancer
+                                                              .profilePictureUrl!
+                                                              .isNotEmpty
+                                                      ? DecorationImage(
+                                                          image:
+                                                              freelancer
+                                                                  .profilePictureUrl!
+                                                                  .startsWith(
+                                                                    'http',
+                                                                  )
+                                                              ? NetworkImage(
+                                                                      freelancer
+                                                                          .profilePictureUrl!,
+                                                                    )
+                                                                    as ImageProvider
+                                                              : FileImage(
+                                                                  File(
+                                                                    freelancer
+                                                                        .profilePictureUrl!,
+                                                                  ),
+                                                                ),
+                                                          fit: BoxFit.cover,
+                                                        )
+                                                      : null,
+                                                ),
+                                                child:
+                                                    freelancer.profilePictureUrl ==
+                                                            null ||
+                                                        freelancer
+                                                            .profilePictureUrl!
+                                                            .isEmpty
+                                                    ? const Icon(
+                                                        Icons.person,
+                                                        color:
+                                                            AppColors.primary,
+                                                        size: 20,
+                                                      )
+                                                    : null,
+                                              ),
+                                              title: freelancer.displayName,
+                                              category: freelancer.jobTitle,
+                                              biddings:
+                                                  freelancer.totalProjects > 0
+                                                  ? '${freelancer.totalProjects} project${freelancer.totalProjects != 1 ? 's' : ''}'
+                                                  : 'New freelancer',
+                                              salary: freelancer.formattedRate,
+                                              jobType: 'Freelancer',
+                                            ),
+                                          ),
+                                          if (index <
+                                              _topFreelancers.length - 1)
+                                            const SizedBox(width: 12),
+                                        ],
+                                      );
+                                    },
+                                  ),
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -663,11 +736,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  // Popular Categories
                   SectionHeader(title: 'Popular Categories', onViewAll: () {}),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 128,
+                    height: 120,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: const [
@@ -725,19 +797,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: Consumer<AuthProvider>(
-        builder: (context, auth, _) => HomeBottomNavBar(
+      bottomNavigationBar: Consumer2<AuthProvider, ProfileProvider>(
+        builder: (context, auth, profile, _) => HomeBottomNavBar(
           currentIndex: _currentNavIndex,
           onTap: _handleNavigation,
           onCenterTap: _handleCenterButton,
-          showCenterButton: !auth.currentUser!.isFreelancer,
+          showCenterButton: profile.isClient,
         ),
       ),
     );
   }
 }
 
-// ── Dashboard header ───────────────────────────────────────────────────────────
 class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -754,7 +825,6 @@ class _DashboardHeader extends StatelessWidget {
   }
 }
 
-// ── Quick-access card ─────────────────────────────────────────────────────────
 class _QuickAccessCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -838,7 +908,6 @@ class _QuickAccessCard extends StatelessWidget {
   }
 }
 
-// ── Horizontal category card ──────────────────────────────────────────────────
 class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -911,7 +980,6 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-// ── Notification placeholder ───────────────────────────────────────────────────
 class _NotificationPlaceholder extends StatelessWidget {
   const _NotificationPlaceholder();
 
@@ -930,7 +998,10 @@ class _NotificationPlaceholder extends StatelessWidget {
       body: Center(
         child: Text(
           'No notifications yet',
-          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF7D7D7D)),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: const Color(0xFF7D7D7D),
+          ),
         ),
       ),
     );

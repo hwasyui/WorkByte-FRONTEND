@@ -1,98 +1,66 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../models/education_model.dart';
 import '../../models/experience_model.dart';
-import '../../models/freelancer_skill_model.dart';
 import '../../models/review_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/review_provider.dart';
-import '../../providers/saved_items_provider.dart';
-import '../../screens/auth/login.dart';
-import '../../widgets/add_skill.dart';
-import '../../widgets/edit_profile_form.dart';
-import '../../widgets/education_profile.dart';
-import '../../widgets/experience_profile.dart';
-import 'upload_cv.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+class FreelancerPublicProfileScreen extends StatefulWidget {
+  final String freelancerId;
+
+  const FreelancerPublicProfileScreen({Key? key, required this.freelancerId})
+    : super(key: key);
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<FreelancerPublicProfileScreen> createState() =>
+      _FreelancerPublicProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
+class _FreelancerPublicProfileScreenState
+    extends State<FreelancerPublicProfileScreen>
     with SingleTickerProviderStateMixin {
-  String aboutText = '';
-  String? uploadedCVPath;
-  bool _cvRemoved = false;
-  final TextEditingController aboutController = TextEditingController();
-  late TabController _tabController;
-
   static const Color primaryColor = AppColors.primary;
 
-  final List<Map<String, dynamic>> _reviews = [];
+  late TabController _tabController;
+  String aboutText = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
 
-    aboutController.addListener(() {
-      setState(() => aboutText = aboutController.text);
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-      setState(() {
-        aboutText = profile.bio ?? '';
-        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
-      });
-
-      if (auth.token != null && profile.isFreelancer) {
-        await profile.refreshFreelancerDetails(auth.token!);
-      }
-
+      await _loadProfile();
       await _loadReviews();
     });
   }
 
-  Future<void> _refreshProfile() async {
+  Future<void> _loadProfile() async {
+    if (!mounted) return;
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
-    final userType = profile.userType ?? 'freelancer';
 
-    final identifier =
-        profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
+    if (auth.token == null) return;
 
-    if (auth.token != null) {
-      final refreshSuccess = await profile.fetchProfile(
-        token: auth.token!,
-        userId: identifier,
-        userType: userType,
-      );
+    final success = await profile.fetchProfile(
+      token: auth.token!,
+      userId: widget.freelancerId,
+      userType: 'freelancer',
+    );
 
-      debugPrint(
-        'Profile fetch refresh success: $refreshSuccess, bio: ${profile.bio}, cv: ${profile.freelancerProfile?.cvFileUrl}, pic: ${profile.profilePictureUrl}',
-      );
+    if (!mounted) return;
 
+    if (success) {
       setState(() {
         aboutText = profile.bio ?? '';
-        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
       });
     }
   }
@@ -101,578 +69,19 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (!mounted) return;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
     final reviewProvider = Provider.of<ReviewProvider>(context, listen: false);
 
-    final freelancerId = profile.freelancerProfile?.freelancerId;
-    if (auth.token != null && freelancerId != null) {
+    if (auth.token != null) {
       await Future.wait([
         reviewProvider.loadFreelancerReviews(
           token: auth.token!,
-          freelancerId: freelancerId,
+          freelancerId: widget.freelancerId,
         ),
         reviewProvider.loadTrustScore(
           token: auth.token!,
-          freelancerId: freelancerId,
+          freelancerId: widget.freelancerId,
         ),
       ]);
-    }
-  }
-
-  Future<void> _deleteEducation(String educationId) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    final success = await profile.removeEducation(
-      token: auth.token!,
-      educationId: educationId,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Education deleted successfully'
-              : 'Failed to delete education',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _deleteExperience(String workExperienceId) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    final success = await profile.removeWorkExperience(
-      token: auth.token!,
-      workExperienceId: workExperienceId,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Experience deleted successfully'
-              : 'Failed to delete experience',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _deleteSkill(String freelancerSkillId) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    final success = await profile.removeFreelancerSkill(
-      token: auth.token!,
-      freelancerSkillId: freelancerSkillId,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? 'Skill deleted successfully' : 'Failed to delete skill',
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    aboutController.dispose();
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: const Color(0xFFF3F1FF),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 120,
-                width: 120,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 88,
-                      height: 88,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFDDD8FA),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.logout_rounded,
-                        color: AppColors.primary,
-                        size: 36,
-                      ),
-                    ),
-                    const Positioned(
-                      top: 6,
-                      left: 10,
-                      child: Text(
-                        '✦',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const Positioned(
-                      top: 6,
-                      right: 10,
-                      child: Text(
-                        '✦',
-                        style: TextStyle(
-                          color: Color(0xFFB8B0F0),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    const Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Text(
-                        '✦',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const Positioned(
-                      top: 30,
-                      left: 2,
-                      child: CircleAvatar(
-                        radius: 3,
-                        backgroundColor: Color(0xFFB8B0F0),
-                      ),
-                    ),
-                    const Positioned(
-                      bottom: 26,
-                      right: 0,
-                      child: CircleAvatar(
-                        radius: 2.5,
-                        backgroundColor: Color(0xFFB8B0F0),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Logout',
-                style: GoogleFonts.poppins(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Are you sure you want to logout?',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFF6B7280),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: AppColors.primary,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(
-                        'Cancel',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final auth = Provider.of<AuthProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final profile = Provider.of<ProfileProvider>(
-                          context,
-                          listen: false,
-                        );
-                        auth.logout(profileProvider: profile);
-                        if (mounted) {
-                          Navigator.pop(context);
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Logout',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEditProfile() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => EditProfileForm(
-        initialData: {
-          "name": profile.displayName,
-          "username": auth.currentUser?.email ?? '',
-          "job": profile.jobTitle,
-          "image": profile.profilePictureUrl,
-        },
-        onSave: (data) async {
-          profile.updateJobTitle(data['job']);
-
-          final fields = <String, dynamic>{"full_name": data['name']};
-
-          if (data['imageDeleted'] == true) {
-            fields['profile_picture_url'] = null;
-          } else if (data['image'] != null &&
-              data['image'].toString().isNotEmpty &&
-              data['image'] != profile.profilePictureUrl) {
-            final imageVal = data['image'].toString();
-
-            if (imageVal.startsWith('http')) {
-              fields['profile_picture_url'] = imageVal;
-            } else {
-              fields['profile_picture_url'] = imageVal;
-            }
-          }
-
-          final identifier =
-              profile.freelancerProfile?.freelancerId ??
-              auth.currentUser!.userId;
-
-          final success = await profile.updateProfile(
-            token: auth.token!,
-            identifier: identifier,
-            fields: fields,
-          );
-
-          if (success) {
-            if (data['imageDeleted'] == true) {
-              profile.clearProfilePicture();
-            } else if (fields.containsKey('profile_picture_url') &&
-                fields['profile_picture_url'] != null) {
-              profile.updateProfilePictureUrl(fields['profile_picture_url']);
-            }
-
-            await _refreshProfile();
-            profile.forceRefreshProfilePicture();
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully')),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(profile.error ?? 'Failed to update profile'),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  void _showEducationForm() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => EducationProfile(
-        onSave: (data) async {
-          final success = await profile.addEducation(
-            token: auth.token!,
-            data: {
-              "freelancer_id": profile.freelancerProfile?.freelancerId,
-              "institution_name": data["school"],
-              "degree": data["degree"],
-              "field_of_study": data["field"],
-              "start_date": data["startDate"]?.toIso8601String().split('T')[0],
-              "end_date": data["endDate"]?.toIso8601String().split('T')[0],
-              "is_current": data["isCurrent"],
-              "grade": data["grade"],
-              "description": data["description"],
-            },
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Education added successfully'
-                    : 'Failed to add education',
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showExperienceForm() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => ExperienceProfile(
-        onSave: (data) async {
-          final success = await profile.addWorkExperience(
-            token: auth.token!,
-            data: {
-              "freelancer_id": profile.freelancerProfile?.freelancerId,
-              "job_title": data["title"],
-              "company_name": data["company"],
-              "location": data["location"],
-              "start_date": data["startDate"] != null
-                  ? data["startDate"].toIso8601String().split('T')[0]
-                  : null,
-              "end_date": data["endDate"] != null
-                  ? data["endDate"].toIso8601String().split('T')[0]
-                  : null,
-              "is_current": data["isPresent"],
-              "description": data["description"],
-            },
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Experience added successfully'
-                    : 'Failed to add experience',
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _editAbout() {
-    aboutController.text = aboutText;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit About'),
-        content: TextField(
-          controller: aboutController,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Tell us about yourself...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newBio = aboutController.text.trim();
-              final bioValue = newBio.isEmpty ? null : newBio;
-
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(
-                context,
-                listen: false,
-              );
-              final messenger = ScaffoldMessenger.of(context);
-              final identifier =
-                  profile.freelancerProfile?.freelancerId ??
-                  auth.currentUser!.userId;
-
-              Navigator.pop(dialogContext);
-
-              final success = await profile.updateProfile(
-                token: auth.token!,
-                identifier: identifier,
-                fields: {'bio': bioValue},
-              );
-
-              if (success) {
-                setState(() => aboutText = newBio);
-                await _refreshProfile();
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('About saved successfully')),
-                );
-              } else {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(profile.error ?? 'Failed to save About'),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSkillForm() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => AddSkillWidget(
-        onSave: (skillData) async {
-          final skillId = skillData["skill_id"];
-          final proficiency = skillData["proficiency_level"] as String;
-
-          if (skillId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please select a skill')),
-            );
-            return;
-          }
-
-          final success = await profile.addFreelancerSkill(
-            token: auth.token!,
-            data: {
-              "freelancer_id": profile.freelancerProfile?.freelancerId,
-              "skill_id": skillId,
-              "proficiency_level": proficiency,
-            },
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success ? 'Skill added successfully' : 'Failed to add skill',
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _uploadCV() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx'],
-    );
-
-    if (result == null || result.files.single.path == null) return;
-
-    final file = File(result.files.single.path!);
-
-    final success = await profile.uploadCV(token: auth.token!, file: file);
-
-    if (success) {
-      await _refreshProfile();
-      setState(() {
-        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CV uploaded successfully')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(profile.error ?? 'Failed to upload CV')),
-      );
-    }
-  }
-
-  Future<void> _removeCV() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    final identifier =
-        profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
-    final updateFields = {"cv_file_url": null};
-
-    final success = await profile.updateProfile(
-      token: auth.token!,
-      identifier: identifier,
-      fields: updateFields,
-    );
-
-    if (success) {
-      await _refreshProfile();
-      setState(() {
-        uploadedCVPath = null;
-        _cvRemoved = true;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CV removed successfully')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(profile.error ?? 'Failed to remove CV')),
-      );
     }
   }
 
@@ -707,14 +116,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     return parts.isNotEmpty ? parts.last : path;
   }
 
-  double _getAverageRating() {
-    if (_reviews.isEmpty) return 0.0;
-    final totalRating = _reviews.fold<int>(0, (sum, review) {
-      return sum + (review['rating'] as int? ?? 0);
-    });
-    return totalRating / _reviews.length;
-  }
-
   String _formatPeriod({
     required String? startDate,
     required String? endDate,
@@ -738,6 +139,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (endYear.isEmpty) return startYear;
 
     return '$startYear - $endYear';
+  }
+
+  void _onMessageTap() {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Open message flow here')));
+  }
+
+  void _onInviteToJobTap() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Open invite to job flow here')),
+    );
   }
 
   Widget _buildStarRating({
@@ -791,6 +204,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -804,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 children: [
                   _buildAboutTab(),
                   _buildReviewsTab(),
-                  _buildSavedTab(),
+                  _buildPortfolioTab(),
                 ],
               ),
             ),
@@ -886,7 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                       ),
-                      Positioned(top: 16, right: 56, child: _buildDotGrid()),
+                      Positioned(top: 16, right: 16, child: _buildDotGrid()),
                     ],
                   ),
                 ),
@@ -897,25 +316,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.maybePop(context),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.bookmarks_outlined,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => _tabController.animateTo(2),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      onPressed: () => _showLogoutDialog(context),
-                    ),
-                  ],
                 ),
               ),
               Positioned(
@@ -937,10 +337,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           backgroundColor: AppColors.secondary,
                           backgroundImage: profileImage != null
                               ? (profileImage.startsWith('http')
-                                    ? NetworkImage(profileImage)
-                                    : (File(profileImage).existsSync()
-                                          ? FileImage(File(profileImage))
-                                          : null))
+                                        ? NetworkImage(profileImage)
+                                        : (File(profileImage).existsSync()
+                                              ? FileImage(File(profileImage))
+                                              : null))
+                                    as ImageProvider?
                               : null,
                           child:
                               profileImage == null ||
@@ -987,10 +388,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    auth.currentUser?.email ?? '',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
                   if (profile.jobTitle.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -1009,9 +406,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _showEditProfile,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit Profile'),
+                    onPressed: _onMessageTap,
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text('Message'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
@@ -1025,16 +422,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UploadCVScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.analytics_outlined, size: 18),
-                    label: const Text('Analyze CV'),
+                    onPressed: _onInviteToJobTap,
+                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                    label: const Text('Invite to Job'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1065,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               tabs: const [
                 Tab(text: 'About'),
                 Tab(text: 'Reviews'),
-                Tab(text: 'Saved'),
+                Tab(text: 'Portfolio'),
               ],
             ),
           ),
@@ -1078,9 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Consumer<ProfileProvider>(
       builder: (context, profile, child) {
         final bioText = aboutText;
-        final cvPath = !_cvRemoved
-            ? (uploadedCVPath ?? profile.freelancerProfile?.cvFileUrl)
-            : null;
+        final cvPath = profile.freelancerProfile?.cvFileUrl;
         final cvDisplayName = _getCvDisplayName(cvPath);
 
         final skills = profile.skills;
@@ -1094,8 +482,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildSection(
                 title: 'About',
                 icon: Icons.person_outline,
-                hasEdit: true,
-                onEdit: _editAbout,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Text(
@@ -1142,7 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Upload CV',
+                            'CV',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -1159,55 +545,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
+                          ] else ...[
+                            const SizedBox(height: 3),
+                            const Text(
+                              'No CV uploaded',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ],
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     if (cvPath != null)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () => _previewCV(cvPath),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: primaryColor,
-                              side: const BorderSide(color: primaryColor),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Preview',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: _removeCV,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: AppColors.primary,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
                       OutlinedButton(
-                        onPressed: _uploadCV,
+                        onPressed: () => _previewCV(cvPath),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: primaryColor,
                           side: const BorderSide(color: primaryColor),
@@ -1220,7 +574,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                         child: const Text(
-                          'Upload',
+                          'Preview',
                           style: TextStyle(fontSize: 12),
                         ),
                       ),
@@ -1231,7 +585,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildSection(
                 title: 'Skills',
                 icon: Icons.star_outline,
-                actionButton: _buildAddButton('Add Skill', _showSkillForm),
                 child: skills.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -1252,7 +605,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                             return _SkillChip(
                               label: s.skillName ?? 'Unknown Skill',
                               proficiency: s.proficiencyLevel,
-                              onDelete: () => _deleteSkill(s.freelancerSkillId),
                             );
                           }).toList(),
                         ),
@@ -1262,10 +614,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildSection(
                 title: 'Experiences',
                 icon: Icons.work_outline,
-                actionButton: _buildAddButton(
-                  'Add Experiences',
-                  _showExperienceForm,
-                ),
                 child: experiences.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -1286,8 +634,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                               isCurrent: e.isCurrent,
                             ),
                             logoColor: primaryColor,
-                            onDelete: () =>
-                                _deleteExperience(e.workExperienceId),
                           );
                         }).toList(),
                       ),
@@ -1296,10 +642,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildSection(
                 title: 'Education',
                 icon: Icons.school_outlined,
-                actionButton: _buildAddButton(
-                  'Add Education',
-                  _showEducationForm,
-                ),
                 child: educations.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -1319,7 +661,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                               isCurrent: e.isCurrent,
                             ),
                             color: primaryColor,
-                            onDelete: () => _deleteEducation(e.educationId),
                           );
                         }).toList(),
                       ),
@@ -1429,244 +770,31 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildSavedTab() {
-    return Consumer<SavedItemsProvider>(
-      builder: (context, saved, _) {
-        final jobs = saved.savedJobs;
-        final clients = saved.savedClients;
-
-        if (jobs.isEmpty && clients.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 60),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.bookmarks_outlined,
-                    size: 52,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'No saved items yet',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Save jobs or clients to see them here.',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                  ),
-                ],
+  Widget _buildPortfolioTab() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.work_outline, size: 52, color: Colors.grey[300]),
+            const SizedBox(height: 14),
+            Text(
+              'No portfolio yet',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          );
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 16, bottom: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (jobs.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Saved Jobs',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${jobs.length}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ...jobs.map(
-                  (job) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.work_outline,
-                              color: AppColors.primary,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  job.jobTitle,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  job.clientName ?? 'Client',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => saved.toggleSaveJob(job),
-                            child: const Icon(
-                              Icons.bookmark_rounded,
-                              color: AppColors.primary,
-                              size: 22,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              if (clients.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Saved Clients',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${clients.length}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ...clients.map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.secondary,
-                            backgroundImage:
-                                c.profilePictureUrl != null &&
-                                    c.profilePictureUrl!.startsWith('http')
-                                ? NetworkImage(c.profilePictureUrl!)
-                                : null,
-                            child:
-                                c.profilePictureUrl == null ||
-                                    !c.profilePictureUrl!.startsWith('http')
-                                ? const Icon(
-                                    Icons.business,
-                                    color: AppColors.primary,
-                                    size: 22,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  c.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 3),
-                                const Text(
-                                  'Client',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => saved.toggleSaveClient(c),
-                            child: const Icon(
-                              Icons.bookmark_rounded,
-                              color: AppColors.primary,
-                              size: 22,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
+            const SizedBox(height: 6),
+            Text(
+              'Portfolio items will appear here.',
+              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1794,86 +922,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  String _capitalizeCategory(String cat) {
-    return cat
-        .split('_')
-        .map((w) => w[0].toUpperCase() + w.substring(1))
-        .join(' ');
-  }
-
-  Widget _buildEmptyBio(VoidCallback onAdd) {
-    return GestureDetector(
-      onTap: onAdd,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.secondary.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.primary.withOpacity(0.25),
-            style: BorderStyle.solid,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.edit_note_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add your bio',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Tell clients about yourself, your skills, and experience.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSection({
     required String title,
     required Widget child,
     IconData? icon,
-    bool hasEdit = false,
-    VoidCallback? onEdit,
-    Widget? actionButton,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1894,63 +946,31 @@ class _ProfileScreenState extends State<ProfileScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    if (icon != null) ...[
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(icon, color: AppColors.primary, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                if (icon != null) ...[
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    if (hasEdit) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: onEdit,
-                        child: const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: primaryColor,
-                        ),
-                      ),
-                    ],
-                  ],
+                    child: Icon(icon, color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                if (actionButton != null) actionButton,
               ],
             ),
           ),
           child,
         ],
-      ),
-    );
-  }
-
-  Widget _buildAddButton(String label, VoidCallback onPressed) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.add, size: 16),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        textStyle: const TextStyle(fontSize: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
     );
   }
@@ -1962,7 +982,6 @@ class _ExperienceItem extends StatelessWidget {
   final String company;
   final String period;
   final Color logoColor;
-  final VoidCallback? onDelete;
 
   const _ExperienceItem({
     required this.logo,
@@ -1970,7 +989,6 @@ class _ExperienceItem extends StatelessWidget {
     required this.company,
     required this.period,
     required this.logoColor,
-    this.onDelete,
   });
 
   @override
@@ -2012,15 +1030,6 @@ class _ExperienceItem extends StatelessWidget {
             period,
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          if (onDelete != null) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: onDelete,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
         ],
       ),
     );
@@ -2032,14 +1041,12 @@ class _EducationItem extends StatelessWidget {
   final String school;
   final String period;
   final Color color;
-  final VoidCallback? onDelete;
 
   const _EducationItem({
     required this.degree,
     required this.school,
     required this.period,
     required this.color,
-    this.onDelete,
   });
 
   @override
@@ -2085,15 +1092,6 @@ class _EducationItem extends StatelessWidget {
             period,
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          if (onDelete != null) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: onDelete,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
         ],
       ),
     );
@@ -2103,13 +1101,8 @@ class _EducationItem extends StatelessWidget {
 class _SkillChip extends StatelessWidget {
   final String label;
   final String proficiency;
-  final VoidCallback? onDelete;
 
-  const _SkillChip({
-    required this.label,
-    required this.proficiency,
-    this.onDelete,
-  });
+  const _SkillChip({required this.label, required this.proficiency});
 
   String _toTitleCase(String text) {
     if (text.trim().isEmpty) return text;
@@ -2131,29 +1124,13 @@ class _SkillChip extends StatelessWidget {
         color: AppColors.secondary,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label (${_toTitleCase(proficiency)})',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (onDelete != null) ...[
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onDelete,
-              child: const Icon(
-                Icons.close,
-                size: 14,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ],
+      child: Text(
+        '$label (${_toTitleCase(proficiency)})',
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -2565,7 +1542,7 @@ class _ReviewRatingsWrap extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+              const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
               const SizedBox(width: 2),
               Text(
                 rating.score.toStringAsFixed(1),

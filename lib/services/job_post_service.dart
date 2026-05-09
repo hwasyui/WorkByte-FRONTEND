@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -19,19 +20,25 @@ class JobPostService {
   };
 
   // ─── Job Posts ────────────────────────────────────────────────────────────
-  Future<List<JobPostModel>> getAllJobPosts(String token, {int page = 1, int pageSize = 20}) async {
+  Future<List<JobPostModel>> getAllJobPosts(
+    String token, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
-        'page': page.toString(),
-        'page_size': pageSize.toString(),
-      }),
+      Uri.parse('$_baseUrl/job-posts').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      ),
       headers: _headers(token),
     );
     final body = jsonDecode(res.body);
     debugPrint('GET /job-posts: $body');
     if (res.statusCode == 200) {
       final details = body['details'];
-      final list = (details is Map && details['items'] != null) 
+      final list = (details is Map && details['items'] != null)
           ? details['items']
           : (details is List ? details : (body['data'] ?? []));
       return (list as List)
@@ -41,18 +48,24 @@ class JobPostService {
     throw Exception(body['details'] ?? 'Failed to load job posts');
   }
 
-  Future<Map<String, dynamic>> getAllJobPostsWithPagination(String token, {int page = 1, int pageSize = 20}) async {
+  Future<Map<String, dynamic>> getAllJobPostsWithPagination(
+    String token, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts').replace(queryParameters: {
-        'page': page.toString(),
-        'page_size': pageSize.toString(),
-      }),
+      Uri.parse('$_baseUrl/job-posts').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      ),
       headers: _headers(token),
     );
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
       final details = body['details'];
-      final list = (details is Map && details['items'] != null) 
+      final list = (details is Map && details['items'] != null)
           ? details['items']
           : (details is List ? details : (body['data'] ?? []));
       final items = (list as List)
@@ -234,36 +247,63 @@ class JobPostService {
   }
 
   // ─── Job Files ────────────────────────────────────────────────────────────
+
   Future<List<JobFileModel>> getJobFiles(String token, String jobPostId) async {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-files/job-post/$jobPostId'),
       headers: _headers(token),
     );
+
     final body = jsonDecode(res.body);
     debugPrint('GET /job-files/job-post/$jobPostId: $body');
+
     if (res.statusCode == 200) {
       final list = body['details'] ?? body['data'] ?? [];
       return (list as List)
           .map((e) => JobFileModel.fromJson(e as Map<String, dynamic>))
           .toList();
     }
+
     throw Exception(body['details'] ?? 'Failed to load job files');
   }
 
-  Future<JobFileModel> createJobFile(
-    String token,
-    Map<String, dynamic> data,
-  ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/job-files'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    );
-    final body = jsonDecode(res.body);
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      return JobFileModel.fromJson(body['details'] ?? body['data'] ?? body);
+  /// 🔥 NEW: Upload job files using multipart/form-data
+  Future<List<JobFileModel>> uploadJobFiles({
+    required String token,
+    required String jobPostId,
+    required List<File> files,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/job-files');
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // Add required form field
+    request.fields['job_post_id'] = jobPostId;
+
+    // Attach files
+    for (final file in files) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'files', // MUST match backend parameter name
+          file.path,
+        ),
+      );
     }
-    throw Exception(body['details'] ?? 'Failed to create job file');
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    final body = jsonDecode(response.body);
+
+    debugPrint('POST /job-files response: $body');
+
+    if (response.statusCode == 201) {
+      final list = body['details'] ?? body['data'] ?? [];
+      return (list as List).map((e) => JobFileModel.fromJson(e)).toList();
+    }
+
+    throw Exception(body['details'] ?? 'Failed to upload job files');
   }
 
   Future<void> deleteJobFile(String token, String jobFileId) async {
@@ -271,6 +311,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-files/$jobFileId'),
       headers: _headers(token),
     );
+
     if (res.statusCode != 200) {
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to delete job file');

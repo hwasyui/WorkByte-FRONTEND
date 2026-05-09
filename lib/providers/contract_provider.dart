@@ -225,4 +225,20 @@ class ContractProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  int get totalContractsCount => _contracts.length;
+
+  int completedContractsCountForFreelancer(String freelancerId) {
+    return _contracts.where((c) {
+      return c.freelancerId == freelancerId &&
+          c.status.toLowerCase() == 'completed';
+    }).length;
+  }
+
+  List<ContractModel> completedContractsForFreelancer(String freelancerId) {
+    return _contracts.where((c) {
+      return c.freelancerId == freelancerId &&
+          c.status.toLowerCase() == 'completed';
+    }).toList();
+  }
 }

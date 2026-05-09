@@ -70,7 +70,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
       if (mounted) {
         setState(() {
-          postedJobs = jobsList.map((job) => JobPostModel.fromJson(job)).toList();
+          postedJobs = jobsList
+              .map((job) => JobPostModel.fromJson(job))
+              .toList();
           _isLoading = false;
         });
       }
@@ -89,7 +91,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final userType = profile.userType ?? 'client';
 
-    final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
+    final identifier =
+        profile.clientProfile?.clientId ?? auth.currentUser!.userId;
     if (auth.token != null) {
       await profile.fetchProfile(
         token: auth.token!,
@@ -131,8 +134,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       color: Color(0xFFE0E7FF),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.edit_outlined,
-                        color: Color(0xFF4F46E5), size: 20),
+                    child: const Icon(
+                      Icons.edit_outlined,
+                      color: Color(0xFF4F46E5),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -154,8 +160,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         color: Color(0xFFE0E7FF),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.close,
-                          color: Color(0xFF4F46E5), size: 18),
+                      child: const Icon(
+                        Icons.close,
+                        color: Color(0xFF4F46E5),
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
@@ -163,10 +172,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               const SizedBox(height: 20),
               const Text(
                 'Tell us about your company',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -176,27 +182,30 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 decoration: InputDecoration(
                   hintText: 'Tell us about your company...',
                   hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF), fontSize: 14),
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 14,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFFEEF0FF),
                   contentPadding: const EdgeInsets.all(16),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(
-                        color: Color(0xFF4F46E5), width: 1.5),
+                      color: Color(0xFF4F46E5),
+                      width: 1.5,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(
-                        color: Color(0xFF4F46E5), width: 1.5),
+                      color: Color(0xFF4F46E5),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              Container(
-                height: 1,
-                color: const Color(0xFFE5E7EB),
-              ),
+              Container(height: 1, color: const Color(0xFFE5E7EB)),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Row(
@@ -220,14 +229,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         final bioValue = newBio.trim().isEmpty ? null : newBio;
                         setState(() => bioText = newBio);
 
-                        final auth =
-                            Provider.of<AuthProvider>(context, listen: false);
-                        final profile = Provider.of<ProfileProvider>(context,
-                            listen: false);
+                        final auth = Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        );
+                        final profile = Provider.of<ProfileProvider>(
+                          context,
+                          listen: false,
+                        );
                         final messenger = ScaffoldMessenger.of(context);
                         final identifier =
                             profile.clientProfile?.clientId ??
-                                auth.currentUser!.userId;
+                            auth.currentUser!.userId;
 
                         Navigator.pop(dialogContext);
 
@@ -240,9 +253,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         if (mounted) {
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(success
-                                  ? 'About saved successfully'
-                                  : profile.error ?? 'Failed to save About'),
+                              content: Text(
+                                success
+                                    ? 'About saved successfully'
+                                    : profile.error ?? 'Failed to save About',
+                              ),
                             ),
                           );
                         }
@@ -252,7 +267,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 28, vertical: 14),
+                          horizontal: 28,
+                          vertical: 14,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -260,7 +277,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       child: const Text(
                         'Save',
                         style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -298,9 +317,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               setState(() => websiteUrl = newUrl);
 
               final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(context, listen: false);
+              final profile = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
               final messenger = ScaffoldMessenger.of(context);
-              final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
+              final identifier =
+                  profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
               Navigator.pop(dialogContext);
 
@@ -313,9 +336,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text(success
-                        ? 'Website saved successfully'
-                        : profile.error ?? 'Failed to save Website'),
+                    content: Text(
+                      success
+                          ? 'Website saved successfully'
+                          : profile.error ?? 'Failed to save Website',
+                    ),
                   ),
                 );
               }
@@ -331,6 +356,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   void _showEditProfile() {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -341,85 +367,89 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          final fields = <String, dynamic>{"full_name": data['name']};
+          final identifier =
+              profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
-          if (data['imageDeleted'] == true) {
-            fields['profile_picture_url'] = null;
-          } else if (data['image'] != null &&
+          // ── Case 1: New local image selected → upload via fixed endpoint ──
+          if (data['image'] != null &&
               data['image'].toString().isNotEmpty &&
-              data['image'] != profile.profilePictureUrl) {
-            if (!data['image'].toString().startsWith('http')) {
+              data['image'] != profile.profilePictureUrl &&
+              !data['image'].toString().startsWith('http')) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Uploading profile picture...')),
+              );
+            }
+
+            final success = await profile.uploadProfilePicture(
+              token: auth.token!,
+              identifier: identifier,
+              imageFile: File(data['image']),
+            );
+
+            if (!success) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uploading profile picture...')),
+                  SnackBar(
+                    content: Text(
+                      profile.error ?? 'Failed to upload profile picture',
+                    ),
+                  ),
                 );
               }
+              return;
+            }
+          }
+          // ── Case 2: Image deleted ─────────────────────────────────────────
+          else if (data['imageDeleted'] == true) {
+            final success = await profile.deleteProfilePicture(
+              token: auth.token!,
+              identifier: identifier,
+            );
 
-              final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-              final uploadResult = await ApiService.uploadClientProfilePicture(
-                auth.token!,
-                identifier,
-                data['image'],
+            if (!success && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    profile.error ?? 'Failed to delete profile picture',
+                  ),
+                ),
               );
-
-              if (uploadResult != null) {
-                final uploadedUrl = uploadResult['profile_picture_url'] as String?;
-                if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-                  await _refreshProfile();
-                  profile.forceRefreshProfilePicture();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile picture updated successfully')),
-                    );
-                    Navigator.pop(context);
-                  }
-                  return;
-                }
-              } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to upload profile picture')),
-                  );
-                }
-                return;
-              }
-            } else {
-              fields['profile_picture_url'] = data['image'];
+              return;
             }
           }
 
-          final identifier = profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-          final success = await profile.updateProfile(
-            token: auth.token!,
-            identifier: identifier,
-            fields: fields,
-          );
+          // ── Case 3: Update other fields (name, etc.) ──────────────────────
+          final fields = <String, dynamic>{
+            if (data['name'] != null) 'full_name': data['name'],
+          };
 
-          if (success) {
-            if (data['imageDeleted'] == true) {
-              profile.clearProfilePicture();
-            } else {
-              final updatedUrl = profile.profilePictureUrl;
-              if (updatedUrl != null && updatedUrl.isNotEmpty) {
-                profile.updateProfilePictureUrl(updatedUrl);
-              }
-            }
+          if (fields.isNotEmpty) {
+            final success = await profile.updateProfile(
+              token: auth.token!,
+              identifier: identifier,
+              fields: fields,
+            );
 
-            await _refreshProfile();
-            profile.forceRefreshProfilePicture();
-
-            if (mounted) {
+            if (!success && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile updated successfully')),
+                SnackBar(
+                  content: Text(profile.error ?? 'Failed to update profile'),
+                ),
               );
-              Navigator.pop(context);
+              return;
             }
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(profile.error ?? 'Failed to update profile')),
-              );
-            }
+          }
+
+          // ── Done ──────────────────────────────────────────────────────────
+          await _refreshProfile();
+          profile.forceRefreshProfilePicture();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile updated successfully')),
+            );
+            Navigator.pop(context);
           }
         },
       ),
@@ -431,9 +461,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       context: context,
       builder: (context) => Dialog(
         backgroundColor: const Color(0xFFF3F1FF),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
@@ -462,37 +490,51 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     const Positioned(
                       top: 6,
                       left: 10,
-                      child: Text('✦',
-                          style: TextStyle(
-                              color: AppColors.primary, fontSize: 14)),
+                      child: Text(
+                        '✦',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                     const Positioned(
                       top: 6,
                       right: 10,
-                      child: Text('✦',
-                          style: TextStyle(
-                              color: Color(0xFFB8B0F0), fontSize: 10)),
+                      child: Text(
+                        '✦',
+                        style: TextStyle(
+                          color: Color(0xFFB8B0F0),
+                          fontSize: 10,
+                        ),
+                      ),
                     ),
                     const Positioned(
                       bottom: 8,
                       right: 8,
-                      child: Text('✦',
-                          style: TextStyle(
-                              color: AppColors.primary, fontSize: 12)),
+                      child: Text(
+                        '✦',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     const Positioned(
                       top: 30,
                       left: 2,
                       child: CircleAvatar(
-                          radius: 3,
-                          backgroundColor: Color(0xFFB8B0F0)),
+                        radius: 3,
+                        backgroundColor: Color(0xFFB8B0F0),
+                      ),
                     ),
                     const Positioned(
                       bottom: 26,
                       right: 0,
                       child: CircleAvatar(
-                          radius: 2.5,
-                          backgroundColor: Color(0xFFB8B0F0)),
+                        radius: 2.5,
+                        backgroundColor: Color(0xFFB8B0F0),
+                      ),
                     ),
                   ],
                 ),
@@ -523,12 +565,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(
-                            color: AppColors.primary, width: 1.5),
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(50),
                         ),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
                         'Cancel',
@@ -545,17 +588,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     child: ElevatedButton(
                       onPressed: () {
                         final auth = Provider.of<AuthProvider>(
-                            context,
-                            listen: false);
+                          context,
+                          listen: false,
+                        );
                         final profile = Provider.of<ProfileProvider>(
-                            context,
-                            listen: false);
+                          context,
+                          listen: false,
+                        );
                         auth.logout(profileProvider: profile);
                         if (mounted) {
                           Navigator.pop(context);
                           Navigator.of(context).pushAndRemoveUntil(
                             MaterialPageRoute(
-                                builder: (_) => const LoginScreen()),
+                              builder: (_) => const LoginScreen(),
+                            ),
                             (route) => false,
                           );
                         }
@@ -565,8 +611,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(50),
                         ),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                       ),
                       child: Text(
@@ -701,11 +746,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           ),
                         ),
                       ),
-                      Positioned(
-                        top: 16,
-                        right: 56,
-                        child: _buildDotGrid(),
-                      ),
+                      Positioned(top: 16, right: 56, child: _buildDotGrid()),
                     ],
                   ),
                 ),
@@ -726,7 +767,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   children: [
                     IconButton(
                       icon: const Icon(
-                          Icons.bookmarks_outlined, color: Colors.white),
+                        Icons.bookmarks_outlined,
+                        color: Colors.white,
+                      ),
                       onPressed: () => _tabController.animateTo(2),
                     ),
                     IconButton(
@@ -761,7 +804,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
-                          child: profileImage == null ||
+                          child:
+                              profileImage == null ||
                                   (!profileImage.startsWith('http') &&
                                       !File(profileImage).existsSync())
                               ? const Icon(
@@ -783,9 +827,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           Center(
             child: _buildStarRating(
-              rating: Provider.of<ProfileProvider>(context, listen: false)
-                      .clientProfile
-                      ?.averageRatingGiven ??
+              rating:
+                  Provider.of<ProfileProvider>(
+                    context,
+                    listen: false,
+                  ).clientProfile?.averageRatingGiven ??
                   0.0,
               size: 18,
             ),
@@ -808,13 +854,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     auth.currentUser?.email ?? '',
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
-                  if (profile.jobTitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      profile.jobTitle,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ],
                 ],
               );
             },
@@ -925,7 +964,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 style: TextStyle(
                   color: websiteUrl.isEmpty ? Colors.grey : primaryColor,
                   fontSize: 14,
-                  decoration: websiteUrl.isNotEmpty ? TextDecoration.underline : null,
+                  decoration: websiteUrl.isNotEmpty
+                      ? TextDecoration.underline
+                      : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -948,12 +989,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                   _buildStatItem(
                     label: 'Completed',
-                    value: '${profile.clientProfile?.totalProjectsCompleted ?? 0}',
+                    value:
+                        '${profile.clientProfile?.totalProjectsCompleted ?? 0}',
                   ),
                   if (profile.clientProfile?.averageRatingGiven != null)
                     _buildStatItem(
                       label: 'Rating',
-                      value: profile.clientProfile!.averageRatingGiven!.toStringAsFixed(1),
+                      value: profile.clientProfile!.averageRatingGiven!
+                          .toStringAsFixed(1),
                     ),
                 ],
               ),
@@ -976,10 +1019,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -1073,8 +1113,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.bookmarks_outlined,
-                      size: 52, color: Colors.grey[300]),
+                  Icon(
+                    Icons.bookmarks_outlined,
+                    size: 52,
+                    color: Colors.grey[300],
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     'No saved freelancers yet',
@@ -1109,77 +1152,87 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       const Text(
                         'Saved Freelancers',
                         style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      Text('${freelancers.length}',
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 13)),
+                      Text(
+                        '${freelancers.length}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                ...freelancers.map((f) => Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: AppColors.secondary,
-                              backgroundImage: f.profilePictureUrl != null &&
-                                      f.profilePictureUrl!.startsWith('http')
-                                  ? NetworkImage(f.profilePictureUrl!)
-                                  : null,
-                              child: f.profilePictureUrl == null ||
-                                      !f.profilePictureUrl!.startsWith('http')
-                                  ? const Icon(Icons.person,
-                                      color: AppColors.primary, size: 22)
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    f.displayName,
-                                    style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    f.jobTitle.isNotEmpty && f.jobTitle != '-'
-                                        ? f.jobTitle
-                                        : 'Freelancer',
-                                    style: const TextStyle(
-                                        color: Colors.grey, fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => saved.toggleSaveFreelancer(f),
-                              child: const Icon(Icons.bookmark_rounded,
-                                  color: AppColors.primary, size: 22),
-                            ),
-                          ],
-                        ),
+                ...freelancers.map(
+                  (f) => Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    )),
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppColors.secondary,
+                            backgroundImage:
+                                f.profilePictureUrl != null &&
+                                    f.profilePictureUrl!.startsWith('http')
+                                ? NetworkImage(f.profilePictureUrl!)
+                                : null,
+                            child:
+                                f.profilePictureUrl == null ||
+                                    !f.profilePictureUrl!.startsWith('http')
+                                ? const Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                    size: 22,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  f.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => saved.toggleSaveFreelancer(f),
+                            child: const Icon(
+                              Icons.bookmark_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ],
           ),

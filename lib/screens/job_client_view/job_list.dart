@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/job_post_service.dart';
 import '../../services/proposal_service.dart';
 import '../dashboard/dashboard.dart';
 import '../../models/job_post_model.dart';
@@ -58,14 +59,57 @@ class JobListScreenState extends State<JobListScreen> {
       setState(() {
         _allJobs = jobs ?? [];
         _filteredJobs = List.from(_allJobs);
-        _isLoading = false;
       });
 
-      // Load avatars after list is rendered
+      // Load position counts before displaying the screen.
+      await _loadTeamPositionCounts(token);
+      // Load avatars after list is rendered.
       _fetchProposalAvatars(token);
     } catch (_) {
-      setState(() => _isLoading = false);
+      // ignore
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  Future<void> _loadTeamPositionCounts(String token) async {
+    final service = JobPostService();
+    final teamJobs = _allJobs.where(
+      (job) => (job['project_type'] ?? '') == 'team',
+    );
+    final results = await Future.wait(
+      teamJobs.map((job) async {
+        final id = job['job_post_id'] as String?;
+        if (id == null) return null;
+        try {
+          final roles = await service.getJobRoles(token, id);
+          return MapEntry(
+            id,
+            roles.fold<int>(0, (sum, role) => sum + role.positionsAvailable),
+          );
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+    final counts = results.whereType<MapEntry<String, int>>();
+
+    if (!mounted) return;
+
+    setState(() {
+      for (final entry in counts) {
+        final id = entry.key;
+        final total = entry.value;
+        for (final job in _allJobs) {
+          if (job['job_post_id'] == id) {
+            job['position_count'] = total;
+          }
+        }
+      }
+      _filteredJobs = List.from(_allJobs);
+    });
   }
 
   /// Fetch up to 3 real freelancer avatars per job from proposal list
@@ -239,7 +283,11 @@ class JobListScreenState extends State<JobListScreen> {
                         ),
                       ),
                     ),
-                    const Icon(Icons.search, color: AppColors.primary, size: 22),
+                    const Icon(
+                      Icons.search,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
                   ],
                 ),
               ),
@@ -277,10 +325,21 @@ class JobListScreenState extends State<JobListScreen> {
   Widget _buildJobCard(Map<String, dynamic> job) {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
-    final roleCount = job['role_count'] ?? 0;
     final proposalCount = (job['proposal_count'] ?? 0) as int;
+    final positionCount = isTeam
+        ? (job['position_count'] as int?) ??
+              ((job['roles'] as List?)?.fold<int>(
+                    0,
+                    (sum, role) =>
+                        sum +
+                        ((role is Map
+                                ? (role['positions_available'] as int?)
+                                : null) ??
+                            1),
+                  ) ??
+                  (job['role_count'] ?? 0))
+        : 1;
     final status = job['status'] as String? ?? 'draft';
-    final scope = _capitalize(job['project_scope'] ?? '');
 
     final avatars = _proposalAvatars[jobPostId];
     final avatarCount = avatars != null
@@ -354,6 +413,7 @@ class JobListScreenState extends State<JobListScreen> {
                   const SizedBox(height: 3),
 
                   // Sub-title: project type
+                  // Sub-title: project type
                   Text(
                     isTeam ? 'Team Project' : 'Individual Project',
                     style: GoogleFonts.poppins(
@@ -361,33 +421,39 @@ class JobListScreenState extends State<JobListScreen> {
                       color: const Color(0xFF7D7D7D),
                     ),
                   ),
+                  const SizedBox(height: 6),
+
+                  // ── NEW: category chip ──────────────────────────────────
+                  _categoryChip(
+                    job['project_category'] as String? ?? 'general',
+                  ),
                   const SizedBox(height: 10),
 
-                  // Tags row: scope badge + role/bid count
+                  // Tags row: position/bid count
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          scope,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                      const Icon(
+                        Icons.group_outlined,
+                        size: 15,
+                        color: AppColors.primary,
                       ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.group_outlined,
-                          size: 15, color: AppColors.primary),
                       const SizedBox(width: 4),
                       Text(
-                        isTeam ? '$roleCount' : '$proposalCount',
+                        '$positionCount position${positionCount == 1 ? '' : 's'}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF7D7D7D),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.gavel,
+                        size: 15,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$proposalCount bid${proposalCount == 1 ? '' : 's'}',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF7D7D7D),
@@ -480,6 +546,30 @@ class JobListScreenState extends State<JobListScreen> {
           fontWeight: FontWeight.w600,
           color: colors.$1,
         ),
+      ),
+    );
+  }
+
+  // ── Category chip ─────────────────────────────────────────────────────────
+  Widget _categoryChip(String category) {
+    const labels = {
+      'mobile_dev': 'Mobile Dev',
+      'backend_dev': 'Backend Dev',
+      'web_dev': 'Web Dev',
+      'ui_ux_design': 'UI/UX Design',
+      'graphic_design': 'Graphic Design',
+      'copywriting': 'Copywriting',
+      'data_analytics': 'Data Analytics',
+      'video_editing': 'Video Editing',
+      'general': 'General',
+    };
+
+    return Text(
+      labels[category] ?? 'General',
+      style: GoogleFonts.poppins(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: AppColors.primary,
       ),
     );
   }

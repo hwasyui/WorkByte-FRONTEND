@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/job_post_model.dart';
 import '../models/job_role_model.dart';
@@ -14,11 +15,17 @@ class JobPostProvider extends ChangeNotifier {
   JobPostModel? _currentJobPost;
   List<JobRoleModel> _jobRoles = [];
 
+  // ── NEW: active category filter (null = show all) ─────────────────────────
+  String? _categoryFilter;
+
   // ── Per-role skills cache: jobRoleId → List<JobRoleSkillModel>
   final Map<String, List<JobRoleSkillModel>> _roleSkillsCache = {};
 
   // ── Job files cache: jobPostId → List<JobFileModel>
   final Map<String, List<JobFileModel>> _jobFilesCache = {};
+
+  List<JobFileModel> filesForJob(String jobPostId) =>
+      _jobFilesCache[jobPostId] ?? [];
 
   // ── Draft state ───────────────────────────────────────────────────────────
   Map<String, dynamic>? _draftJobData;
@@ -56,8 +63,32 @@ class JobPostProvider extends ChangeNotifier {
   List<JobRoleSkillModel> skillsForRole(String jobRoleId) =>
       _roleSkillsCache[jobRoleId] ?? [];
 
-  List<JobFileModel> filesForJob(String jobPostId) =>
-      _jobFilesCache[jobPostId] ?? [];
+  // ── NEW: category getters ─────────────────────────────────────────────────
+
+  /// The inferred category of the currently loaded job post.
+  String? get currentProjectCategory => _currentJobPost?.projectCategory;
+
+  /// Active filter; null means no filtering applied.
+  String? get categoryFilter => _categoryFilter;
+
+  /// Job posts filtered by [_categoryFilter]. Use this in your list widgets.
+  List<JobPostModel> get filteredJobPosts {
+    if (_categoryFilter == null || _categoryFilter!.isEmpty) return _jobPosts;
+    return _jobPosts
+        .where((p) => p.projectCategory == _categoryFilter)
+        .toList();
+  }
+
+  /// All distinct categories present in the loaded job posts list.
+  List<String> get availableCategories =>
+      _jobPosts.map((p) => p.projectCategory ?? 'general').toSet().toList()
+        ..sort();
+
+  /// Set or clear the category filter; pass null to show all.
+  void setCategoryFilter(String? category) {
+    _categoryFilter = category;
+    notifyListeners();
+  }
 
   // ── Draft setters ─────────────────────────────────────────────────────────
   void setDraftJobData(Map<String, dynamic> data) {
@@ -123,6 +154,21 @@ class JobPostProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _jobPosts = await _jobPostService.getJobPostsByClient(token, clientId);
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // ── NEW: fetch and filter by category in one call ─────────────────────────
+  Future<void> fetchJobPostsByCategory(String token, String category) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final all = await _jobPostService.getAllJobPosts(token, pageSize: 100);
+      _jobPosts = all.where((p) => p.projectCategory == category).toList();
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
@@ -302,6 +348,7 @@ class JobPostProvider extends ChangeNotifier {
   }
 
   // ── Job Files ─────────────────────────────────────────────────────────────
+
   Future<void> fetchJobFiles(String token, String jobPostId) async {
     try {
       final files = await _jobPostService.getJobFiles(token, jobPostId);
@@ -313,20 +360,24 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
-  Future<JobFileModel?> createJobFile(
+  Future<bool> uploadJobFiles(
     String token,
-    Map<String, dynamic> data,
+    String jobPostId,
+    List<File> files,
   ) async {
     try {
-      final created = await _jobPostService.createJobFile(token, data);
-      final postId = created.jobPostId;
-      _jobFilesCache[postId] = [...filesForJob(postId), created];
+      final createdFiles = await _jobPostService.uploadJobFiles(
+        token: token,
+        jobPostId: jobPostId,
+        files: files,
+      );
+      _jobFilesCache[jobPostId] = [...filesForJob(jobPostId), ...createdFiles];
       notifyListeners();
-      return created;
+      return true;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
-      return null;
+      return false;
     }
   }
 
