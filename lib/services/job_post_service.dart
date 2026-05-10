@@ -24,12 +24,14 @@ class JobPostService {
     String token, {
     int page = 1,
     int pageSize = 20,
+    String? category,
   }) async {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-posts').replace(
         queryParameters: {
           'page': page.toString(),
           'page_size': pageSize.toString(),
+          if (category != null) 'category': category,
         },
       ),
       headers: _headers(token),
@@ -107,6 +109,22 @@ class JobPostService {
           .toList();
     }
     throw Exception(body['details'] ?? 'Failed to load client job posts');
+  }
+
+  Future<Map<String, int>> getCategoryCounts(String token) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-posts/category-counts'),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      final list = body['details'] ?? body['data'] ?? [];
+      return {
+        for (final item in list as List)
+          (item['category'] as String): (item['count'] as num).toInt(),
+      };
+    }
+    throw Exception(body['details'] ?? 'Failed to fetch category counts');
   }
 
   Future<JobPostModel> createJobPost(

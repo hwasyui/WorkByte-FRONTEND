@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:app/screens/category/category_list.dart';
+import 'package:app/services/job_post_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,107 @@ import '../../models/freelancer_model.dart';
 import '../../models/ai_job_match_model.dart';
 import '../job_freelancer_view/job_detail.dart';
 
+class _CategoryDef {
+  final String key;
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final Color countColor;
+
+  const _CategoryDef({
+    required this.key,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.countColor,
+  });
+}
+
+const List<_CategoryDef> _kCategoryDefs = [
+  _CategoryDef(
+    key: 'webdev',
+    label: 'Web Dev',
+    icon: Icons.language_rounded,
+    iconColor: Color(0xFF4F46E5),
+    iconBg: Color(0xFFE0E7FF),
+    countColor: Color(0xFF4F46E5),
+  ),
+  _CategoryDef(
+    key: 'marketing',
+    label: 'Marketing',
+    icon: Icons.campaign_rounded,
+    iconColor: Color(0xFF059669),
+    iconBg: Color(0xFFD1FAE5),
+    countColor: Color(0xFF059669),
+  ),
+  _CategoryDef(
+    key: 'ui_ux_design',
+    label: 'UI/UX Design',
+    icon: Icons.design_services_rounded,
+    iconColor: Color(0xFFD97706),
+    iconBg: Color(0xFFFEF3C7),
+    countColor: Color(0xFFD97706),
+  ),
+  _CategoryDef(
+    key: 'data_analytics',
+    label: 'Data Analytics',
+    icon: Icons.bar_chart_rounded,
+    iconColor: Color(0xFFDC2626),
+    iconBg: Color(0xFFFEE2E2),
+    countColor: Color(0xFFDC2626),
+  ),
+  _CategoryDef(
+    key: 'mobile_dev',
+    label: 'Mobile Dev',
+    icon: Icons.phone_android_rounded,
+    iconColor: Color(0xFF0891B2),
+    iconBg: Color(0xFFCFFAFE),
+    countColor: Color(0xFF0891B2),
+  ),
+  _CategoryDef(
+    key: 'backend_dev',
+    label: 'Backend Dev',
+    icon: Icons.dns_rounded,
+    iconColor: Color(0xFF7C3AED),
+    iconBg: Color(0xFFEDE9FE),
+    countColor: Color(0xFF7C3AED),
+  ),
+  _CategoryDef(
+    key: 'graphic_design',
+    label: 'Graphic Design',
+    icon: Icons.brush_rounded,
+    iconColor: Color(0xFFDB2777),
+    iconBg: Color(0xFFFCE7F3),
+    countColor: Color(0xFFDB2777),
+  ),
+  _CategoryDef(
+    key: 'copy_writing',
+    label: 'Copywriting',
+    icon: Icons.edit_note_rounded,
+    iconColor: Color(0xFF065F46),
+    iconBg: Color(0xFFD1FAE5),
+    countColor: Color(0xFF065F46),
+  ),
+  _CategoryDef(
+    key: 'video_editing',
+    label: 'Video Editing',
+    icon: Icons.videocam_rounded,
+    iconColor: Color(0xFFB45309),
+    iconBg: Color(0xFFFEF3C7),
+    countColor: Color(0xFFB45309),
+  ),
+  _CategoryDef(
+    key: 'general',
+    label: 'General',
+    icon: Icons.work_outline_rounded,
+    iconColor: Color(0xFF374151),
+    iconBg: Color(0xFFF3F4F6),
+    countColor: Color(0xFF374151),
+  ),
+];
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -43,11 +146,17 @@ class _HomeScreenState extends State<HomeScreen> {
   List<FreelancerModel> _topFreelancers = [];
   bool _isLoadingFreelancers = true;
 
+  Map<String, int> _categoryCounts = {};
+  bool _isLoadingCategories = true;
+
   @override
   void initState() {
     super.initState();
-    _loadRecommendedJobs();
-    _loadTopFreelancers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRecommendedJobs();
+      _loadTopFreelancers();
+      _loadCategoryCounts();
+    });
   }
 
   Future<void> _loadRecommendedJobs() async {
@@ -80,6 +189,28 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _isLoadingJobs = false);
       debugPrint('Error loading AI recommendations: $e');
     }
+  }
+
+  Future<void> _loadCategoryCounts() async {
+    setState(() => _isLoadingCategories = true);
+    try {
+      final token = context.read<AuthProvider>().token!;
+      final counts = await JobPostService().getCategoryCounts(token);
+      if (mounted) setState(() => _categoryCounts = counts);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingCategories = false);
+    }
+  }
+
+  // ── Sorted category cards ──────────────────────────────────────────────────
+  List<_CategoryDef> get _sortedCategories {
+    final sorted = [..._kCategoryDefs];
+    sorted.sort(
+      (a, b) =>
+          (_categoryCounts[b.key] ?? 0).compareTo(_categoryCounts[a.key] ?? 0),
+    );
+    return sorted;
   }
 
   Future<void> _tapJob(AIJobMatchModel match) async {
@@ -285,6 +416,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sort categories by real count descending
+    final sortedCategories = [..._kCategoryDefs]
+      ..sort(
+        (a, b) => (_categoryCounts[b.key] ?? 0).compareTo(
+          _categoryCounts[a.key] ?? 0,
+        ),
+      );
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
@@ -303,6 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 16),
 
+                  // ── User greeting row ──
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
                       final imageUrl = profile.profilePictureUrl;
@@ -350,7 +490,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Row(
                         children: [
                           GestureDetector(
-                            onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                            onTap: () =>
+                                _scaffoldKey.currentState?.openDrawer(),
                             child: Container(
                               width: 44,
                               height: 44,
@@ -430,11 +571,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 16),
 
+                  // ── Complete profile banner ──
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
-                      if (profile.isProfileComplete) {
+                      if (profile.isProfileComplete)
                         return const SizedBox.shrink();
-                      }
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.symmetric(
@@ -523,9 +664,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
+                  // ── Search bar ──
                   const SearchBarWidget(),
                   const SizedBox(height: 20),
 
+                  // ── Quick access cards ──
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
                       return Row(
@@ -583,6 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
+                  // ── Recommended for You (freelancers only) ──
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (profile.isClient) return const SizedBox.shrink();
@@ -609,6 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
+                  // ── Top Freelancers (clients only) ──
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (!profile.isClient) return const SizedBox.shrink();
@@ -733,59 +878,52 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
 
-                  SectionHeader(title: 'Popular Categories', onViewAll: () {}),
+                  // ── Popular Categories ──
+                  SectionHeader(
+                    title: 'Popular Categories',
+                    onViewAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryListScreen(),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 120,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: const [
-                        _CategoryCard(
-                          icon: Icons.code_rounded,
-                          iconColor: Color(0xFF4F46E5),
-                          iconBg: Color(0xFFE0E7FF),
-                          label: 'Web Dev',
-                          jobCount: 25,
-                          countColor: Color(0xFF4F46E5),
-                        ),
-                        SizedBox(width: 12),
-                        _CategoryCard(
-                          icon: Icons.campaign_outlined,
-                          iconColor: Color(0xFF059669),
-                          iconBg: Color(0xFFD1FAE5),
-                          label: 'Marketing',
-                          jobCount: 5,
-                          countColor: Color(0xFF059669),
-                        ),
-                        SizedBox(width: 12),
-                        _CategoryCard(
-                          icon: Icons.design_services_outlined,
-                          iconColor: Color(0xFFD97706),
-                          iconBg: Color(0xFFFEF3C7),
-                          label: 'UI/UX',
-                          jobCount: 10,
-                          countColor: Color(0xFFD97706),
-                        ),
-                        SizedBox(width: 12),
-                        _CategoryCard(
-                          icon: Icons.bar_chart_rounded,
-                          iconColor: Color(0xFFDC2626),
-                          iconBg: Color(0xFFFEE2E2),
-                          label: 'Data Science',
-                          jobCount: 8,
-                          countColor: Color(0xFFDC2626),
-                        ),
-                        SizedBox(width: 12),
-                        _CategoryCard(
-                          icon: Icons.shield_outlined,
-                          iconColor: Color(0xFF0891B2),
-                          iconBg: Color(0xFFCFFAFE),
-                          label: 'Cyber Security',
-                          jobCount: 6,
-                          countColor: Color(0xFF0891B2),
-                        ),
-                      ],
-                    ),
+                    height: 118,
+                    child: _isLoadingCategories
+                        ? ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 5,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (_, __) => _CategoryCardSkeleton(),
+                          )
+                        : ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: sortedCategories.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final cat = sortedCategories[index];
+                              final count = _categoryCounts[cat.key] ?? 0;
+                              return _CategoryCard(
+                                icon: cat.icon,
+                                iconColor: cat.iconColor,
+                                iconBg: cat.iconBg,
+                                label: cat.label,
+                                jobCount: count,
+                                countColor: cat.countColor,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        JobListScreen(categoryFilter: cat.key),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -905,6 +1043,7 @@ class _QuickAccessCard extends StatelessWidget {
   }
 }
 
+// ── Category Card ─────────────────────────────────────────────────────────────
 class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -912,6 +1051,7 @@ class _CategoryCard extends StatelessWidget {
   final String label;
   final int jobCount;
   final Color countColor;
+  final VoidCallback? onTap;
 
   const _CategoryCard({
     required this.icon,
@@ -920,13 +1060,75 @@ class _CategoryCard extends StatelessWidget {
     required this.label,
     required this.jobCount,
     required this.countColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF333333),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$jobCount jobs',
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: countColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Category Card Skeleton (loading state) ────────────────────────────────────
+class _CategoryCardSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: 90,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -940,35 +1142,32 @@ class _CategoryCard extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFFF0F0F0),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF333333),
+          const SizedBox(height: 6),
+          Container(
+            height: 10,
+            width: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F0F0),
+              borderRadius: BorderRadius.circular(4),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
-          Text(
-            '$jobCount jobs',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: countColor,
+          const SizedBox(height: 4),
+          Container(
+            height: 10,
+            width: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F0F0),
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
         ],

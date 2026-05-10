@@ -12,10 +12,47 @@ import '../../services/job_post_service.dart';
 import '../../widgets/top_bar.dart';
 import 'job_detail.dart';
 
+// ── Category meta ────────────────────────────────────────────────────────────
+const Map<String, String> kCategoryLabels = {
+  'mobiledev': 'Mobile Dev',
+  'backenddev': 'Backend Dev',
+  'webdev': 'Web Dev',
+  'uiuxdesign': 'UI/UX Design',
+  'graphicdesign': 'Graphic Design',
+  'copywriting': 'Copywriting',
+  'dataanalytics': 'Data Analytics',
+  'videoediting': 'Video Editing',
+  'marketing': 'Marketing',
+  'general': 'General',
+  // legacy snake_case keys (keep for backward compat)
+  'mobile_dev': 'Mobile Dev',
+  'backend_dev': 'Backend Dev',
+  'web_dev': 'Web Dev',
+  'ui_ux_design': 'UI/UX Design',
+  'graphic_design': 'Graphic Design',
+  'data_analytics': 'Data Analytics',
+  'video_editing': 'Video Editing',
+};
+
+const Map<String, IconData> kCategoryIcons = {
+  'mobiledev': Icons.phone_android_rounded,
+  'backenddev': Icons.dns_rounded,
+  'webdev': Icons.language_rounded,
+  'uiuxdesign': Icons.design_services_rounded,
+  'graphicdesign': Icons.brush_rounded,
+  'copywriting': Icons.edit_note_rounded,
+  'dataanalytics': Icons.bar_chart_rounded,
+  'videoediting': Icons.videocam_rounded,
+  'marketing': Icons.campaign_rounded,
+  'general': Icons.work_outline_rounded,
+};
+
+// ── Screen ───────────────────────────────────────────────────────────────────
 class JobListScreen extends StatefulWidget {
   final String? initialQuery;
+  final String? categoryFilter;
 
-  const JobListScreen({super.key, this.initialQuery});
+  const JobListScreen({super.key, this.initialQuery, this.categoryFilter});
 
   @override
   State<JobListScreen> createState() => _JobListScreenState();
@@ -30,12 +67,17 @@ class _JobListScreenState extends State<JobListScreen> {
   bool _isLoading = true;
   String _sortOption = 'Latest';
 
+  /// Active category filter — starts from widget.categoryFilter, can be cleared
+  String? _activeCategoryFilter;
+
   final Map<String, int> _positionCounts = {};
   final Map<String, String?> _clientProfilePictures = {};
 
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
+    _activeCategoryFilter = widget.categoryFilter;
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
     }
@@ -49,13 +91,13 @@ class _JobListScreenState extends State<JobListScreen> {
     super.dispose();
   }
 
+  // ── Data fetching ──────────────────────────────────────────────────────────
   Future<void> _fetchJobs() async {
     setState(() => _isLoading = true);
     try {
       final token = context.read<AuthProvider>().token!;
       await context.read<JobPostProvider>().fetchAllJobPosts(token);
       final posts = context.read<JobPostProvider>().jobPosts;
-
       _allJobs = List<JobPostModel>.from(posts);
 
       await _loadTeamPositionCounts(token);
@@ -67,15 +109,12 @@ class _JobListScreenState extends State<JobListScreen> {
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadTeamPositionCounts(String token) async {
     final service = JobPostService();
-
     final teamJobs = _allJobs.where(
       (job) => (job.projectType ?? '').toLowerCase() == 'team',
     );
@@ -96,7 +135,6 @@ class _JobListScreenState extends State<JobListScreen> {
     );
 
     if (!mounted) return;
-
     setState(() {
       _positionCounts.clear();
       for (final entry in results.whereType<MapEntry<String, int>>()) {
@@ -115,15 +153,12 @@ class _JobListScreenState extends State<JobListScreen> {
 
     for (final clientId in clientIds) {
       if (_clientProfilePictures.containsKey(clientId)) continue;
-
       try {
         final client = await profileProvider.fetchClientById(
           token: token,
           clientId: clientId,
         );
-
         if (!mounted) return;
-
         _clientProfilePictures[clientId] = client?.profilePictureUrl;
       } catch (_) {
         _clientProfilePictures[clientId] = null;
@@ -134,6 +169,7 @@ class _JobListScreenState extends State<JobListScreen> {
     setState(() {});
   }
 
+  // ── Filtering / sorting ────────────────────────────────────────────────────
   void _onSearch() => setState(() => _applySortAndFilter());
 
   void _onSortChanged(String value) {
@@ -143,11 +179,28 @@ class _JobListScreenState extends State<JobListScreen> {
     });
   }
 
+  void _clearCategoryFilter() {
+    setState(() {
+      _activeCategoryFilter = null;
+      _applySortAndFilter();
+    });
+  }
+
   void _applySortAndFilter() {
     final query = _searchController.text.toLowerCase();
-    _filteredJobs = _allJobs
-        .where((j) => j.jobTitle.toLowerCase().contains(query))
-        .toList();
+
+    _filteredJobs = _allJobs.where((j) {
+      // Text search
+      final matchesQuery = j.jobTitle.toLowerCase().contains(query);
+
+      // Category filter
+      final matchesCategory =
+          _activeCategoryFilter == null ||
+          (j.projectCategory).toLowerCase() ==
+              _activeCategoryFilter!.toLowerCase();
+
+      return matchesQuery && matchesCategory;
+    }).toList();
 
     _filteredJobs.sort(
       (a, b) => _sortOption == 'Latest'
@@ -156,8 +209,14 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final bool isFiltered = _activeCategoryFilter != null;
+    final String screenTitle = isFiltered
+        ? (kCategoryLabels[_activeCategoryFilter] ?? 'Jobs')
+        : 'Available jobs';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -165,120 +224,109 @@ class _JobListScreenState extends State<JobListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
                 children: [
-                  Consumer2<AuthProvider, ProfileProvider>(
-                    builder: (context, auth, profile, child) {
-                      final imageUrl = profile.profilePictureUrl;
-
-                      Widget displayImage;
-                      if (imageUrl != null && imageUrl.isNotEmpty) {
-                        if (imageUrl.startsWith('http')) {
-                          final urlWithBustingCache =
-                              '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
-                          displayImage = Image.network(
-                            urlWithBustingCache,
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            cacheWidth: 56,
-                            cacheHeight: 56,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
-                                Icons.person,
-                                size: 28,
-                                color: Colors.white,
-                              );
-                            },
-                          );
-                        } else if (File(imageUrl).existsSync()) {
-                          displayImage = Image.file(
-                            File(imageUrl),
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            cacheWidth: 56,
-                            cacheHeight: 56,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
-                                Icons.person,
-                                size: 28,
-                                color: Colors.white,
-                              );
-                            },
-                          );
-                        } else {
-                          displayImage = const Icon(
-                            Icons.person,
-                            size: 28,
-                            color: Colors.white,
-                          );
-                        }
-                      } else {
-                        displayImage = const Icon(
-                          Icons.person,
-                          size: 28,
-                          color: Colors.white,
-                        );
-                      }
-
-                      return ScreenTopBar(userAvatar: displayImage);
-                    },
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Available jobs',
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: _showSortSheet,
-                        child: Row(
-                          children: [
-                            Text(
-                              _sortOption,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 18,
-                              color: AppColors.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.tune_rounded,
-                          size: 18,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 14),
+                  Text(
+                    'Available Jobs',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A2E),
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            // ── Active category filter chip ──
+            if (isFiltered)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(29, 12, 29, 0),
+                child: Row(
+                  children: [
+                    Icon(
+                      kCategoryIcons[_activeCategoryFilter] ??
+                          Icons.label_outline_rounded,
+                      size: 14,
+                      color: _primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _primary.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              kCategoryLabels[_activeCategoryFilter] ??
+                                  _activeCategoryFilter!,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _primary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: _clearCategoryFilter,
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 14,
+                                color: _primary.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_filteredJobs.length} result${_filteredJobs.length == 1 ? '' : 's'}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── Search bar ──
             Padding(
               padding: const EdgeInsets.fromLTRB(29, 12, 29, 0),
               child: Container(
@@ -299,7 +347,9 @@ class _JobListScreenState extends State<JobListScreen> {
                           color: const Color(0xFF333333),
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Search jobs...',
+                          hintText: isFiltered
+                              ? 'Search in ${kCategoryLabels[_activeCategoryFilter] ?? _activeCategoryFilter}...'
+                              : 'Search jobs...',
                           hintStyle: GoogleFonts.poppins(
                             fontSize: 12,
                             color: const Color(0xFF7D7D7D),
@@ -317,17 +367,17 @@ class _JobListScreenState extends State<JobListScreen> {
                 ),
               ),
             ),
+
+            // ── Job list ──
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                      child: CircularProgressIndicator(color: _primary),
                     )
                   : _filteredJobs.isEmpty
                   ? _buildEmptyState()
                   : RefreshIndicator(
-                      color: AppColors.primary,
+                      color: _primary,
                       onRefresh: _fetchJobs,
                       child: ListView.builder(
                         padding: const EdgeInsets.fromLTRB(29, 16, 29, 16),
@@ -343,6 +393,7 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
+  // ── Job card ───────────────────────────────────────────────────────────────
   Widget _buildJobCard(JobPostModel job) {
     final isTeam = (job.projectType ?? '').toLowerCase() == 'team';
     final proposalCount = job.proposalCount;
@@ -405,7 +456,7 @@ class _JobListScreenState extends State<JobListScreen> {
                           const Icon(
                             Icons.group_outlined,
                             size: 15,
-                            color: AppColors.primary,
+                            color: _primary,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -416,11 +467,7 @@ class _JobListScreenState extends State<JobListScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          const Icon(
-                            Icons.gavel,
-                            size: 15,
-                            color: AppColors.primary,
-                          ),
+                          const Icon(Icons.gavel, size: 15, color: _primary),
                           const SizedBox(width: 4),
                           Text(
                             '$proposalCount bid${proposalCount == 1 ? '' : 's'}',
@@ -450,7 +497,7 @@ class _JobListScreenState extends State<JobListScreen> {
                     child: Icon(
                       isSaved ? Icons.bookmark : Icons.bookmark_border,
                       size: 20,
-                      color: AppColors.primary,
+                      color: _primary,
                     ),
                   ),
                 ),
@@ -462,6 +509,7 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   Widget _clientAvatar(String? avatarUrl) {
     return Container(
       width: 56,
@@ -482,53 +530,57 @@ class _JobListScreenState extends State<JobListScreen> {
                   child: Icon(
                     Icons.business_rounded,
                     size: 28,
-                    color: AppColors.primary,
+                    color: _primary,
                   ),
                 ),
               )
             : const Center(
-                child: Icon(
-                  Icons.business_rounded,
-                  size: 28,
-                  color: AppColors.primary,
-                ),
+                child: Icon(Icons.business_rounded, size: 28, color: _primary),
               ),
       ),
     );
   }
 
   Widget _categoryChip(String category) {
-    const labels = {
-      'mobile_dev': 'Mobile Dev',
-      'backend_dev': 'Backend Dev',
-      'web_dev': 'Web Dev',
-      'ui_ux_design': 'UI/UX Design',
-      'graphic_design': 'Graphic Design',
-      'copywriting': 'Copywriting',
-      'data_analytics': 'Data Analytics',
-      'video_editing': 'Video Editing',
-      'general': 'General',
-    };
+    final label = kCategoryLabels[category.toLowerCase()] ?? 'General';
+    final icon =
+        kCategoryIcons[category.toLowerCase()] ?? Icons.work_outline_rounded;
 
-    return Text(
-      labels[category] ?? 'General',
-      style: GoogleFonts.poppins(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        color: AppColors.primary,
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: _primary),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: _primary,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildEmptyState() {
+    final isFiltered = _activeCategoryFilter != null;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.work_outline, size: 56, color: Colors.grey.shade300),
+          Icon(
+            isFiltered
+                ? (kCategoryIcons[_activeCategoryFilter] ?? Icons.work_outline)
+                : Icons.work_outline,
+            size: 56,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
-            'No jobs available',
+            isFiltered
+                ? 'No ${kCategoryLabels[_activeCategoryFilter] ?? _activeCategoryFilter} jobs'
+                : 'No jobs available',
             style: GoogleFonts.poppins(
               color: const Color(0xFF7D7D7D),
               fontSize: 14,
@@ -537,12 +589,38 @@ class _JobListScreenState extends State<JobListScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Check back later for new opportunities.',
+            isFiltered
+                ? 'Try clearing the filter or check back later.'
+                : 'Check back later for new opportunities.',
             style: GoogleFonts.poppins(
               color: const Color(0xFFB5B4B4),
               fontSize: 12,
             ),
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: _clearCategoryFilter,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Clear filter',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -573,7 +651,7 @@ class _JobListScreenState extends State<JobListScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(option, style: GoogleFonts.poppins(fontSize: 13)),
                 trailing: _sortOption == option
-                    ? const Icon(Icons.check, color: AppColors.primary)
+                    ? const Icon(Icons.check, color: _primary)
                     : null,
                 onTap: () {
                   Navigator.pop(context);

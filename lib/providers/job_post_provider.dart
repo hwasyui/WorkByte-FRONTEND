@@ -167,8 +167,12 @@ class JobPostProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final all = await _jobPostService.getAllJobPosts(token, pageSize: 100);
-      _jobPosts = all.where((p) => p.projectCategory == category).toList();
+      final all = await _jobPostService.getAllJobPosts(
+        token,
+        pageSize: 100,
+        category: category,
+      );
+      _jobPosts = all;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
