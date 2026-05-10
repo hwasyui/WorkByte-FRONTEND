@@ -440,10 +440,10 @@ class ProfileService {
     String searchTerm,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/skills/search/$searchTerm'),
-        headers: _headers(token),
+      final uri = Uri.parse('$_baseUrl/skills/search').replace(
+        queryParameters: {'q': searchTerm},
       );
+      final res = await http.get(uri, headers: _headers(token));
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final details = body['details'] ?? body['data'] ?? {};

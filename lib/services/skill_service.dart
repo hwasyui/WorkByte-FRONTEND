@@ -33,8 +33,8 @@ class SkillService {
   }
 
   Future<List<SkillModel>> searchSkills(String token, String term) async {
-    final uri = Uri.parse(
-      '$_baseUrl/skills/search/${Uri.encodeComponent(term)}',
+    final uri = Uri.parse('$_baseUrl/skills/search').replace(
+      queryParameters: {'q': term},
     );
     final res = await http.get(uri, headers: _headers(token));
     final body = jsonDecode(res.body);
