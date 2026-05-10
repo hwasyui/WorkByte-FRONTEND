@@ -296,59 +296,258 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     websiteController.text = websiteUrl;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Website'),
-        content: TextField(
-          controller: websiteController,
-          decoration: const InputDecoration(
-            hintText: 'https://example.com',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newUrl = websiteController.text;
-              final urlValue = newUrl.trim().isEmpty ? null : newUrl;
-              setState(() => websiteUrl = newUrl);
-
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              final profile = Provider.of<ProfileProvider>(
-                context,
-                listen: false,
-              );
-              final messenger = ScaffoldMessenger.of(context);
-              final identifier =
-                  profile.clientProfile?.clientId ?? auth.currentUser!.userId;
-
-              Navigator.pop(dialogContext);
-
-              final success = await profile.updateProfile(
-                token: auth.token!,
-                identifier: identifier,
-                fields: {'website_url': urlValue},
-              );
-              if (success) await _refreshProfile();
-              if (mounted) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? 'Website saved successfully'
-                          : profile.error ?? 'Failed to save Website',
+      barrierColor: Colors.black45,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE0E7FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.language_rounded,
+                      color: Color(0xFF4F46E5),
+                      size: 26,
                     ),
                   ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Save'),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Edit Website',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Update your portfolio or website link.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(dialogContext),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE0E7FF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Color(0xFF4F46E5),
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Website Address',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 8),
+              StatefulBuilder(
+                builder: (context, setLocal) => TextField(
+                  controller: websiteController,
+                  keyboardType: TextInputType.url,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                  onChanged: (_) => setLocal(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'https://yourwebsite.com',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 14,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.language_rounded,
+                      color: Color(0xFF4F46E5),
+                      size: 20,
+                    ),
+                    suffixIcon: websiteController.text.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () {
+                              websiteController.clear();
+                              setLocal(() {});
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE0E7FF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Color(0xFF4F46E5),
+                                size: 14,
+                              ),
+                            ),
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: const Color(0xFFEEF0FF),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF4F46E5),
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF4F46E5),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: const [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 14,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Enter a valid website URL (e.g., https://yourwebsite.com)',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(height: 1, color: const Color(0xFFE5E7EB)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFF4F46E5),
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF4F46E5),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final newUrl = websiteController.text;
+                          final urlValue = newUrl.trim().isEmpty ? null : newUrl;
+                          setState(() => websiteUrl = newUrl);
+
+                          final auth = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final profile = Provider.of<ProfileProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final messenger = ScaffoldMessenger.of(context);
+                          final identifier =
+                              profile.clientProfile?.clientId ??
+                              auth.currentUser!.userId;
+
+                          Navigator.pop(dialogContext);
+
+                          final success = await profile.updateProfile(
+                            token: auth.token!,
+                            identifier: identifier,
+                            fields: {'website_url': urlValue},
+                          );
+                          if (success) await _refreshProfile();
+                          if (mounted) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  success
+                                      ? 'Website saved successfully'
+                                      : profile.error ?? 'Failed to save Website',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4F46E5),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -421,9 +620,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // ── Case 3: Update other fields (name, etc.) ──────────────────────
+          // ── Case 3: Update other fields (name, job_title, etc.) ─────────
           final fields = <String, dynamic>{
             if (data['name'] != null) 'full_name': data['name'],
+            if ((data['job'] as String?)?.isNotEmpty == true &&
+                data['job'] != '-')
+              'job_title': data['job'],
           };
 
           if (fields.isNotEmpty) {

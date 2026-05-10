@@ -34,7 +34,7 @@ class ClientModel {
     bio: json['bio'] as String?,
     websiteUrl: json['website_url'] as String?,
     profilePictureUrl: json['profile_picture_url'] as String?,
-    jobTitle: '-',
+    jobTitle: json['job_title'] as String? ?? '-',
     totalJobsPosted: (json['total_jobs_posted'] as num?)?.toInt() ?? 0,
     totalProjectsCompleted:
         (json['total_projects_completed'] as num?)?.toInt() ?? 0,

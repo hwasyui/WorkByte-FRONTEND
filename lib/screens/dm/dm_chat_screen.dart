@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +27,7 @@ class _DMChatScreenState extends State<DMChatScreen>
   bool _showVoiceNote = false;
   bool _isRecording = false;
   bool _isLoadingMessages = true;
+  bool _isPickingFile = false;
 
   late AnimationController _sendButtonController;
   late Animation<double> _sendButtonScale;
@@ -144,6 +144,53 @@ class _DMChatScreenState extends State<DMChatScreen>
 
   void _toggleVoiceNote() {
     setState(() => _showVoiceNote = !_showVoiceNote);
+  }
+
+  Future<void> _pickAndSendFile() async {
+    if (_isPickingFile) return;
+
+    setState(() => _isPickingFile = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.any,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final picked = result.files.first;
+      if (picked.path == null) return;
+
+      final token = context.read<AuthProvider>().token;
+      if (token == null) return;
+
+      final msg = await context.read<DMProvider>().sendFileMessage(
+        token: token,
+        threadId: widget.thread.threadId,
+        filePath: picked.path!,
+        fileName: picked.name,
+      );
+
+      context.read<DMProvider>().insertIncomingMessage(
+        widget.thread.threadId,
+        msg,
+      );
+
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isPickingFile = false);
+    }
   }
 
   @override
@@ -553,9 +600,98 @@ class _DMChatScreenState extends State<DMChatScreen>
             ],
           ),
         );
+      case 'document':
+        return _documentPreview(attachment);
       default:
         return _attachmentPlaceholder(attachment.fileType);
     }
+  }
+
+  Widget _documentPreview(DMAttachmentModel attachment) {
+    final ext = attachment.filename.contains('.')
+        ? attachment.filename.split('.').last.toUpperCase()
+        : 'FILE';
+
+    final Color extColor;
+    final IconData extIcon;
+    if (ext == 'PDF') {
+      extColor = const Color(0xFFE53E3E);
+      extIcon = Icons.picture_as_pdf_rounded;
+    } else if (['DOC', 'DOCX'].contains(ext)) {
+      extColor = const Color(0xFF2B6CB0);
+      extIcon = Icons.description_rounded;
+    } else if (['XLS', 'XLSX'].contains(ext)) {
+      extColor = const Color(0xFF276749);
+      extIcon = Icons.table_chart_rounded;
+    } else if (['PPT', 'PPTX'].contains(ext)) {
+      extColor = const Color(0xFFDD6B20);
+      extIcon = Icons.slideshow_rounded;
+    } else if (['ZIP', 'RAR', '7Z'].contains(ext)) {
+      extColor = const Color(0xFF744210);
+      extIcon = Icons.folder_zip_rounded;
+    } else {
+      extColor = const Color(0xFF4A5568);
+      extIcon = Icons.insert_drive_file_rounded;
+    }
+
+    final sizeLabel = attachment.fileSizeBytes != null
+        ? _formatFileSize(attachment.fileSizeBytes!)
+        : ext;
+
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEBEBF0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: extColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(extIcon, size: 22, color: extColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  attachment.filename,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A1A2E),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sizeLabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF8D8D98),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Widget _attachmentPlaceholder(String type) {
@@ -643,7 +779,37 @@ class _DMChatScreenState extends State<DMChatScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: _isPickingFile ? null : _pickAndSendFile,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _isPickingFile
+                      ? AppColors.primary.withValues(alpha: 0.15)
+                      : const Color(0xFFF7F7F8),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: _isPickingFile
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.attach_file_rounded,
+                        size: 20,
+                        color: Color(0xFF8D8D98),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 120),

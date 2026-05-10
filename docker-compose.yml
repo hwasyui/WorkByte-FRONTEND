@@ -12,6 +12,9 @@ services:
     working_dir: /app
     environment:
       - ANDROID_SDK_ROOT=/opt/android-sdk
+    ports:
+      - "8000:8000"
+      - "8100:8100"
     tty: true
     stdin_open: true
     networks:

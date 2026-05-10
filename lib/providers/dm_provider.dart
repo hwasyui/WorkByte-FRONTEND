@@ -252,6 +252,56 @@ class DMProvider extends ChangeNotifier {
     return updated;
   }
 
+  Future<DMMessageModel> sendFileMessage({
+    required String token,
+    required String threadId,
+    required String filePath,
+    required String fileName,
+    String? messageText,
+  }) async {
+    _isSending = true;
+    notifyListeners();
+
+    try {
+      final msg = await _service.sendFileMessage(
+        token: token,
+        threadId: threadId,
+        filePath: filePath,
+        fileName: fileName,
+        messageText: messageText,
+      );
+
+      final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
+      _messagesByThread[threadId] = [...current, msg];
+
+      final threadIndex = _threads.indexWhere((t) => t.threadId == threadId);
+      if (threadIndex >= 0) {
+        final old = _threads[threadIndex];
+        _threads[threadIndex] = DMThreadModel(
+          threadId: old.threadId,
+          status: old.status,
+          initiatorId: old.initiatorId,
+          otherUser: old.otherUser,
+          jobPost: old.jobPost,
+          unreadCount: old.unreadCount,
+          createdAt: old.createdAt,
+          updatedAt: msg.sentAt ?? DateTime.now(),
+          lastMessage: DMLastMessagePreview(
+            messageText: msg.messageText.isNotEmpty ? msg.messageText : '📎 $fileName',
+            sentAt: msg.sentAt,
+            senderId: msg.senderId,
+          ),
+        );
+      }
+
+      notifyListeners();
+      return msg;
+    } finally {
+      _isSending = false;
+      notifyListeners();
+    }
+  }
+
   void insertIncomingMessage(String threadId, DMMessageModel message) {
     final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
     if (current.any((m) => m.dmMessageId == message.dmMessageId)) return;

@@ -37,7 +37,7 @@ class FreelancerModel {
         bio: json['bio'] as String?,
         cvFileUrl: json['cv_file_url'] as String?,
         profilePictureUrl: json['profile_picture_url'] as String?,
-        jobTitle: '-',
+        jobTitle: json['job_title'] as String? ?? '-',
         estimatedRate: (json['estimated_rate'] as num?)?.toDouble(),
         rateTime: json['rate_time'] as String?,
         rateCurrency: json['rate_currency'] as String?,

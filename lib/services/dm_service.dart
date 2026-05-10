@@ -186,6 +186,41 @@ class DMService {
     throw Exception(body is String ? body : 'Failed to send message');
   }
 
+  Future<DMMessageModel> sendFileMessage({
+    required String token,
+    required String threadId,
+    required String filePath,
+    required String fileName,
+    String? messageText,
+    bool isVoiceNote = false,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/dm/threads/$threadId/messages/upload');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token';
+
+    request.files.add(
+      await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+    );
+    if (messageText != null && messageText.trim().isNotEmpty) {
+      request.fields['message_text'] = messageText.trim();
+    }
+    if (isVoiceNote) {
+      request.fields['is_voice_note'] = 'true';
+    }
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+
+    debugPrint('POST /dm/threads/$threadId/messages/upload -> ${res.statusCode}');
+    final body = _unwrap(res);
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
+    }
+
+    throw Exception(body is String ? body : 'Failed to send file');
+  }
+
   Future<void> markThreadAsRead({
     required String token,
     required String threadId,

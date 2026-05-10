@@ -2,6 +2,7 @@ class UserModel {
   final String userId;
   final String email;
   final String type;
+  final bool isAdmin;
   final String? clientId;
   final String? freelancerId;
   final DateTime? createdAt;
@@ -11,6 +12,7 @@ class UserModel {
     required this.userId,
     required this.email,
     required this.type,
+    this.isAdmin = false,
     this.clientId,
     this.freelancerId,
     this.createdAt,
@@ -21,6 +23,7 @@ class UserModel {
     userId: json['user_id'] as String,
     email: json['email'] as String,
     type: _extractUserType(json),
+    isAdmin: json['is_admin'] as bool? ?? false,
     clientId: json['client_id'] as String?,
     freelancerId: json['freelancer_id'] as String?,
     createdAt: json['created_at'] != null

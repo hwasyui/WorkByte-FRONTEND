@@ -17,6 +17,7 @@ import 'providers/skill_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/dm_provider.dart';
+import 'providers/admin_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -47,6 +48,7 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SavedItemsProvider()),
         ChangeNotifierProvider(create: (_) => DMProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

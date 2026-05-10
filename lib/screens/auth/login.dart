@@ -7,8 +7,10 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
 import '../../screens/dashboard/dashboard.dart';
+import '../../screens/admin/admin_shell.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/admin_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -77,10 +79,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      final user = authProvider.currentUser;
+      if (user?.isAdmin == true) {
+        context.read<AdminProvider>().initWithToken(authProvider.token!);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminShell()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Login failed')),
