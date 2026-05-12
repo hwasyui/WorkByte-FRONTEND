@@ -130,6 +130,151 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
+  static Future<Map<String, dynamic>> getDashboardStats(String token) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/admin/dashboard'),
+        headers: _headers(token),
+      );
+      if (res.statusCode != 200) return {};
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final details = body['details'] ?? body['data'] ?? body;
+      return details is Map ? Map<String, dynamic>.from(details) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getReports(
+    String token, {
+    String status = 'all',
+    String reportedType = 'all',
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/admin/reports').replace(
+      queryParameters: {
+        'status': status,
+        'reported_type': reportedType,
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      },
+    );
+    final response = await http.get(uri, headers: _headers(token));
+    if (response.statusCode == 200) {
+      return _extract(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> actionReport(
+    String token, {
+    required String reportId,
+    required String action,
+    String? adminNote,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/reports/$reportId/$action'),
+        headers: _headers(token),
+        body: jsonEncode({'admin_note': adminNote}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getScamFlags(
+    String token, {
+    String status = 'pending',
+    String sortBy = 'scam_score',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/scam-flags').replace(
+        queryParameters: {
+          'status': status,
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> actionScamFlag(
+    String token, {
+    required String flagId,
+    required String action,
+    String? adminNote,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/scam-flags/$flagId/$action'),
+        headers: _headers(token),
+        body: jsonEncode({'admin_note': adminNote}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getModerationItems(
+    String token, {
+    String status = 'pending',
+    String contentType = 'all',
+    String sortBy = 'total_score',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/moderation').replace(
+        queryParameters: {
+          'status': status,
+          'content_type': contentType,
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> actionModerationItem(
+    String token, {
+    required String moderationId,
+    required String action,
+    String? adminNote,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/moderation/$moderationId/$action'),
+        headers: _headers(token),
+        body: jsonEncode({'admin_note': adminNote}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Map<String, dynamic> _extract(Map<String, dynamic> data) {
     final details = data['details'];
     List<Map<String, dynamic>> items = [];

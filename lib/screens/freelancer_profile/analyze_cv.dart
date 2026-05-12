@@ -83,10 +83,13 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       final result = await analysisFuture;
       if (!mounted) return;
 
-      final status = (result['scoring'] as String?)?.toUpperCase() ?? 'UNKNOWN';
-      final similarity = (result['similarity_score'] as num?)?.toDouble() ?? 0.0;
-      final score = (similarity * 100).round();
-      final recommendations = List<String>.from(result['recommendations'] ?? []);
+      final score = (result['overall_score'] as num?)?.toInt() ?? 0;
+      final status = (result['overall_grade'] as String?) ?? 'unknown';
+      final overallAssessment = (result['overall_assessment'] as String?) ?? '';
+      final profileMatchAnalysis = (result['profile_match_analysis'] as String?) ?? '';
+      final sections = ((result['sections'] as List?) ?? [])
+          .map((s) => Map<String, dynamic>.from(s as Map))
+          .toList();
 
       Navigator.pushReplacement(
         context,
@@ -94,7 +97,9 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
           builder: (context) => CVAnalysisResultScreen(
             score: score,
             status: status,
-            recommendations: recommendations,
+            overallAssessment: overallAssessment,
+            profileMatchAnalysis: profileMatchAnalysis,
+            sections: sections,
           ),
         ),
       );

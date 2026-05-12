@@ -10,14 +10,16 @@ class AdminSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
-        return Container(
-          width: 240,
+        return Material(
           color: const Color(0xFF1E1B4B),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Logo / Header
-              Padding(
+          child: Container(
+            width: 240,
+            color: Colors.transparent,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Logo / Header
+                Padding(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
                 child: Row(
                   children: [
@@ -110,6 +112,31 @@ class AdminSidebar extends StatelessWidget {
                   admin.loadJobsPage(1);
                 },
               ),
+              _NavItem(
+                icon: Icons.flag_rounded,
+                label: 'Reports',
+                page: AdminPage.reports,
+                current: admin.currentPage,
+                badge: admin.pendingReports > 0 ? admin.pendingReports : null,
+                onTap: () {
+                  admin.setPage(AdminPage.reports);
+                  admin.loadReports();
+                },
+              ),
+              _NavItem(
+                icon: Icons.smart_toy_rounded,
+                label: 'AI Analysis',
+                page: AdminPage.ai,
+                current: admin.currentPage,
+                badge: (admin.pendingScamFlags + admin.pendingModerationItems) > 0
+                    ? admin.pendingScamFlags + admin.pendingModerationItems
+                    : null,
+                onTap: () {
+                  admin.setPage(AdminPage.ai);
+                  admin.loadScamFlags();
+                  admin.loadModerationItems();
+                },
+              ),
 
               const Spacer(),
 
@@ -153,7 +180,8 @@ class AdminSidebar extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -167,6 +195,7 @@ class _NavItem extends StatelessWidget {
   final AdminPage page;
   final AdminPage current;
   final VoidCallback onTap;
+  final int? badge;
 
   const _NavItem({
     required this.icon,
@@ -174,6 +203,7 @@ class _NavItem extends StatelessWidget {
     required this.page,
     required this.current,
     required this.onTap,
+    this.badge,
   });
 
   @override
@@ -216,8 +246,24 @@ class _NavItem extends StatelessWidget {
                       : Colors.white.withOpacity(0.65),
                 ),
               ),
-              if (isActive) ...[
-                const Spacer(),
+              const Spacer(),
+              if (badge != null && !isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    badge! > 99 ? '99+' : badge.toString(),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              else if (isActive)
                 Container(
                   width: 6,
                   height: 6,
@@ -226,7 +272,6 @@ class _NavItem extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-              ],
             ],
           ),
         ),

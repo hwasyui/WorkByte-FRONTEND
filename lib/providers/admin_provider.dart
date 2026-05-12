@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
 
-enum AdminPage { overview, users, jobs }
+enum AdminPage { overview, users, jobs, reports, ai }
 
 class AdminProvider extends ChangeNotifier {
   String? _token;
@@ -26,6 +26,19 @@ class AdminProvider extends ChangeNotifier {
   Map<String, dynamic> _freelancerPagination = {};
   Map<String, dynamic> _clientPagination = {};
   Map<String, dynamic> _jobPagination = {};
+
+  Map<String, dynamic> _dashboardStats = {};
+  List<Map<String, dynamic>> _reports = [];
+  int _pendingReports = 0;
+  String _reportsStatusFilter = 'all';
+  String _reportsTypeFilter = 'all';
+
+  List<Map<String, dynamic>> _scamFlags = [];
+  List<Map<String, dynamic>> _moderationItems = [];
+  bool _isAiLoading = false;
+  String _scamStatusFilter = 'pending';
+  String _moderationStatusFilter = 'pending';
+  String _moderationTypeFilter = 'all';
 
   // Getters
   String? get token => _token;
@@ -52,6 +65,21 @@ class AdminProvider extends ChangeNotifier {
   Map<String, dynamic> get freelancerPagination => _freelancerPagination;
   Map<String, dynamic> get clientPagination => _clientPagination;
   Map<String, dynamic> get jobPagination => _jobPagination;
+
+  Map<String, dynamic> get dashboardStats => _dashboardStats;
+  List<Map<String, dynamic>> get reports => _reports;
+  int get pendingReports => _pendingReports;
+  String get reportsStatusFilter => _reportsStatusFilter;
+  String get reportsTypeFilter => _reportsTypeFilter;
+
+  List<Map<String, dynamic>> get scamFlags => _scamFlags;
+  List<Map<String, dynamic>> get moderationItems => _moderationItems;
+  bool get isAiLoading => _isAiLoading;
+  String get scamStatusFilter => _scamStatusFilter;
+  String get moderationStatusFilter => _moderationStatusFilter;
+  String get moderationTypeFilter => _moderationTypeFilter;
+  int get pendingScamFlags => (_dashboardStats['pending_scam_flags'] as num?)?.toInt() ?? 0;
+  int get pendingModerationItems => (_dashboardStats['pending_moderation_items'] as num?)?.toInt() ?? 0;
 
   void setPage(AdminPage page) {
     _currentPage = page;
@@ -112,6 +140,54 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadDashboardStats() async {
+    if (_token == null) return;
+    try {
+      _dashboardStats = await AdminService.getDashboardStats(_token!);
+      _pendingReports = (_dashboardStats['pending_reports'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      debugPrint('AdminProvider.loadDashboardStats error: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadReports({String? status, String? reportedType}) async {
+    if (_token == null) return;
+    if (status != null) _reportsStatusFilter = status;
+    if (reportedType != null) _reportsTypeFilter = reportedType;
+    _isTableLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getReports(
+        _token!,
+        status: _reportsStatusFilter,
+        reportedType: _reportsTypeFilter,
+      );
+      _reports = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadReports error: $e');
+    }
+    _isTableLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> actionReport(String reportId, String action) async {
+    if (_token == null) return false;
+    try {
+      final success = await AdminService.actionReport(
+        _token!,
+        reportId: reportId,
+        action: action,
+      );
+      if (success) {
+        await Future.wait([loadReports(), loadDashboardStats()]);
+      }
+      return success;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> loadOverviewData() async {
     if (_token == null) return;
 
@@ -154,6 +230,7 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider.loadOverviewData error: $e');
     }
     notifyListeners();
+    loadDashboardStats();
   }
 
   Future<void> loadFreelancersPage(int page) async {
@@ -227,6 +304,74 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadScamFlags({String? status}) async {
+    if (_token == null) return;
+    if (status != null) _scamStatusFilter = status;
+    _isAiLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getScamFlags(
+        _token!,
+        status: _scamStatusFilter,
+      );
+      _scamFlags = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadScamFlags error: $e');
+    }
+    _isAiLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> actionScamFlag(String flagId, String action) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.actionScamFlag(
+        _token!,
+        flagId: flagId,
+        action: action,
+      );
+      if (ok) await Future.wait([loadScamFlags(), loadDashboardStats()]);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> loadModerationItems({String? status, String? contentType}) async {
+    if (_token == null) return;
+    if (status != null) _moderationStatusFilter = status;
+    if (contentType != null) _moderationTypeFilter = contentType;
+    _isAiLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getModerationItems(
+        _token!,
+        status: _moderationStatusFilter,
+        contentType: _moderationTypeFilter,
+      );
+      _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadModerationItems error: $e');
+    }
+    _isAiLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> actionModerationItem(String moderationId, String action) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.actionModerationItem(
+        _token!,
+        moderationId: moderationId,
+        action: action,
+      );
+      if (ok) await Future.wait([loadModerationItems(), loadDashboardStats()]);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void initWithToken(String token) {
     _token = token;
     _currentPage = AdminPage.overview;
@@ -250,6 +395,17 @@ class AdminProvider extends ChangeNotifier {
     _freelancerPagination = {};
     _clientPagination = {};
     _jobPagination = {};
+    _dashboardStats = {};
+    _reports = [];
+    _pendingReports = 0;
+    _reportsStatusFilter = 'all';
+    _reportsTypeFilter = 'all';
+    _scamFlags = [];
+    _moderationItems = [];
+    _scamStatusFilter = 'pending';
+    _moderationStatusFilter = 'pending';
+    _moderationTypeFilter = 'all';
+    _isAiLoading = false;
     _error = null;
     notifyListeners();
   }

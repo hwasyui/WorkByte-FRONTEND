@@ -10,6 +10,8 @@ import '../../widgets/admin/admin_sidebar.dart';
 import 'pages/admin_overview_page.dart';
 import 'pages/admin_users_page.dart';
 import 'pages/admin_jobs_page.dart';
+import 'pages/admin_reports_page.dart';
+import 'pages/admin_ai_page.dart';
 import '../auth/login.dart';
 
 class AdminShell extends StatelessWidget {
@@ -19,12 +21,16 @@ class AdminShell extends StatelessWidget {
     AdminOverviewPage(),
     AdminUsersPage(),
     AdminJobsPage(),
+    AdminReportsPage(),
+    AdminAiPage(),
   ];
 
   static const List<String> _titles = [
     'Dashboard',
     'User Management',
     'Job Management',
+    'Reports',
+    'AI Analysis',
   ];
 
   @override
@@ -221,6 +227,19 @@ class _MobileDrawer extends StatelessWidget {
                   Navigator.pop(context);
                 },
               ),
+              _DrawerItem(
+                icon: Icons.flag_rounded,
+                label: 'Reports',
+                isSelected: selectedIndex == 3,
+                badge: context.read<AdminProvider>().pendingReports > 0
+                    ? context.read<AdminProvider>().pendingReports
+                    : null,
+                onTap: () {
+                  onSelect(3);
+                  context.read<AdminProvider>().loadReports();
+                  Navigator.pop(context);
+                },
+              ),
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -276,12 +295,14 @@ class _DrawerItem extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final int? badge;
 
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.badge,
   });
 
   @override
@@ -322,7 +343,23 @@ class _DrawerItem extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               )
-            : null,
+            : badge != null
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      badge! > 99 ? '99+' : badge.toString(),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                : null,
         onTap: onTap,
       ),
     );

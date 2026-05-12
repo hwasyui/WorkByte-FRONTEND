@@ -4,13 +4,17 @@ import 'dart:math' as math;
 class CVAnalysisResultScreen extends StatefulWidget {
   final int score;
   final String status;
-  final List<String> recommendations;
+  final String overallAssessment;
+  final String profileMatchAnalysis;
+  final List<Map<String, dynamic>> sections;
 
   const CVAnalysisResultScreen({
     Key? key,
     required this.score,
     required this.status,
-    this.recommendations = const [],
+    this.overallAssessment = '',
+    this.profileMatchAnalysis = '',
+    this.sections = const [],
   }) : super(key: key);
 
   @override
@@ -45,16 +49,42 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
     super.dispose();
   }
 
+  String _getGradeLabel() {
+    switch (widget.status.toLowerCase()) {
+      case 'excellent':
+        return 'Excellent';
+      case 'good':
+        return 'Good';
+      case 'fair':
+        return 'Fair';
+      case 'bad':
+        return 'Needs Improvement';
+      default:
+        return widget.status.isNotEmpty
+            ? '${widget.status[0].toUpperCase()}${widget.status.substring(1)}'
+            : 'Unknown';
+    }
+  }
+
   String _getStatusDescription() {
-    if (widget.score >= 75) return 'Your CV is well structured';
-    if (widget.score >= 50) return 'Your CV needs some improvements';
+    if (widget.score >= 80) return 'Your CV is well structured and optimized';
+    if (widget.score >= 60) return 'Your CV is good with room for improvement';
+    if (widget.score >= 40) return 'Your CV needs some improvements';
     return 'Your CV requires major improvements';
   }
 
   IconData _getStatusIcon() {
-    if (widget.score >= 75) return Icons.workspace_premium;
-    if (widget.score >= 50) return Icons.shield;
+    if (widget.score >= 80) return Icons.workspace_premium;
+    if (widget.score >= 60) return Icons.shield;
+    if (widget.score >= 40) return Icons.trending_up_rounded;
     return Icons.warning_amber_rounded;
+  }
+
+  Color _getGradeColor() {
+    if (widget.score >= 80) return const Color(0xFF22C55E);
+    if (widget.score >= 60) return _primaryColor;
+    if (widget.score >= 40) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
   }
 
   @override
@@ -73,6 +103,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
                     Padding(
@@ -114,7 +145,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
 
                     const SizedBox(height: 16),
 
-                    _buildScoreCircle(),
+                    Center(child: _buildScoreCircle()),
 
                     const SizedBox(height: 24),
 
@@ -126,27 +157,211 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
 
                     const SizedBox(height: 20),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Suggestions for improvement',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ..._buildSuggestionItems(),
-                        ],
-                      ),
-                    ),
+                    // Overall Assessment
+                    if (widget.overallAssessment.isNotEmpty) ...[
+                      _buildSectionHeader('Overall Assessment', Icons.summarize_rounded),
+                      const SizedBox(height: 12),
+                      _buildAssessmentCard(widget.overallAssessment),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Profile Match Analysis
+                    if (widget.profileMatchAnalysis.isNotEmpty) ...[
+                      _buildSectionHeader('Profile Match', Icons.person_search_rounded),
+                      const SizedBox(height: 12),
+                      _buildAssessmentCard(widget.profileMatchAnalysis),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Per-section recommendations
+                    if (widget.sections.isNotEmpty) ...[
+                      _buildSectionHeader('Recommendations', Icons.tips_and_updates_rounded),
+                      const SizedBox(height: 12),
+                      ...widget.sections.map(_buildSectionCard),
+                    ],
 
                     const SizedBox(height: 24),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: _primaryColor),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A2E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssessmentCard(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _lightColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _lightColor),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.6,
+            color: Color(0xFF374151),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(Map<String, dynamic> section) {
+    final title = (section['title'] as String?) ?? '';
+    final analysis = (section['analysis'] as String?) ?? '';
+    final recs = List<String>.from(
+      ((section['recommendations'] as List?) ?? []).map((r) => r.toString()),
+    );
+
+    final IconData sectionIcon;
+    switch (title.toLowerCase()) {
+      case 'skills analysis':
+        sectionIcon = Icons.build_rounded;
+        break;
+      case 'work experience':
+        sectionIcon = Icons.work_rounded;
+        break;
+      case 'education':
+        sectionIcon = Icons.school_rounded;
+        break;
+      case 'ats optimization':
+        sectionIcon = Icons.smart_toy_rounded;
+        break;
+      default:
+        sectionIcon = Icons.article_rounded;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section title bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: _lightColor.withOpacity(0.6),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+              child: Row(
+                children: [
+                  Icon(sectionIcon, size: 18, color: _primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (analysis.isNotEmpty) ...[
+                    Text(
+                      analysis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.55,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    if (recs.isNotEmpty) const SizedBox(height: 12),
+                  ],
+                  if (recs.isNotEmpty) ...[
+                    const Text(
+                      'Recommendations',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...recs.map(_buildRecItem),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: _primaryColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: Color(0xFF374151),
               ),
             ),
           ),
@@ -173,7 +388,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                 size: const Size(190, 190),
                 painter: CircularProgressPainter(
                   progress: _animation.value / 100,
-                  progressColor: _primaryColor,
+                  progressColor: _getGradeColor(),
                   backgroundColor: _lightColor,
                 ),
                 child: SizedBox(
@@ -195,20 +410,20 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                                 ),
                               ),
                               const TextSpan(
-                                text: '%',
+                                text: '/100',
                                 style: TextStyle(
-                                  fontSize: 26,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                                  color: Colors.black54,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const Text(
-                          'Match',
+                          'Overall Score',
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 13,
                             color: Colors.grey,
                           ),
                         ),
@@ -230,8 +445,9 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _lightColor,
+          color: _getGradeColor().withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _getGradeColor().withOpacity(0.25)),
         ),
         child: Row(
           children: [
@@ -239,10 +455,10 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.15),
+                color: _getGradeColor().withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_getStatusIcon(), color: _primaryColor, size: 22),
+              child: Icon(_getStatusIcon(), color: _getGradeColor(), size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -250,11 +466,11 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.status,
-                    style: const TextStyle(
+                    _getGradeLabel(),
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: _primaryColor,
+                      color: _getGradeColor(),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -263,57 +479,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                     style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildSuggestionItems() {
-    final items = widget.recommendations.isEmpty
-        ? [
-            'Add more quantifiable achievements in your work experience',
-            'Include specific metrics and results from your projects',
-            'Consider adding a brief professional summary at the top',
-          ]
-        : widget.recommendations;
-
-    return items.map((text) => _buildSuggestionCard(text)).toList();
-  }
-
-  Widget _buildSuggestionCard(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!, width: 1),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 5),
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: _primaryColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: Colors.black87,
-                ),
               ),
             ),
           ],

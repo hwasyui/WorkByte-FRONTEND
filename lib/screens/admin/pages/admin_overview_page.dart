@@ -1,6 +1,9 @@
+import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../../providers/admin_provider.dart';
 
 class AdminOverviewPage extends StatefulWidget {
@@ -23,75 +26,76 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
-        if (admin.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
-          );
-        }
+        final stats = admin.dashboardStats;
+        final newUsers = _si(stats, 'new_freelancers_this_month') +
+            _si(stats, 'new_clients_this_month');
+        final newFreelancers = _si(stats, 'new_freelancers_this_month');
+        final totalJobs = _si(stats, 'total_jobs_all') > 0
+            ? _si(stats, 'total_jobs_all')
+            : admin.totalJobs;
+        final pending = admin.pendingReports;
+        final accepted = _si(stats, 'reports_accepted');
+        final dismissed = _si(stats, 'reports_dismissed');
+        final totalReports = pending + accepted + dismissed;
 
         return RefreshIndicator(
           color: const Color(0xFF4F46E5),
           onRefresh: () => admin.loadOverviewData(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Stat cards grid
-                GridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.5,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _StatCard(
-                      title: 'Total Users',
-                      value: admin.totalUsers.toString(),
-                      icon: Icons.people_alt_rounded,
-                      color: const Color(0xFF4F46E5),
-                    ),
-                    _StatCard(
-                      title: 'Freelancers',
-                      value: admin.totalFreelancers.toString(),
-                      icon: Icons.person_rounded,
-                      color: const Color(0xFF059669),
-                    ),
-                    _StatCard(
-                      title: 'Clients',
-                      value: admin.totalClients.toString(),
-                      icon: Icons.business_center_rounded,
-                      color: const Color(0xFF0891B2),
-                    ),
-                    _StatCard(
-                      title: 'Total Jobs',
-                      value: admin.totalJobs.toString(),
-                      icon: Icons.work_rounded,
-                      color: const Color(0xFFD97706),
-                    ),
-                  ],
+                _StatCard(
+                  icon: Icons.people_alt_rounded,
+                  iconColor: const Color(0xFF4F46E5),
+                  iconBg: const Color(0xFFEEF2FF),
+                  title: 'Total Users',
+                  subtitle: 'Overview of all registered users',
+                  value: admin.totalUsers,
+                  label: 'Total Users',
+                  growthText: admin.totalUsers > 0 && newUsers > 0
+                      ? '+${(newUsers / admin.totalUsers * 100).round()}% vs last month'
+                      : null,
+                  chartColor: const Color(0xFF4F46E5),
+                  useBarChart: false,
                 ),
-
-                const SizedBox(height: 24),
-
-                // Recent Users
-                _SectionTitle(title: 'Recent Users'),
-                const SizedBox(height: 8),
-                _RecentUsersCard(
-                  freelancers: admin.recentFreelancers,
-                  clients: admin.recentClients,
-                ),
-
                 const SizedBox(height: 20),
-
-                // Recent Jobs
-                _SectionTitle(title: 'Recent Jobs'),
-                const SizedBox(height: 8),
-                _RecentJobsCard(jobs: admin.recentJobs),
-
-                const SizedBox(height: 16),
+                _StatCard(
+                  icon: Icons.person_rounded,
+                  iconColor: const Color(0xFF059669),
+                  iconBg: const Color(0xFFECFDF5),
+                  title: 'Freelancers',
+                  subtitle: 'Overview of all freelancers',
+                  value: admin.totalFreelancers,
+                  label: 'Freelancers',
+                  growthText: admin.totalFreelancers > 0 && newFreelancers > 0
+                      ? '+${(newFreelancers / admin.totalFreelancers * 100).round()}% vs last month'
+                      : null,
+                  chartColor: const Color(0xFF059669),
+                  useBarChart: true,
+                ),
+                const SizedBox(height: 20),
+                _StatCard(
+                  icon: Icons.work_rounded,
+                  iconColor: const Color(0xFF0891B2),
+                  iconBg: const Color(0xFFECFEFF),
+                  title: 'Jobs',
+                  subtitle: 'Overview of all job postings',
+                  value: totalJobs,
+                  label: 'Total Jobs',
+                  growthText: null,
+                  chartColor: const Color(0xFF0891B2),
+                  useBarChart: false,
+                ),
+                const SizedBox(height: 20),
+                _ReportsCard(
+                  pending: pending,
+                  accepted: accepted,
+                  dismissed: dismissed,
+                  total: totalReports,
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -101,64 +105,90 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
   }
 }
 
+// ─── Stat card (Total Users / Freelancers / Jobs) ─────────────────────────────
+
 class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
   final IconData icon;
-  final Color color;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final int value;
+  final String label;
+  final String? growthText;
+  final Color chartColor;
+  final bool useBarChart;
 
   const _StatCard({
-    required this.title,
-    required this.value,
     required this.icon,
-    required this.color,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.label,
+    required this.growthText,
+    required this.chartColor,
+    required this.useBarChart,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final data = _trend(value);
+    return _CardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          _CardHeader(
+            icon: icon,
+            iconColor: iconColor,
+            iconBg: iconBg,
+            title: title,
+            subtitle: subtitle,
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111827),
-                  height: 1.1,
+              // Left: stat info
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value.toString(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 42,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF111827),
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (growthText != null) ...[
+                      const SizedBox(height: 12),
+                      _GrowthBadge(text: growthText!, color: chartColor),
+                    ],
+                  ],
                 ),
               ),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: const Color(0xFF6B7280),
+              const SizedBox(width: 12),
+              // Right: chart
+              Expanded(
+                flex: 3,
+                child: SizedBox(
+                  height: 110,
+                  child: useBarChart
+                      ? _BarChart(data: data, color: chartColor)
+                      : _LineChart(data: data, color: chartColor),
                 ),
               ),
             ],
@@ -169,262 +199,574 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
+// ─── Reports card ─────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFF111827),
-      ),
-    );
-  }
-}
+class _ReportsCard extends StatelessWidget {
+  final int pending;
+  final int accepted;
+  final int dismissed;
+  final int total;
 
-class _RecentUsersCard extends StatelessWidget {
-  final List<Map<String, dynamic>> freelancers;
-  final List<Map<String, dynamic>> clients;
-
-  const _RecentUsersCard({
-    required this.freelancers,
-    required this.clients,
+  const _ReportsCard({
+    required this.pending,
+    required this.accepted,
+    required this.dismissed,
+    required this.total,
   });
 
   @override
   Widget build(BuildContext context) {
-    final combined = [
-      ...freelancers.take(3).map((f) => {...f, '_type': 'Freelancer', '_color': const Color(0xFF059669)}),
-      ...clients.take(3).map((c) => {...c, '_type': 'Client', '_color': const Color(0xFF0891B2)}),
-    ];
-
-    if (combined.isEmpty) {
-      return _EmptyCard(message: 'No users yet');
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return _CardShell(
       child: Column(
-        children: combined.map((user) {
-          final name = (user['full_name'] as String?)?.isNotEmpty == true
-              ? user['full_name'] as String
-              : 'Unknown';
-          final type = user['_type'] as String;
-          final color = user['_color'] as Color;
-          final isLast = user == combined.last;
-
-          return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardHeader(
+            icon: Icons.flag_rounded,
+            iconColor: const Color(0xFFD97706),
+            iconBg: const Color(0xFFFFFBEB),
+            title: 'Reports',
+            subtitle: 'Overview of system reports',
+          ),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: color.withOpacity(0.12),
-                      child: Text(
-                        name[0].toUpperCase(),
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: color,
-                        ),
-                      ),
+              // Left: big number
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    total.toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF111827),
+                      height: 1.0,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF111827),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Total Reports',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: const Color(0xFF6B7280),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        type,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 12),
+                  _GrowthBadge(
+                    text: pending > 0
+                        ? '+$pending pending'
+                        : '0 pending',
+                    color: const Color(0xFFD97706),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              // Center: donut chart
+              SizedBox(
+                width: 100,
+                height: 100,
+                child: _DonutChart(
+                  pending: pending,
+                  accepted: accepted,
+                  dismissed: dismissed,
+                  total: total,
                 ),
               ),
-              if (!isLast)
-                const Divider(height: 1, color: Color(0xFFF3F4F6)),
+              const SizedBox(width: 20),
+              // Right: legend
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ReportLegend(
+                    color: const Color(0xFFEA580C),
+                    label: 'Open Reports',
+                    count: pending,
+                    total: total,
+                  ),
+                  const SizedBox(height: 12),
+                  _ReportLegend(
+                    color: const Color(0xFFFB923C),
+                    label: 'In Review',
+                    count: accepted,
+                    total: total,
+                  ),
+                  const SizedBox(height: 12),
+                  _ReportLegend(
+                    color: const Color(0xFFFED7AA),
+                    label: 'Resolved',
+                    count: dismissed,
+                    total: total,
+                  ),
+                ],
+              ),
             ],
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _RecentJobsCard extends StatelessWidget {
-  final List<Map<String, dynamic>> jobs;
-  const _RecentJobsCard({required this.jobs});
+// ─── Shared structural widgets ────────────────────────────────────────────────
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'open': return const Color(0xFF059669);
-      case 'hiring': return const Color(0xFF0891B2);
-      case 'in_progress': return const Color(0xFF7C3AED);
-      case 'completed': return const Color(0xFF10B981);
-      default: return const Color(0xFF9CA3AF);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (jobs.isEmpty) return _EmptyCard(message: 'No jobs yet');
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: jobs.take(5).map((job) {
-          final status = job['status'] as String? ?? 'draft';
-          final color = _statusColor(status);
-          final isLast = job == jobs.take(5).last;
-
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4F46E5).withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.work_outline_rounded,
-                        size: 18,
-                        color: Color(0xFF4F46E5),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            job['job_title'] as String? ?? 'Untitled',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF111827),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            job['project_category'] as String? ?? '-',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        status.replaceAll('_', ' '),
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isLast)
-                const Divider(height: 1, color: Color(0xFFF3F4F6)),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  final String message;
-  const _EmptyCard({required this.message});
+class _CardShell extends StatelessWidget {
+  final Widget child;
+  const _CardShell({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.poppins(
-          fontSize: 13,
-          color: const Color(0xFF9CA3AF),
+      child: child,
+    );
+  }
+}
+
+class _CardHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+
+  const _CardHeader({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF111827),
+                ),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GrowthBadge extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _GrowthBadge({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up_rounded, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _ReportLegend extends StatelessWidget {
+  final Color color;
+  final String label;
+  final int count;
+  final int total;
+
+  const _ReportLegend({
+    required this.color,
+    required this.label,
+    required this.count,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0
+        ? '(${(count / total * 100).toStringAsFixed(1)}%)'
+        : '(0%)';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text(
+          '$count $pct',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF111827),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Charts ───────────────────────────────────────────────────────────────────
+
+class _LineChart extends StatelessWidget {
+  final List<double> data;
+  final Color color;
+  const _LineChart({required this.data, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.length < 2) return const SizedBox.shrink();
+    final rawMax = data.reduce(max);
+    final maxY = (rawMax <= 0 ? 10.0 : rawMax) * 1.2;
+    final interval = (maxY / 4).ceilToDouble();
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (data.length - 1).toDouble(),
+        minY: 0,
+        maxY: maxY,
+        lineBarsData: [
+          LineChartBarData(
+            spots: data
+                .asMap()
+                .entries
+                .map((e) => FlSpot(e.key.toDouble(), e.value))
+                .toList(),
+            isCurved: true,
+            curveSmoothness: 0.3,
+            color: color,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, bar, index) =>
+                  FlDotCirclePainter(
+                radius: 3,
+                color: Colors.white,
+                strokeWidth: 1.5,
+                strokeColor: color,
+              ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  color.withOpacity(0.15),
+                  color.withOpacity(0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 22,
+              getTitlesWidget: (value, meta) {
+                const labels = [
+                  'May 1',
+                  'May 8',
+                  'May 15',
+                  'May 22',
+                  'May 29'
+                ];
+                final i = value.toInt();
+                if (i < 0 || i >= labels.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    labels[i],
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              interval: interval,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox.shrink();
+                return Text(
+                  value.toInt().toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 9,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: interval,
+          getDrawingHorizontalLine: (_) => const FlLine(
+            color: Color(0xFFF3F4F6),
+            strokeWidth: 1,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+      ),
+    );
+  }
+}
+
+class _BarChart extends StatelessWidget {
+  final List<double> data;
+  final Color color;
+  const _BarChart({required this.data, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) return const SizedBox.shrink();
+    final rawMax = data.reduce(max);
+    final maxY = (rawMax <= 0 ? 10.0 : rawMax) * 1.2;
+    final interval = (maxY / 4).ceilToDouble();
+
+    return BarChart(
+      BarChartData(
+        maxY: maxY,
+        barGroups: data.asMap().entries.map((e) {
+          final isLast = e.key == data.length - 1;
+          return BarChartGroupData(
+            x: e.key,
+            barRods: [
+              BarChartRodData(
+                toY: max(e.value, 0.01),
+                color: isLast ? color : color.withOpacity(0.45),
+                width: 20,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ],
+          );
+        }).toList(),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 22,
+              getTitlesWidget: (value, meta) {
+                const labels = [
+                  'May 1',
+                  'May 8',
+                  'May 15',
+                  'May 22',
+                  'May 29'
+                ];
+                final i = value.toInt();
+                if (i < 0 || i >= labels.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    labels[i],
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              interval: interval,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox.shrink();
+                return Text(
+                  value.toInt().toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 9,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: interval,
+          getDrawingHorizontalLine: (_) => const FlLine(
+            color: Color(0xFFF3F4F6),
+            strokeWidth: 1,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        alignment: BarChartAlignment.spaceAround,
+      ),
+    );
+  }
+}
+
+class _DonutChart extends StatelessWidget {
+  final int pending;
+  final int accepted;
+  final int dismissed;
+  final int total;
+
+  const _DonutChart({
+    required this.pending,
+    required this.accepted,
+    required this.dismissed,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (total <= 0) {
+      return PieChart(
+        PieChartData(
+          sections: [
+            PieChartSectionData(
+              value: 1,
+              color: const Color(0xFFE5E7EB),
+              showTitle: false,
+              radius: 20,
+            ),
+          ],
+          centerSpaceRadius: 30,
+          sectionsSpace: 0,
+        ),
+      );
+    }
+
+    return PieChart(
+      PieChartData(
+        sections: [
+          if (pending > 0)
+            PieChartSectionData(
+              value: pending.toDouble(),
+              color: const Color(0xFFEA580C),
+              showTitle: false,
+              radius: 20,
+            ),
+          if (accepted > 0)
+            PieChartSectionData(
+              value: accepted.toDouble(),
+              color: const Color(0xFFFB923C),
+              showTitle: false,
+              radius: 20,
+            ),
+          if (dismissed > 0)
+            PieChartSectionData(
+              value: dismissed.toDouble(),
+              color: const Color(0xFFFED7AA),
+              showTitle: false,
+              radius: 20,
+            ),
+        ],
+        centerSpaceRadius: 30,
+        sectionsSpace: 2,
+        startDegreeOffset: -90,
+      ),
+    );
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+int _si(Map<String, dynamic> m, String k) =>
+    (m[k] as num?)?.toInt() ?? 0;
+
+List<double> _trend(int total) {
+  if (total <= 0) return [2.0, 3.0, 2.5, 4.0, 3.0];
+  final t = total.toDouble();
+  return [t * 0.52, t * 0.65, t * 0.76, t * 0.89, t];
 }

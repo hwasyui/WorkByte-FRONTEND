@@ -30,16 +30,15 @@ class _SplashScreenState extends State<SplashScreen> {
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
-    await authProvider.restoreSession(profileProvider: profileProvider);
+    // Force user to log in every time the app starts.
+    await authProvider.logout(profileProvider: profileProvider);
 
     if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => authProvider.isAuthenticated
-            ? const HomeScreen()
-            : const LoginScreen(),
+        builder: (_) => const LoginScreen(),
       ),
     );
   }

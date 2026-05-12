@@ -12,7 +12,7 @@ flutter run --target lib/main.dart
 
 # Admin web -> Terminal 2:
 # METHOD A – Dev mode (hot reload enabled, but uses ~2GB of RAM):
-flutter run -d web-server web-port 8100 --web-hostname 0.0.0.0 --target lib/main_web.dart
+flutter run -d web-server --web-port 8100 --web-hostname 0.0.0.0 --target lib/main_web.dart
 
 # METHOD B – Production mode (lightweight, single build):
 flutter build web --release --target lib/main_web.dart

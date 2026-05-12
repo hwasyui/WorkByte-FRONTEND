@@ -95,18 +95,6 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
                   _buildDropZone(),
 
                   const SizedBox(height: 32),
-                  Text(
-                    'Supported formats',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _buildSupportedFormats(),
-
-                  const SizedBox(height: 32),
 
                   _buildAnalyzeButton(),
 
@@ -402,22 +390,21 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
         ),
         const SizedBox(height: 12),
 
-        OutlinedButton.icon(
+        OutlinedButton(
           onPressed: _pickFile,
-          icon: const Icon(Icons.upload_file_outlined, size: 18),
-          label: Text(
-            'Browse files',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary, width: 1.5),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          child: Text(
+            'Browse files',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -606,26 +593,8 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton.icon(
+      child: ElevatedButton(
         onPressed: _isUploading ? null : _uploadAndAnalyze,
-        icon: _isUploading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.white),
-        label: Text(
-          _isUploading ? 'Processing...' : 'Analyze CV',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
@@ -634,6 +603,23 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
+        child: _isUploading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                'Analyze CV',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
