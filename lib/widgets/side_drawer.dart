@@ -10,6 +10,7 @@ import '../screens/client_profile/client_profile.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/about/about_screen.dart';
 import '../screens/auth/login.dart';
+import '../screens/appeals/my_appeals_screen.dart'; // 👈 NEW
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -40,6 +41,15 @@ class SideDrawer extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AboutScreen()),
+    );
+  }
+
+  // 👇 NEW
+  void _navigateToMyAppeals(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MyAppealsScreen()),
     );
   }
 
@@ -178,8 +188,10 @@ class SideDrawer extends StatelessWidget {
                         final auth = dialogContext.read<AuthProvider>();
                         final profile = dialogContext.read<ProfileProvider>();
                         auth.logout(profileProvider: profile);
-                        Navigator.of(dialogContext, rootNavigator: true)
-                            .pushAndRemoveUntil(
+                        Navigator.of(
+                          dialogContext,
+                          rootNavigator: true,
+                        ).pushAndRemoveUntil(
                           MaterialPageRoute(
                             builder: (_) => const LoginScreen(),
                           ),
@@ -220,11 +232,7 @@ class SideDrawer extends StatelessWidget {
     final userId = auth.currentUser?.userId;
     if (userId == null || auth.token == null) return;
 
-    profile.switchRole(
-      token: auth.token!,
-      userId: userId,
-      newRole: newRole,
-    );
+    profile.switchRole(token: auth.token!, userId: userId, newRole: newRole);
   }
 
   @override
@@ -288,7 +296,6 @@ class SideDrawer extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Current active profile header
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                       child: Column(
@@ -325,11 +332,52 @@ class SideDrawer extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+
+                          // 👇 NEW: ban badge under email
+                          if (auth.isReportBanned) ...[
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () => _navigateToMyAppeals(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEBEE),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFFEF9A9A,
+                                    ).withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.gavel_rounded,
+                                      size: 12,
+                                      color: Color(0xFFC62828),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Account Restricted · View Appeals',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFFC62828),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
 
-                    // Account switcher (only shown when user has both roles)
                     if (hasBothRoles) ...[
                       Container(
                         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -387,6 +435,18 @@ class SideDrawer extends StatelessWidget {
               label: 'Settings',
               onTap: () => _navigateToSettings(context),
             ),
+
+            // 👇 NEW: My Appeals — always visible so users can track status
+            Consumer<AuthProvider>(
+              builder: (context, auth, _) => _DrawerItem(
+                icon: Icons.policy_outlined,
+                label: 'My Appeals',
+                onTap: () => _navigateToMyAppeals(context),
+                // 👇 shows a red dot badge when account is banned
+                badge: auth.isReportBanned ? '!' : null,
+              ),
+            ),
+
             _DrawerItem(
               icon: Icons.info_outline_rounded,
               label: 'About Us',
@@ -407,6 +467,8 @@ class SideDrawer extends StatelessWidget {
     );
   }
 }
+
+// ── _AccountTile — unchanged ───────────────────────────────────────────────
 
 class _AccountTile extends StatelessWidget {
   final String name;
@@ -433,11 +495,8 @@ class _AccountTile extends StatelessWidget {
           width: 40,
           height: 40,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.person,
-            size: 22,
-            color: AppColors.primary,
-          ),
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.person, size: 22, color: AppColors.primary),
         );
       } else if (File(profilePicUrl!).existsSync()) {
         avatar = Image.file(
@@ -445,11 +504,8 @@ class _AccountTile extends StatelessWidget {
           width: 40,
           height: 40,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.person,
-            size: 22,
-            color: AppColors.primary,
-          ),
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.person, size: 22, color: AppColors.primary),
         );
       } else {
         avatar = const Icon(Icons.person, size: 22, color: AppColors.primary);
@@ -501,15 +557,15 @@ class _AccountTile extends StatelessWidget {
               ),
             ),
             if (isActive)
-              Icon(
+              const Icon(
                 Icons.check_rounded,
                 color: AppColors.primary,
                 size: 20,
               )
             else
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
-                color: const Color(0xFF9CA3AF),
+                color: Color(0xFF9CA3AF),
                 size: 20,
               ),
           ],
@@ -519,17 +575,21 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
+// ── _DrawerItem — updated to support optional badge ───────────────────────
+
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Color? color;
+  final String? badge; // 👈 NEW
 
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.color,
+    this.badge, // 👈 NEW
   });
 
   @override
@@ -554,14 +614,33 @@ class _DrawerItem extends StatelessWidget {
               child: Icon(icon, size: 20, color: itemColor),
             ),
             const SizedBox(width: 14),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: itemColor,
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: itemColor,
+                ),
               ),
             ),
+            // 👇 NEW: red badge dot for urgent items
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  badge!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

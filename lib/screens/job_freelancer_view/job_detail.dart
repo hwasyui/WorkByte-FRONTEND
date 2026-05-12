@@ -1,27 +1,28 @@
+import 'package:app/core/constants/colors.dart';
+import 'package:app/models/client_model.dart';
+import 'package:app/models/job_post_model.dart';
+import 'package:app/models/job_role_model.dart';
+import 'package:app/models/job_role_skill_model.dart';
+import 'package:app/models/skill_model.dart';
+import 'package:app/providers/auth_provider.dart';
+import 'package:app/providers/job_post_provider.dart';
+import 'package:app/providers/profile_provider.dart';
+import 'package:app/providers/saved_items_provider.dart';
+import 'package:app/providers/skill_provider.dart';
+import 'package:app/services/api_service.dart';
+import 'package:app/widgets/appeal_dialog.dart';
+import 'package:app/widgets/job_detail_header.dart';
+import 'package:app/widgets/job_detail_tab_bar.dart';
+import 'package:app/widgets/report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants/colors.dart';
-import '../../models/job_post_model.dart';
-import '../../models/job_role_model.dart';
-import '../../models/job_role_skill_model.dart';
-import '../../models/skill_model.dart';
-import '../../models/client_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/profile_provider.dart';
-import '../../providers/saved_items_provider.dart';
-import '../../providers/job_post_provider.dart';
-import '../../providers/skill_provider.dart';
-import '../../services/api_service.dart';
-import '../../widgets/job_detail_header.dart';
-import '../../widgets/job_detail_tab_bar.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobPostModel job;
-
   const JobDetailScreen({super.key, required this.job});
 
   @override
@@ -29,32 +30,31 @@ class JobDetailScreen extends StatefulWidget {
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
-  static const Color _primary = AppColors.primary;
+  static const Color primary = AppColors.primary;
 
-  int _selectedTab = 0;
-  ClientModel? _client;
-  bool _clientLoading = true;
-  List<JobRoleModel> _roles = [];
-  bool _rolesLoading = true;
-  bool _analyzing = false;
+  int selectedTab = 0;
+  ClientModel? client;
+  bool clientLoading = true;
+  List<JobRoleModel> roles = [];
+  bool rolesLoading = true;
+  bool analyzing = false;
+  Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
+  List<SkillModel> allSkills = [];
 
-  Map<String, List<JobRoleSkillModel>> _roleSkillsMap = {};
-  List<SkillModel> _allSkills = [];
+  bool get isTeam => widget.job.projectType.toLowerCase() == 'team';
 
-  bool get _isTeam => widget.job.projectType.toLowerCase() == 'team';
-
-  List<String> get _tabs => [
+  List<String> get tabs => [
     'Details',
     'Terms',
     'Bidding (${widget.job.proposalCount})',
   ];
 
-  List<String> get _tags {
+  List<String> get tags {
     final tags = <String>[];
     if (widget.job.deadline != null) tags.add(widget.job.deadline!);
-    tags.add(_capitalize(widget.job.projectType));
+    tags.add(capitalize(widget.job.projectType));
     if (widget.job.experienceLevel != null) {
-      tags.add(_capitalize(widget.job.experienceLevel!));
+      tags.add(capitalize(widget.job.experienceLevel!));
     }
     return tags;
   }
@@ -63,13 +63,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchClient();
-      _fetchRoles();
-      _fetchAllSkills();
+      fetchClient();
+      fetchRoles();
+      fetchAllSkills();
     });
   }
 
-  Future<void> _fetchClient() async {
+  Future<void> fetchClient() async {
     final token = context.read<AuthProvider>().token!;
     final client = await context.read<ProfileProvider>().fetchClientById(
       token: token,
@@ -77,88 +77,73 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
     if (mounted) {
       setState(() {
-        _client = client;
-        _clientLoading = false;
+        this.client = client;
+        clientLoading = false;
       });
     }
   }
 
-  Future<void> _fetchRoles() async {
+  Future<void> fetchRoles() async {
     final token = context.read<AuthProvider>().token!;
     try {
       final provider = context.read<JobPostProvider>();
-
       await provider.fetchJobRoles(token, widget.job.jobPostId);
-
       if (!mounted) return;
-
       setState(() {
-        _roles = provider.jobRoles;
-        _rolesLoading = false;
+        roles = provider.jobRoles;
+        rolesLoading = false;
       });
-
-      await _fetchRoleSkills(token);
+      await fetchRoleSkills(token);
     } catch (e) {
-      debugPrint('_fetchRoles error: $e');
-      if (mounted) setState(() => _rolesLoading = false);
+      debugPrint('fetchRoles error: $e');
+      if (mounted) setState(() => rolesLoading = false);
     }
   }
 
-  Future<void> _fetchRoleSkills(String token) async {
+  Future<void> fetchRoleSkills(String token) async {
     final provider = context.read<JobPostProvider>();
-
-    for (final role in _roles) {
+    for (final role in roles) {
       await provider.fetchRoleSkills(token, role.jobRoleId);
     }
-
     if (!mounted) return;
-
     setState(() {
-      _roleSkillsMap = {
-        for (final role in _roles)
+      roleSkillsMap = {
+        for (final role in roles)
           role.jobRoleId: provider.skillsForRole(role.jobRoleId),
       };
     });
   }
 
-  Future<void> _fetchAllSkills() async {
+  Future<void> fetchAllSkills() async {
     final token = context.read<AuthProvider>().token!;
     await context.read<SkillProvider>().fetchAllSkills(token);
-
     if (!mounted) return;
-
-    setState(() {
-      _allSkills = context.read<SkillProvider>().skills;
-    });
+    setState(() => allSkills = context.read<SkillProvider>().skills);
   }
 
-  Future<void> _analyzeJob() async {
-    setState(() => _analyzing = true);
+  Future<void> analyzeJob() async {
+    setState(() => analyzing = true);
     final token = context.read<AuthProvider>().token!;
     final result = await ApiService.analyzeJobMatch(
       token,
       widget.job.jobPostId,
     );
-
     if (!mounted) return;
-
-    setState(() => _analyzing = false);
-
+    setState(() => analyzing = false);
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Analysis failed. Please try again.')),
       );
       return;
     }
-
-    _showAnalysisSheet(result);
+    showAnalysisSheet(result);
   }
 
-  void _showAnalysisSheet(Map<String, dynamic> result) {
+  void showAnalysisSheet(Map<String, dynamic> result) {
     final overallScore = (result['overall_match_score'] as num?)?.toInt() ?? 0;
     final recommendation = result['overall_recommendation'] as String? ?? '';
     final reason = result['overall_recommendation_reason'] as String? ?? '';
-    final roles = (result['roles'] as List?) ?? [];
+    final roles = result['roles'] as List? ?? [];
 
     showModalBottomSheet(
       context: context,
@@ -216,7 +201,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           color: const Color(0xFFF0FAFA),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
@@ -233,9 +218,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   ),
                                 ),
                                 const Spacer(),
-                                _ScoreBadge(score: overallScore),
+                                ScoreBadge(score: overallScore),
                                 const SizedBox(width: 8),
-                                _RecommendationChip(
+                                RecommendationChip(
                                   recommendation: recommendation,
                                 ),
                               ],
@@ -267,7 +252,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         const SizedBox(height: 12),
                         ...roles.map(
                           (r) =>
-                              _buildRoleAnalysis(Map<String, dynamic>.from(r)),
+                              buildRoleAnalysis(Map<String, dynamic>.from(r)),
                         ),
                       ],
                     ],
@@ -281,42 +266,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Widget _buildRoleAnalysis(Map<String, dynamic> role) {
+  Widget buildRoleAnalysis(Map<String, dynamic> role) {
     final title = role['role_title'] as String? ?? 'Role';
     final score = (role['match_score'] as num?)?.toInt() ?? 0;
     final rec = role['recommendation'] as String? ?? '';
     final recReason = role['recommendation_reason'] as String? ?? '';
 
-    String _str(dynamic e) => e is String
+    String str(dynamic e) => e is String
         ? e
-        : (e is Map
-              ? (e['point'] ?? e['text'] ?? e['description'] ?? e.values.first)
-                        ?.toString() ??
-                    ''
-              : e.toString());
+        : e is Map
+        ? (e['point'] ?? e['text'] ?? e['description'] ?? e.values.first)
+                  ?.toString() ??
+              e.toString()
+        : e.toString();
 
     final matched = (role['matching_skills'] as List? ?? [])
-        .map(_str)
+        .map(str)
         .where((s) => s.isNotEmpty)
         .toList();
-
     final missing = (role['missing_required_skills'] as List? ?? [])
-        .map(_str)
+        .map(str)
         .where((s) => s.isNotEmpty)
         .toList();
-
     final strengths = (role['strengths'] as List? ?? [])
-        .map(_str)
+        .map(str)
         .where((s) => s.isNotEmpty)
         .toList();
-
     final gaps = (role['gaps'] as List? ?? [])
-        .map(_str)
+        .map(str)
         .where((s) => s.isNotEmpty)
         .toList();
-
     final tips = (role['skill_tips'] as List? ?? [])
-        .map(_str)
+        .map(str)
         .where((s) => s.isNotEmpty)
         .toList();
 
@@ -343,9 +324,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
               ),
-              _ScoreBadge(score: score),
+              ScoreBadge(score: score),
               const SizedBox(width: 8),
-              _RecommendationChip(recommendation: rec),
+              RecommendationChip(recommendation: rec),
             ],
           ),
           if (recReason.isNotEmpty) ...[
@@ -361,52 +342,52 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ],
           if (matched.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _analysisLabel('Matching Skills'),
+            analysisLabel('Matching Skills'),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: matched
-                  .map((s) => _SkillChip(label: s, matched: true))
+                  .map((s) => SkillChip(label: s, matched: true))
                   .toList(),
             ),
           ],
           if (missing.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _analysisLabel('Missing Required Skills'),
+            analysisLabel('Missing Required Skills'),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: missing
-                  .map((s) => _SkillChip(label: s, matched: false))
+                  .map((s) => SkillChip(label: s, matched: false))
                   .toList(),
             ),
           ],
           if (strengths.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _analysisLabel('Strengths'),
+            analysisLabel('Strengths'),
             const SizedBox(height: 6),
-            ...strengths.map((s) => _bulletItem(s, color: AppColors.primary)),
+            ...strengths.map((s) => bulletItem(s, color: AppColors.primary)),
           ],
           if (gaps.isNotEmpty) ...[
             const SizedBox(height: 8),
-            _analysisLabel('Gaps'),
+            analysisLabel('Gaps'),
             const SizedBox(height: 6),
-            ...gaps.map((s) => _bulletItem(s, color: const Color(0xFFEF4444))),
+            ...gaps.map((s) => bulletItem(s, color: const Color(0xFFEF4444))),
           ],
           if (tips.isNotEmpty) ...[
             const SizedBox(height: 8),
-            _analysisLabel('Skill Tips'),
+            analysisLabel('Skill Tips'),
             const SizedBox(height: 6),
-            ...tips.map((s) => _bulletItem(s, color: const Color(0xFFF59E0B))),
+            ...tips.map((s) => bulletItem(s, color: const Color(0xFFF59E0B))),
           ],
         ],
       ),
     );
   }
 
-  Widget _analysisLabel(String text) => Text(
+  Widget analysisLabel(String text) => Text(
     text,
     style: GoogleFonts.poppins(
       fontSize: 11,
@@ -415,7 +396,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget _bulletItem(String text, {required Color color}) => Padding(
+  Widget bulletItem(String text, {required Color color}) => Padding(
     padding: const EdgeInsets.only(bottom: 4),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,45 +424,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget _buildAnalyzeButton() {
-    return GestureDetector(
-      onTap: _analyzing ? null : _analyzeJob,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_analyzing)
-              const SizedBox(
-                width: 10,
-                height: 10,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.5,
-                  color: Colors.white,
-                ),
-              )
-            else
-              const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
-            const SizedBox(width: 4),
-            Text(
-              _analyzing ? 'Analyzing...' : 'Analyze',
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+  Widget buildAnalyzeButton() => GestureDetector(
+    onTap: analyzing ? null : analyzeJob,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (analyzing)
+            const SizedBox(
+              width: 10,
+              height: 10,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
                 color: Colors.white,
               ),
+            )
+          else
+            const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            analyzing ? 'Analyzing...' : 'Analyze',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
-  void _onApplyRole(JobRoleModel role) {
+  void onApplyRole(JobRoleModel role) {
     final profile = context.read<ProfileProvider>();
     if (!profile.isProfileComplete) {
       showDialog(
@@ -533,7 +512,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
       return;
     }
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -542,13 +520,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  String _capitalize(String s) =>
+  String capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
+  /// Converts snake_case closure reason from backend into a readable label.
+  String _formatClosureReason(String reason) {
+    const labels = {
+      'spam': 'Spam',
+      'scam': 'Scam / Fraud',
+      'inappropriate_content': 'Inappropriate Content',
+      'duplicate': 'Duplicate Listing',
+      'policy_violation': 'Policy Violation',
+      'other': 'Other',
+    };
+    return labels[reason.toLowerCase()] ??
+        capitalize(reason.replaceAll('_', ' '));
+  }
+
+  // ── BUILD ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
     final profile = context.watch<ProfileProvider>();
+    final auth = context.watch<AuthProvider>();
+
+    // 👇 NEW: self-ownership + closed status flags
+    final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
+    final isClosed = widget.job.status?.toLowerCase() == 'closed';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -556,11 +554,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Header ──────────────────────────────────────────────
             JobDetailHeader(
-              companyLogo: _client?.profilePictureUrl != null
+              companyLogo: client?.profilePictureUrl != null
                   ? ClipOval(
                       child: Image.network(
-                        _client!.profilePictureUrl!,
+                        client!.profilePictureUrl!,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
@@ -592,43 +591,193 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         color: AppColors.primary,
                       ),
                     ),
-              posterName: _clientLoading
+              posterName: clientLoading
                   ? '...'
-                  : (_client?.displayName ?? 'Client'),
-              username: _clientLoading ? '' : (_client?.websiteUrl ?? ''),
+                  : client?.displayName ?? 'Client',
+              username: clientLoading ? '' : client?.websiteUrl ?? '',
               jobTitle: widget.job.jobTitle,
-              category: _capitalize(widget.job.projectCategory),
-              tags: _tags,
+              category: capitalize(widget.job.projectCategory),
+              tags: tags,
               bookmarked: saved.isJobSaved(widget.job.jobPostId),
               onBookmark: () => saved.toggleSaveJob(widget.job),
-              titleTrailing: profile.isClient ? null : _buildAnalyzeButton(),
+              titleTrailing: profile.isClient ? null : buildAnalyzeButton(),
+              // 👇 NEW: pass null for own jobs so flag icon is hidden
+              onReport: isOwnJob
+                  ? null
+                  : () => ReportSheet.show(
+                      context,
+                      reportedType: 'job_post',
+                      jobPostId: widget.job.jobPostId,
+                      targetName: widget.job.jobTitle,
+                    ),
             ),
 
+            // 👇 Closed job appeal banner — only for the owner
+            if (isClosed && isOwnJob)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFFFCC02).withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3CD),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: Color(0xFFF57F17),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Title row with closed-at date ──
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'This job post has been closed',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF5D4037),
+                                    ),
+                                  ),
+                                ),
+                                if (widget.job.closedAt != null)
+                                  Text(
+                                    formatDate(widget.job.closedAt!),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: const Color(0xFF9E9E9E),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            // ── Closure reason badge ──
+                            if (widget.job.closureReason != null &&
+                                widget.job.closureReason!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFE0B2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _formatClosureReason(
+                                    widget.job.closureReason!,
+                                  ),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFE65100),
+                                  ),
+                                ),
+                              ),
+                            ],
+
+                            // ── Closure note (admin message) ──
+                            if (widget.job.closureNote != null &&
+                                widget.job.closureNote!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                widget.job.closureNote!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 10),
+
+                            // ── Appeal CTA ──
+                            GestureDetector(
+                              onTap: () => AppealDialog.show(
+                                context,
+                                targetType: 'job_post',
+                                targetId: widget.job.jobPostId,
+                                targetLabel: widget.job.jobTitle,
+                                closureNote:
+                                    widget.job.closureNote ??
+                                    widget.job.closureReason,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF57F17),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Submit an Appeal',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Tab bar ──────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
               child: JobDetailTabBar(
-                tabs: _tabs,
-                selectedIndex: _selectedTab,
-                onTabSelected: (i) => setState(() => _selectedTab = i),
+                tabs: tabs,
+                selectedIndex: selectedTab,
+                onTabSelected: (i) => setState(() => selectedTab = i),
               ),
             ),
 
-            if (_selectedTab == 0) _buildDetailsTab(),
-            if (_selectedTab == 1) _buildTermsTab(),
-            if (_selectedTab == 2) _buildBiddingTab(),
+            // ── Tab content ──────────────────────────────────────────
+            if (selectedTab == 0) buildDetailsTab(),
+            if (selectedTab == 1) buildTermsTab(),
+            if (selectedTab == 2) buildBiddingTab(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailsTab() {
+  // ── Tab: Details ───────────────────────────────────────────────────────────
+  Widget buildDetailsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Description'),
+          sectionTitle('Description'),
           const SizedBox(height: 12),
           Text(
             widget.job.jobDescription,
@@ -639,17 +788,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               height: 20 / 13,
             ),
           ),
-          if (_client != null) ...[
+          if (client != null) ...[
             const SizedBox(height: 28),
             Row(
               children: [
-                Expanded(child: _sectionTitle('About the Client')),
+                Expanded(child: sectionTitle('About the Client')),
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          PeopleProfileScreen(isClient: true, client: _client),
+                          PeopleProfileScreen(isClient: true, client: client),
                     ),
                   ),
                   child: Row(
@@ -675,8 +824,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _client!.bio?.isNotEmpty == true
-                  ? _client!.bio!
+              client!.bio?.isNotEmpty == true
+                  ? client!.bio!
                   : 'No client bio available.',
               style: GoogleFonts.poppins(
                 fontSize: 12,
@@ -686,56 +835,57 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
           ],
           const SizedBox(height: 28),
-          _sectionTitle(_isTeam ? 'Roles' : 'Role'),
+          sectionTitle(isTeam ? 'Roles' : 'Role'),
           const SizedBox(height: 12),
-          _buildRolesSection(),
+          buildRolesSection(),
         ],
       ),
     );
   }
 
-  Widget _buildTermsTab() {
+  // ── Tab: Terms ─────────────────────────────────────────────────────────────
+  Widget buildTermsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Project Terms'),
+          sectionTitle('Project Terms'),
           const SizedBox(height: 12),
-          _termCard(
+          termCard(
             children: [
-              _termRow('Project Type', _capitalize(widget.job.projectType)),
+              termRow('Project Type', capitalize(widget.job.projectType)),
               if (widget.job.workingDays != null)
-                _termRow('Working Days', '${widget.job.workingDays} days'),
+                termRow('Working Days', '${widget.job.workingDays} days'),
               if (widget.job.deadline != null)
-                _termRow('Deadline', widget.job.deadline!),
+                termRow('Deadline', widget.job.deadline!),
               if (widget.job.estimatedDuration != null)
-                _termRow('Estimated Duration', widget.job.estimatedDuration!),
+                termRow('Estimated Duration', widget.job.estimatedDuration!),
               if (widget.job.experienceLevel != null)
-                _termRow(
+                termRow(
                   'Experience Level',
-                  _capitalize(widget.job.experienceLevel!),
+                  capitalize(widget.job.experienceLevel!),
                 ),
               if (widget.job.postedAt != null)
-                _termRow('Posted At', _formatDate(widget.job.postedAt!)),
+                termRow('Posted At', formatDate(widget.job.postedAt!)),
             ],
           ),
-          if (_client != null) ...[
+          if (client != null) ...[
             const SizedBox(height: 24),
-            _sectionTitle('Client Info'),
+            sectionTitle('Client Info'),
             const SizedBox(height: 12),
-            _termCard(
+            termCard(
               children: [
-                _termRow('Name', _client!.displayName),
-                _termRow('Jobs Posted', _client!.totalJobsPosted.toString()),
-                _termRow(
+                termRow('Name', client!.displayName),
+                termRow('Jobs Posted', client!.totalJobsPosted.toString()),
+                termRow(
                   'Projects Completed',
-                  _client!.totalProjectsCompleted.toString(),
+                  client!.totalProjectsCompleted.toString(),
                 ),
-                if (_client!.averageRatingGiven != null)
-                  _termRow(
+                if (client!.averageRatingGiven != null)
+                  termRow(
                     'Avg Rating Given',
-                    _client!.averageRatingGiven!.toStringAsFixed(1),
+                    client!.averageRatingGiven!.toStringAsFixed(1),
                   ),
               ],
             ),
@@ -745,13 +895,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Widget _buildBiddingTab() {
+  // ── Tab: Bidding ───────────────────────────────────────────────────────────
+  Widget buildBiddingTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Bidding'),
+          sectionTitle('Bidding'),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -774,8 +925,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Widget _buildRolesSection() {
-    if (_rolesLoading) {
+  // ── Roles section ──────────────────────────────────────────────────────────
+  Widget buildRolesSection() {
+    if (rolesLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(
@@ -783,8 +935,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       );
     }
-
-    if (_roles.isEmpty) {
+    if (roles.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
@@ -797,13 +948,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       );
     }
-
-    return Column(children: _roles.map((r) => _buildRoleCard(r)).toList());
+    return Column(children: roles.map((r) => buildRoleCard(r)).toList());
   }
 
-  Widget _buildRoleCard(JobRoleModel role) {
-    final skills = _roleSkillsMap[role.jobRoleId] ?? [];
-    final skillLookup = {for (final s in _allSkills) s.skillId: s};
+  Widget buildRoleCard(JobRoleModel role) {
+    final skills = roleSkillsMap[role.jobRoleId] ?? [];
+    final skillLookup = {for (final s in allSkills) s.skillId: s};
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -813,7 +963,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         border: Border.all(color: const Color(0xFFF0F0F1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -831,7 +981,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: _primary.withOpacity(0.1),
+                    color: primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -858,13 +1008,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          _miniChip(
+                          miniChip(
                             role.isRequired ? 'Required' : 'Optional',
-                            role.isRequired
-                                ? _primary
-                                : const Color(0xFF7D7D7D),
+                            role.isRequired ? primary : const Color(0xFF7D7D7D),
                           ),
-                          _miniChip(
+                          miniChip(
                             role.budgetType == 'hourly'
                                 ? 'Hourly'
                                 : role.budgetType == 'negotiable'
@@ -883,18 +1031,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   children: [
                     Text(
                       role.roleBudget != null
-                          ? '${role.budgetCurrency} ${_formatNumber(role.roleBudget!)}'
+                          ? '${role.budgetCurrency} ${formatNumber(role.roleBudget!)}'
                           : 'Negotiable',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: _primary,
+                        color: primary,
                       ),
                     ),
                     if (role.roleBudget != null)
                       Text(
                         role.budgetType == 'hourly'
-                            ? '/hour'
+                            ? '/ hour'
                             : role.budgetType == 'negotiable'
                             ? 'Negotiable'
                             : 'fixed',
@@ -932,7 +1080,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '${role.positionsAvailable} position${role.positionsAvailable > 1 ? 's' : ''} available',
+                    '${role.positionsAvailable} position${role.positionsAvailable != 1 ? 's' : ''} available',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: const Color(0xFF7D7D7D),
@@ -944,7 +1092,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     '${role.positionsFilled} filled',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: _primary,
+                      color: primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -976,41 +1124,110 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 children: skills.map((s) {
                   final skill = skillLookup[s.skillId];
                   final name = skill?.skillName ?? s.skillId;
-                  final importance = s.importanceLevel;
-                  final isRequired = s.isRequired;
-                  return _skillChip(name, isRequired, importance);
+                  return skillChip(name, s.isRequired, s.importanceLevel);
                 }).toList(),
               ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _onApplyRole(role),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  'Apply for Role',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+            // Only freelancers see the apply button
+            if (!context.read<ProfileProvider>().isClient) ...[
+              const SizedBox(height: 14),
+              // Show ban notice inline if banned, otherwise normal apply button
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  if (auth.isReportBanned) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFEF9A9A).withValues(alpha: 0.6),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.gavel_rounded,
+                            color: Color(0xFFC62828),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your account is restricted. You cannot apply for roles.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: const Color(0xFFC62828),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => AppealDialog.show(
+                              context,
+                              targetType: 'user',
+                              targetId: auth.userId!,
+                              targetLabel: 'Account Restriction',
+                              closureNote: auth.banMessage,
+                            ).then((_) => auth.refreshUser()),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC62828),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Appeal',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => onApplyRole(role),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Apply for Role',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _sectionTitle(String title) => Text(
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+  Widget sectionTitle(String title) => Text(
     title,
     style: GoogleFonts.poppins(
       fontSize: 13,
@@ -1019,82 +1236,76 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget _termCard({required List<Widget> children}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFEEEEF5)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(children: children),
-    );
-  }
+  Widget termCard({required List<Widget> children}) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: const Color(0xFFEEEEF5)),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(children: children),
+  );
 
-  Widget _termRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF7D7D7D),
-              ),
+  Widget termRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF7D7D7D),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF333333),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _miniChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.18)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
         ),
-      ),
-    );
-  }
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
-  Widget _skillChip(String label, bool isRequired, String? importance) {
-    final color = isRequired ? _primary : const Color(0xFF7D7D7D);
+  Widget miniChip(String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withValues(alpha: 0.18)),
+    ),
+    child: Text(
+      label,
+      style: GoogleFonts.poppins(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    ),
+  );
+
+  Widget skillChip(String label, bool isRequired, String? importance) {
+    final color = isRequired ? primary : const Color(0xFF7D7D7D);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
         importance != null && importance.isNotEmpty
-            ? '$label · ${_capitalize(importance)}'
+            ? '$label (${capitalize(importance)})'
             : label,
         style: GoogleFonts.poppins(
           fontSize: 10,
@@ -1105,28 +1316,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  String _formatNumber(num value) {
+  String formatNumber(num value) {
     final str = value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
     final parts = str.split('.');
     final whole = parts[0];
     final buffer = StringBuffer();
-
     for (int i = 0; i < whole.length; i++) {
       final reverseIndex = whole.length - i;
       buffer.write(whole[i]);
-      if (reverseIndex > 1 && reverseIndex % 3 == 1) {
-        buffer.write(',');
-      }
+      if (reverseIndex > 1 && reverseIndex % 3 == 1) buffer.write(',');
     }
-
     if (parts.length > 1 && parts[1] != '00') {
       return '${buffer.toString()}.${parts[1]}';
     }
-
     return buffer.toString();
   }
 
-  String _formatDate(String raw) {
+  String formatDate(String raw) {
     try {
       final dt = DateTime.parse(raw);
       const months = [
@@ -1150,11 +1356,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 }
 
-class _ScoreBadge extends StatelessWidget {
-  final int score;
-  const _ScoreBadge({required this.score});
+// ── Standalone widget classes (unchanged) ─────────────────────────────────────
 
-  Color get _color {
+class ScoreBadge extends StatelessWidget {
+  final int score;
+  const ScoreBadge({super.key, required this.score});
+
+  Color get color {
     if (score >= 65) return AppColors.primary;
     if (score >= 40) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
@@ -1165,7 +1373,7 @@ class _ScoreBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -1173,18 +1381,18 @@ class _ScoreBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: _color,
+          color: color,
         ),
       ),
     );
   }
 }
 
-class _RecommendationChip extends StatelessWidget {
+class RecommendationChip extends StatelessWidget {
   final String recommendation;
-  const _RecommendationChip({required this.recommendation});
+  const RecommendationChip({super.key, required this.recommendation});
 
-  Color get _color {
+  Color get color {
     switch (recommendation.toLowerCase()) {
       case 'apply':
         return AppColors.primary;
@@ -1195,7 +1403,7 @@ class _RecommendationChip extends StatelessWidget {
     }
   }
 
-  String get _label {
+  String get label {
     switch (recommendation.toLowerCase()) {
       case 'apply':
         return 'Apply';
@@ -1211,26 +1419,26 @@ class _RecommendationChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
-        _label,
+        label,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: _color,
+          color: color,
         ),
       ),
     );
   }
 }
 
-class _SkillChip extends StatelessWidget {
+class SkillChip extends StatelessWidget {
   final String label;
   final bool matched;
-  const _SkillChip({required this.label, required this.matched});
+  const SkillChip({super.key, required this.label, required this.matched});
 
   @override
   Widget build(BuildContext context) {
@@ -1238,9 +1446,9 @@ class _SkillChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,

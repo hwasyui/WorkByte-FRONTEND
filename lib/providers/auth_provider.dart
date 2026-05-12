@@ -11,6 +11,7 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   String? _token;
   UserModel? _currentUser;
+  bool _sessionExpired = false;
 
   bool get isLoading => _isLoading;
   bool get isRestoring => _isRestoring;
@@ -19,6 +20,7 @@ class AuthProvider extends ChangeNotifier {
   UserModel? get currentUser => _currentUser;
   String? get userId => _currentUser?.userId;
   bool get isAuthenticated => _token != null && _currentUser != null;
+  bool get sessionExpired => _sessionExpired;
 
   // ban state convenience getters
   bool get isReportBanned => _currentUser?.isReportBanned ?? false;
@@ -41,7 +43,6 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final user = await _service.getMe(savedToken);
-
       _token = savedToken;
       _currentUser = user;
 
@@ -52,6 +53,8 @@ class AuthProvider extends ChangeNotifier {
           userType: _currentUser!.type,
         );
       }
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
     } catch (e) {
       await _service.clearSavedToken();
       _token = null;
@@ -74,7 +77,6 @@ class AuthProvider extends ChangeNotifier {
     try {
       _token = await _service.login(email, password);
       await _service.saveToken(_token!);
-
       _currentUser = await _service.getMe(_token!);
 
       if (profileProvider != null) {
@@ -115,7 +117,6 @@ class AuthProvider extends ChangeNotifier {
         fullName: fullName,
         companyName: companyName,
       );
-
       _isLoading = false;
       notifyListeners();
       return true;
@@ -179,6 +180,11 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
@@ -216,6 +222,7 @@ class AuthProvider extends ChangeNotifier {
     _token = null;
     _currentUser = null;
     _error = null;
+    _sessionExpired = false;
     profileProvider?.clear();
     notifyListeners();
   }

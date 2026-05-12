@@ -1,5 +1,6 @@
 import 'package:app/providers/connectivity_provider.dart';
 import 'package:app/screens/app_gate.dart';
+import 'package:app/screens/auth/login.dart';
 import 'package:app/screens/no_internet_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,8 +59,30 @@ class WorkByteApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'WorkByte',
         builder: (context, child) {
-          return Consumer<ConnectivityProvider>(
-            builder: (context, connectivity, _) {
+          return Consumer2<ConnectivityProvider, AuthProvider>(
+            builder: (context, connectivity, auth, _) {
+              // Session expired — redirect to login with message
+              if (auth.sessionExpired) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  auth.clearSessionExpired();
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Your session has expired. Please log in again.',
+                      ),
+                      backgroundColor: Colors.redAccent,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                });
+              }
+
               if (connectivity.isChecking) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),

@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
-/// Reusable teal header used on job detail screens.
-/// Shows back/share/bookmark actions, company logo, poster name,
-/// username, job title, category, and tag chips.
 class JobDetailHeader extends StatelessWidget {
   final Widget companyLogo;
   final String posterName;
   final String username;
   final String jobTitle;
   final String category;
-  final List<String>
-  tags; // e.g. ['Rp. 6.000.000', 'Team', '23/02/2023', 'Milestone']
+  final List<String> tags;
   final bool bookmarked;
   final VoidCallback? onBack;
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
+  final VoidCallback? onReport; // 👈 NEW
   final Widget? titleTrailing;
 
   const JobDetailHeader({
@@ -31,6 +28,7 @@ class JobDetailHeader extends StatelessWidget {
     this.onBack,
     this.onShare,
     this.onBookmark,
+    this.onReport, // 👈 NEW
     this.titleTrailing,
   });
 
@@ -63,6 +61,18 @@ class JobDetailHeader extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  // 👇 NEW: report flag — only shown when onReport is provided
+                  if (onReport != null) ...[
+                    GestureDetector(
+                      onTap: onReport,
+                      child: const Icon(
+                        Icons.flag_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
                   GestureDetector(
                     onTap: onShare,
                     child: const Icon(
@@ -83,11 +93,10 @@ class JobDetailHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              // Company logo + poster info
+              // Company logo + poster info — unchanged
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo in circular white bg
                   Container(
                     width: 80,
                     height: 80,
@@ -129,7 +138,7 @@ class JobDetailHeader extends StatelessWidget {
           ),
         ),
 
-        // ── White rounded card section ────────────────────────────────
+        // ── White rounded card section ── unchanged
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(
@@ -143,7 +152,6 @@ class JobDetailHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Job title
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -165,7 +173,6 @@ class JobDetailHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              // Category
               Text(
                 category,
                 style: GoogleFonts.poppins(
@@ -175,7 +182,6 @@ class JobDetailHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // Tag chips row
               Wrap(
                 spacing: 8,
                 runSpacing: 6,

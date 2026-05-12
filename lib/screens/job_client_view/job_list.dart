@@ -29,7 +29,17 @@ class JobListScreenState extends State<JobListScreen> {
   bool _isLoading = true;
   String _sortOption = 'Latest';
 
-  // jobPostId → up to 3 freelancer avatar URLs
+  // 👇 NEW: active status filter tab
+  String _statusFilter = 'all';
+
+  static const List<_StatusTab> _statusTabs = [
+    _StatusTab(key: 'all', label: 'All'),
+    _StatusTab(key: 'active', label: 'Active'),
+    _StatusTab(key: 'filled', label: 'Filled'),
+    _StatusTab(key: 'closed', label: 'Closed'),
+    _StatusTab(key: 'draft', label: 'Draft'),
+  ];
+
   final Map<String, List<String?>> _proposalAvatars = {};
 
   @override
@@ -58,19 +68,15 @@ class JobListScreenState extends State<JobListScreen> {
 
       setState(() {
         _allJobs = jobs ?? [];
-        _filteredJobs = List.from(_allJobs);
+        _applyFilters();
       });
 
-      // Load position counts before displaying the screen.
       await _loadTeamPositionCounts(token);
-      // Load avatars after list is rendered.
       _fetchProposalAvatars(token);
     } catch (_) {
       // ignore
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -95,24 +101,19 @@ class JobListScreenState extends State<JobListScreen> {
       }),
     );
     final counts = results.whereType<MapEntry<String, int>>();
-
     if (!mounted) return;
-
     setState(() {
       for (final entry in counts) {
         final id = entry.key;
         final total = entry.value;
         for (final job in _allJobs) {
-          if (job['job_post_id'] == id) {
-            job['position_count'] = total;
-          }
+          if (job['job_post_id'] == id) job['position_count'] = total;
         }
       }
-      _filteredJobs = List.from(_allJobs);
+      _applyFilters();
     });
   }
 
-  /// Fetch up to 3 real freelancer avatars per job from proposal list
   Future<void> _fetchProposalAvatars(String token) async {
     final profileProvider = context.read<ProfileProvider>();
     final proposalService = ProposalService();
@@ -120,19 +121,16 @@ class JobListScreenState extends State<JobListScreen> {
     for (final job in _allJobs) {
       final jobPostId = job['job_post_id'] as String?;
       if (jobPostId == null) continue;
-
       final proposalCount = (job['proposal_count'] ?? 0) as int;
       if (proposalCount == 0) continue;
 
       try {
-        // Fetch proposals for this job
         final proposals = await proposalService.getProposalsByJobPost(
           token,
           jobPostId,
         );
         if (!mounted) return;
 
-        // Fetch each freelancer's avatar (up to 3)
         final avatars = <String?>[];
         for (final proposal in proposals.take(3)) {
           final freelancer = await profileProvider.fetchFreelancerById(
@@ -141,44 +139,45 @@ class JobListScreenState extends State<JobListScreen> {
           );
           avatars.add(freelancer?.profilePictureUrl);
         }
-
-        if (mounted) {
-          setState(() => _proposalAvatars[jobPostId] = avatars);
-        }
+        if (mounted) setState(() => _proposalAvatars[jobPostId] = avatars);
       } catch (e) {
         debugPrint('Failed to fetch avatars for $jobPostId: $e');
-        // Non-fatal — falls back to colored circles
       }
     }
   }
 
-  void _onSearch() {
+  // 👇 NEW: unified filter — combines search query + status tab
+  void _applyFilters() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredJobs = _allJobs
-          .where(
-            (job) => (job['job_title'] as String? ?? '').toLowerCase().contains(
-              query,
-            ),
-          )
-          .toList();
+      _filteredJobs = _allJobs.where((job) {
+        final matchesQuery = (job['job_title'] as String? ?? '')
+            .toLowerCase()
+            .contains(query);
+        final status = (job['status'] as String? ?? '').toLowerCase();
+        final matchesStatus = _statusFilter == 'all' || status == _statusFilter;
+        return matchesQuery && matchesStatus;
+      }).toList();
     });
   }
+
+  void _onSearch() => _applyFilters();
 
   void _onSortChanged(String value) {
     setState(() {
       _sortOption = value;
-      _allJobs.sort(
-        (a, b) => value == 'Latest'
-            ? (b['created_at'] ?? '').compareTo(a['created_at'] ?? '')
-            : (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
-      );
-      _filteredJobs.sort(
-        (a, b) => value == 'Latest'
-            ? (b['created_at'] ?? '').compareTo(a['created_at'] ?? '')
-            : (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''),
-      );
+      int compare(Map a, Map b) => value == 'Latest'
+          ? (b['created_at'] ?? '').compareTo(a['created_at'] ?? '')
+          : (a['created_at'] ?? '').compareTo(b['created_at'] ?? '');
+      _allJobs.sort(compare);
+      _filteredJobs.sort(compare);
     });
+  }
+
+  // 👇 NEW: count jobs per status for badge numbers
+  int _countForStatus(String key) {
+    if (key == 'all') return _allJobs.length;
+    return _allJobs.where((j) => (j['status'] as String? ?? '') == key).length;
   }
 
   @override
@@ -292,7 +291,87 @@ class JobListScreenState extends State<JobListScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // 👇 NEW: Status filter tab bar
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _statusTabs.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final tab = _statusTabs[i];
+                  final isActive = _statusFilter == tab.key;
+                  final count = _countForStatus(tab.key);
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _statusFilter = tab.key);
+                      _applyFilters();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isActive
+                              ? AppColors.primary
+                              : const Color(0xFFE8E8E8),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            tab.label,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isActive
+                                  ? Colors.white
+                                  : const Color(0xFF7D7D7D),
+                            ),
+                          ),
+                          if (count > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? Colors.white.withValues(alpha: 0.25)
+                                    : AppColors.secondary,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$count',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: isActive
+                                      ? Colors.white
+                                      : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // ── Job list ────────────────────────────────────────────────────
             Expanded(
@@ -321,7 +400,7 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Job card ──────────────────────────────────────────────────────────────
+  // ── Job card — unchanged ───────────────────────────────────────────────────
   Widget _buildJobCard(Map<String, dynamic> job) {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
@@ -340,7 +419,6 @@ class JobListScreenState extends State<JobListScreen> {
                   (job['role_count'] ?? 0))
         : 1;
     final status = job['status'] as String? ?? 'draft';
-
     final avatars = _proposalAvatars[jobPostId];
     final avatarCount = avatars != null
         ? avatars.length.clamp(0, 3)
@@ -367,7 +445,6 @@ class JobListScreenState extends State<JobListScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── Logo container ───────────────────────────────────────────
             Container(
               width: 56,
               height: 56,
@@ -384,13 +461,10 @@ class JobListScreenState extends State<JobListScreen> {
               ),
             ),
             const SizedBox(width: 14),
-
-            // ── Content ──────────────────────────────────────────────────
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title + status badge
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -411,9 +485,6 @@ class JobListScreenState extends State<JobListScreen> {
                     ],
                   ),
                   const SizedBox(height: 3),
-
-                  // Sub-title: project type
-                  // Sub-title: project type
                   Text(
                     isTeam ? 'Team Project' : 'Individual Project',
                     style: GoogleFonts.poppins(
@@ -422,14 +493,10 @@ class JobListScreenState extends State<JobListScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-
-                  // ── NEW: category chip ──────────────────────────────────
                   _categoryChip(
                     job['project_category'] as String? ?? 'general',
                   ),
                   const SizedBox(height: 10),
-
-                  // Tags row: position/bid count
                   Row(
                     children: [
                       const Icon(
@@ -488,14 +555,12 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Proposal avatar — real photo or colored fallback ─────────────────────
   Widget _proposalAvatar(int index, String? avatarUrl) {
     final fallbackColors = [
       const Color(0xFFB0C4DE),
       const Color(0xFF98D8C8),
       const Color(0xFFDEB0C4),
     ];
-
     return Positioned(
       left: index * 18.0,
       child: Container(
@@ -522,17 +587,16 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Status badge ──────────────────────────────────────────────────────────
   Widget _statusBadge(String status) {
     final map = {
       'draft': (const Color(0xFFB5B4B4), const Color(0xFFF5F5F5)),
       'open': (AppColors.primary, AppColors.secondary),
       'closed': (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1)),
       'cancelled': (const Color(0xFFE53935), const Color(0xFFFFEBEE)),
+      'filled': (const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
     };
     final colors =
         map[status] ?? (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1));
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
@@ -550,7 +614,6 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Category chip ─────────────────────────────────────────────────────────
   Widget _categoryChip(String category) {
     const labels = {
       'mobile_dev': 'Mobile Dev',
@@ -563,7 +626,6 @@ class JobListScreenState extends State<JobListScreen> {
       'video_editing': 'Video Editing',
       'general': 'General',
     };
-
     return Text(
       labels[category] ?? 'General',
       style: GoogleFonts.poppins(
@@ -574,33 +636,67 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Empty state ───────────────────────────────────────────────────────────
   Widget _buildEmptyState() {
+    final isFiltered =
+        _statusFilter != 'all' || _searchController.text.isNotEmpty;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.work_outline, size: 56, color: Colors.grey.shade300),
+          Icon(
+            isFiltered ? Icons.filter_list_off_rounded : Icons.work_outline,
+            size: 56,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
-          const Text(
-            'No jobs posted yet',
-            style: TextStyle(
+          Text(
+            isFiltered ? 'No matching jobs' : 'No jobs posted yet',
+            style: const TextStyle(
               color: Color(0xFF7D7D7D),
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your posted jobs will appear here.',
-            style: TextStyle(color: Color(0xFFB5B4B4), fontSize: 12),
+          Text(
+            isFiltered
+                ? 'Try a different filter or search term.'
+                : 'Your posted jobs will appear here.',
+            style: const TextStyle(color: Color(0xFFB5B4B4), fontSize: 12),
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _statusFilter = 'all');
+                _applyFilters();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Clear filters',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // ── Sort bottom sheet ─────────────────────────────────────────────────────
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
@@ -661,4 +757,11 @@ class JobListScreenState extends State<JobListScreen> {
       return raw;
     }
   }
+}
+
+// 👇 NEW: simple data class for tab definitions
+class _StatusTab {
+  final String key;
+  final String label;
+  const _StatusTab({required this.key, required this.label});
 }

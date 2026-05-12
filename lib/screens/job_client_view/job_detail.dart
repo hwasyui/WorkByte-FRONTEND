@@ -1,4 +1,5 @@
 import 'package:app/services/dm_service.dart';
+import 'package:app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -803,7 +804,13 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     final avatarUrl = _client?.profilePictureUrl;
+
+    // 👇 NEW: closed status flags
+    final isClosed = widget.job.status.toLowerCase() == 'closed';
+    final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
+
     final companyLogo = _clientLoading
         ? const SizedBox(
             width: 64,
@@ -844,7 +851,149 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               jobTitle: widget.job.jobTitle,
               category: _capitalize(widget.job.projectCategory),
               tags: _tags,
+              // 👇 NEW: no report button on own job post
+              onReport: null,
             ),
+
+            // 👇 NEW: Closed job appeal banner — only for the owner
+            if (isClosed && isOwnJob)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFFFCC02).withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3CD),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: Color(0xFFF57F17),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Title row with closed-at date ──
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'This job post has been closed',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF5D4037),
+                                    ),
+                                  ),
+                                ),
+                                if (widget.job.closedAt != null)
+                                  Text(
+                                    _formatDate(widget.job.closedAt!),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: const Color(0xFF9E9E9E),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            // ── Closure reason badge ──
+                            if (widget.job.closureReason != null &&
+                                widget.job.closureReason!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFE0B2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _formatClosureReason(
+                                    widget.job.closureReason!,
+                                  ),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFE65100),
+                                  ),
+                                ),
+                              ),
+                            ],
+
+                            // ── Closure note ──
+                            if (widget.job.closureNote != null &&
+                                widget.job.closureNote!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                widget.job.closureNote!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 10),
+
+                            // ── Appeal CTA ──
+                            GestureDetector(
+                              onTap: () => AppealDialog.show(
+                                context,
+                                targetType: 'job_post',
+                                targetId: widget.job.jobPostId,
+                                targetLabel: widget.job.jobTitle,
+                                closureNote:
+                                    widget.job.closureNote ??
+                                    widget.job.closureReason,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF57F17),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Submit an Appeal',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Tab bar — unchanged ──
             Padding(
               padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
               child: JobDetailTabBar(
@@ -1727,5 +1876,24 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     } catch (_) {
       return raw;
     }
+  }
+
+  String _formatClosureReason(String reason) {
+    const labels = {
+      'spam': 'Spam',
+      'scam': 'Scam / Fraud',
+      'inappropriate_content': 'Inappropriate Content',
+      'duplicate': 'Duplicate Listing',
+      'policy_violation': 'Policy Violation',
+      'other': 'Other',
+    };
+    return labels[reason.toLowerCase()] ??
+        reason
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}',
+            )
+            .join(' ');
   }
 }

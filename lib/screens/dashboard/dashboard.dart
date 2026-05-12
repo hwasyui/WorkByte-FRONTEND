@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:app/screens/category/category_list.dart';
 import 'package:app/services/job_post_service.dart';
+import 'package:app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -351,7 +352,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToPostJob() {
+    final auth = context.read<AuthProvider>();
     final profile = context.read<ProfileProvider>();
+
+    // block if account is banned
+    if (auth.isReportBanned) {
+      _showBannedDialog();
+      return;
+    }
     if (!profile.isProfileComplete) {
       _showIncompleteProfileDialog(isClient: true);
       return;
@@ -407,6 +415,93 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppColors.primary,
                 fontWeight: FontWeight.w700,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBannedDialog() {
+    final auth = context.read<AuthProvider>();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFCDD2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.gavel_rounded,
+                color: Color(0xFFC62828),
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Account Restricted',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFB71C1C),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              auth.banMessage ??
+                  'Your account has been restricted due to community reports. You cannot post jobs at this time.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+              side: BorderSide(color: Colors.grey[300]!),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Dismiss'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppealDialog.show(
+                context,
+                targetType: 'user',
+                targetId: auth.userId!,
+                targetLabel: 'Account Restriction',
+                closureNote: auth.banMessage,
+              ).then((_) => auth.refreshUser());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              'Submit Appeal',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
             ),
           ),
         ],

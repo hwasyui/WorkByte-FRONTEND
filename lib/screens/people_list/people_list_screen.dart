@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/widgets/report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -683,6 +684,26 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     }
   }
 
+  // 👇 NEW: helper to determine target user ID for self-report guard
+  String? get _targetUserId {
+    if (widget.isClient) return widget.client?.userId;
+    return widget.freelancer?.userId;
+  }
+
+  // 👇 NEW: opens the report sheet
+  void _openReportSheet() {
+    ReportSheet.show(
+      context,
+      reportedType: widget.isClient ? 'client' : 'freelancer',
+      reportedUserId: widget.isClient
+          ? widget.client?.userId
+          : widget.freelancer?.userId,
+      targetName: widget.isClient
+          ? widget.client?.displayName
+          : widget.freelancer?.displayName,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = widget.isClient
@@ -726,6 +747,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               ),
             ),
             actions: [
+              // ── Bookmark (existing) ──
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {
                   final isSaved = widget.isClient
@@ -737,7 +759,8 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                     onTap: () {
                       if (widget.isClient && widget.client != null) {
                         saved.toggleSaveClient(widget.client!);
-                      } else if (!widget.isClient && widget.freelancer != null) {
+                      } else if (!widget.isClient &&
+                          widget.freelancer != null) {
                         saved.toggleSaveFreelancer(widget.freelancer!);
                       }
                     },
@@ -753,6 +776,34 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                           isSaved
                               ? Icons.bookmark_rounded
                               : Icons.bookmark_border_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              // 👇 NEW: Report button — hidden if viewing own profile
+              Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  // Don't show report button on the user's own profile
+                  if (_targetUserId != null && _targetUserId == auth.userId) {
+                    return const SizedBox.shrink();
+                  }
+                  return GestureDetector(
+                    onTap: _openReportSheet,
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(0, 8, 12, 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: const Icon(
+                          Icons.flag_rounded,
                           color: Colors.white,
                           size: 20,
                         ),
@@ -815,7 +866,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stats row
+                  // Stats row — unchanged
                   Row(
                     children: [
                       if (widget.isClient) ...[
@@ -849,7 +900,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                             label: 'Rate',
                             value: widget.freelancer?.estimatedRate != null
                                 ? widget.freelancer!.estimatedRate!
-                                    .toStringAsFixed(0)
+                                      .toStringAsFixed(0)
                                 : 'N/A',
                             icon: Icons.attach_money_rounded,
                           ),
@@ -859,7 +910,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // About section
+                  // About section — unchanged
                   Text(
                     'About',
                     style: GoogleFonts.poppins(
@@ -894,7 +945,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Details section
+                  // Details section — unchanged
                   Text(
                     'Details',
                     style: GoogleFonts.poppins(
@@ -925,8 +976,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                         if (widget.isClient) ...[
                           _DetailRow(
                             label: 'Website',
-                            value:
-                                widget.client?.websiteUrl ?? 'Not provided',
+                            value: widget.client?.websiteUrl ?? 'Not provided',
                           ),
                           const Divider(height: 20, color: Color(0xFFF0F0F1)),
                           _DetailRow(label: 'Rating', value: badge),
@@ -944,7 +994,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                     ),
                   ),
 
-                  // Freelancer-only sections
+                  // Freelancer-only sections — unchanged
                   if (!widget.isClient) ...[
                     const SizedBox(height: 20),
                     if (_loadingDetails)
@@ -958,7 +1008,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                         ),
                       )
                     else ...[
-                      // Skills
                       _SectionHeader(
                         label: 'Skills',
                         icon: Icons.psychology_outlined,
@@ -993,7 +1042,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                         ),
                       const SizedBox(height: 20),
 
-                      // Education
                       _SectionHeader(
                         label: 'Education',
                         icon: Icons.school_outlined,
@@ -1016,7 +1064,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                         ),
                       const SizedBox(height: 20),
 
-                      // Experience
                       _SectionHeader(
                         label: 'Experience',
                         icon: Icons.work_outline_rounded,
@@ -1059,7 +1106,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
         provider = FileImage(File(url));
       }
     }
-
     return CircleAvatar(
       radius: 44,
       backgroundColor: Colors.white,
@@ -1078,10 +1124,11 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
   }
 }
 
+// ── All helper widgets below are completely unchanged ─────────────────────────
+
 class _SectionHeader extends StatelessWidget {
   final String label;
   final IconData icon;
-
   const _SectionHeader({required this.label, required this.icon});
 
   @override
@@ -1172,7 +1219,7 @@ class _TimelineCard extends StatelessWidget {
             width: 8,
             height: 8,
             margin: const EdgeInsets.only(top: 5),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
@@ -1288,7 +1335,6 @@ class _StatCard extends StatelessWidget {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
-
   const _DetailRow({required this.label, required this.value});
 
   @override

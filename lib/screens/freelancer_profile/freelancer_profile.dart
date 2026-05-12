@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/widgets/appeal_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -62,7 +63,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
-        hourlyController.text = profile.freelancerProfile?.estimatedRate?.toString() ?? '';
+        hourlyController.text =
+            profile.freelancerProfile?.estimatedRate?.toString() ?? '';
       });
 
       if (auth.token != null && profile.isFreelancer) {
@@ -96,7 +98,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
-        hourlyController.text = profile.freelancerProfile?.estimatedRate?.toString() ?? '';
+        hourlyController.text =
+            profile.freelancerProfile?.estimatedRate?.toString() ?? '';
       });
     }
   }
@@ -930,10 +933,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: ElevatedButton(
                         onPressed: () async {
                           final newHourly = hourlyController.text.trim();
-                          final hourlyValue =
-                              newHourly.isEmpty
-                                  ? null
-                                  : double.tryParse(newHourly);
+                          final hourlyValue = newHourly.isEmpty
+                              ? null
+                              : double.tryParse(newHourly);
 
                           final auth = Provider.of<AuthProvider>(
                             context,
@@ -974,8 +976,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             messenger.showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  profile.error ??
-                                      'Failed to save hourly rate',
+                                  profile.error ?? 'Failed to save hourly rate',
                                 ),
                               ),
                             );
@@ -1387,11 +1388,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ],
           ),
+
           const SizedBox(height: 58),
+
           Consumer<ReviewProvider>(
             builder: (context, reviewProvider, child) {
               final trustScore = reviewProvider.trustScore;
-
               return Center(
                 child: _buildStarRating(
                   rating: trustScore?.weightedReviewAvg ?? 0.0,
@@ -1402,6 +1404,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           ),
           const SizedBox(height: 6),
+
           Consumer2<AuthProvider, ProfileProvider>(
             builder: (context, auth, profile, child) {
               return Column(
@@ -1430,6 +1433,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           ),
           const SizedBox(height: 14),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -1475,7 +1479,104 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
+
+          // 👇 NEW: ban notice banner
+          Consumer<AuthProvider>(
+            builder: (context, auth, child) {
+              if (!auth.isReportBanned) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFEF9A9A).withValues(alpha: 0.7),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFCDD2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: Color(0xFFC62828),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your account has been restricted',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFB71C1C),
+                              ),
+                            ),
+                            if (auth.banMessage != null &&
+                                auth.banMessage!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                auth.banMessage!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => AppealDialog.show(
+                                context,
+                                targetType: 'user',
+                                targetId: auth.userId!,
+                                targetLabel: 'Account Restriction',
+                                closureNote: auth.banMessage,
+                              ).then((_) => auth.refreshUser()),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFC62828),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Submit an Appeal',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
           const SizedBox(height: 12),
+
+          // ── Tab bar ──────────────────────────────────────────────────────
           Container(
             color: Colors.white,
             child: TabBar(
@@ -1526,9 +1627,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Text(
-                    hourlyController.text.isEmpty ? 'No rate set' : 'USD ${hourlyController.text} / hour',
+                    hourlyController.text.isEmpty
+                        ? 'No rate set'
+                        : 'USD ${hourlyController.text} / hour',
                     style: TextStyle(
-                      color: hourlyController.text.isEmpty ? Colors.grey : Colors.black87,
+                      color: hourlyController.text.isEmpty
+                          ? Colors.grey
+                          : Colors.black87,
                     ),
                   ),
                 ),

@@ -1,3 +1,4 @@
+import 'package:app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
@@ -488,7 +489,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       child: ElevatedButton(
                         onPressed: () async {
                           final newUrl = websiteController.text;
-                          final urlValue = newUrl.trim().isEmpty ? null : newUrl;
+                          final urlValue = newUrl.trim().isEmpty
+                              ? null
+                              : newUrl;
                           setState(() => websiteUrl = newUrl);
 
                           final auth = Provider.of<AuthProvider>(
@@ -518,7 +521,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                 content: Text(
                                   success
                                       ? 'Website saved successfully'
-                                      : profile.error ?? 'Failed to save Website',
+                                      : profile.error ??
+                                            'Failed to save Website',
                                 ),
                               ),
                             );
@@ -907,6 +911,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   Widget _buildStickyHeader() {
+    final auth = context.read<AuthProvider>();
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -1083,8 +1089,107 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ],
             ),
           ),
+
+          // 👇 NEW: ban notice banner — only shown when account is restricted
+          if (auth.isReportBanned) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFEF9A9A).withValues(alpha: 0.7),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFCDD2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.gavel_rounded,
+                        color: Color(0xFFC62828),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Your account has been restricted',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFB71C1C),
+                            ),
+                          ),
+                          if (auth.banMessage != null &&
+                              auth.banMessage!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              auth.banMessage!,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF7D7D7D),
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: () =>
+                                AppealDialog.show(
+                                  context,
+                                  targetType: 'user',
+                                  targetId: auth.userId!,
+                                  targetLabel: 'Account Restriction',
+                                  closureNote: auth.banMessage,
+                                ).then((_) {
+                                  // 👇 refresh user after appeal submitted
+                                  // so banner disappears if appeal approved
+                                  context.read<AuthProvider>().refreshUser();
+                                }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC62828),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Submit an Appeal',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
 
+          // ── Tab bar ─────────────────────────────────────────────────────
           Container(
             color: Colors.white,
             child: TabBar(

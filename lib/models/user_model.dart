@@ -7,6 +7,9 @@ class UserModel {
   final String? freelancerId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final bool isReportBanned;
+  final String? banMessage;
+  final DateTime? reportBannedAt;
 
   const UserModel({
     required this.userId,
@@ -17,6 +20,9 @@ class UserModel {
     this.freelancerId,
     this.createdAt,
     this.updatedAt,
+    this.isReportBanned = false, // 👈 NEW
+    this.banMessage, // 👈 NEW
+    this.reportBannedAt, // 👈 NEW
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -32,6 +38,13 @@ class UserModel {
     updatedAt: json['updated_at'] != null
         ? DateTime.tryParse(json['updated_at'].toString())
         : null,
+    isReportBanned: json['is_report_banned'] as bool? ?? false, // 👈 NEW
+    banMessage: json['ban_message'] as String?, // 👈 NEW
+    reportBannedAt:
+        json['report_banned_at'] !=
+            null // 👈 NEW
+        ? DateTime.tryParse(json['report_banned_at'].toString())
+        : null,
   );
 
   static String _extractUserType(Map<String, dynamic> json) {
@@ -39,18 +52,9 @@ class UserModel {
         ?.toString()
         .toLowerCase();
 
-    if (rawType == 'client' || rawType == 'freelancer') {
-      return rawType!;
-    }
-
-    if (json['freelancer_id'] != null) {
-      return 'freelancer';
-    }
-
-    if (json['client_id'] != null) {
-      return 'client';
-    }
-
+    if (rawType == 'client' || rawType == 'freelancer') return rawType!;
+    if (json['freelancer_id'] != null) return 'freelancer';
+    if (json['client_id'] != null) return 'client';
     return 'client';
   }
 
