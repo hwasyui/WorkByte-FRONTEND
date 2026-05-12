@@ -147,7 +147,10 @@ class AuthService {
     }
 
     throw Exception(
-      body['details'] ?? body['message'] ?? body['detail'] ?? 'Failed to add role',
+      body['details'] ??
+          body['message'] ??
+          body['detail'] ??
+          'Failed to add role',
     );
   }
 
@@ -163,10 +166,20 @@ class AuthService {
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
       final data = body['details'] ?? body['data'] ?? body;
-      debugPrint('Parsed user data: $data');
       return UserModel.fromJson(data as Map<String, dynamic>);
     }
 
-    throw Exception('Session expired');
+    if (response.statusCode == 401) {
+      throw const SessionExpiredException();
+    }
+
+    throw Exception('Failed to fetch user');
   }
+}
+
+class SessionExpiredException implements Exception {
+  const SessionExpiredException();
+
+  @override
+  String toString() => 'Session expired. Please log in again.';
 }

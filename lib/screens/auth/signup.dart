@@ -19,11 +19,14 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController(); // ← NEW
   final TextEditingController _nameController = TextEditingController();
 
   String? _nameError;
   String? _emailError;
   String? _passwordError;
+  String? _confirmPasswordError; // ← NEW
 
   String _selectedRole = 'Freelancer';
 
@@ -31,17 +34,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose(); // ← NEW
     _nameController.dispose();
     super.dispose();
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+    return RegExp(r'^[\w\.\+\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$').hasMatch(email);
   }
 
   bool _validate() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim(); // ← NEW
     final fullName = _nameController.text.trim();
 
     setState(() {
@@ -71,9 +76,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
       } else {
         _passwordError = null;
       }
+
+      // ← NEW: Confirm Password
+      if (confirmPassword.isEmpty) {
+        _confirmPasswordError = 'Please confirm your password';
+      } else if (confirmPassword != password) {
+        _confirmPasswordError = 'Passwords do not match';
+      } else {
+        _confirmPasswordError = null;
+      }
     });
 
-    return _nameError == null && _emailError == null && _passwordError == null;
+    return _nameError == null &&
+        _emailError == null &&
+        _passwordError == null &&
+        _confirmPasswordError == null; // ← NEW
   }
 
   Future<void> _handleSignUp() async {
@@ -98,9 +115,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => VerifyEmailScreen(email: email),
-        ),
+        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: email)),
       );
     } else {
       if (!mounted) return;
@@ -118,7 +133,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         bottom: false,
         child: Column(
           children: [
-            // Logo section with header image
             Image.asset(
               'assets/login-header.png',
               width: double.infinity,
@@ -129,14 +143,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 30,
+                      ),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 400),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              /// Title
                               Text(
                                 'Sign Up',
                                 textAlign: TextAlign.center,
@@ -206,6 +222,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
 
+                              const SizedBox(height: 14),
+
+                              // ↓ NEW: Confirm Password field
+                              SizedBox(
+                                width: double.infinity,
+                                child: LoginTextField(
+                                  hintText: 'Confirm password',
+                                  controller: _confirmPasswordController,
+                                  isPassword: true,
+                                  errorText: _confirmPasswordError,
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+
                               const SizedBox(height: 26),
 
                               /// Role Toggle (Freelancer / Client)
@@ -219,9 +252,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   children: [
                                     Expanded(
                                       child: GestureDetector(
-                                        onTap: () {
-                                          setState(() => _selectedRole = 'Freelancer');
-                                        },
+                                        onTap: () => setState(
+                                          () => _selectedRole = 'Freelancer',
+                                        ),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 10,
@@ -230,13 +263,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             color: _selectedRole == 'Freelancer'
                                                 ? AppColors.primary
                                                 : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(30),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
                                           ),
                                           alignment: Alignment.center,
                                           child: Text(
                                             'Freelancer',
                                             style: TextStyle(
-                                              color: _selectedRole == 'Freelancer'
+                                              color:
+                                                  _selectedRole == 'Freelancer'
                                                   ? Colors.white
                                                   : const Color(0xFF7D7D7D),
                                               fontWeight: FontWeight.w600,
@@ -247,9 +283,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     ),
                                     Expanded(
                                       child: GestureDetector(
-                                        onTap: () {
-                                          setState(() => _selectedRole = 'Client');
-                                        },
+                                        onTap: () => setState(
+                                          () => _selectedRole = 'Client',
+                                        ),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 10,
@@ -258,7 +294,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             color: _selectedRole == 'Client'
                                                 ? AppColors.primary
                                                 : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(30),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
                                           ),
                                           alignment: Alignment.center,
                                           child: Text(
@@ -295,7 +333,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               const SizedBox(height: 16),
 
-                              /// Or continue with
                               Center(
                                 child: Text(
                                   'Or continue with',
@@ -307,7 +344,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                               const SizedBox(height: 16),
 
-                              /// Social buttons
                               Center(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -332,11 +368,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
 
-                    /// Bottom wave (scrolls with content)
                     Builder(
                       builder: (context) {
-                        final bottomInset = MediaQuery.of(context).padding.bottom;
-
+                        final bottomInset = MediaQuery.of(
+                          context,
+                        ).padding.bottom;
                         return ClipPath(
                           clipper: _WaveClipper(),
                           child: Container(
@@ -360,14 +396,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const LoginScreen(),
+                                        builder: (context) =>
+                                            const LoginScreen(),
                                       ),
                                     );
                                   },
                                   style: TextButton.styleFrom(
                                     padding: EdgeInsets.zero,
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: Text(
                                     'Login',

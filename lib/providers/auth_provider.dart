@@ -20,6 +20,11 @@ class AuthProvider extends ChangeNotifier {
   String? get userId => _currentUser?.userId;
   bool get isAuthenticated => _token != null && _currentUser != null;
 
+  // ban state convenience getters
+  bool get isReportBanned => _currentUser?.isReportBanned ?? false;
+  String? get banMessage => _currentUser?.banMessage;
+  DateTime? get reportBannedAt => _currentUser?.reportBannedAt;
+
   Future<void> restoreSession({ProfileProvider? profileProvider}) async {
     _isRestoring = true;
     notifyListeners();
@@ -180,6 +185,30 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  // call this after an appeal is approved to refresh ban state
+  Future<void> refreshUser() async {
+    if (_token == null) return;
+    try {
+      _currentUser = await _service.getMe(_token!);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> handleSessionExpired({ProfileProvider? profileProvider}) async {
+    await _service.clearSavedToken();
+    _token = null;
+    _currentUser = null;
+    _error = null;
+    _sessionExpired = true;
+    profileProvider?.clear();
+    notifyListeners();
+  }
+
+  void clearSessionExpired() {
+    _sessionExpired = false;
+    notifyListeners();
   }
 
   Future<void> logout({ProfileProvider? profileProvider}) async {
