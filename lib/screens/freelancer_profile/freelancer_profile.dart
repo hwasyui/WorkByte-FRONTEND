@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:app/models/cv_suggested_profile.dart';
+import 'package:app/screens/freelancer_profile/cv_review.dart';
+import 'package:app/services/cv_analysis_service.dart';
 import 'package:app/widgets/appeal_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +39,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   String aboutText = '';
   String? uploadedCVPath;
   bool _cvRemoved = false;
+  bool _isUploadingCV = false;
+  String? cvDisplayName;
+
   final TextEditingController aboutController = TextEditingController();
   final TextEditingController hourlyController = TextEditingController();
   late TabController _tabController;
@@ -1052,7 +1058,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _uploadCV() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -1062,23 +1071,99 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (result == null || result.files.single.path == null) return;
 
     final file = File(result.files.single.path!);
+    final fileName = result.files.single.name;
 
-    final success = await profile.uploadCV(token: auth.token!, file: file);
+    setState(() => _isUploadingCV = true);
 
-    if (success) {
-      await _refreshProfile();
-      setState(() {
-        uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = false;
-      });
+    try {
+      final data = await CvAnalysisService().uploadCV(auth.token!, file);
+      final suggested = data['suggested_profile'];
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CV uploaded successfully')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(profile.error ?? 'Failed to upload CV')),
+      // Store the CV URL from the response
+      final fileUrl = data['file_url'] as String?;
+      if (fileUrl != null) {
+        setState(() {
+          uploadedCVPath = fileUrl;
+          cvDisplayName = fileName;
+          _cvRemoved = false;
+        });
+      }
+
+      if (suggested == null) {
+        // No suggestions — treat as plain upload success
+        await _refreshProfile();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'CV uploaded successfully',
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFF4F46E5),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        return;
+      }
+
+      // Has suggestions — go to review screen
+      final profile = CvSuggestedProfile.fromJson(
+        suggested as Map<String, dynamic>,
       );
+
+      if (!mounted) return;
+      final applied = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => CvReviewScreen(
+            token: auth.token!,
+            profile: profile,
+            isInitial: data['is_initial'] as bool? ?? true,
+            analysisData: data['is_initial'] == false ? data : null,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      await _refreshProfile();
+
+      if (applied == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Profile updated from CV! 🎉',
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFF4F46E5),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: const Color(0xFFC62828),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingCV = false);
     }
   }
 
@@ -1231,20 +1316,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildStickyHeader(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildAboutTab(),
-                  _buildReviewsTab(),
-                  _buildSavedTab(),
-                ],
-              ),
-            ),
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: _buildStickyHeader()),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [_buildAboutTab(), _buildReviewsTab(), _buildSavedTab()],
+          ),
         ),
       ),
     );
@@ -1480,91 +1559,93 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
 
-          // 👇 NEW: ban notice banner
+          // Ban notice banner
           Consumer<AuthProvider>(
             builder: (context, auth, child) {
               if (!auth.isReportBanned) return const SizedBox.shrink();
               return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFEBEE),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: const Color(0xFFEF9A9A).withValues(alpha: 0.7),
                     ),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
+                        width: 30,
+                        height: 30,
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFCDD2),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
                           Icons.gavel_rounded,
                           color: Color(0xFFC62828),
-                          size: 18,
+                          size: 15,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Your account has been restricted',
+                              'Account restricted',
                               style: GoogleFonts.poppins(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFFB71C1C),
                               ),
                             ),
                             if (auth.banMessage != null &&
-                                auth.banMessage!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
+                                auth.banMessage!.isNotEmpty)
                               Text(
                                 auth.banMessage!,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   color: const Color(0xFF7D7D7D),
-                                  height: 1.4,
+                                  height: 1.3,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => AppealDialog.show(
-                                context,
-                                targetType: 'user',
-                                targetId: auth.userId!,
-                                targetLabel: 'Account Restriction',
-                                closureNote: auth.banMessage,
-                              ).then((_) => auth.refreshUser()),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFC62828),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Submit an Appeal',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => AppealDialog.show(
+                          context,
+                          targetType: 'user',
+                          targetId: auth.userId!,
+                          targetLabel: 'Account Restriction',
+                          closureNote: auth.banMessage,
+                        ).then((_) => auth.refreshUser()),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC62828),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Appeal',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -1573,7 +1654,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               );
             },
           ),
-
           const SizedBox(height: 12),
 
           // ── Tab bar ──────────────────────────────────────────────────────
@@ -1755,7 +1835,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       )
                     else
                       OutlinedButton(
-                        onPressed: _uploadCV,
+                        onPressed: _isUploadingCV ? null : _uploadCV,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: primaryColor,
                           side: const BorderSide(color: primaryColor),
@@ -1767,10 +1847,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Upload',
-                          style: TextStyle(fontSize: 12),
-                        ),
+                        child: _isUploadingCV
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: primaryColor,
+                                ),
+                              )
+                            : const Text(
+                                'Upload',
+                                style: TextStyle(fontSize: 12),
+                              ),
                       ),
                   ],
                 ),

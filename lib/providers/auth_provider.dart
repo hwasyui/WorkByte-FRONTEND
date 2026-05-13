@@ -54,11 +54,16 @@ class AuthProvider extends ChangeNotifier {
         );
       }
     } on SessionExpiredException {
+      // Token is genuinely invalid/expired — safe to clear
       await handleSessionExpired(profileProvider: profileProvider);
     } catch (e) {
-      await _service.clearSavedToken();
-      _token = null;
-      _currentUser = null;
+      // 👇 Network error, timeout, server down — keep the token, stay logged in
+      final savedToken = await _service.getSavedToken();
+      if (savedToken != null) {
+        _token = savedToken; // restore token even if getMe() failed
+      }
+      // Don't clear anything — session survives connectivity loss
+      debugPrint('restoreSession: non-auth error, keeping session: $e');
     }
 
     _isRestoring = false;

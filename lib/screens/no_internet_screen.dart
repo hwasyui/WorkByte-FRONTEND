@@ -178,32 +178,28 @@ class NoInternetScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: connectivity.isChecking
-                        ? null
-                        : () => connectivity.recheck(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: AppColors.primary.withOpacity(
-                        0.6,
-                      ),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                // Replace the button + bottom text with this:
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary.withOpacity(0.5),
                       ),
                     ),
-                    child: Text(
-                      connectivity.isChecking ? 'Checking...' : 'Try Again',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    const SizedBox(width: 10),
+                    Text(
+                      'Waiting for connection...',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF9CA3AF),
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Text(

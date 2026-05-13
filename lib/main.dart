@@ -61,11 +61,10 @@ class WorkByteApp extends StatelessWidget {
         builder: (context, child) {
           return Consumer2<ConnectivityProvider, AuthProvider>(
             builder: (context, connectivity, auth, _) {
-              // Session expired — redirect to login with message
+              // Session expired — redirect to login
               if (auth.sessionExpired) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   auth.clearSessionExpired();
-
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -75,7 +74,6 @@ class WorkByteApp extends StatelessWidget {
                       duration: Duration(seconds: 4),
                     ),
                   );
-
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
@@ -89,11 +87,15 @@ class WorkByteApp extends StatelessWidget {
                 );
               }
 
-              if (!connectivity.hasInternet) {
-                return const NoInternetScreen();
-              }
-
-              return child ?? const SizedBox.shrink();
+              // Stack overlay instead of replacing child
+              return Stack(
+                children: [
+                  child ??
+                      const SizedBox.shrink(), // session stays alive underneath
+                  if (!connectivity.hasInternet)
+                    const NoInternetScreen(), // sits on top, doesn't destroy child
+                ],
+              );
             },
           );
         },

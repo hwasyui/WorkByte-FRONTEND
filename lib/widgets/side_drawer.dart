@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -333,7 +334,7 @@ class SideDrawer extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
 
-                          // 👇 NEW: ban badge under email
+                          // NEW: ban badge under email
                           if (auth.isReportBanned) ...[
                             const SizedBox(height: 8),
                             GestureDetector(
@@ -367,6 +368,50 @@ class SideDrawer extends StatelessWidget {
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: const Color(0xFFC62828),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // 👇 Submit Appeal button — compact
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context);
+                                final auth = context.read<AuthProvider>();
+                                AppealDialog.show(
+                                  context,
+                                  targetType: 'user',
+                                  targetId: auth.currentUser!.userId,
+                                  targetLabel: 'Your Account',
+                                  closureNote: auth.currentUser!.banMessage,
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFC62828),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.edit_note_rounded,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Submit Appeal',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],
