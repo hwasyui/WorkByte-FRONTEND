@@ -286,7 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
-                matchScore: job.matchScoreInt,
               ),
             ),
             if (index < _recommendedJobs.length - 1) const SizedBox(width: 12),
@@ -345,6 +344,19 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       setState(() => _currentNavIndex = index);
     }
+  }
+
+  void _handleSearch(String query) {
+    if (query.isEmpty) return;
+    final profile = context.read<ProfileProvider>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => profile.isClient
+            ? client_job_list.JobListScreen(initialQuery: query)
+            : JobListScreen(initialQuery: query),
+      ),
+    );
   }
 
   void _handleCenterButton() {
@@ -762,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
 
                   // ── Search bar ──
-                  const SearchBarWidget(),
+                  SearchBarWidget(onSearch: _handleSearch),
                   const SizedBox(height: 20),
 
                   // ── Quick access cards ──
