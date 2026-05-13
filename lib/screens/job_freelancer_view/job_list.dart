@@ -97,17 +97,18 @@ class _JobListScreenState extends State<JobListScreen> {
     try {
       final token = context.read<AuthProvider>().token!;
       await context.read<JobPostProvider>().fetchAllJobPosts(token);
+      if (!mounted) return;
       final posts = context.read<JobPostProvider>().jobPosts;
       _allJobs = List<JobPostModel>.from(posts);
 
-      await _loadTeamPositionCounts(token);
-      await _loadClientProfilePictures(token);
-
-      if (!mounted) return;
       setState(() {
         _applySortAndFilter();
         _isLoading = false;
       });
+
+      // Load secondary data in background — avatars & position counts
+      await _loadTeamPositionCounts(token);
+      await _loadClientProfilePictures(token);
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
