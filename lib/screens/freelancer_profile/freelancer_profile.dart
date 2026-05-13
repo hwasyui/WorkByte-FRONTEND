@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:app/models/cv_suggested_profile.dart';
-import 'package:app/screens/freelancer_profile/cv_review.dart';
-import 'package:app/services/cv_analysis_service.dart';
-import 'package:app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/models/cv_suggested_profile.dart';
+import 'package:workbyte_app/screens/freelancer_profile/cv_review.dart';
+import 'package:workbyte_app/services/cv_analysis_service.dart';
+import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

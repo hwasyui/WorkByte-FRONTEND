@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:app/screens/category/category_list.dart';
-import 'package:app/services/job_post_service.dart';
-import 'package:app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/screens/category/category_list.dart';
+import 'package:workbyte_app/services/job_post_service.dart';
+import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';

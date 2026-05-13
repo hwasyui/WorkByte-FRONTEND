@@ -1,4 +1,4 @@
-import 'package:app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';

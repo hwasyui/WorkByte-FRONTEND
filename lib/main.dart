@@ -1,7 +1,7 @@
-import 'package:app/providers/connectivity_provider.dart';
-import 'package:app/screens/app_gate.dart';
-import 'package:app/screens/auth/login.dart';
-import 'package:app/screens/no_internet_screen.dart';
+import 'package:workbyte_app/providers/connectivity_provider.dart';
+import 'package:workbyte_app/screens/app_gate.dart';
+import 'package:workbyte_app/screens/auth/login.dart';
+import 'package:workbyte_app/screens/no_internet_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';

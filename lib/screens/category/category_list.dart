@@ -1,4 +1,4 @@
-import 'package:app/screens/job_freelancer_view/job_list.dart';
+import 'package:workbyte_app/screens/job_freelancer_view/job_list.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';

@@ -1,5 +1,5 @@
-import 'package:app/models/cv_suggested_profile.dart';
-import 'package:app/services/cv_analysis_service.dart';
+import 'package:workbyte_app/models/cv_suggested_profile.dart';
+import 'package:workbyte_app/services/cv_analysis_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

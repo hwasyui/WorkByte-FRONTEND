@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:app/models/dm_model.dart';
-import 'package:app/providers/dm_provider.dart';
+import 'package:workbyte_app/models/dm_model.dart';
+import 'package:workbyte_app/providers/dm_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

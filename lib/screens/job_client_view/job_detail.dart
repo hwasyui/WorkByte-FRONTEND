@@ -1,5 +1,5 @@
-import 'package:app/services/dm_service.dart';
-import 'package:app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/services/dm_service.dart';
+import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
