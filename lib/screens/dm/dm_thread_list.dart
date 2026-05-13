@@ -428,6 +428,7 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
             color: AppColors.secondary,
             borderRadius: BorderRadius.circular(13),
           ),
+          indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           labelColor: AppColors.primary,
           unselectedLabelColor: const Color(0xFF8B8B95),
@@ -813,7 +814,7 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
@@ -821,7 +822,7 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
       child: Text(
         label,
         style: GoogleFonts.poppins(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: textColor,
         ),

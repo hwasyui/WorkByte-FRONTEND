@@ -353,12 +353,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       iconSize: 34,
                                       onPressed: () {},
                                     ),
-                                    const SizedBox(width: 8),
-                                    SocialButton(
-                                      assetPath: 'assets/linkedin.png',
-                                      iconSize: 36,
-                                      onPressed: () {},
-                                    ),
                                   ],
                                 ),
                               ),

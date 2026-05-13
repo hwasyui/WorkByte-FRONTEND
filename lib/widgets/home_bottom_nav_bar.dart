@@ -22,7 +22,7 @@ class HomeBottomNavBar extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Container(
-          height: 76,
+          height: 80,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.only(
@@ -37,64 +37,74 @@ class HomeBottomNavBar extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Home',
-                isSelected: currentIndex == 0,
-                onTap: () => onTap?.call(0),
-              ),
-              _NavItem(
-                icon: Icons.work_outline_rounded,
-                activeIcon: Icons.work_rounded,
-                label: 'Jobs',
-                isSelected: currentIndex == 1,
-                onTap: () => onTap?.call(1),
-              ),
-              if (showCenterButton) const SizedBox(width: 60),
-              _NavItem(
-                icon: Icons.list_alt_outlined,
-                activeIcon: Icons.list_alt_rounded,
-                label: 'Workspace',
-                isSelected: currentIndex == 2,
-                onTap: () => onTap?.call(2),
-              ),
-              _NavItem(
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
-                label: 'Profile',
-                isSelected: currentIndex == 3,
-                onTap: () => onTap?.call(3),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: 'Home',
+                    isSelected: currentIndex == 0,
+                    onTap: () => onTap?.call(0),
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.work_outline_rounded,
+                    activeIcon: Icons.work_rounded,
+                    label: 'Jobs',
+                    isSelected: currentIndex == 1,
+                    onTap: () => onTap?.call(1),
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.list_alt_outlined,
+                    activeIcon: Icons.list_alt_rounded,
+                    label: 'Workspace',
+                    isSelected: currentIndex == 2,
+                    onTap: () => onTap?.call(2),
+                  ),
+                ),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    activeIcon: Icons.chat_bubble_rounded,
+                    label: 'Messages',
+                    isSelected: currentIndex == 3,
+                    onTap: () => onTap?.call(3),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         if (showCenterButton)
           Positioned(
-            top: -26,
+            top: -34,
             left: 0,
             right: 0,
             child: Center(
               child: GestureDetector(
                 onTap: onCenterTap,
                 child: Container(
-                  width: 56,
-                  height: 56,
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
+                        color: AppColors.primary.withValues(alpha: 0.32),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 32),
+                  child: const Icon(Icons.add, color: Colors.white, size: 30),
                 ),
               ),
             ),
@@ -124,35 +134,34 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              size: 24,
-              color: isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
-            ),
-            const SizedBox(height: 3),
-            SizedBox(
-              width: 50,
-              child: Text(
+      child: SizedBox(
+        height: 84,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isSelected ? activeIcon : icon,
+                size: 22,
+                color: isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
+              ),
+              const SizedBox(height: 3),
+              Text(
                 label,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 9.5,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected
                       ? AppColors.primary
                       : const Color(0xFF9CA3AF),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

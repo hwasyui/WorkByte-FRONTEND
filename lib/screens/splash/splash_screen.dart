@@ -45,16 +45,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final logoSize = MediaQuery.of(context).size.width * 0.7;
+
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: Colors.white,
       body: Center(
-        child: Text(
-          "WorkByte",
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-            fontSize: 40,
-            color: Colors.white,
-          ),
+        child: Image.asset(
+          'assets/workbyte-purple.png',
+          width: logoSize,
+          height: logoSize,
+          fit: BoxFit.contain,
         ),
       ),
     );

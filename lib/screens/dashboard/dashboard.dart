@@ -525,11 +525,13 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: const SideDrawer(),
       floatingActionButton: null,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 100),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + 120,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _DashboardHeader(),
+            SizedBox(height: MediaQuery.of(context).padding.top),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -606,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   'Hi, ${profile.displayName}!',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 14,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF333333),
                                   ),
@@ -614,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   "Let's find your next opportunity",
                                   style: GoogleFonts.poppins(
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     color: const Color(0xFF7D7D7D),
                                   ),
                                 ),
@@ -709,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     'Complete your profile',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 13,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF1A1A2E),
                                     ),
@@ -717,7 +719,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     'Unlock all features & opportunities',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       color: const Color(0xFF7D7D7D),
                                     ),
                                   ),
@@ -746,7 +748,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text(
                                   'Complete now',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
@@ -985,7 +987,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 118,
+                    height: 122,
                     child: _isLoadingCategories
                         ? ListView.separated(
                             scrollDirection: Axis.horizontal,
@@ -1101,16 +1103,16 @@ class _QuickAccessCard extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.poppins(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1A1A2E),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               subtitle,
               style: GoogleFonts.poppins(
-                fontSize: 9,
+                fontSize: 11,
                 color: const Color(0xFF7D7D7D),
               ),
             ),
@@ -1194,18 +1196,18 @@ class _CategoryCard extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF333333),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               '$jobCount jobs',
               style: GoogleFonts.poppins(
-                fontSize: 10,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: countColor,
               ),

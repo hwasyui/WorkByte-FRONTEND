@@ -291,12 +291,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       iconSize: 34,
                                       onPressed: () {},
                                     ),
-                                    const SizedBox(width: 20),
-                                    SocialButton(
-                                      assetPath: 'assets/linkedin.png',
-                                      iconSize: 36,
-                                      onPressed: () {},
-                                    ),
                                   ],
                                 ),
                               ),
