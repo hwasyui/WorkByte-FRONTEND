@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,6 +30,10 @@ class _DMChatScreenState extends State<DMChatScreen>
   bool _isRecording = false;
   bool _isLoadingMessages = true;
   bool _isPickingFile = false;
+
+  PlatformFile? _selectedFile;
+  String? _selectedFilePath;
+  bool _isSendingFile = false;
 
   late AnimationController _sendButtonController;
   late Animation<double> _sendButtonScale;
@@ -113,18 +119,63 @@ class _DMChatScreenState extends State<DMChatScreen>
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    final hasText = text.isNotEmpty;
+    final hasFile = _selectedFile != null && _selectedFilePath != null;
+
+    if (!hasText && !hasFile) return;
 
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
 
-    final text = _messageController.text.trim();
-    _messageController.clear();
     _focusNode.unfocus();
-
     _sendButtonController.forward();
-    await _sendMessageCore(token, text);
-    _sendButtonController.reverse();
+
+    try {
+      if (hasText) {
+        _messageController.clear();
+        await _sendMessageCore(token, text);
+      }
+
+      if (hasFile) {
+        setState(() => _isSendingFile = true);
+
+        final sent = await context.read<DMProvider>().sendFileMessage(
+          token: token,
+          threadId: widget.thread.threadId,
+          filePath: _selectedFilePath!,
+          fileName: _selectedFile!.name,
+        );
+
+        context.read<DMProvider>().insertIncomingMessage(
+          widget.thread.threadId,
+          sent,
+        );
+
+        setState(() {
+          _selectedFile = null;
+          _selectedFilePath = null;
+        });
+
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingFile = false);
+      }
+      _sendButtonController.reverse();
+    }
   }
 
   Future<void> _sendMessageCore(String token, String text) async {
@@ -146,7 +197,7 @@ class _DMChatScreenState extends State<DMChatScreen>
     setState(() => _showVoiceNote = !_showVoiceNote);
   }
 
-  Future<void> _pickAndSendFile() async {
+  Future<void> _pickFile() async {
     if (_isPickingFile) return;
 
     setState(() => _isPickingFile = true);
@@ -159,24 +210,14 @@ class _DMChatScreenState extends State<DMChatScreen>
       if (result == null || result.files.isEmpty) return;
 
       final picked = result.files.first;
-      if (picked.path == null) return;
+      if (picked.path == null) {
+        throw Exception('Selected file path is unavailable');
+      }
 
-      final token = context.read<AuthProvider>().token;
-      if (token == null) return;
-
-      final msg = await context.read<DMProvider>().sendFileMessage(
-        token: token,
-        threadId: widget.thread.threadId,
-        filePath: picked.path!,
-        fileName: picked.name,
-      );
-
-      context.read<DMProvider>().insertIncomingMessage(
-        widget.thread.threadId,
-        msg,
-      );
-
-      _scrollToBottom();
+      setState(() {
+        _selectedFile = picked;
+        _selectedFilePath = picked.path!;
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +231,49 @@ class _DMChatScreenState extends State<DMChatScreen>
       );
     } finally {
       if (mounted) setState(() => _isPickingFile = false);
+    }
+  }
+
+  String _fileExtension(String name) {
+    final parts = name.split('.');
+    return parts.length > 1 ? parts.last.toUpperCase() : 'FILE';
+  }
+
+  String _fileTypeLabel(String? fileType, String name) {
+    if (fileType == null || fileType.isEmpty) {
+      return _fileExtension(name);
+    }
+    return fileType.replaceAll('_', ' ').toUpperCase();
+  }
+
+  Future<void> _openAttachment(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Invalid attachment URL',
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not open attachment',
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -213,6 +297,7 @@ class _DMChatScreenState extends State<DMChatScreen>
                 backgroundColor: Color(0xFFF0F0F1),
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
+            if (_selectedFile != null) _buildPendingAttachmentPreview(),
             _buildMessageInput(),
           ],
         ),
@@ -435,7 +520,7 @@ class _DMChatScreenState extends State<DMChatScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (message.attachments.isNotEmpty)
-                      _buildAttachmentPreview(message.attachments.first),
+                      _buildAttachmentPreview(message.attachments.first, isOwn),
                     if (message.messageText.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -491,125 +576,45 @@ class _DMChatScreenState extends State<DMChatScreen>
     );
   }
 
-  Widget _buildAttachmentPreview(DMAttachmentModel attachment) {
-    switch (attachment.fileType) {
-      case 'image':
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+  Widget _buildAttachmentPreview(DMAttachmentModel attachment, bool isOwn) {
+    final fileName = attachment.fileName?.trim().isNotEmpty == true
+        ? attachment.fileName!.trim()
+        : 'Attachment';
+
+    if (attachment.fileType == 'image') {
+      return GestureDetector(
+        onTap: () => _openAttachment(attachment.fileUrl),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
           child: Image.network(
             attachment.fileUrl,
-            width: 180,
-            height: 180,
+            width: 190,
+            height: 190,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _attachmentPlaceholder('Image'),
-          ),
-        );
-      case 'video':
-        return Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 180,
-                height: 180,
-                color: const Color(0xFFF5F5F5),
-                child: const Icon(
-                  Icons.play_circle_outline_rounded,
-                  size: 48,
-                  color: Colors.grey,
-                ),
-              ),
+            errorBuilder: (_, __, ___) => _buildFileAttachmentCard(
+              fileName: fileName,
+              fileUrl: attachment.fileUrl,
+              fileType: attachment.fileType,
+              fileSize: attachment.fileSizeBytes,
+              isOwn: isOwn,
             ),
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Video',
-                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        );
-      case 'audio':
-      case 'voice_note':
-        return Container(
-          width: 220,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEBEBF0)),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0DB4A5), Color(0xFF00A89E)],
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.mic_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      attachment.filename,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1A1A2E),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '${attachment.durationSeconds?.toStringAsFixed(0) ?? '0'}s',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11.5,
-                        color: const Color(0xFF7D7D7D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.play_arrow_rounded,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-        );
-      case 'document':
-        return _documentPreview(attachment);
-      default:
-        return _attachmentPlaceholder(attachment.fileType);
+        ),
+      );
     }
+
+    return _buildFileAttachmentCard(
+      fileName: fileName,
+      fileUrl: attachment.fileUrl,
+      fileType: attachment.fileType,
+      fileSize: attachment.fileSizeBytes,
+      isOwn: isOwn,
+    );
   }
 
   Widget _documentPreview(DMAttachmentModel attachment) {
-    final ext = attachment.filename.contains('.')
-        ? attachment.filename.split('.').last.toUpperCase()
+    final ext = attachment.fileName?.contains('.') == true
+        ? attachment.fileName!.split('.').last.toUpperCase()
         : 'FILE';
 
     final Color extColor;
@@ -663,7 +668,7 @@ class _DMChatScreenState extends State<DMChatScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  attachment.filename,
+                  attachment.fileName,
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -694,189 +699,76 @@ class _DMChatScreenState extends State<DMChatScreen>
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  Widget _attachmentPlaceholder(String type) {
+  Widget _buildMessageInput() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    final hasAttachment = _selectedFile != null && _selectedFilePath != null;
+    final canSend = hasText || hasAttachment;
+    final isBusy = _isPickingFile || _isSendingFile;
+
     return Container(
-      width: 180,
-      height: 120,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE9ECEF)),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE9ECEF))),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Icon(_attachmentIcon(type), size: 32, color: const Color(0xFFADB5BD)),
-          const SizedBox(height: 8),
-          Text(
-            type.toUpperCase(),
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: const Color(0xFFADB5BD),
-              fontWeight: FontWeight.w500,
+          IconButton(
+            onPressed: isBusy ? null : _pickFile,
+            icon: const Icon(Icons.attach_file_rounded),
+          ),
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              focusNode: _focusNode,
+              minLines: 1,
+              maxLines: 5,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: hasAttachment
+                    ? 'Add a caption...'
+                    : 'Type a message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: canSend ? AppColors.primary : const Color(0xFFBFC8CC),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: (!canSend || isBusy) ? null : _sendMessage,
+              icon: isBusy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  IconData _attachmentIcon(String type) {
-    switch (type) {
-      case 'image':
-        return Icons.image_outlined;
-      case 'video':
-        return Icons.video_file_outlined;
-      case 'audio':
-      case 'voice_note':
-        return Icons.audiotrack_outlined;
-      case 'pdf':
-        return Icons.picture_as_pdf_outlined;
-      default:
-        return Icons.insert_drive_file_outlined;
-    }
-  }
-
-  Widget _buildMessageInput() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.fromLTRB(18, 8, 18, 18),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFF0F0F1)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            GestureDetector(
-              onTap: _toggleVoiceNote,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _showVoiceNote
-                      ? AppColors.primary
-                      : const Color(0xFFF7F7F8),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  _showVoiceNote ? Icons.keyboard_rounded : Icons.mic_rounded,
-                  size: 20,
-                  color: _showVoiceNote
-                      ? Colors.white
-                      : const Color(0xFF8D8D98),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: _isPickingFile ? null : _pickAndSendFile,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _isPickingFile
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : const Color(0xFFF7F7F8),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: _isPickingFile
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primary,
-                          ),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.attach_file_rounded,
-                        size: 20,
-                        color: Color(0xFF8D8D98),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 120),
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _focusNode,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: null,
-                  minLines: 1,
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFF1A1A2E),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _showVoiceNote
-                        ? 'Hold to record'
-                        : 'Type a message...',
-                    hintStyle: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: const Color(0xFFB5B4B4),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFF7F7F8),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            AnimatedBuilder(
-              animation: _sendButtonController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _sendButtonScale.value,
-                  child: GestureDetector(
-                    onTap: _messageController.text.trim().isEmpty
-                        ? null
-                        : _sendMessage,
-                    child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0DB4A5), Color(0xFF00A89E)],
-                        ),
-                        borderRadius: BorderRadius.circular(23),
-                      ),
-                      child: const Icon(
-                        Icons.send_rounded,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -922,6 +814,52 @@ class _DMChatScreenState extends State<DMChatScreen>
                 fontSize: 13,
                 color: const Color(0xFF8D8D98),
                 height: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingAttachmentPreview() {
+    if (_selectedFile == null || _selectedFilePath == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Stack(
+        children: [
+          _buildFileAttachmentCard(
+            fileName: _selectedFile!.name,
+            fileUrl: _selectedFilePath!,
+            fileType: _selectedFile!.extension,
+            fileSize: _selectedFile!.size,
+            extension: _selectedFile!.extension,
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedFile = null;
+                    _selectedFilePath = null;
+                  });
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Ink(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, size: 16),
+                ),
               ),
             ),
           ),
@@ -1034,6 +972,103 @@ class _DMChatScreenState extends State<DMChatScreen>
     return '$hour:$minute $suffix';
   }
 
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  String _prettyFileType({
+    String? fileType,
+    String? fileName,
+    String? extension,
+  }) {
+    final ext =
+        (extension ??
+                (fileName != null && fileName.contains('.')
+                    ? fileName.split('.').last
+                    : 'file'))
+            .toUpperCase();
+
+    if (fileType == null || fileType.trim().isEmpty) return ext;
+
+    switch (fileType.toLowerCase()) {
+      case 'image':
+        return 'IMAGE • $ext';
+      case 'video':
+        return 'VIDEO • $ext';
+      case 'audio':
+      case 'voice_note':
+        return 'AUDIO • $ext';
+      case 'document':
+        return 'DOCUMENT • $ext';
+      default:
+        return fileType.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
+  IconData _fileIcon(String? fileName, String? fileType, String? extension) {
+    final ext =
+        (extension ??
+                (fileName != null && fileName.contains('.')
+                    ? fileName.split('.').last
+                    : ''))
+            .toLowerCase();
+
+    if (fileType == 'image') return Icons.image_rounded;
+    if (fileType == 'video') return Icons.videocam_rounded;
+    if (fileType == 'audio' || fileType == 'voice_note') {
+      return Icons.audio_file_rounded;
+    }
+
+    switch (ext) {
+      case 'pdf':
+        return Icons.picture_as_pdf_rounded;
+      case 'doc':
+      case 'docx':
+        return Icons.description_rounded;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return Icons.table_chart_rounded;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow_rounded;
+      case 'zip':
+      case 'rar':
+      case '7z':
+        return Icons.folder_zip_rounded;
+      default:
+        return Icons.insert_drive_file_rounded;
+    }
+  }
+
+  Color _fileAccent(String? extension) {
+    switch ((extension ?? '').toLowerCase()) {
+      case 'pdf':
+        return const Color(0xFFE74C3C);
+      case 'doc':
+      case 'docx':
+        return const Color(0xFF2F80ED);
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return const Color(0xFF27AE60);
+      case 'ppt':
+      case 'pptx':
+        return const Color(0xFFF2994A);
+      case 'zip':
+      case 'rar':
+      case '7z':
+        return const Color(0xFF9B51E0);
+      default:
+        return AppColors.primary;
+    }
+  }
+
   Widget _buildAvatarForBubble() {
     return Container(
       width: 32,
@@ -1050,6 +1085,135 @@ class _DMChatScreenState extends State<DMChatScreen>
         Icons.person_rounded,
         size: 18,
         color: AppColors.primary,
+      ),
+    );
+  }
+
+  Widget _buildFileAttachmentCard({
+    required String fileName,
+    required String fileUrl,
+    required String? fileType,
+    required int? fileSize,
+    bool isOwn = false,
+    String? extension,
+  }) {
+    final ext =
+        extension ?? (fileName.contains('.') ? fileName.split('.').last : null);
+    final accent = _fileAccent(ext);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openAttachment(fileUrl),
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          width: 255,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isOwn
+                ? Colors.white.withValues(alpha: 0.16)
+                : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isOwn
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : const Color(0xFFE6EBF2),
+            ),
+            boxShadow: isOwn
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isOwn
+                      ? Colors.white.withValues(alpha: 0.95)
+                      : accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _fileIcon(fileName, fileType, ext),
+                  color: accent,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.2,
+                        fontWeight: FontWeight.w600,
+                        color: isOwn ? Colors.white : const Color(0xFF1A1A2E),
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _prettyFileType(
+                        fileType: fileType,
+                        fileName: fileName,
+                        extension: ext,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.2,
+                        fontWeight: FontWeight.w500,
+                        color: isOwn
+                            ? Colors.white.withValues(alpha: 0.86)
+                            : const Color(0xFF7B8794),
+                      ),
+                    ),
+                    if (fileSize != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatBytes(fileSize),
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.8,
+                          color: isOwn
+                              ? Colors.white.withValues(alpha: 0.72)
+                              : const Color(0xFF98A2B3),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isOwn
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.open_in_new_rounded,
+                  size: 18,
+                  color: isOwn ? Colors.white : const Color(0xFF667085),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

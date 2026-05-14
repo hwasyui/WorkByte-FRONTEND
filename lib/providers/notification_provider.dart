@@ -5,65 +5,87 @@ import '../services/notification_service.dart';
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service = NotificationService();
 
-  bool _isLoading = false;
-  String? _error;
   List<NotificationModel> _notifications = [];
+  int _unreadCount = 0;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  String? _error;
 
-  bool get isLoading => _isLoading;
-  String? get error => _error;
+  static const int _pageSize = 20;
+
   List<NotificationModel> get notifications => _notifications;
-  int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  int get unreadCount => _unreadCount;
+  bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
+  String? get error => _error;
 
-  Future<void> fetchNotifications(String token) async {
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+
+  Future<void> fetchNotifications({bool refresh = false}) async {
+    if (_isLoading) return;
+    if (!refresh && !_hasMore) return;
+
+    if (refresh) {
+      _notifications = [];
+      _hasMore = true;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final data = await _service.getNotifications(token);
-      _notifications = data.map((json) => NotificationModel.fromJson(json)).toList();
-      _isLoading = false;
-      notifyListeners();
+      final results = await _service.getNotifications(
+        limit: _pageSize,
+        offset: _notifications.length,
+      );
+      _notifications.addAll(results);
+      _hasMore = results.length == _pageSize;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
-      _isLoading = false;
-      notifyListeners();
     }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<bool> markAsRead(String token, String notificationId) async {
+  Future<void> fetchUnreadCount() async {
     try {
-      await _service.markAsRead(token, notificationId);
-      final index = _notifications.indexWhere((n) => n.id == notificationId);
-      if (index != -1) {
-        _notifications[index] = _notifications[index].copyWith(isRead: true);
-        notifyListeners();
-      }
-      return true;
-    } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _unreadCount = await _service.getUnreadCount();
       notifyListeners();
-      return false;
-    }
+    } catch (_) {}
   }
 
-  Future<bool> createNotification(
-    String token,
-    String userId,
-    String title,
-    String message,
-    String type, {
-    Map<String, dynamic>? data,
-  }) async {
+  // ── Mark read ─────────────────────────────────────────────────────────────
+
+  Future<void> markAsRead(String notificationId) async {
     try {
-      await _service.createNotification(token, userId, title, message, type, data: data);
-      // Refresh notifications after creating
-      await fetchNotifications(token);
-      return true;
-    } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      await _service.markAsRead(notificationId);
+      _notifications = _notifications.map((n) {
+        return n.id == notificationId ? n.copyWith(isRead: true) : n;
+      }).toList();
+      if (_unreadCount > 0) _unreadCount--;
       notifyListeners();
-      return false;
-    }
+    } catch (_) {}
+  }
+
+  Future<void> markAllRead() async {
+    try {
+      await _service.markAllRead();
+      _notifications = _notifications
+          .map((n) => n.copyWith(isRead: true))
+          .toList();
+      _unreadCount = 0;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void clear() {
+    _notifications = [];
+    _unreadCount = 0;
+    _isLoading = false;
+    _hasMore = true;
+    _error = null;
+    notifyListeners();
   }
 }

@@ -1,12 +1,15 @@
 import 'package:workbyte_app/core/constants/colors.dart';
 import 'package:workbyte_app/models/client_model.dart';
+import 'package:workbyte_app/models/job_file_model.dart';
 import 'package:workbyte_app/models/job_post_model.dart';
 import 'package:workbyte_app/models/job_role_model.dart';
 import 'package:workbyte_app/models/job_role_skill_model.dart';
+import 'package:workbyte_app/models/proposal_model.dart';
 import 'package:workbyte_app/models/skill_model.dart';
 import 'package:workbyte_app/providers/auth_provider.dart';
 import 'package:workbyte_app/providers/job_post_provider.dart';
 import 'package:workbyte_app/providers/profile_provider.dart';
+import 'package:workbyte_app/providers/proposal_provider.dart';
 import 'package:workbyte_app/providers/saved_items_provider.dart';
 import 'package:workbyte_app/providers/skill_provider.dart';
 import 'package:workbyte_app/services/api_service.dart';
@@ -17,6 +20,7 @@ import 'package:workbyte_app/widgets/report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
@@ -40,6 +44,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool analyzing = false;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
+
+  List<ProposalModel> myProposals = [];
+  bool proposalsLoading = true;
+
+  List<JobFileModel> _jobFiles = [];
+  bool _filesLoading = true;
 
   bool get isTeam => widget.job.projectType.toLowerCase() == 'team';
 
@@ -66,6 +76,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       fetchClient();
       fetchRoles();
       fetchAllSkills();
+      fetchMyProposals();
     });
   }
 
@@ -119,6 +130,67 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await context.read<SkillProvider>().fetchAllSkills(token);
     if (!mounted) return;
     setState(() => allSkills = context.read<SkillProvider>().skills);
+  }
+
+  Future<void> fetchMyProposals() async {
+    final auth = context.read<AuthProvider>();
+    final profile = context.read<ProfileProvider>();
+
+    if (auth.token == null || profile.freelancerProfile == null) {
+      if (mounted) {
+        setState(() {
+          myProposals = [];
+          proposalsLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      await context.read<ProposalProvider>().fetchProposalsByFreelancer(
+        token: auth.token!,
+        freelancerId: profile.freelancerProfile!.freelancerId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        myProposals = context.read<ProposalProvider>().proposals;
+        proposalsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('fetchMyProposals error: $e');
+      if (mounted) {
+        setState(() {
+          myProposals = [];
+          proposalsLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> openJobFile(JobFileModel file) async {
+    final uri = Uri.parse(file.fileUrl);
+    try {
+      final canOpen = await canLaunchUrl(uri);
+      if (canOpen) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not open file.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> analyzeJob() async {
@@ -461,6 +533,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   );
 
   void onApplyRole(JobRoleModel role) {
+    if (hasAppliedToThisJobPost(widget.job.jobPostId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You have already applied to this job.')),
+      );
+      return;
+    }
+
+    if (isRoleFilled(role)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This role is already full.')),
+      );
+      return;
+    }
+
     final profile = context.read<ProfileProvider>();
     if (!profile.isProfileComplete) {
       showDialog(
@@ -512,6 +598,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
       return;
     }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -537,14 +624,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         capitalize(reason.replaceAll('_', ' '));
   }
 
+  bool hasAppliedToThisJobPost(String jobPostId) {
+    return myProposals.any((p) => p.jobPostId == jobPostId);
+  }
+
+  bool hasAppliedToThisRole(String jobRoleId) {
+    return myProposals.any((p) => p.jobRoleId == jobRoleId);
+  }
+
+  bool isRoleFilled(JobRoleModel role) {
+    return role.positionsFilled >= role.positionsAvailable;
+  }
+
   // ── BUILD ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
     final profile = context.watch<ProfileProvider>();
     final auth = context.watch<AuthProvider>();
-
-    // 👇 NEW: self-ownership + closed status flags
+    final proposalProvider = context.watch<ProposalProvider>();
+    // NEW: self-ownership + closed status flags
     final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
     final isClosed = widget.job.status?.toLowerCase() == 'closed';
 
@@ -835,9 +934,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
           ],
           const SizedBox(height: 28),
-          sectionTitle(isTeam ? 'Roles' : 'Role'),
+          sectionTitle(isTeam ? 'Roles & Skills' : 'Role & Skills'),
           const SizedBox(height: 12),
           buildRolesSection(),
+          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            sectionTitle('Attachments (${_jobFiles.length})'),
+            const SizedBox(height: 12),
+            ..._jobFiles.map((f) => buildJobFileRow(f)),
+          ],
         ],
       ),
     );
@@ -935,6 +1040,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       );
     }
+
     if (roles.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -948,12 +1054,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       );
     }
+
     return Column(children: roles.map((r) => buildRoleCard(r)).toList());
   }
 
   Widget buildRoleCard(JobRoleModel role) {
     final skills = roleSkillsMap[role.jobRoleId] ?? [];
     final skillLookup = {for (final s in allSkills) s.skillId: s};
+
+    final alreadyAppliedToJob = hasAppliedToThisJobPost(widget.job.jobPostId);
+    final alreadyAppliedToRole = hasAppliedToThisRole(role.jobRoleId);
+    final roleFilled = isRoleFilled(role);
+
+    final disableApply = proposalsLoading || alreadyAppliedToJob || roleFilled;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1020,6 +1133,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 : 'Fixed',
                             const Color(0xFF7D7D7D),
                           ),
+                          if (roleFilled)
+                            miniChip('Filled', const Color(0xFFD32F2F)),
                         ],
                       ),
                     ],
@@ -1087,15 +1202,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
                   ),
                 ),
-                if (role.positionsFilled > 0)
-                  Text(
-                    '${role.positionsFilled} filled',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  '${role.positionsFilled} filled',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: roleFilled ? const Color(0xFFD32F2F) : primary,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -1127,10 +1241,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   return skillChip(name, s.isRequired, s.importanceLevel);
                 }).toList(),
               ),
+
             // Only freelancers see the apply button
             if (!context.read<ProfileProvider>().isClient) ...[
               const SizedBox(height: 14),
-              // Show ban notice inline if banned, otherwise normal apply button
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (auth.isReportBanned) {
@@ -1195,31 +1309,145 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     );
                   }
 
-                  return SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => onApplyRole(role),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: disableApply
+                              ? null
+                              : () => onApplyRole(role),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            disabledBackgroundColor: const Color(0xFFE0E0E0),
+                            disabledForegroundColor: const Color(0xFF9E9E9E),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            proposalsLoading
+                                ? 'Loading...'
+                                : roleFilled
+                                ? 'Role Filled'
+                                : alreadyAppliedToJob
+                                ? 'Applied'
+                                : 'Apply for Role',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Apply for Role',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+
+                      if (roleFilled) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'All positions for this role have been filled.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF7D7D7D),
+                          ),
                         ),
-                      ),
-                    ),
+                      ] else if (alreadyAppliedToRole) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'You applied for this role.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else if (alreadyAppliedToJob) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'You already applied for another role in this job.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF7D7D7D),
+                          ),
+                        ),
+                      ],
+                    ],
                   );
                 },
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildJobFileRow(JobFileModel file) {
+    final IconData icon;
+    switch (file.fileTypeIcon) {
+      case 'pdf':
+        icon = Icons.picture_as_pdf_outlined;
+      case 'image':
+        icon = Icons.image_outlined;
+      case 'word':
+        icon = Icons.description_outlined;
+      case 'archive':
+        icon = Icons.folder_zip_outlined;
+      default:
+        icon = Icons.attach_file;
+    }
+
+    return GestureDetector(
+      onTap: () => openJobFile(file),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: primary.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.fileName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: primary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (file.fileSizeFormatted.isNotEmpty)
+                    Text(
+                      '${file.fileType.toUpperCase()} · ${file.fileSizeFormatted}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFF7D7D7D),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'View',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: primary,
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
           ],
         ),
       ),

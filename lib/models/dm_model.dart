@@ -33,7 +33,7 @@ Map<String, dynamic>? _parseMap(dynamic value) {
 class DMAttachmentModel {
   final String attachmentId;
   final String dmMessageId;
-  final String filename;
+  final String fileName;
   final String fileUrl;
   final String fileType;
   final String mimeType;
@@ -44,7 +44,7 @@ class DMAttachmentModel {
   const DMAttachmentModel({
     required this.attachmentId,
     required this.dmMessageId,
-    required this.filename,
+    required this.fileName,
     required this.fileUrl,
     required this.fileType,
     required this.mimeType,
@@ -55,28 +55,17 @@ class DMAttachmentModel {
 
   factory DMAttachmentModel.fromJson(Map<String, dynamic> json) {
     return DMAttachmentModel(
-      attachmentId:
-          json['attachmentid'] as String? ??
-          json['attachment_id'] as String? ??
-          '',
-      dmMessageId:
-          json['dmmessageid'] as String? ??
-          json['dm_message_id'] as String? ??
-          '',
-      filename: json['filename'] as String? ?? '',
-      fileUrl: json['fileurl'] as String? ?? json['file_url'] as String? ?? '',
-      fileType:
-          json['filetype'] as String? ?? json['file_type'] as String? ?? '',
-      mimeType:
-          json['mimetype'] as String? ?? json['mime_type'] as String? ?? '',
-      fileSizeBytes:
-          json['filesizebytes'] as int? ?? json['file_size_bytes'] as int?,
-      durationSeconds:
-          (json['durationseconds'] ?? json['duration_seconds']) is num
-          ? ((json['durationseconds'] ?? json['duration_seconds']) as num)
-                .toDouble()
+      attachmentId: json['attachment_id'] as String? ?? '',
+      dmMessageId: json['dm_message_id'] as String? ?? '',
+      fileName: json['file_name'] as String? ?? '',
+      fileUrl: json['file_url'] as String? ?? '',
+      fileType: json['file_type'] as String? ?? '',
+      mimeType: json['mime_type'] as String? ?? '',
+      fileSizeBytes: json['file_size_bytes'] as int?,
+      durationSeconds: (json['duration_seconds']) is num
+          ? ((json['duration_seconds']) as num).toDouble()
           : null,
-      createdAt: _parseDate(json['createdat'] ?? json['created_at']),
+      createdAt: _parseDate(json['created_at']),
     );
   }
 }
@@ -109,22 +98,14 @@ class DMMessageModel {
   factory DMMessageModel.fromJson(Map<String, dynamic> json) {
     final rawAttachments = json['attachments'];
     return DMMessageModel(
-      dmMessageId:
-          json['dmmessageid'] as String? ??
-          json['dm_message_id'] as String? ??
-          '',
-      threadId:
-          json['threadid'] as String? ?? json['thread_id'] as String? ?? '',
-      senderId:
-          json['senderid'] as String? ?? json['sender_id'] as String? ?? '',
-      messageText:
-          json['messagetext'] as String? ??
-          json['message_text'] as String? ??
-          '',
+      dmMessageId: json['dm_message_id'] as String? ?? '',
+      threadId: json['thread_id'] as String? ?? '',
+      senderId: json['sender_id'] as String? ?? '',
+      messageText: json['message_text'] as String? ?? '',
       metadata: _parseMap(json['metadata']),
-      isRead: json['isread'] as bool? ?? json['is_read'] as bool? ?? false,
-      readAt: _parseDate(json['readat'] ?? json['read_at']),
-      sentAt: _parseDate(json['sentat'] ?? json['sent_at']),
+      isRead: json['is_read'] as bool? ?? false,
+      readAt: _parseDate(json['read_at']),
+      sentAt: _parseDate(json['sent_at']),
       status: json['status'] as String? ?? 'sent',
       attachments: rawAttachments is List
           ? rawAttachments
@@ -173,15 +154,12 @@ class DMUserPreview {
 
   factory DMUserPreview.fromJson(Map<String, dynamic> json) {
     return DMUserPreview(
-      userId: json['userid'] as String? ?? json['user_id'] as String? ?? '',
-      fullName: json['fullname'] as String? ?? json['full_name'] as String?,
-      profilePictureUrl:
-          json['profilepictureurl'] as String? ??
-          json['profile_picture_url'] as String?,
+      userId: json['user_id'] as String? ?? '',
+      fullName: json['full_name'] as String?,
+      profilePictureUrl: json['profile_picture_url'] as String?,
       role: json['role'] as String?,
-      freelancerId:
-          json['freelancerid'] as String? ?? json['freelancer_id'] as String?,
-      clientId: json['clientid'] as String? ?? json['client_id'] as String?,
+      freelancerId: json['freelancer_id'] as String?,
+      clientId: json['client_id'] as String?,
     );
   }
 }
@@ -194,9 +172,8 @@ class DMJobPostPreview {
 
   factory DMJobPostPreview.fromJson(Map<String, dynamic> json) {
     return DMJobPostPreview(
-      jobPostId:
-          json['jobpostid'] as String? ?? json['job_post_id'] as String? ?? '',
-      jobTitle: json['jobtitle'] as String? ?? json['job_title'] as String?,
+      jobPostId: json['job_post_id'] as String? ?? '',
+      jobTitle: json['job_title'] as String?,
     );
   }
 }
@@ -210,10 +187,9 @@ class DMLastMessagePreview {
 
   factory DMLastMessagePreview.fromJson(Map<String, dynamic> json) {
     return DMLastMessagePreview(
-      messageText:
-          json['messagetext'] as String? ?? json['message_text'] as String?,
-      sentAt: _parseDate(json['sentat'] ?? json['sent_at']),
-      senderId: json['senderid'] as String? ?? json['sender_id'] as String?,
+      messageText: json['message_text'] as String?,
+      sentAt: _parseDate(json['sent_at']),
+      senderId: json['sender_id'] as String?,
     );
   }
 }
@@ -245,20 +221,11 @@ class DMThreadModel {
 
   factory DMThreadModel.fromJson(Map<String, dynamic> json) {
     return DMThreadModel(
-      threadId:
-          json['threadid'] as String? ?? json['thread_id'] as String? ?? '',
+      threadId: json['thread_id'] as String? ?? '',
       status: json['status'] as String? ?? 'request',
-      initiatorId:
-          json['initiatorid'] as String? ??
-          json['initiator_id'] as String? ??
-          '',
-      contractId:
-          json['contractid'] as String? ?? json['contract_id'] as String?,
-      otherUser: json['otheruser'] != null
-          ? DMUserPreview.fromJson(
-              Map<String, dynamic>.from(json['otheruser'] as Map),
-            )
-          : json['other_user'] != null
+      initiatorId: json['initiator_id'] as String? ?? '',
+      contractId: json['contract_id'] as String?,
+      otherUser: json['other_user'] != null
           ? DMUserPreview.fromJson(
               Map<String, dynamic>.from(json['other_user'] as Map),
             )
@@ -272,19 +239,14 @@ class DMThreadModel {
               Map<String, dynamic>.from(json['job_post'] as Map),
             )
           : null,
-      lastMessage: json['lastmessage'] != null
-          ? DMLastMessagePreview.fromJson(
-              Map<String, dynamic>.from(json['lastmessage'] as Map),
-            )
-          : json['last_message'] != null
+      lastMessage: json['last_message'] != null
           ? DMLastMessagePreview.fromJson(
               Map<String, dynamic>.from(json['last_message'] as Map),
             )
           : null,
-      unreadCount:
-          json['unreadcount'] as int? ?? json['unread_count'] as int? ?? 0,
-      createdAt: _parseDate(json['createdat'] ?? json['created_at']),
-      updatedAt: _parseDate(json['updatedat'] ?? json['updated_at']),
+      unreadCount: json['unread_count'] as int? ?? 0,
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
     );
   }
 }
@@ -305,17 +267,13 @@ class DMThreadStartResult {
       thread: DMThreadModel.fromJson(
         Map<String, dynamic>.from(json['thread'] as Map),
       ),
-      firstMessage: json['firstmessage'] != null
-          ? DMMessageModel.fromJson(
-              Map<String, dynamic>.from(json['firstmessage'] as Map),
-            )
-          : json['first_message'] != null
+      firstMessage: json['first_message'] != null
           ? DMMessageModel.fromJson(
               Map<String, dynamic>.from(json['first_message'] as Map),
             )
           : null,
       alreadyExists:
-          json['alreadyexists'] as bool? ??
+          json['already_exists'] as bool? ??
           json['already_exists'] as bool? ??
           false,
     );
@@ -341,9 +299,8 @@ class DMMessagePage {
             (e) => DMMessageModel.fromJson(Map<String, dynamic>.from(e as Map)),
           )
           .toList(),
-      hasMore: json['hasmore'] as bool? ?? json['has_more'] as bool? ?? false,
-      nextCursor:
-          json['nextcursor'] as String? ?? json['next_cursor'] as String?,
+      hasMore: json['has_more'] as bool? ?? false,
+      nextCursor: json['next_cursor'] as String?,
     );
   }
 }
@@ -365,10 +322,7 @@ class DMThreadListResult {
             (e) => DMThreadModel.fromJson(Map<String, dynamic>.from(e as Map)),
           )
           .toList(),
-      pendingRequestCount:
-          json['pendingrequestscount'] as int? ??
-          json['pending_requests_count'] as int? ??
-          0,
+      pendingRequestCount: json['pending_requests_count'] as int? ?? 0,
     );
   }
 }

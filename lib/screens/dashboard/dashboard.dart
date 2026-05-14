@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:workbyte_app/providers/notification_provider.dart';
 import 'package:workbyte_app/screens/category/category_list.dart';
+import 'package:workbyte_app/screens/dashboard/notification.dart';
 import 'package:workbyte_app/services/job_post_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
@@ -157,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadRecommendedJobs();
       _loadTopFreelancers();
       _loadCategoryCounts();
+      context.read<NotificationProvider>().fetchUnreadCount();
     });
   }
 
@@ -535,6 +538,11 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
       drawer: const SideDrawer(),
+      onDrawerChanged: (isOpened) {
+        if (isOpened) {
+          context.read<AuthProvider>().refreshUser();
+        }
+      },
       floatingActionButton: null,
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
@@ -635,43 +643,62 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const _NotificationPlaceholder(),
-                              ),
-                            ),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.secondary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.notifications_outlined,
-                                    size: 20,
-                                    color: AppColors.primary,
+                          // AFTER — live unread badge, navigates to real NotificationScreen
+                          Consumer<NotificationProvider>(
+                            builder: (context, notifProvider, _) {
+                              final count = notifProvider.unreadCount;
+                              return GestureDetector(
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const NotificationScreen(),
                                   ),
                                 ),
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEC1B1B),
-                                      shape: BoxShape.circle,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondary,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.notifications_outlined,
+                                        size: 20,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
-                                  ),
+                                    if (count > 0)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 16,
+                                            minHeight: 16,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFEC1B1B),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            count > 99 ? '99+' : '$count',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         ],
                       );

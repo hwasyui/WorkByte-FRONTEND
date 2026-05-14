@@ -58,6 +58,7 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
     });
   }
 
+  // In _loadPeople(), after mapping, add sorting for freelancers:
   Future<void> _loadPeople() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
@@ -76,6 +77,15 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
       final mapped = widget.showClients
           ? rawItems.map((e) => ClientModel.fromJson(e)).toList()
           : rawItems.map((e) => FreelancerModel.fromJson(e)).toList();
+
+      // ── Sort freelancers by weighted review average (descending) ──
+      if (!widget.showClients) {
+        (mapped as List<FreelancerModel>).sort((a, b) {
+          final aScore = a.weightedReviewAvg ?? 0.0;
+          final bScore = b.weightedReviewAvg ?? 0.0;
+          return bScore.compareTo(aScore);
+        });
+      }
 
       setState(() {
         _all = mapped;
@@ -369,6 +379,10 @@ class _FreelancerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double? avg = freelancer.weightedReviewAvg;
+    final bool hasRating = avg != null;
+    final bool isTopRated = hasRating && avg >= 4.5;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -395,13 +409,53 @@ class _FreelancerCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    freelancer.displayName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
-                    ),
+                  // ── Name row with optional Top Rated badge ──
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          freelancer.displayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A2E),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isTopRated) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3CD),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 10,
+                                color: Color(0xFFD4A017),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Top Rated',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFD4A017),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -413,6 +467,9 @@ class _FreelancerCard extends StatelessWidget {
                       color: const Color(0xFF7D7D7D),
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  // ── Star rating row ──
+                  _StarRating(avg: avg),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -628,6 +685,60 @@ class _StatChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StarRating extends StatelessWidget {
+  final double? avg;
+
+  const _StarRating({this.avg});
+
+  @override
+  Widget build(BuildContext context) {
+    if (avg == null) {
+      return Text(
+        'No reviews yet',
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          color: const Color(0xFFB5B4B4),
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Build 5 stars
+        ...List.generate(5, (i) {
+          final starValue = i + 1;
+          IconData icon;
+          Color color;
+
+          if (avg! >= starValue) {
+            icon = Icons.star_rounded;
+            color = const Color(0xFFFBBC04);
+          } else if (avg! >= starValue - 0.5) {
+            icon = Icons.star_half_rounded;
+            color = const Color(0xFFFBBC04);
+          } else {
+            icon = Icons.star_outline_rounded;
+            color = const Color(0xFFD1D5DB);
+          }
+
+          return Icon(icon, size: 14, color: color);
+        }),
+        const SizedBox(width: 5),
+        Text(
+          avg!.toStringAsFixed(1),
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1A1A2E),
+          ),
+        ),
+      ],
     );
   }
 }

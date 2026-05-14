@@ -23,10 +23,18 @@ import 'providers/appeal_provider.dart';
 import 'providers/report_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'services/notification_service.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   GoogleFonts.config.allowRuntimeFetching = false;
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.initialize(navigatorKey: navigatorKey);
   runApp(const WorkByteApp());
 }
 
@@ -58,6 +66,7 @@ class WorkByteApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'WorkByte',
+        navigatorKey: navigatorKey, // ← add this
         builder: (context, child) {
           return Consumer2<ConnectivityProvider, AuthProvider>(
             builder: (context, connectivity, auth, _) {
@@ -65,6 +74,8 @@ class WorkByteApp extends StatelessWidget {
               if (auth.sessionExpired) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   auth.clearSessionExpired();
+                  // ← also clear notifications on session expiry
+                  context.read<NotificationProvider>().clear();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -87,13 +98,10 @@ class WorkByteApp extends StatelessWidget {
                 );
               }
 
-              // Stack overlay instead of replacing child
               return Stack(
                 children: [
-                  child ??
-                      const SizedBox.shrink(), // session stays alive underneath
-                  if (!connectivity.hasInternet)
-                    const NoInternetScreen(), // sits on top, doesn't destroy child
+                  child ?? const SizedBox.shrink(),
+                  if (!connectivity.hasInternet) const NoInternetScreen(),
                 ],
               );
             },

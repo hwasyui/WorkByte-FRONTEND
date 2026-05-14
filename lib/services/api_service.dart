@@ -207,6 +207,8 @@ class ApiService {
         queryParameters: {
           'page': page.toString(),
           'page_size': pageSize.toString(),
+          'order_by': 'weighted_review_avg',
+          'order_dir': 'desc',
         },
       );
 

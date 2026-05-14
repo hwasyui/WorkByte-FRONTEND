@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:workbyte_app/providers/notification_provider.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -188,7 +189,12 @@ class SideDrawer extends StatelessWidget {
                       onPressed: () {
                         final auth = dialogContext.read<AuthProvider>();
                         final profile = dialogContext.read<ProfileProvider>();
-                        auth.logout(profileProvider: profile);
+                        final notification = dialogContext
+                            .read<NotificationProvider>();
+                        auth.logout(
+                          profileProvider: profile,
+                          notificationProvider: notification,
+                        );
                         Navigator.of(
                           dialogContext,
                           rootNavigator: true,

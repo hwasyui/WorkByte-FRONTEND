@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:workbyte_app/services/notification_service.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'profile_provider.dart';
+import 'notification_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
@@ -83,6 +85,8 @@ class AuthProvider extends ChangeNotifier {
       _token = await _service.login(email, password);
       await _service.saveToken(_token!);
       _currentUser = await _service.getMe(_token!);
+
+      await NotificationService.saveTokenToBackend();
 
       if (profileProvider != null) {
         await profileProvider.fetchProfile(
@@ -207,13 +211,17 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> handleSessionExpired({ProfileProvider? profileProvider}) async {
+  Future<void> handleSessionExpired({
+    ProfileProvider? profileProvider,
+    NotificationProvider? notificationProvider,
+  }) async {
     await _service.clearSavedToken();
     _token = null;
     _currentUser = null;
     _error = null;
     _sessionExpired = true;
     profileProvider?.clear();
+    notificationProvider?.clear();
     notifyListeners();
   }
 
@@ -222,13 +230,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> logout({ProfileProvider? profileProvider}) async {
+  Future<void> logout({
+    ProfileProvider? profileProvider,
+    NotificationProvider? notificationProvider,
+  }) async {
     await _service.clearSavedToken();
     _token = null;
     _currentUser = null;
     _error = null;
     _sessionExpired = false;
     profileProvider?.clear();
+    notificationProvider?.clear();
     notifyListeners();
   }
 

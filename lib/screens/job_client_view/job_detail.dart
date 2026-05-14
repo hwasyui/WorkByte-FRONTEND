@@ -70,6 +70,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (widget.job.experienceLevel != null) {
       tags.add(_capitalize(widget.job.experienceLevel!));
     }
+    if (widget.job.projectScope != null) {
+      tags.add(_capitalize(widget.job.projectScope!));
+    }
     return tags;
   }
 
@@ -227,77 +230,21 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Future<void> _acceptBid(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Accept Bid',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Accept bid from ${proposal.freelancerName ?? 'this freelancer'}?',
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D)),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Accept',
-              style: GoogleFonts.poppins(
-                color: _primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final freelancerName = proposal.freelancerName?.trim().isNotEmpty == true
+        ? proposal.freelancerName!.trim()
+        : 'this freelancer';
+
+    final confirmed = await _showActionDialog(
+      title: 'Accept Bid',
+      message:
+          'Accept the bid from $freelancerName and continue to contract setup?',
+      primaryLabel: 'Continue',
+      secondaryLabel: 'Cancel',
+      icon: Icons.verified_rounded,
+      accent: _primary,
     );
 
     if (confirmed != true || !mounted) return;
-
-    final proceedToContract = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Generate Contract',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Proceed to generate contract terms?',
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Later',
-              style: GoogleFonts.poppins(color: const Color(0xFF7D7D7D)),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Generate',
-              style: GoogleFonts.poppins(
-                color: _primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
 
     final success = await context.read<ProposalProvider>().acceptProposal(
       token: token,
@@ -320,18 +267,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bid accepted!',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        backgroundColor: _primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-
     setState(() {
       _proposals = _proposals
           .map(
@@ -342,10 +277,85 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .toList();
     });
 
-    if (proceedToContract != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Bid accepted. Continue with contract setup.',
+          style: GoogleFonts.poppins(fontSize: 12),
+        ),
+        backgroundColor: _primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+
+    _createAndNavigateToContract(proposal);
+  }
+
+  Future<void> _rejectBid(ProposalModel proposal) async {
+    final token = context.read<AuthProvider>().token!;
+
+    final freelancerName = proposal.freelancerName?.trim().isNotEmpty == true
+        ? proposal.freelancerName!.trim()
+        : 'this freelancer';
+
+    final confirmed = await _showActionDialog(
+      title: 'Reject Bid',
+      message:
+          'Reject the bid from $freelancerName? This action will mark the proposal as rejected.',
+      primaryLabel: 'Reject bid',
+      secondaryLabel: 'Cancel',
+      icon: Icons.close_rounded,
+      accent: Colors.redAccent,
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final success = await context.read<ProposalProvider>().rejectProposal(
+      token: token,
+      proposalId: proposal.proposalId,
+    );
 
     if (!mounted) return;
-    _createAndNavigateToContract(proposal);
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to reject bid.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _proposals = _proposals
+          .map(
+            (p) => p.proposalId == proposal.proposalId
+                ? p.copyWith(status: 'rejected')
+                : p,
+          )
+          .toList();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Bid rejected.',
+          style: GoogleFonts.poppins(fontSize: 12),
+        ),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   Future<void> _createAndNavigateToContract(ProposalModel proposal) async {
@@ -802,6 +812,25 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
+  String _projectCategoryLabel(String? value) {
+    if (value == null || value.trim().isEmpty) return 'General';
+
+    const labels = {
+      'mobile_dev': 'Mobile Dev',
+      'backend_dev': 'Backend Dev',
+      'web_dev': 'Web Dev',
+      'ui_ux_design': 'UI/UX Design',
+      'graphic_design': 'Graphic Design',
+      'copywriting': 'Copywriting',
+      'data_analytics': 'Data Analytics',
+      'video_editing': 'Video Editing',
+      'general': 'General',
+    };
+
+    final key = value.trim().toLowerCase();
+    return labels[key] ?? 'General';
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -849,7 +878,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         ? _client!.websiteUrl!
                         : ''),
               jobTitle: widget.job.jobTitle,
-              category: _capitalize(widget.job.projectCategory),
+              category: _projectCategoryLabel(widget.job.projectCategory),
               tags: _tags,
               // 👇 NEW: no report button on own job post
               onReport: null,
@@ -1084,159 +1113,383 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       proposal.proposalId,
     );
 
+    final canDecide = !isAccepted && !isRejected;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: isAccepted
-              ? AppColors.primary.withOpacity(0.3)
-              : const Color(0xFFF0F0F1),
+              ? AppColors.primary.withValues(alpha: 0.20)
+              : isRejected
+              ? Colors.red.withValues(alpha: 0.14)
+              : const Color(0xFFEDEEF2),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipOval(
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFF3F4F6),
+                  ),
+                  clipBehavior: Clip.antiAlias,
                   child:
                       (proposal.freelancerAvatarUrl != null &&
                           proposal.freelancerAvatarUrl!.isNotEmpty)
                       ? Image.network(
                           proposal.freelancerAvatarUrl!,
-                          width: 44,
-                          height: 44,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _avatarFallback(),
                         )
                       : _avatarFallback(),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    proposal.freelancerName ?? 'Freelancer',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF333333),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        proposal.freelancerName ?? 'Freelancer',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        proposal.submittedAt != null
+                            ? _formatDate(proposal.submittedAt!)
+                            : 'Recently submitted',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF8A8F98),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (isAccepted)
+                  _modernStatusBadge(
+                    label: 'Accepted',
+                    textColor: AppColors.primary,
+                    bgColor: AppColors.primary.withValues(alpha: 0.10),
+                  )
+                else if (isRejected)
+                  _modernStatusBadge(
+                    label: 'Rejected',
+                    textColor: Colors.redAccent,
+                    bgColor: Colors.redAccent.withValues(alpha: 0.10),
+                  )
+                else
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE8EAF0)),
+                    ),
+                    child: const Icon(
+                      Icons.push_pin_outlined,
+                      size: 18,
+                      color: Color(0xFF8A8F98),
                     ),
                   ),
-                ),
-                if (isAccepted)
-                  _statusBadge('Accepted', _primary)
-                else if (isRejected)
-                  _statusBadge('Rejected', Colors.red)
-                else
-                  const Icon(
-                    Icons.push_pin_outlined,
-                    size: 20,
-                    color: Color(0xFF7D7D7D),
-                  ),
               ],
             ),
-            const SizedBox(height: 10),
+
+            const SizedBox(height: 14),
+
             Wrap(
               spacing: 8,
-              runSpacing: 6,
+              runSpacing: 8,
               children: [
-                if (roleTitle.isNotEmpty) _roleChip(roleTitle),
-                _budgetChip(
-                  'Rp. ${proposal.proposedBudget.toStringAsFixed(0)}',
+                if (roleTitle.isNotEmpty)
+                  _softChip(roleTitle, icon: Icons.work_outline_rounded),
+                _softChip(
+                  'Rp ${proposal.proposedBudget.toStringAsFixed(0)}',
+                  icon: Icons.account_balance_wallet_outlined,
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              proposal.coverLetter,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: const Color(0xFF333333),
-                height: 1.6,
-              ),
-              maxLines: isExpanded ? null : 4,
-              overflow: isExpanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
-            ),
-            if (proposal.coverLetter.trim().isNotEmpty) ...[
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isExpanded) {
-                      _expandedProposalIds.remove(proposal.proposalId);
-                    } else {
-                      _expandedProposalIds.add(proposal.proposalId);
-                    }
-                  });
-                },
-                child: Text(
-                  isExpanded ? 'Show less' : 'Read more',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-            if (files.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ...files.map((f) => _attachmentRow(f)),
-            ],
-            const SizedBox(height: 6),
-            if (proposal.submittedAt != null)
-              Text(
-                _formatDate(proposal.submittedAt!),
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: const Color(0xFF7D7D7D),
-                ),
-              ),
+
             const SizedBox(height: 14),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFEDEFF3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    proposal.coverLetter.trim().isEmpty
+                        ? 'No cover letter provided.'
+                        : proposal.coverLetter,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      color: const Color(0xFF374151),
+                      height: 1.65,
+                    ),
+                    maxLines: isExpanded ? null : 4,
+                    overflow: isExpanded
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                  ),
+                  if (proposal.coverLetter.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (isExpanded) {
+                            _expandedProposalIds.remove(proposal.proposalId);
+                          } else {
+                            _expandedProposalIds.add(proposal.proposalId);
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          isExpanded ? 'Show less' : 'Read more',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            if (files.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...files.map(
+                (f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _attachmentRow(f),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 14),
+
             Row(
               children: [
                 Expanded(
-                  child: _actionButton(
-                    icon: Icons.check,
-                    label: 'Accept bid',
-                    onTap: isAccepted || isRejected
-                        ? null
-                        : () => _acceptBid(proposal),
-                    muted: isAccepted || isRejected,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _actionButton(
-                    icon: Icons.mail_outline,
+                  child: _utilityActionButton(
+                    icon: Icons.mail_outline_rounded,
                     label: 'Message',
                     onTap: () => _messageBidder(proposal),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: _actionButton(
-                    icon: Icons.person_outline,
+                  child: _utilityActionButton(
+                    icon: Icons.person_outline_rounded,
                     label: 'Profile',
                     onTap: () => _viewFreelancerProfile(proposal),
                   ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFEEF0F4)),
+            const SizedBox(height: 14),
+
+            if (canDecide)
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _acceptBid(proposal),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(Icons.check_rounded, size: 18),
+                        label: Text(
+                          'Accept bid',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton.icon(
+                    onPressed: () => _rejectBid(proposal),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    label: Text(
+                      'Reject',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isAccepted
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : Colors.redAccent.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(
+                    isAccepted
+                        ? 'This bid has been accepted'
+                        : 'This bid has been rejected',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: isAccepted ? AppColors.primary : Colors.redAccent,
+                    ),
+                  ),
+                ),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modernStatusBadge({
+    required String label,
+    required Color textColor,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _softChip(String label, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8FB),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE9ECF2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: const Color(0xFF7C82A1)),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF5B6178),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _utilityActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE9EDF3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 17, color: const Color(0xFF667085)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF475467),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1244,65 +1497,241 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   Widget _attachmentRow(ProposalFileModel file) {
     IconData icon;
+    Color accent;
+
     if (file.isPdf) {
-      icon = Icons.picture_as_pdf_outlined;
+      icon = Icons.picture_as_pdf_rounded;
+      accent = const Color(0xFFE74C3C);
     } else if (file.isImage) {
       icon = Icons.image_outlined;
+      accent = const Color(0xFF8E6CEF);
     } else {
-      icon = Icons.attach_file;
+      icon = Icons.attach_file_rounded;
+      accent = AppColors.primary;
     }
 
-    return GestureDetector(
-      onTap: () => _openFile(file),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: _primary.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _primary.withOpacity(0.25)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: _primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    file.fileName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: _primary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (file.formattedSize.isNotEmpty)
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openFile(file),
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE9EDF3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      file.formattedSize,
+                      file.fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: const Color(0xFF7D7D7D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF25324B),
                       ),
                     ),
-                ],
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Text(
+                          file.isPdf
+                              ? 'PDF Document'
+                              : file.isImage
+                              ? 'Image File'
+                              : 'Attachment',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            color: const Color(0xFF8A8F98),
+                          ),
+                        ),
+                        if (file.formattedSize.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 3,
+                            height: 3,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFC4C7CF),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            file.formattedSize,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
+                              color: const Color(0xFF8A8F98),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'View',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: _primary,
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFE6EAF0)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Open',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF667085),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      size: 14,
+                      color: Color(0xFF667085),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Future<bool?> _showActionDialog({
+    required String title,
+    required String message,
+    required String primaryLabel,
+    required IconData icon,
+    required Color accent,
+    String secondaryLabel = 'Cancel',
+    bool isDestructive = false,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 30, color: accent),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1A1A2E),
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF6B7280),
+                    height: 1.55,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          secondaryLabel,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          primaryLabel,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1312,92 +1741,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     color: const Color(0xFFF0F0F1),
     child: const Icon(Icons.person, color: Color(0xFF7D7D7D), size: 24),
   );
-
-  Widget _statusBadge(String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: color.withOpacity(0.3)),
-    ),
-    child: Text(
-      label,
-      style: GoogleFonts.poppins(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: color,
-      ),
-    ),
-  );
-
-  Widget _roleChip(String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-    decoration: BoxDecoration(
-      color: _primary.withOpacity(0.08),
-      border: Border.all(color: _primary.withOpacity(0.4)),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.work_outline, size: 11, color: AppColors.primary),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: _primary,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _budgetChip(String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-    decoration: BoxDecoration(
-      border: Border.all(color: const Color(0xFFF0F0F1)),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      label,
-      style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF333333)),
-    ),
-  );
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback? onTap,
-    bool muted = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: muted ? const Color(0xFFB5B4B4) : _primary,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildWorkersTab() {
     return Padding(

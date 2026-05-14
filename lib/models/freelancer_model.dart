@@ -12,6 +12,7 @@ class FreelancerModel {
   final int totalProjects;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final double? weightedReviewAvg;
 
   const FreelancerModel({
     required this.freelancerId,
@@ -27,6 +28,7 @@ class FreelancerModel {
     this.totalProjects = 0,
     this.createdAt,
     this.updatedAt,
+    this.weightedReviewAvg,
   });
 
   factory FreelancerModel.fromJson(Map<String, dynamic> json) =>
@@ -48,6 +50,7 @@ class FreelancerModel {
         updatedAt: json['updated_at'] != null
             ? DateTime.tryParse(json['updated_at'].toString())
             : null,
+        weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
       );
 
   String get displayName => fullName.isNotEmpty ? fullName : 'Freelancer';
@@ -69,13 +72,16 @@ class FreelancerModel {
     String? rateTime,
     String? rateCurrency,
     bool clearProfilePicture = false,
+    double? weightedReviewAvg,
   }) => FreelancerModel(
     freelancerId: freelancerId,
     userId: userId,
     fullName: fullName ?? this.fullName,
     bio: bio ?? this.bio,
     cvFileUrl: cvFileUrl ?? this.cvFileUrl,
-    profilePictureUrl: clearProfilePicture ? null : (profilePictureUrl ?? this.profilePictureUrl),
+    profilePictureUrl: clearProfilePicture
+        ? null
+        : (profilePictureUrl ?? this.profilePictureUrl),
     jobTitle: jobTitle ?? this.jobTitle,
     estimatedRate: estimatedRate ?? this.estimatedRate,
     rateTime: rateTime ?? this.rateTime,
@@ -83,5 +89,6 @@ class FreelancerModel {
     totalProjects: totalProjects,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    weightedReviewAvg: weightedReviewAvg ?? this.weightedReviewAvg,
   );
 }
