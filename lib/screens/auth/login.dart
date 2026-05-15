@@ -6,6 +6,8 @@ import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
+import '../../screens/auth/forgot_password.dart';
+import '../../screens/auth/oauth_role_select.dart';
 import '../../screens/dashboard/dashboard.dart';
 import '../../screens/admin/admin_shell.dart';
 import '../../providers/auth_provider.dart';
@@ -62,6 +64,48 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     return _emailError == null && _passwordError == null;
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final result = await authProvider.loginWithGoogle(profileProvider: profileProvider);
+
+    if (!mounted) return;
+
+    if (result == null) {
+      final err = authProvider.error ?? 'Google login failed';
+      if (err != 'Google login cancelled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err)),
+        );
+      }
+      return;
+    }
+
+    final isNewUser = result['is_new_user'] as bool;
+    if (isNewUser) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+      );
+      return;
+    }
+
+    final user = authProvider.currentUser;
+    if (user?.isAdmin == true) {
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -202,7 +246,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: GestureDetector(
-                                  onTap: () {},
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ForgotPasswordScreen(),
+                                    ),
+                                  ),
                                   child: Text(
                                     'Forgot password?',
                                     style: AppText.caption.copyWith(
@@ -289,7 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     SocialButton(
                                       assetPath: 'assets/google.png',
                                       iconSize: 34,
-                                      onPressed: () {},
+                                      onPressed: _handleGoogleLogin,
                                     ),
                                   ],
                                 ),

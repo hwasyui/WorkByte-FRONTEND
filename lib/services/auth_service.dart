@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
@@ -16,6 +18,26 @@ class AuthService {
   );
 
   static const String _tokenKey = 'auth_token';
+
+  Future<Map<String, dynamic>> loginWithGoogle() async {
+    final authUrl = '$_baseUrl/auth/oauth/google';
+    try {
+      final result = await FlutterWebAuth2.authenticate(
+        url: authUrl,
+        callbackUrlScheme: 'workbyte',
+      );
+      final uri = Uri.parse(result);
+      final error = uri.queryParameters['error'];
+      if (error != null) throw Exception(error);
+      final token = uri.queryParameters['token'];
+      if (token == null || token.isEmpty) throw Exception('No token received');
+      final isNewUser = uri.queryParameters['is_new_user'] == 'true';
+      return {'token': token, 'is_new_user': isNewUser};
+    } on PlatformException catch (e) {
+      if (e.code == 'CANCELED') throw Exception('Google login cancelled');
+      throw Exception('Google login failed: ${e.message}');
+    }
+  }
 
   Future<String> login(String email, String password) async {
     final response = await http.post(
@@ -151,6 +173,40 @@ class AuthService {
           body['message'] ??
           body['detail'] ??
           'Failed to add role',
+    );
+  }
+
+  Future<void> forgotPassword({required String email}) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+    throw Exception(
+      data['details'] ?? data['message'] ?? data['detail'] ?? 'Failed to send reset code',
+    );
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+    throw Exception(
+      data['details'] ?? data['message'] ?? data['detail'] ?? 'Password reset failed',
     );
   }
 

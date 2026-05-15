@@ -7,7 +7,10 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/login.dart';
 import '../../screens/auth/verify_email.dart';
+import '../../screens/auth/oauth_role_select.dart';
+import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -91,6 +94,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailError == null &&
         _passwordError == null &&
         _confirmPasswordError == null; // ← NEW
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final result = await authProvider.loginWithGoogle(profileProvider: profileProvider);
+
+    if (!mounted) return;
+
+    if (result == null) {
+      final err = authProvider.error ?? 'Google sign-up failed';
+      if (err != 'Google login cancelled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err)),
+        );
+      }
+      return;
+    }
+
+    final isNewUser = result['is_new_user'] as bool;
+    if (isNewUser) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+      );
+    } else {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    }
   }
 
   Future<void> _handleSignUp() async {
@@ -351,7 +387,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     SocialButton(
                                       assetPath: 'assets/google.png',
                                       iconSize: 34,
-                                      onPressed: () {},
+                                      onPressed: _handleGoogleSignUp,
                                     ),
                                   ],
                                 ),

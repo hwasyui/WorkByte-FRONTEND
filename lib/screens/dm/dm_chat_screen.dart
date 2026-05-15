@@ -1,4 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +38,15 @@ class _DMChatScreenState extends State<DMChatScreen>
   PlatformFile? _selectedFile;
   String? _selectedFilePath;
   bool _isSendingFile = false;
+
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _recordingPath;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
+  String? _playingMessageId;
+  bool _isAudioPlaying = false;
+  StreamSubscription<void>? _playerCompleteSub;
 
   late AnimationController _sendButtonController;
   late Animation<double> _sendButtonScale;
@@ -73,6 +86,10 @@ class _DMChatScreenState extends State<DMChatScreen>
     _focusNode.dispose();
     _sendButtonController.dispose();
     _recordingController.dispose();
+    _playerCompleteSub?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    _recordingTimer?.cancel();
     super.dispose();
   }
 
@@ -246,6 +263,232 @@ class _DMChatScreenState extends State<DMChatScreen>
     return fileType.replaceAll('_', ' ').toUpperCase();
   }
 
+  Widget _buildVoiceMessageBubble(
+    DMAttachmentModel attachment,
+    bool isOwn,
+    String messageId,
+  ) {
+    const barHeights = [
+      8.0, 14.0, 20.0, 12.0, 18.0, 10.0, 22.0, 16.0, 8.0,
+      14.0, 20.0, 10.0, 18.0, 12.0, 22.0, 8.0, 16.0, 14.0,
+    ];
+    final isThisPlaying = _playingMessageId == messageId && _isAudioPlaying;
+    final durSec = attachment.durationSeconds?.round() ?? 0;
+    final durLabel =
+        '${(durSec ~/ 60)}:${(durSec % 60).toString().padLeft(2, '0')}';
+
+    return GestureDetector(
+      onTap: () => _togglePlayback(attachment.fileUrl, messageId),
+      child: SizedBox(
+        width: 210,
+        child: Row(
+          children: [
+            Icon(
+              isThisPlaying
+                  ? Icons.pause_circle_filled_rounded
+                  : Icons.play_circle_filled_rounded,
+              size: 38,
+              color: isOwn ? Colors.white : AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: List.generate(barHeights.length, (i) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
+                        child: Container(
+                          width: 3,
+                          height: barHeights[i],
+                          decoration: BoxDecoration(
+                            color: isOwn
+                                ? Colors.white.withValues(
+                                    alpha: isThisPlaying ? 1.0 : 0.55,
+                                  )
+                                : AppColors.primary.withValues(
+                                    alpha: isThisPlaying ? 1.0 : 0.45,
+                                  ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    durSec > 0 ? durLabel : 'Voice message',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      color: isOwn
+                          ? Colors.white.withValues(alpha: 0.75)
+                          : const Color(0xFF9A9AA3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startRecording() async {
+    final hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Microphone permission denied',
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _audioRecorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+
+    setState(() {
+      _isRecording = true;
+      _recordingPath = path;
+      _recordingSeconds = 0;
+    });
+
+    _recordingTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _recordingSeconds++);
+    });
+  }
+
+  Future<void> _stopAndSendRecording() async {
+    _recordingTimer?.cancel();
+    final path = await _audioRecorder.stop();
+
+    setState(() {
+      _isRecording = false;
+      _recordingSeconds = 0;
+      _recordingPath = null;
+    });
+
+    if (path == null) return;
+
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    try {
+      final fileName =
+          'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final sent = await context.read<DMProvider>().sendFileMessage(
+        token: token,
+        threadId: widget.thread.threadId,
+        filePath: path,
+        fileName: fileName,
+      );
+
+      context.read<DMProvider>().insertIncomingMessage(
+        widget.thread.threadId,
+        sent,
+      );
+
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordingTimer?.cancel();
+    await _audioRecorder.stop();
+    final savedPath = _recordingPath;
+
+    setState(() {
+      _isRecording = false;
+      _recordingSeconds = 0;
+      _recordingPath = null;
+    });
+
+    if (savedPath != null) {
+      final file = File(savedPath);
+      if (await file.exists()) await file.delete();
+    }
+  }
+
+  Future<void> _togglePlayback(String url, String messageId) async {
+    if (_playingMessageId == messageId && _isAudioPlaying) {
+      await _audioPlayer.pause();
+      setState(() => _isAudioPlaying = false);
+      return;
+    }
+
+    if (_playingMessageId == messageId && !_isAudioPlaying) {
+      await _audioPlayer.resume();
+      setState(() => _isAudioPlaying = true);
+      return;
+    }
+
+    await _audioPlayer.stop();
+
+    _playerCompleteSub?.cancel();
+    _playerCompleteSub = _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isAudioPlaying = false;
+          _playingMessageId = null;
+        });
+      }
+    });
+
+    setState(() {
+      _playingMessageId = messageId;
+      _isAudioPlaying = true;
+    });
+
+    try {
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.play(UrlSource(url));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isAudioPlaying = false;
+        _playingMessageId = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal memutar audio: ${e.toString().replaceFirst('Exception: ', '')}',
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   Future<void> _openAttachment(String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null) {
@@ -286,7 +529,7 @@ class _DMChatScreenState extends State<DMChatScreen>
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF2F2FA),
       appBar: _buildAppBar(currentUserId),
       body: SafeArea(
         child: Column(
@@ -484,8 +727,8 @@ class _DMChatScreenState extends State<DMChatScreen>
                 ),
                 decoration: BoxDecoration(
                   gradient: isOwn
-                      ? const LinearGradient(
-                          colors: [Color(0xFF0DB4A5), Color(0xFF00A89E)],
+                      ? LinearGradient(
+                          colors: [AppColors.primary, const Color(0xFF4338CA)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
@@ -520,7 +763,7 @@ class _DMChatScreenState extends State<DMChatScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (message.attachments.isNotEmpty)
-                      _buildAttachmentPreview(message.attachments.first, isOwn),
+                      _buildAttachmentPreview(message.attachments.first, isOwn, message.dmMessageId),
                     if (message.messageText.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -576,10 +819,25 @@ class _DMChatScreenState extends State<DMChatScreen>
     );
   }
 
-  Widget _buildAttachmentPreview(DMAttachmentModel attachment, bool isOwn) {
+  bool _isVoiceAttachment(DMAttachmentModel att) {
+    if (att.fileType == 'voice_note' || att.fileType == 'audio') return true;
+    if (att.mimeType.startsWith('audio/')) return true;
+    final name = att.fileName.toLowerCase();
+    return name.endsWith('.m4a') ||
+        name.endsWith('.mp3') ||
+        name.endsWith('.wav') ||
+        name.endsWith('.ogg') ||
+        name.endsWith('.aac');
+  }
+
+  Widget _buildAttachmentPreview(DMAttachmentModel attachment, bool isOwn, String messageId) {
     final fileName = attachment.fileName?.trim().isNotEmpty == true
         ? attachment.fileName!.trim()
         : 'Attachment';
+
+    if (_isVoiceAttachment(attachment)) {
+      return _buildVoiceMessageBubble(attachment, isOwn, messageId);
+    }
 
     if (attachment.fileType == 'image') {
       return GestureDetector(
@@ -700,13 +958,15 @@ class _DMChatScreenState extends State<DMChatScreen>
   }
 
   Widget _buildMessageInput() {
+    if (_isRecording) return _buildRecordingBar();
+
     final hasText = _messageController.text.trim().isNotEmpty;
     final hasAttachment = _selectedFile != null && _selectedFilePath != null;
     final canSend = hasText || hasAttachment;
     final isBusy = _isPickingFile || _isSendingFile;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFE9ECEF))),
@@ -716,7 +976,10 @@ class _DMChatScreenState extends State<DMChatScreen>
         children: [
           IconButton(
             onPressed: isBusy ? null : _pickFile,
-            icon: const Icon(Icons.attach_file_rounded),
+            icon: Icon(
+              Icons.attach_file_rounded,
+              color: canSend ? AppColors.primary : const Color(0xFF9A9AA3),
+            ),
           ),
           Expanded(
             child: TextField(
@@ -725,21 +988,28 @@ class _DMChatScreenState extends State<DMChatScreen>
               minLines: 1,
               maxLines: 5,
               textInputAction: TextInputAction.newline,
+              style: GoogleFonts.poppins(fontSize: 14),
               decoration: InputDecoration(
                 hintText: hasAttachment
                     ? 'Add a caption...'
                     : 'Type a message...',
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: const Color(0xFFAAAAAA),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF5F5F5),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: AppColors.primary),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -748,10 +1018,27 @@ class _DMChatScreenState extends State<DMChatScreen>
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: _startRecording,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.mic_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
           Container(
             decoration: BoxDecoration(
-              color: canSend ? AppColors.primary : const Color(0xFFBFC8CC),
+              color: canSend ? AppColors.primary : const Color(0xFFCCCCDD),
               shape: BoxShape.circle,
             ),
             child: IconButton(
@@ -765,7 +1052,66 @@ class _DMChatScreenState extends State<DMChatScreen>
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.send_rounded, color: Colors.white),
+                  : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordingBar() {
+    final minutes = (_recordingSeconds ~/ 60).toString();
+    final seconds = (_recordingSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE9ECEF))),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: _cancelRecording,
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: Colors.redAccent,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Recording  $minutes:$seconds',
+              style: GoogleFonts.poppins(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF1A1A2E),
+              ),
+            ),
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: _stopAndSendRecording,
+              icon: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
         ],

@@ -72,6 +72,41 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>?> loginWithGoogle({
+    ProfileProvider? profileProvider,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _service.loginWithGoogle();
+      final token = result['token'] as String;
+      final isNewUser = result['is_new_user'] as bool;
+
+      await _service.saveToken(token);
+      _token = token;
+      _currentUser = await _service.getMe(token);
+
+      if (!isNewUser && profileProvider != null) {
+        await profileProvider.fetchProfile(
+          token: _token!,
+          userId: _currentUser!.userId,
+          userType: _currentUser!.type,
+        );
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return {'is_new_user': isNewUser};
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> login(
     String email,
     String password, {
@@ -144,6 +179,44 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _service.verifyEmail(email: email, otp: otp);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword({required String email}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.forgotPassword(email: email);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.resetPassword(email: email, otp: otp, newPassword: newPassword);
       _isLoading = false;
       notifyListeners();
       return true;
