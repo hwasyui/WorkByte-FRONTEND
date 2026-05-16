@@ -28,7 +28,6 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
   bool _applySkills = true;
   bool _applyWorkExperience = true;
   bool _applyEducation = true;
-  bool _applyLanguages = true;
   bool _isApplying = false;
   String? _errorMessage;
 
@@ -42,8 +41,7 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
       _applyBio ||
       _applySkills ||
       _applyWorkExperience ||
-      _applyEducation ||
-      _applyLanguages;
+      _applyEducation;
 
   Future<void> _applyToProfile() async {
     setState(() {
@@ -57,8 +55,7 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
         applyBio: _applyBio,
         applySkills: _applySkills,
         applyWorkExperience: _applyWorkExperience,
-        applyEducation: _applyEducation,
-        applyLanguages: _applyLanguages,
+        applyEducation: _applyEducation
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,25 +199,6 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
                     child: Column(
                       children: p.education
                           .map((e) => _EducationItem(edu: e))
-                          .toList(),
-                    ),
-                  ),
-                if (p.languages.isNotEmpty)
-                  _SectionCard(
-                    title: 'Languages',
-                    icon: Icons.translate_rounded,
-                    count: p.languages.length,
-                    isEnabled: _applyLanguages,
-                    onToggle: (v) => setState(() => _applyLanguages = v),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: p.languages
-                          .map(
-                            (l) => _SkillChip(
-                              label: '${l.name} · ${l.proficiency}',
-                            ),
-                          )
                           .toList(),
                     ),
                   ),

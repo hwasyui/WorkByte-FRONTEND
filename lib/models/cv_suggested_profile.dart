@@ -80,34 +80,17 @@ class SuggestedEducation {
   };
 }
 
-class SuggestedLanguage {
-  final String name;
-  final String proficiency;
-
-  SuggestedLanguage({required this.name, required this.proficiency});
-
-  factory SuggestedLanguage.fromJson(Map<String, dynamic> json) =>
-      SuggestedLanguage(
-        name: json['name'] as String? ?? '',
-        proficiency: json['proficiency'] as String? ?? 'conversational',
-      );
-
-  Map<String, dynamic> toJson() => {'name': name, 'proficiency': proficiency};
-}
-
 class CvSuggestedProfile {
   final String? suggestedBio;
   final List<String> skills;
   final List<SuggestedWorkExperience> workExperience;
   final List<SuggestedEducation> education;
-  final List<SuggestedLanguage> languages;
 
   CvSuggestedProfile({
     this.suggestedBio,
     this.skills = const [],
     this.workExperience = const [],
     this.education = const [],
-    this.languages = const [],
   });
 
   factory CvSuggestedProfile.fromJson(
@@ -129,11 +112,6 @@ class CvSuggestedProfile {
         (json['education'] as List<dynamic>?)
             ?.map((e) => SuggestedEducation.fromJson(e as Map<String, dynamic>))
             .toList() ??
-        [],
-    languages:
-        (json['languages'] as List<dynamic>?)
-            ?.map((e) => SuggestedLanguage.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [],
+        []
   );
 }

@@ -72,7 +72,6 @@ class CvAnalysisService {
     required bool applySkills,
     required bool applyWorkExperience,
     required bool applyEducation,
-    required bool applyLanguages,
   }) async {
     final uri = Uri.parse('$_baseUrl/cv_upload/apply');
     final bodyMap = {
@@ -80,12 +79,10 @@ class CvAnalysisService {
       'apply_skills': applySkills,
       'apply_work_experience': applyWorkExperience,
       'apply_education': applyEducation,
-      'apply_languages': applyLanguages,
       'suggested_bio': profile.suggestedBio,
       'skills': profile.skills,
       'work_experience': profile.workExperience.map((e) => e.toJson()).toList(),
       'education': profile.education.map((e) => e.toJson()).toList(),
-      'languages': profile.languages.map((e) => e.toJson()).toList(),
     };
 
     final response = await http.post(
