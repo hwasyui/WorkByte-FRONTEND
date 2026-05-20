@@ -6,10 +6,13 @@ import '../models/freelancer_model.dart';
 import '../models/education_model.dart';
 import '../models/experience_model.dart';
 import '../models/freelancer_skill_model.dart';
+import '../models/portfolio_model.dart';
 import '../services/profile_service.dart';
+import '../services/portfolio_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _service = ProfileService();
+  final PortfolioService _portfolioService = PortfolioService();
 
   bool _isLoading = false;
   String? _error;
@@ -20,6 +23,7 @@ class ProfileProvider extends ChangeNotifier {
   List<EducationModel> _educations = const [];
   List<ExperienceModel> _experiences = const [];
   List<FreelancerSkillModel> _skills = const [];
+  List<PortfolioModel> _portfolios = const [];
 
   String? _userType;
 
@@ -39,6 +43,7 @@ class ProfileProvider extends ChangeNotifier {
   List<EducationModel> get educations => _educations;
   List<ExperienceModel> get experiences => _experiences;
   List<FreelancerSkillModel> get skills => _skills;
+  List<PortfolioModel> get portfolios => _portfolios;
 
   // Keep this the same from the service perspective
   bool get isProfileComplete {
@@ -150,7 +155,7 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// Reload education, experience, skills from the services.
+  /// Reload education, experience, skills, and portfolios from the services.
   /// Call after adding/deleting any of these items.
   Future<void> refreshFreelancerDetails(String token) async {
     final id = _freelancerProfile?.freelancerId;
@@ -160,11 +165,13 @@ class ProfileProvider extends ChangeNotifier {
       _service.getEducations(token, id),
       _service.getWorkExperiences(token, id),
       _service.getFreelancerSkills(token, id),
+      _portfolioService.getPortfolios(token),
     ]);
 
     _educations = results[0] as List<EducationModel>;
     _experiences = results[1] as List<ExperienceModel>;
     _skills = results[2] as List<FreelancerSkillModel>;
+    _portfolios = results[3] as List<PortfolioModel>;
     notifyListeners();
   }
 
@@ -370,6 +377,42 @@ class ProfileProvider extends ChangeNotifier {
       notifyListeners();
     }
     return ok;
+  }
+
+  // ─── Portfolio ──────────────────────────────────────────────────
+
+  Future<bool> addPortfolio({
+    required String token,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final item = await _portfolioService.createPortfolio(token, data);
+      _portfolios = [item, ..._portfolios];
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> removePortfolio({
+    required String token,
+    required String portfolioId,
+  }) async {
+    try {
+      await _portfolioService.deletePortfolio(token, portfolioId);
+      _portfolios = _portfolios
+          .where((p) => p.portfolioId != portfolioId)
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
   }
 
   // Keep this as‑is, these are just pass‑through to services

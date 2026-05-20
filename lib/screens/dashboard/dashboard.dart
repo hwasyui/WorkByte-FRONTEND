@@ -693,7 +693,32 @@ class _HomeScreenState extends State<HomeScreen> {
           context.read<AuthProvider>().refreshUser();
         }
       },
-      floatingActionButton: null,
+      floatingActionButton: Consumer<ProfileProvider>(
+        builder: (_, profile, __) {
+          if (!profile.isClient) return const SizedBox.shrink();
+          return GestureDetector(
+            onTap: _handleCenterButton,
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.32),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 30),
+            ),
+          );
+        },
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 120,
@@ -1315,8 +1340,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, auth, profile, _) => HomeBottomNavBar(
           currentIndex: _currentNavIndex,
           onTap: _handleNavigation,
-          onCenterTap: _handleCenterButton,
-          showCenterButton: profile.isClient,
+          showCenterButton: false,
         ),
       ),
     );

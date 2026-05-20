@@ -19,11 +19,19 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
   final _searchCtrl = TextEditingController();
   SkillModel? _selected;
   String? _proficiency;
+  String? _newSkillCategory;
   bool _isSubmitting = false;
   bool _isCreating = false;
   bool _showSuggestions = false;
+  bool _showCategoryPicker = false;
+  String _pendingNewSkillName = '';
 
   static const _levels = ['Beginner', 'Intermediate', 'Advanced'];
+  static const _categories = [
+    ('hard_skill', 'Hard Skill'),
+    ('tool', 'Tool'),
+    ('soft_skill', 'Soft Skill'),
+  ];
 
   @override
   void initState() {
@@ -60,12 +68,23 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
     });
   }
 
-  Future<void> _createAndSelect(String name) async {
+  void _promptCategoryThenCreate(String name) {
+    setState(() {
+      _pendingNewSkillName = name.trim();
+      _newSkillCategory = null;
+      _showCategoryPicker = true;
+      _showSuggestions = false;
+    });
+  }
+
+  Future<void> _confirmCreateWithCategory() async {
+    if (_newSkillCategory == null) return;
     setState(() => _isCreating = true);
     try {
       final token = context.read<AuthProvider>().token!;
       final result = await context.read<ProfileProvider>().createSkill(token, {
-        'skill_name': name.trim(),
+        'skill_name': _pendingNewSkillName,
+        'skill_category': _newSkillCategory,
       });
       if (result != null && mounted) {
         final newSkill = SkillModel(
@@ -74,6 +93,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
           skillCategory: result['skill_category'] as String?,
         );
         _select(newSkill);
+        setState(() => _showCategoryPicker = false);
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -230,7 +250,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                               color: Colors.grey.shade100,
                             ),
                           InkWell(
-                            onTap: () => _createAndSelect(query),
+                            onTap: () => _promptCategoryThenCreate(query),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
@@ -288,6 +308,102 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                   );
                 },
               ),
+
+            // ── Category picker (shown when creating a new skill) ──────────
+            if (_showCategoryPicker && !_isCreating) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.add_circle_outline,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Creating "$_pendingNewSkillName" — choose type:',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _showCategoryPicker = false),
+                    child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: _categories.asMap().entries.map((entry) {
+                  final cat = entry.value.$1;
+                  final label = entry.value.$2;
+                  final isSelected = _newSkillCategory == cat;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _newSkillCategory = cat),
+                      child: Container(
+                        margin: entry.key < _categories.length - 1
+                            ? const EdgeInsets.only(right: 8)
+                            : null,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                              fontSize: 11,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _newSkillCategory != null
+                      ? _confirmCreateWithCategory
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: Colors.grey[300],
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Create Skill',
+                    style: TextStyle(fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
 
             // ── Selected indicator ─────────────────────────────────────────
             if (_selected != null && !_showSuggestions) ...[
@@ -420,6 +536,15 @@ class _SkillItem extends StatelessWidget {
     required this.onTap,
   });
 
+  static String _formatCategory(String cat) {
+    return switch (cat) {
+      'hard_skill' => 'Hard Skill',
+      'soft_skill' => 'Soft Skill',
+      'tool' => 'Tool',
+      _ => cat.replaceAll('_', ' '),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -458,7 +583,7 @@ class _SkillItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  skill.skillCategory!.replaceAll('_', ' '),
+                  _formatCategory(skill.skillCategory!),
                   style: const TextStyle(
                     fontSize: 10,
                     color: AppColors.primary,

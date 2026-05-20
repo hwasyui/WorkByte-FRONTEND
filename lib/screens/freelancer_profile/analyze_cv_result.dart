@@ -174,11 +174,12 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                     ],
 
                     // Per-section recommendations
-                    if (widget.sections.isNotEmpty) ...[
-                      _buildSectionHeader('Recommendations', Icons.tips_and_updates_rounded),
-                      const SizedBox(height: 12),
-                      ...widget.sections.map(_buildSectionCard),
-                    ],
+                    _buildSectionHeader('Recommendations', Icons.tips_and_updates_rounded),
+                    const SizedBox(height: 12),
+                    if (widget.sections.isNotEmpty)
+                      ...widget.sections.map(_buildSectionCard)
+                    else
+                      _buildEmptySectionsCard(),
 
                     const SizedBox(height: 24),
                   ],
@@ -329,6 +330,33 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                     ...recs.map(_buildRecItem),
                   ],
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySectionsCard() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _lightColor.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _lightColor),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 18, color: _primaryColor.withOpacity(0.6)),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Detailed section analysis could not be generated. '
+                'Try re-uploading your CV to get per-section recommendations.',
+                style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF6B7280)),
               ),
             ),
           ],

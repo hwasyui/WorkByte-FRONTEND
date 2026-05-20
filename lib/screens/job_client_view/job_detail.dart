@@ -839,6 +839,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     // 👇 NEW: closed status flags
     final isClosed = widget.job.status.toLowerCase() == 'closed';
     final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
+    final isScamClosure = isClosed && widget.job.closureReason == 'scam';
 
     final companyLogo = _clientLoading
         ? const SizedBox(
@@ -884,17 +885,21 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               onReport: null,
             ),
 
-            // 👇 NEW: Closed job appeal banner — only for the owner
+            // ── Closed job banner — only for the owner ──
             if (isClosed && isOwnJob)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
+                    color: isScamClosure
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFFFFCC02).withValues(alpha: 0.6),
+                      color: isScamClosure
+                          ? const Color(0xFFFCA5A5)
+                          : const Color(0xFFFFCC02).withValues(alpha: 0.6),
                     ),
                   ),
                   child: Row(
@@ -904,12 +909,18 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3CD),
+                          color: isScamClosure
+                              ? const Color(0xFFFFE4E6)
+                              : const Color(0xFFFFF3CD),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.gavel_rounded,
-                          color: Color(0xFFF57F17),
+                        child: Icon(
+                          isScamClosure
+                              ? Icons.gpp_bad_rounded
+                              : Icons.gavel_rounded,
+                          color: isScamClosure
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFF57F17),
                           size: 18,
                         ),
                       ),
@@ -923,11 +934,15 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'This job post has been closed',
+                                    isScamClosure
+                                        ? 'Job flagged by AI scam detection'
+                                        : 'This job post has been closed',
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF5D4037),
+                                      color: isScamClosure
+                                          ? const Color(0xFF7F1D1D)
+                                          : const Color(0xFF5D4037),
                                     ),
                                   ),
                                 ),
@@ -942,6 +957,19 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                               ],
                             ),
 
+                            // ── Scam-specific explanation ──
+                            if (isScamClosure) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Our AI detected patterns associated with fraudulent job listings and automatically closed this post. If this was a legitimate job, submit an appeal for admin review.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF991B1B),
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+
                             // ── Closure reason badge ──
                             if (widget.job.closureReason != null &&
                                 widget.job.closureReason!.isNotEmpty) ...[
@@ -952,7 +980,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFE0B2),
+                                  color: isScamClosure
+                                      ? const Color(0xFFFEE2E2)
+                                      : const Color(0xFFFFE0B2),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
@@ -962,7 +992,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFFE65100),
+                                    color: isScamClosure
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFFE65100),
                                   ),
                                 ),
                               ),
@@ -1001,7 +1033,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   vertical: 7,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF57F17),
+                                  color: isScamClosure
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFF57F17),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(

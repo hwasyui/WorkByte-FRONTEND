@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:intl/intl.dart';
 import 'package:workbyte_app/models/cv_suggested_profile.dart';
+import 'package:http/http.dart' as http;
 import 'package:workbyte_app/screens/freelancer_profile/cv_review.dart';
 import 'package:workbyte_app/services/cv_analysis_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
@@ -15,6 +18,7 @@ import '../../core/constants/colors.dart';
 import '../../models/education_model.dart';
 import '../../models/experience_model.dart';
 import '../../models/freelancer_skill_model.dart';
+import '../../models/portfolio_model.dart';
 import '../../models/review_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -25,6 +29,7 @@ import '../../widgets/add_skill.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
+import '../../widgets/portfolio_profile.dart';
 import 'upload_cv.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -44,7 +49,36 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   final TextEditingController aboutController = TextEditingController();
   final TextEditingController hourlyController = TextEditingController();
+  String _selectedRateTime = 'hourly';
+  String _selectedCurrency = 'USD';
   late TabController _tabController;
+
+  // Cached currency list loaded once from REST Countries API
+  static List<Map<String, String>>? _currencyCache;
+
+  Future<List<Map<String, String>>> _loadCurrencies() async {
+    if (_currencyCache != null) return _currencyCache!;
+    final res = await http.get(
+      Uri.parse('https://restcountries.com/v3.1/all?fields=currencies'),
+    );
+    if (res.statusCode != 200) throw Exception('Failed to load currencies');
+    final countries = jsonDecode(res.body) as List<dynamic>;
+    final seen = <String>{};
+    final result = <Map<String, String>>[];
+    for (final c in countries) {
+      final map = c['currencies'] as Map<String, dynamic>?;
+      if (map == null) continue;
+      for (final e in map.entries) {
+        if (seen.contains(e.key)) continue;
+        seen.add(e.key);
+        final name = (e.value as Map<String, dynamic>)['name'] as String? ?? e.key;
+        result.add({'code': e.key, 'name': name});
+      }
+    }
+    result.sort((a, b) => a['code']!.compareTo(b['code']!));
+    _currencyCache = result;
+    return result;
+  }
 
   static const Color primaryColor = AppColors.primary;
 
@@ -69,8 +103,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        final rate = profile.freelancerProfile?.estimatedRate;
         hourlyController.text =
-            profile.freelancerProfile?.estimatedRate?.toString() ?? '';
+            rate != null ? ThousandsSeparatorFormatter.format(rate) : '';
+        _selectedRateTime =
+            profile.freelancerProfile?.rateTime ?? 'hourly';
+        _selectedCurrency =
+            profile.freelancerProfile?.rateCurrency ?? 'USD';
       });
 
       if (auth.token != null && profile.isFreelancer) {
@@ -104,8 +143,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        final rate = profile.freelancerProfile?.estimatedRate;
         hourlyController.text =
-            profile.freelancerProfile?.estimatedRate?.toString() ?? '';
+            rate != null ? ThousandsSeparatorFormatter.format(rate) : '';
+        _selectedRateTime =
+            profile.freelancerProfile?.rateTime ?? 'hourly';
+        _selectedCurrency =
+            profile.freelancerProfile?.rateCurrency ?? 'USD';
       });
     }
   }
@@ -186,6 +230,61 @@ class _ProfileScreenState extends State<ProfileScreen>
         content: Text(
           success ? 'Skill deleted successfully' : 'Failed to delete skill',
         ),
+      ),
+    );
+  }
+
+  Future<void> _deletePortfolio(String portfolioId) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    final success = await profile.removePortfolio(
+      token: auth.token!,
+      portfolioId: portfolioId,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Portfolio deleted successfully'
+                : 'Failed to delete portfolio',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showPortfolioForm() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final freelancerId = profile.freelancerProfile?.freelancerId;
+    if (freelancerId == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PortfolioProfile(
+        onSave: (data) async {
+          final completionDate = data['completionDate'] as DateTime?;
+          await profile.addPortfolio(
+            token: auth.token!,
+            data: {
+              'freelancer_id': freelancerId,
+              'project_title': data['projectTitle'] as String,
+              'project_description': data['projectDescription'] as String?,
+              'project_url': data['projectUrl'] as String?,
+              'completion_date': completionDate?.toIso8601String(),
+            },
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Portfolio added successfully')),
+            );
+          }
+        },
       ),
     );
   }
@@ -741,276 +840,396 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _editHourly() {
+    const rateTimes = [
+      ('hourly', 'Hourly'),
+      ('weekly', 'Weekly'),
+      ('monthly', 'Monthly'),
+      ('annually', 'Annually'),
+    ];
+
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 40,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEECFB),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.schedule_rounded,
-                        color: AppColors.primary,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
+        String localRateTime = _selectedRateTime;
+        String localCurrency = _selectedCurrency;
+        List<Map<String, String>>? currencies;
+        bool loadingCurrencies = false;
+        String? currencyError;
+
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            // Kick off currency load once
+            if (currencies == null && !loadingCurrencies && currencyError == null) {
+              loadingCurrencies = true;
+              _loadCurrencies().then((list) {
+                setDialogState(() {
+                  currencies = list;
+                  loadingCurrencies = false;
+                });
+              }).catchError((e) {
+                setDialogState(() {
+                  currencyError = e.toString();
+                  loadingCurrencies = false;
+                });
+              });
+            }
+
+            Future<void> pickCurrency() async {
+              if (currencies == null) return;
+              final picked = await showModalBottomSheet<String>(
+                context: ctx,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => _CurrencyPickerSheet(currencies: currencies!),
+              );
+              if (picked != null) {
+                setDialogState(() => localCurrency = picked);
+              }
+            }
+
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 40,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Edit Hourly Rate',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF111827),
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEEECFB),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.payments_outlined,
+                              color: AppColors.primary,
+                              size: 28,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Set your desired hourly rate.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: const Color(0xFF6B7280),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Edit Rate',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF111827),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Set your desired rate and period.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: const Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(dialogContext),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: Color(0xFF9CA3AF),
+                              size: 22,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(dialogContext),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFF9CA3AF),
-                        size: 22,
+                      const SizedBox(height: 20),
+
+                      // Rate type selector
+                      Text(
+                        'Rate Period',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: rateTimes.map((rt) {
+                          final isSelected = localRateTime == rt.$1;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () =>
+                                  setDialogState(() => localRateTime = rt.$1),
+                              child: Container(
+                                margin: rt != rateTimes.last
+                                    ? const EdgeInsets.only(right: 6)
+                                    : null,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : const Color(0xFFE5E7EB),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    rt.$2,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
 
-                // Label
-                Text(
-                  'Hourly Rate (USD / hour)',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Input field
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEECFB),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: hourlyController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*'),
+                      // Amount + currency row
+                      Text(
+                        'Amount & Currency',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEECFB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: hourlyController,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                inputFormatters: [
+                                  ThousandsSeparatorFormatter(),
+                                ],
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF111827),
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: const Color(0xFF9CA3AF),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Currency picker button
+                            GestureDetector(
+                              onTap: loadingCurrencies ? null : pickCurrency,
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDDD8FA),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (loadingCurrencies)
+                                      const SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 1.5,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        localCurrency,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.arrow_drop_down,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF111827),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: '0.00',
-                            hintStyle: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                          ),
                         ),
                       ),
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDDD8FA),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'USD',
+                      if (currencyError != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Could not load currencies. Using cached list.',
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                            fontSize: 11,
+                            color: Colors.orange,
                           ),
                         ),
+                      ],
+                      const SizedBox(height: 20),
+                      const Divider(color: Color(0xFFF0F0F1)),
+                      const SizedBox(height: 16),
+
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final val = ThousandsSeparatorFormatter.parse(
+                                  hourlyController.text.trim(),
+                                );
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                final profile = Provider.of<ProfileProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                final messenger =
+                                    ScaffoldMessenger.of(context);
+                                final identifier =
+                                    profile.freelancerProfile?.freelancerId ??
+                                    auth.currentUser!.userId;
+
+                                Navigator.pop(dialogContext);
+
+                                final fields = <String, dynamic>{
+                                  'rate_time': localRateTime,
+                                  'rate_currency': localCurrency,
+                                };
+                                if (val != null) {
+                                  fields['estimated_rate'] = val;
+                                }
+
+                                final success = await profile.updateProfile(
+                                  token: auth.token!,
+                                  identifier: identifier,
+                                  fields: fields,
+                                );
+
+                                if (success) {
+                                  setState(() {
+                                    _selectedRateTime = localRateTime;
+                                    _selectedCurrency = localCurrency;
+                                  });
+                                  await _refreshProfile();
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Rate saved successfully'),
+                                    ),
+                                  );
+                                } else {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        profile.error ?? 'Failed to save rate',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                'Save',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Info hint
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Enter the amount you want to earn per hour.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(color: Color(0xFFF0F0F1)),
-                const SizedBox(height: 16),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: AppColors.primary,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final newHourly = hourlyController.text.trim();
-                          final hourlyValue = newHourly.isEmpty
-                              ? null
-                              : double.tryParse(newHourly);
-
-                          final auth = Provider.of<AuthProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final profile = Provider.of<ProfileProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final messenger = ScaffoldMessenger.of(context);
-                          final identifier =
-                              profile.freelancerProfile?.freelancerId ??
-                              auth.currentUser!.userId;
-
-                          Navigator.pop(dialogContext);
-
-                          final fields = <String, dynamic>{};
-                          if (hourlyValue != null) {
-                            fields['estimated_rate'] = hourlyValue;
-                            fields['rate_time'] = 'hourly';
-                            fields['rate_currency'] = 'USD';
-                          }
-
-                          final success = await profile.updateProfile(
-                            token: auth.token!,
-                            identifier: identifier,
-                            fields: fields,
-                          );
-
-                          if (success) {
-                            await _refreshProfile();
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Hourly rate saved successfully'),
-                              ),
-                            );
-                          } else {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  profile.error ?? 'Failed to save hourly rate',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Save',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1694,14 +1913,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         final skills = profile.skills;
         final List<ExperienceModel> experiences = profile.experiences;
         final List<EducationModel> educations = profile.educations;
+        final List<PortfolioModel> portfolios = profile.portfolios;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             children: [
               _buildSection(
-                title: 'Hourly Rate',
-                icon: Icons.attach_money,
+                title: 'Rate',
+                icon: Icons.payments_outlined,
                 hasEdit: true,
                 onEdit: _editHourly,
                 child: Padding(
@@ -1709,7 +1929,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Text(
                     hourlyController.text.isEmpty
                         ? 'No rate set'
-                        : 'USD ${hourlyController.text} / hour',
+                        : '$_selectedCurrency ${hourlyController.text} / $_selectedRateTime',
                     style: TextStyle(
                       color: hourlyController.text.isEmpty
                           ? Colors.grey
@@ -1889,6 +2109,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             return _SkillChip(
                               label: s.skillName ?? 'Unknown Skill',
                               proficiency: s.proficiencyLevel,
+                              category: s.skillCategory,
                               onDelete: () => _deleteSkill(s.freelancerSkillId),
                             );
                           }).toList(),
@@ -1957,6 +2178,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             color: primaryColor,
                             onDelete: () => _deleteEducation(e.educationId),
+                          );
+                        }).toList(),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                title: 'Portfolio',
+                icon: Icons.work_history_outlined,
+                actionButton: _buildAddButton('Add Portfolio', _showPortfolioForm),
+                child: portfolios.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Text(
+                          'No portfolio items yet',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      )
+                    : Column(
+                        children: portfolios.map<Widget>((p) {
+                          return _PortfolioItem(
+                            item: p,
+                            onDelete: p.isAutoGenerated
+                                ? null
+                                : () => _deletePortfolio(p.portfolioId),
                           );
                         }).toList(),
                       ),
@@ -2737,16 +2982,150 @@ class _EducationItem extends StatelessWidget {
   }
 }
 
+class _PortfolioItem extends StatelessWidget {
+  final PortfolioModel item;
+  final VoidCallback? onDelete;
+
+  const _PortfolioItem({required this.item, this.onDelete});
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8FC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEAEAF0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.projectTitle,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                ),
+                if (item.isAutoGenerated)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'From Contract',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: const Icon(Icons.delete, color: Colors.red, size: 18),
+                  ),
+                ],
+              ],
+            ),
+            if (item.projectDescription != null &&
+                item.projectDescription!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                item.projectDescription!,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (item.completionDate != null || item.projectUrl != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (item.completionDate != null) ...[
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 12,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(item.completionDate!),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                  if (item.projectUrl != null &&
+                      item.projectUrl!.isNotEmpty) ...[
+                    if (item.completionDate != null)
+                      const SizedBox(width: 12),
+                    const Icon(Icons.link, size: 12, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.projectUrl!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SkillChip extends StatelessWidget {
   final String label;
   final String proficiency;
+  final String? category;
   final VoidCallback? onDelete;
 
   const _SkillChip({
     required this.label,
     required this.proficiency,
+    this.category,
     this.onDelete,
   });
+
+  static String _formatCategory(String? cat) {
+    return switch (cat) {
+      'hard_skill' => 'Hard Skill',
+      'soft_skill' => 'Soft Skill',
+      'tool' => 'Tool',
+      _ => cat?.replaceAll('_', ' ') ?? '',
+    };
+  }
 
   String _toTitleCase(String text) {
     if (text.trim().isEmpty) return text;
@@ -2762,8 +3141,9 @@ class _SkillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final catLabel = _formatCategory(category);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.secondary,
         borderRadius: BorderRadius.circular(20),
@@ -2771,13 +3151,28 @@ class _SkillChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$label (${_toTitleCase(proficiency)})',
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                catLabel.isNotEmpty
+                    ? '$catLabel · ${_toTitleCase(proficiency)}'
+                    : _toTitleCase(proficiency),
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
           if (onDelete != null) ...[
             const SizedBox(width: 6),
@@ -3358,6 +3753,212 @@ class _ExpandableReviewTextState extends State<_ExpandableReviewText> {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ── Thousands separator formatter ─────────────────────────────────────────────
+// International format: comma = thousands separator, period = decimal separator.
+// e.g. 14000 → "14,000" | 20.25 → "20.25" | 1500000.5 → "1,500,000.5"
+class ThousandsSeparatorFormatter extends TextInputFormatter {
+  static final _intFmt = NumberFormat('#,##0', 'en');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Allow only digits and one period (decimal point)
+    String raw = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
+
+    // Keep only the first period
+    final dotIndex = raw.indexOf('.');
+    if (dotIndex != -1) {
+      final afterDot = raw.substring(dotIndex + 1).replaceAll('.', '');
+      // Limit decimal places to 2
+      final dec = afterDot.length > 2 ? afterDot.substring(0, 2) : afterDot;
+      raw = '${raw.substring(0, dotIndex)}.$dec';
+    }
+
+    if (raw.isEmpty) return newValue.copyWith(text: '');
+
+    // Format integer part with comma separators
+    final parts = raw.split('.');
+    final intDigits = parts[0].replaceAll(',', '');
+    final intFormatted = intDigits.isEmpty
+        ? '0'
+        : _intFmt.format(int.parse(intDigits));
+
+    final formatted = parts.length > 1
+        ? '$intFormatted.${parts[1]}'  // preserve decimal as typed
+        : intFormatted;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  /// Strip commas and parse as double (returns null for empty/invalid).
+  static double? parse(String text) {
+    final clean = text.replaceAll(',', '');
+    if (clean.isEmpty) return null;
+    return double.tryParse(clean);
+  }
+
+  /// Format a double for display in the field.
+  static String format(double value) {
+    if (value == value.truncateToDouble()) {
+      return _intFmt.format(value.toInt());
+    }
+    // Show up to 2 decimal places, strip trailing zeros
+    final dec = value.toStringAsFixed(2).split('.')[1].replaceAll(RegExp(r'0+$'), '');
+    return '${_intFmt.format(value.truncate())}.$dec';
+  }
+}
+
+// ── Currency picker bottom sheet ───────────────────────────────────────────────
+class _CurrencyPickerSheet extends StatefulWidget {
+  final List<Map<String, String>> currencies;
+
+  const _CurrencyPickerSheet({required this.currencies});
+
+  @override
+  State<_CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
+}
+
+class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  List<Map<String, String>> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.currencies;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.currencies
+          : widget.currencies
+              .where(
+                (c) =>
+                    c['code']!.toLowerCase().contains(q) ||
+                    c['name']!.toLowerCase().contains(q),
+              )
+              .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Title
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Select Currency',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF111827),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Search
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextField(
+                controller: _searchCtrl,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search currency code or name...',
+                  hintStyle: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 20,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // List
+          Expanded(
+            child: ListView.builder(
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final c = _filtered[i];
+                return ListTile(
+                  dense: true,
+                  leading: Container(
+                    width: 44,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      c['code']!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    c['name']!,
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
+                  onTap: () => Navigator.pop(context, c['code']),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

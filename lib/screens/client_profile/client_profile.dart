@@ -43,8 +43,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     websiteController.addListener(() {
       setState(() => websiteUrl = websiteController.text);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
       final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+      if (profile.clientProfile == null && auth.token != null) {
+        final userId = auth.currentUser?.userId;
+        if (userId != null) {
+          await profile.fetchProfile(
+            token: auth.token!,
+            userId: userId,
+            userType: 'client',
+          );
+        }
+      }
+
+      if (!mounted) return;
       setState(() {
         bioText = profile.clientProfile?.bio ?? '';
         websiteUrl = profile.clientProfile?.websiteUrl ?? '';
@@ -60,6 +74,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final profile = Provider.of<ProfileProvider>(context, listen: false);
 
     if (!mounted) return;
+
+    if (profile.clientProfile == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -860,8 +879,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       backgroundColor: AppColors.background,
       body: Consumer<ProfileProvider>(
         builder: (context, profile, child) {
-          if (!profile.isClient || profile.clientProfile == null) {
+          if (!profile.isClient) {
             return const Center(child: Text('Client profile not available'));
+          }
+          if (profile.clientProfile == null) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           return SafeArea(

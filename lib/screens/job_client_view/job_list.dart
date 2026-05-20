@@ -405,6 +405,9 @@ class JobListScreenState extends State<JobListScreen> {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
     final proposalCount = (job['proposal_count'] ?? 0) as int;
+    final status = job['status'] as String? ?? 'draft';
+    final closureReason = job['closure_reason'] as String? ?? '';
+    final isScamClosed = status == 'closed' && closureReason == 'scam';
     final positionCount = isTeam
         ? (job['position_count'] as int?) ??
               ((job['roles'] as List?)?.fold<int>(
@@ -418,7 +421,6 @@ class JobListScreenState extends State<JobListScreen> {
                   ) ??
                   (job['role_count'] ?? 0))
         : 1;
-    final status = job['status'] as String? ?? 'draft';
     final avatars = _proposalAvatars[jobPostId];
     final avatarCount = avatars != null
         ? avatars.length.clamp(0, 3)
@@ -546,6 +548,39 @@ class JobListScreenState extends State<JobListScreen> {
                       ],
                     ],
                   ),
+                  if (isScamClosed) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.gpp_bad_rounded,
+                            size: 12,
+                            color: Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Closed by AI scam detection · Tap to appeal',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
