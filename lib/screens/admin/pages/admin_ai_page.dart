@@ -160,6 +160,7 @@ class _ScamTab extends StatelessWidget {
               selected: admin.scamStatusFilter,
               onSelect: (s) => admin.loadScamFlags(status: s),
               accentColor: const Color(0xFFDC2626),
+              count: admin.scamFlags.length,
             ),
 
             Expanded(
@@ -1802,53 +1803,104 @@ class _FilterBar extends StatelessWidget {
   final String selected;
   final ValueChanged<String> onSelect;
   final Color accentColor;
+  final int? count;
 
   const _FilterBar({
     required this.options,
     required this.selected,
     required this.onSelect,
     required this.accentColor,
+    this.count,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: options.map((opt) {
-            final active = opt == selected;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onTap: () => onSelect(opt),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
+              const SizedBox(width: 6),
+              Text(
+                'Filter by Status',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.4,
+                ),
+              ),
+              if (count != null) ...[
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: active ? accentColor : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: active ? accentColor : const Color(0xFFE5E7EB),
-                    ),
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    opt[0].toUpperCase() + opt.substring(1),
+                    '$count items',
                     style: GoogleFonts.poppins(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: active ? Colors.white : const Color(0xFF6B7280),
+                      color: const Color(0xFF6B7280),
                     ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
-        ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: options.map((opt) {
+                final active = opt == selected;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => onSelect(opt),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: active ? accentColor : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: active
+                            ? null
+                            : Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                      ),
+                      child: Text(
+                        opt[0].toUpperCase() + opt.substring(1),
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: active ? Colors.white : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1890,16 +1942,15 @@ class _ModerationFilterSection extends StatelessWidget {
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () => onTap(opt),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFF7C3AED) : Colors.white,
+                  color: active ? const Color(0xFF7C3AED) : const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: active
-                        ? const Color(0xFF7C3AED)
-                        : const Color(0xFFE5E7EB),
-                  ),
+                  border: active
+                      ? null
+                      : Border.all(color: const Color(0xFFE5E7EB), width: 1),
                 ),
                 child: Text(
                   label(opt),
@@ -1920,18 +1971,46 @@ class _ModerationFilterSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
+              const SizedBox(width: 6),
+              Text(
+                'Filters',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             'STATUS',
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9CA3AF),
-              letterSpacing: 0.5,
+              color: const Color(0xFFB0B7C3),
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 6),
@@ -1941,14 +2020,16 @@ class _ModerationFilterSection extends StatelessWidget {
             (s) => s[0].toUpperCase() + s.substring(1),
             onStatusSelect,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const SizedBox(height: 12),
           Text(
             'CONTENT TYPE',
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9CA3AF),
-              letterSpacing: 0.5,
+              color: const Color(0xFFB0B7C3),
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 6),

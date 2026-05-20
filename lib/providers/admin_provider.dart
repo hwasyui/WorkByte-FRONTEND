@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
 
-enum AdminPage { overview, users, jobs, reports, ai, closed }
+enum AdminPage { overview, users, jobs, reports, ai, closed, appeals }
 
 class AdminProvider extends ChangeNotifier {
   String? _token;
@@ -47,6 +47,11 @@ class AdminProvider extends ChangeNotifier {
   String _closedAccountReasonFilter = 'all';
   Map<String, dynamic> _closedJobPagination = {};
   Map<String, dynamic> _closedAccountPagination = {};
+
+  List<Map<String, dynamic>> _appeals = [];
+  bool _isAppealsLoading = false;
+  String _appealsStatusFilter = 'all';
+  Map<String, dynamic> _appealsPagination = {};
 
   // Getters
   String? get token => _token;
@@ -94,6 +99,14 @@ class AdminProvider extends ChangeNotifier {
   String get closedAccountReasonFilter => _closedAccountReasonFilter;
   Map<String, dynamic> get closedJobPagination => _closedJobPagination;
   Map<String, dynamic> get closedAccountPagination => _closedAccountPagination;
+
+  List<Map<String, dynamic>> get appeals => _appeals;
+  bool get isAppealsLoading => _isAppealsLoading;
+  String get appealsStatusFilter => _appealsStatusFilter;
+  Map<String, dynamic> get appealsPagination => _appealsPagination;
+  int get pendingAppeals =>
+      (_appealsPagination['pending_count'] as num?)?.toInt() ??
+      _appeals.where((a) => a['status'] == 'pending').length;
   int get pendingScamFlags =>
       (_dashboardStats['pending_scam_flags'] as num?)?.toInt() ?? 0;
   int get pendingModerationItems =>
@@ -461,10 +474,10 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> adminCloseJob(String jobPostId) async {
+  Future<bool> adminCloseJob(String jobPostId, {String? reason}) async {
     if (_token == null) return false;
     try {
-      final ok = await AdminService.closeJob(_token!, jobPostId);
+      final ok = await AdminService.closeJob(_token!, jobPostId, reason: reason);
       if (ok) {
         await Future.wait([loadScamFlags(), loadModerationItems(), loadDashboardStats()]);
       }
@@ -474,13 +487,55 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> adminCloseAccount(String userId) async {
+  Future<Map<String, dynamic>?> loadFreelancerFullProfile(String freelancerId) async {
+    if (_token == null) return null;
+    return AdminService.getFreelancerFullProfile(_token!, freelancerId);
+  }
+
+  Future<bool> adminCloseAccount(String userId, {String? reason}) async {
     if (_token == null) return false;
     try {
-      final ok = await AdminService.closeAccount(_token!, userId);
+      final ok = await AdminService.closeAccount(_token!, userId, reason: reason);
       if (ok) {
         await Future.wait([loadModerationItems(), loadDashboardStats()]);
       }
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> loadAppeals({String? status, int page = 1}) async {
+    if (_token == null) return;
+    if (status != null) _appealsStatusFilter = status;
+    _isAppealsLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getAppeals(
+        _token!,
+        status: _appealsStatusFilter,
+        page: page,
+        pageSize: 30,
+      );
+      _appeals = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _appealsPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+    } catch (e) {
+      debugPrint('AdminProvider.loadAppeals error: $e');
+    }
+    _isAppealsLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> resolveAppeal(String appealId, String action, {String? adminNote}) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.resolveAppeal(
+        _token!,
+        appealId: appealId,
+        action: action,
+        adminNote: adminNote,
+      );
+      if (ok) await loadAppeals();
       return ok;
     } catch (_) {
       return false;
@@ -527,6 +582,10 @@ class AdminProvider extends ChangeNotifier {
     _closedAccountReasonFilter = 'all';
     _closedJobPagination = {};
     _closedAccountPagination = {};
+    _appeals = [];
+    _isAppealsLoading = false;
+    _appealsStatusFilter = 'all';
+    _appealsPagination = {};
     _isAiLoading = false;
     _isClosedLoading = false;
     _error = null;

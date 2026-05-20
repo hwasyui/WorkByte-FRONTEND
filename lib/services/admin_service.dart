@@ -357,12 +357,16 @@ class AdminService {
     }
   }
 
-  static Future<bool> closeJob(String token, String jobPostId) async {
+  static Future<bool> closeJob(
+    String token,
+    String jobPostId, {
+    String? reason,
+  }) async {
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/admin/jobs/$jobPostId/close'),
         headers: _headers(token),
-        body: jsonEncode({}),
+        body: jsonEncode({'reason': reason}),
       );
       return res.statusCode == 200;
     } catch (_) {
@@ -370,12 +374,85 @@ class AdminService {
     }
   }
 
-  static Future<bool> closeAccount(String token, String userId) async {
+  static Future<Map<String, dynamic>?> getFreelancerFullProfile(
+    String token,
+    String freelancerId,
+  ) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/freelancers/$freelancerId/profile');
+      final response = await http.get(uri, headers: _headers(token));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) return Map<String, dynamic>.from(details);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<bool> closeAccount(
+    String token,
+    String userId, {
+    String? reason,
+  }) async {
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/admin/accounts/$userId/close'),
         headers: _headers(token),
-        body: jsonEncode({}),
+        body: jsonEncode({'reason': reason}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAppeals(
+    String token, {
+    String status = 'all',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/appeals').replace(
+        queryParameters: {
+          'status': status,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token));
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) {
+          final rawItems = details['items'] ?? details['appeals'] ?? [];
+          final rawPag = details['pagination'];
+          return {
+            'items': rawItems is List
+                ? List<Map<String, dynamic>>.from(rawItems)
+                : <Map<String, dynamic>>[],
+            'pagination': rawPag is Map
+                ? Map<String, dynamic>.from(rawPag)
+                : <String, dynamic>{},
+          };
+        }
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> resolveAppeal(
+    String token, {
+    required String appealId,
+    required String action, // 'approve' | 'reject'
+    String? adminNote,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/appeals/$appealId/$action'),
+        headers: _headers(token),
+        body: jsonEncode({'admin_note': adminNote}),
       );
       return res.statusCode == 200;
     } catch (_) {

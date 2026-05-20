@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../auth/login.dart';
 import '../../core/constants/colors.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/section_header.dart';
@@ -676,6 +677,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
+    // Full-screen gate: account has been closed by admin
+    if (auth.isReportBanned) {
+      return _BannedAccountGate(
+        banMessage: auth.banMessage,
+        userId: auth.userId ?? '',
+      );
+    }
+
     // Sort categories by real count descending
     final sortedCategories = [..._kCategoryDefs]
       ..sort(
@@ -1600,6 +1611,162 @@ class _NotificationPlaceholder extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 14,
             color: const Color(0xFF7D7D7D),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Banned-account gate ───────────────────────────────────────────────────────
+// Shown instead of the normal app when the user's account has been closed.
+
+class _BannedAccountGate extends StatelessWidget {
+  final String? banMessage;
+  final String userId;
+
+  const _BannedAccountGate({this.banMessage, required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF9F9),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // icon
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE4E6),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(
+                    Icons.lock_person_rounded,
+                    size: 44,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Account Closed',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  banMessage ??
+                      'Your account has been closed by the WorkByte team. '
+                          'You can no longer access the platform.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: const Color(0xFF6B7280),
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // info card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFFFCC02).withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: Color(0xFFF57F17),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'If you believe this was a mistake, you can submit an appeal. '
+                          'Our team will review it within 3–5 business days.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF5D4037),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // appeal button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () => AppealDialog.show(
+                      context,
+                      targetType: 'user',
+                      targetId: userId,
+                      targetLabel: 'Your Account',
+                      closureNote: banMessage,
+                    ),
+                    icon: const Icon(Icons.gavel_rounded, size: 18),
+                    label: Text(
+                      'Submit an Appeal',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // logout
+                TextButton(
+                  onPressed: () async {
+                    final profile = context.read<ProfileProvider>();
+                    await auth.logout(profileProvider: profile);
+                    if (context.mounted) {
+                      Navigator.of(context, rootNavigator: true)
+                          .pushAndRemoveUntil(
+                        MaterialPageRoute(
+                            builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                  child: Text(
+                    'Sign out',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

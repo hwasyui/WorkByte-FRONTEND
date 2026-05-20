@@ -58,6 +58,14 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   String? _validate() {
     if (_titleController.text.trim().isEmpty) return 'Title is required';
     if (_descController.text.trim().isEmpty) return 'Description is required';
+    final descWordCount = _descController.text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .length;
+    if (descWordCount < 50) {
+      return 'Description must be at least 50 words (currently $descWordCount)';
+    }
     if (_daysController.text.trim().isEmpty) return 'Working days is required';
     if (int.tryParse(_daysController.text.trim()) == null) {
       return 'Working days must be a number';

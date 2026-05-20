@@ -34,69 +34,114 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
 
         return Column(
           children: [
-            // Filter chips
+            // Filter bar
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _statuses.map((status) {
-                    final isActive = _statusFilter == status;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _statusFilter = status;
-                            _currentPage = 1;
-                          });
-                          admin.loadJobsPage(
-                            1,
-                            status: status == 'all' ? null : status,
-                          );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? const Color(0xFF4F46E5)
-                                : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _label(status),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isActive
-                                  ? Colors.white
-                                  : const Color(0xFF6B7280),
-                            ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: const Border(
+                  bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.filter_list_rounded,
+                        size: 15,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Filter by Status',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF9CA3AF),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$total jobs',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF6B7280),
                           ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            // Total count
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  Text(
-                    '$total jobs total',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF374151),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _statuses.map((status) {
+                        final isActive = _statusFilter == status;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _statusFilter = status;
+                                _currentPage = 1;
+                              });
+                              admin.loadJobsPage(
+                                1,
+                                status: status == 'all' ? null : status,
+                              );
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? const Color(0xFF4F46E5)
+                                    : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(20),
+                                border: isActive
+                                    ? null
+                                    : Border.all(
+                                        color: const Color(0xFFE5E7EB),
+                                        width: 1,
+                                      ),
+                              ),
+                              child: Text(
+                                _label(status),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isActive
+                                      ? Colors.white
+                                      : const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ],
@@ -245,92 +290,87 @@ class _JobCard extends StatelessWidget {
     final color = _statusColor;
     final proposals = job['proposal_count'] ?? 0;
     final views = job['view_count'] ?? 0;
-    final category = (job['project_category'] as String? ?? '').replaceAll(
-      '_',
-      ' ',
-    );
-    final postedAt = _formatDate(
-      job['posted_at'] as String? ?? job['created_at'] as String?,
-    );
+    final category = (job['project_category'] as String? ?? '').replaceAll('_', ' ');
+    final postedAt = _formatDate(job['posted_at'] as String? ?? job['created_at'] as String?);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => _JobDetailSheet(job: job),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  job['job_title'] as String? ?? 'Untitled',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF111827),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status.replaceAll('_', ' '),
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            category,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: const Color(0xFF6B7280),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _InfoChip(
-                icon: Icons.description_outlined,
-                label: '$proposals proposals',
-              ),
-              const SizedBox(width: 12),
-              _InfoChip(icon: Icons.visibility_outlined, label: '$views views'),
-              const Spacer(),
-              Text(
-                postedAt,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: const Color(0xFF9CA3AF),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    job['job_title'] as String? ?? 'Untitled',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF111827),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status.replaceAll('_', ' '),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              category,
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _InfoChip(icon: Icons.description_outlined, label: '$proposals proposals'),
+                const SizedBox(width: 12),
+                _InfoChip(icon: Icons.visibility_outlined, label: '$views views'),
+                const Spacer(),
+                Text(
+                  postedAt,
+                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -343,6 +383,312 @@ class _JobCard extends StatelessWidget {
     } catch (_) {
       return '-';
     }
+  }
+}
+
+class _JobDetailSheet extends StatefulWidget {
+  final Map<String, dynamic> job;
+  const _JobDetailSheet({required this.job});
+
+  @override
+  State<_JobDetailSheet> createState() => _JobDetailSheetState();
+}
+
+class _JobDetailSheetState extends State<_JobDetailSheet> {
+  bool _closing = false;
+
+  String get _jobPostId =>
+      (widget.job['job_post_id'] ?? widget.job['id'])?.toString() ?? '';
+
+  Future<void> _handleClose() async {
+    if (_jobPostId.isEmpty) return;
+
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Close Job Post?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This will permanently close the job post. Freelancers will no longer be able to apply.',
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Reason / closure note *',
+                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF374151)),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: reasonCtrl,
+                maxLines: 3,
+                onChanged: (_) => setDlgState(() {}),
+                style: GoogleFonts.poppins(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Job post violates platform policy…',
+                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  contentPadding: const EdgeInsets.all(12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: reasonCtrl.text.trim().isEmpty
+                    ? const Color(0xFFDC2626).withOpacity(0.4)
+                    : const Color(0xFFDC2626),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+              onPressed: reasonCtrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, true),
+              child: Text('Close Job', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _closing = true);
+    final ok = await context.read<AdminProvider>().adminCloseJob(
+      _jobPostId,
+      reason: reasonCtrl.text.trim().isEmpty ? null : reasonCtrl.text.trim(),
+    );
+    if (mounted) {
+      setState(() => _closing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          ok ? 'Job closed successfully' : 'Failed to close job',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      if (ok) Navigator.pop(context);
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'active': return const Color(0xFF059669);
+      case 'filled': return const Color(0xFF0891B2);
+      case 'closed': return const Color(0xFFDC2626);
+      case 'draft': return const Color(0xFF9CA3AF);
+      default: return const Color(0xFFD97706);
+    }
+  }
+
+  String _fmt(String? d) {
+    if (d == null) return '-';
+    try {
+      final dt = DateTime.parse(d);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) { return '-'; }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final job = widget.job;
+    final status = job['status'] as String? ?? 'draft';
+    final color = _statusColor(status);
+    final category = (job['project_category'] as String? ?? '').replaceAll('_', ' ');
+    final proposals = job['proposal_count'] ?? 0;
+    final views = job['view_count'] ?? 0;
+    final postedAt = _fmt(job['posted_at'] as String? ?? job['created_at'] as String?);
+    final canClose = status != 'closed';
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (_, sc) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            child: Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              controller: sc,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(Icons.work_rounded, color: color, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            job['job_title'] as String? ?? 'Untitled Job',
+                            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF111827)),
+                          ),
+                          if (category.isNotEmpty)
+                            Text(category, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF))),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        status.replaceAll('_', ' '),
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Color(0xFFF3F4F6)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _DetailStat(icon: Icons.description_outlined, label: 'Proposals', value: proposals.toString()),
+                    const SizedBox(width: 24),
+                    _DetailStat(icon: Icons.visibility_outlined, label: 'Views', value: views.toString()),
+                    const SizedBox(width: 24),
+                    _DetailStat(icon: Icons.calendar_today_outlined, label: 'Posted', value: postedAt),
+                  ],
+                ),
+                if ((job['client_name'] as String?)?.isNotEmpty == true ||
+                    (job['client_email'] as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  _SheetSectionLabel('CLIENT'),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF9CA3AF)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          [job['client_name'], job['client_email']].where((e) => (e as String?)?.isNotEmpty == true).join(' · '),
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if ((job['project_type'] as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  _SheetSectionLabel('PROJECT TYPE'),
+                  const SizedBox(height: 4),
+                  Text((job['project_type'] as String).replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
+                ],
+                if ((job['experience_level'] as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  _SheetSectionLabel('EXPERIENCE LEVEL'),
+                  const SizedBox(height: 4),
+                  Text((job['experience_level'] as String).replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
+                ],
+                if (((job['description'] ?? job['job_description']) as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  _SheetSectionLabel('DESCRIPTION'),
+                  const SizedBox(height: 4),
+                  Text(
+                    job['description'] as String? ?? job['job_description'] as String? ?? '',
+                    style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151), height: 1.5),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (canClose) ...[
+                  const SizedBox(height: 24),
+                  const Divider(color: Color(0xFFF3F4F6)),
+                  const SizedBox(height: 16),
+                  _closing
+                      ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFFDC2626), strokeWidth: 2)))
+                      : SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _handleClose,
+                            icon: const Icon(Icons.block_rounded, size: 16),
+                            label: Text('Close Job Post', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _DetailStat({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: const Color(0xFF9CA3AF)),
+            const SizedBox(width: 4),
+            Text(label, style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF9CA3AF))),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF111827))),
+      ],
+    );
+  }
+}
+
+class _SheetSectionLabel extends StatelessWidget {
+  final String text;
+  const _SheetSectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF), letterSpacing: 0.5),
+    );
   }
 }
 

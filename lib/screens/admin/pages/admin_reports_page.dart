@@ -133,19 +133,71 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusOptions = ['all', 'pending', 'accepted', 'dismissed'];
     final typeOptions = ['all', 'freelancer', 'client', 'job_post'];
+    final reportCount = admin.reports.length;
 
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row
+          Row(
+            children: [
+              const Icon(
+                Icons.filter_list_rounded,
+                size: 15,
+                color: Color(0xFF9CA3AF),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Filters',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$reportCount report${reportCount == 1 ? '' : 's'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF6B7280),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Status row
           Text(
             'STATUS',
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFFB0B7C3),
               letterSpacing: 0.8,
             ),
           ),
@@ -161,17 +213,26 @@ class _FilterBar extends StatelessWidget {
                     onTap: () => admin.loadReports(status: s),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isActive ? _statusColor(s) : const Color(0xFFF3F4F6),
+                        color: isActive
+                            ? _statusColor(s)
+                            : const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(20),
+                        border: isActive
+                            ? null
+                            : Border.all(
+                                color: const Color(0xFFE5E7EB), width: 1),
                       ),
                       child: Text(
                         _statusLabel(s),
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: isActive ? Colors.white : const Color(0xFF6B7280),
+                          color: isActive
+                              ? Colors.white
+                              : const Color(0xFF6B7280),
                         ),
                       ),
                     ),
@@ -180,13 +241,18 @@ class _FilterBar extends StatelessWidget {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 10),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const SizedBox(height: 12),
+
+          // Type row
           Text(
             'TYPE',
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFFB0B7C3),
               letterSpacing: 0.8,
             ),
           ),
@@ -202,17 +268,26 @@ class _FilterBar extends StatelessWidget {
                     onTap: () => admin.loadReports(reportedType: t),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isActive ? const Color(0xFF4F46E5) : const Color(0xFFF3F4F6),
+                        color: isActive
+                            ? const Color(0xFF4F46E5)
+                            : const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(20),
+                        border: isActive
+                            ? null
+                            : Border.all(
+                                color: const Color(0xFFE5E7EB), width: 1),
                       ),
                       child: Text(
                         _typeLabel(t),
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: isActive ? Colors.white : const Color(0xFF6B7280),
+                          color: isActive
+                              ? Colors.white
+                              : const Color(0xFF6B7280),
                         ),
                       ),
                     ),
@@ -220,11 +295,6 @@ class _FilterBar extends StatelessWidget {
                 );
               }).toList(),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${admin.reports.length} report${admin.reports.length == 1 ? '' : 's'} found',
-            style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
           ),
         ],
       ),

@@ -22,6 +22,8 @@ class AppealProvider extends ChangeNotifier {
       _myAppeals.where((a) => a.status == 'pending').toList();
   List<AppealModel> get resolvedAppeals =>
       _myAppeals.where((a) => a.status != 'pending').toList();
+  List<AppealModel> get accountAppeals =>
+      _myAppeals.where((a) => a.targetType == 'user').toList();
 
   Future<void> fetchMyAppeals(String token) async {
     _isLoading = true;

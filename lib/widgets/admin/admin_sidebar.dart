@@ -156,6 +156,17 @@ class AdminSidebar extends StatelessWidget {
                     admin.loadClosedAccounts();
                   },
                 ),
+                _NavItem(
+                  icon: Icons.gavel_rounded,
+                  label: 'Appeals',
+                  page: AdminPage.appeals,
+                  current: admin.currentPage,
+                  badge: admin.pendingAppeals > 0 ? admin.pendingAppeals : null,
+                  onTap: () {
+                    admin.setPage(AdminPage.appeals);
+                    admin.loadAppeals(status: 'all');
+                  },
+                ),
 
                 const Spacer(),
 

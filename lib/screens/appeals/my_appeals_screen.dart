@@ -20,7 +20,7 @@ class _MyAppealsScreenState extends State<MyAppealsScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final token = context.read<AuthProvider>().token;
       if (token != null) context.read<AppealProvider>().fetchMyAppeals(token);
@@ -72,6 +72,7 @@ class _MyAppealsScreenState extends State<MyAppealsScreen>
               tabs: const [
                 Tab(text: 'Pending'),
                 Tab(text: 'Resolved'),
+                Tab(text: 'Account'),
               ],
             ),
           ),
@@ -161,6 +162,14 @@ class _MyAppealsScreenState extends State<MyAppealsScreen>
                 emptySubtitle:
                     'Appeals that have been reviewed will show here.',
                 emptyIcon: Icons.task_alt_rounded,
+              ),
+              _AppealList(
+                appeals: provider.accountAppeals,
+                onRefresh: _refresh,
+                emptyTitle: 'No account appeals',
+                emptySubtitle:
+                    'If your account is closed, you can submit an appeal here.',
+                emptyIcon: Icons.account_circle_outlined,
               ),
             ],
           );

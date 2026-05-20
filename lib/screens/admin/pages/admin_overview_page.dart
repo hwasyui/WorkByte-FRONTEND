@@ -487,6 +487,23 @@ class _LineChart extends StatelessWidget {
 
     return LineChart(
       LineChartData(
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => const Color(0xFF1F2937),
+            getTooltipItems: (spots) => spots
+                .map(
+                  (s) => LineTooltipItem(
+                    s.y.toInt().toString(),
+                    GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
         minX: 0,
         maxX: (data.length - 1).toDouble(),
         minY: 0,
@@ -609,6 +626,20 @@ class _BarChart extends StatelessWidget {
 
     return BarChart(
       BarChartData(
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => const Color(0xFF1F2937),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                BarTooltipItem(
+              rod.toY.toInt().toString(),
+              GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
         maxY: maxY,
         barGroups: data.asMap().entries.map((e) {
           final isLast = e.key == data.length - 1;
@@ -766,7 +797,13 @@ int _si(Map<String, dynamic> m, String k) =>
     (m[k] as num?)?.toInt() ?? 0;
 
 List<double> _trend(int total) {
-  if (total <= 0) return [2.0, 3.0, 2.5, 4.0, 3.0];
+  if (total <= 0) return [2.0, 3.0, 3.0, 4.0, 5.0];
   final t = total.toDouble();
-  return [t * 0.52, t * 0.65, t * 0.76, t * 0.89, t];
+  return [
+    (t * 0.52).roundToDouble(),
+    (t * 0.65).roundToDouble(),
+    (t * 0.76).roundToDouble(),
+    (t * 0.89).roundToDouble(),
+    t,
+  ];
 }
