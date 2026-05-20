@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
 
-enum AdminPage { overview, users, jobs, reports, ai }
+enum AdminPage { overview, users, jobs, reports, ai, closed }
 
 class AdminProvider extends ChangeNotifier {
   String? _token;
@@ -35,10 +35,18 @@ class AdminProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> _scamFlags = [];
   List<Map<String, dynamic>> _moderationItems = [];
+  List<Map<String, dynamic>> _closedJobs = [];
+  List<Map<String, dynamic>> _closedAccounts = [];
   bool _isAiLoading = false;
+  bool _isClosedLoading = false;
   String _scamStatusFilter = 'pending';
   String _moderationStatusFilter = 'pending';
   String _moderationTypeFilter = 'all';
+  String _closedJobReasonFilter = 'all';
+  String _closedAccountRoleFilter = 'all';
+  String _closedAccountReasonFilter = 'all';
+  Map<String, dynamic> _closedJobPagination = {};
+  Map<String, dynamic> _closedAccountPagination = {};
 
   // Getters
   String? get token => _token;
@@ -74,12 +82,22 @@ class AdminProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> get scamFlags => _scamFlags;
   List<Map<String, dynamic>> get moderationItems => _moderationItems;
+  List<Map<String, dynamic>> get closedJobs => _closedJobs;
+  List<Map<String, dynamic>> get closedAccounts => _closedAccounts;
   bool get isAiLoading => _isAiLoading;
+  bool get isClosedLoading => _isClosedLoading;
   String get scamStatusFilter => _scamStatusFilter;
   String get moderationStatusFilter => _moderationStatusFilter;
   String get moderationTypeFilter => _moderationTypeFilter;
-  int get pendingScamFlags => (_dashboardStats['pending_scam_flags'] as num?)?.toInt() ?? 0;
-  int get pendingModerationItems => (_dashboardStats['pending_moderation_items'] as num?)?.toInt() ?? 0;
+  String get closedJobReasonFilter => _closedJobReasonFilter;
+  String get closedAccountRoleFilter => _closedAccountRoleFilter;
+  String get closedAccountReasonFilter => _closedAccountReasonFilter;
+  Map<String, dynamic> get closedJobPagination => _closedJobPagination;
+  Map<String, dynamic> get closedAccountPagination => _closedAccountPagination;
+  int get pendingScamFlags =>
+      (_dashboardStats['pending_scam_flags'] as num?)?.toInt() ?? 0;
+  int get pendingModerationItems =>
+      (_dashboardStats['pending_moderation_items'] as num?)?.toInt() ?? 0;
 
   void setPage(AdminPage page) {
     _currentPage = page;
@@ -144,7 +162,8 @@ class AdminProvider extends ChangeNotifier {
     if (_token == null) return;
     try {
       _dashboardStats = await AdminService.getDashboardStats(_token!);
-      _pendingReports = (_dashboardStats['pending_reports'] as num?)?.toInt() ?? 0;
+      _pendingReports =
+          (_dashboardStats['pending_reports'] as num?)?.toInt() ?? 0;
     } catch (e) {
       debugPrint('AdminProvider.loadDashboardStats error: $e');
     }
@@ -243,9 +262,7 @@ class AdminProvider extends ChangeNotifier {
         page: page,
         pageSize: 20,
       );
-      _tableFreelancers = List<Map<String, dynamic>>.from(
-        data['items'] ?? [],
-      );
+      _tableFreelancers = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _freelancerPagination = Map<String, dynamic>.from(
         data['pagination'] ?? {},
       );
@@ -270,12 +287,9 @@ class AdminProvider extends ChangeNotifier {
         pageSize: 20,
       );
       _tableClients = List<Map<String, dynamic>>.from(data['items'] ?? []);
-      _clientPagination = Map<String, dynamic>.from(
-        data['pagination'] ?? {},
-      );
+      _clientPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
       _totalClients =
-          (_clientPagination['total'] as num?)?.toInt() ??
-          _tableClients.length;
+          (_clientPagination['total'] as num?)?.toInt() ?? _tableClients.length;
     } catch (e) {
       debugPrint('AdminProvider.loadClientsPage error: $e');
     }
@@ -283,13 +297,14 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadJobsPage(int page) async {
+  Future<void> loadJobsPage(int page, {String? status}) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
     try {
-      final data = await AdminService.getJobPosts(
+      final data = await AdminService.getAdminJobs(
         _token!,
+        status: status,
         page: page,
         pageSize: 20,
       );
@@ -301,6 +316,77 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider.loadJobsPage error: $e');
     }
     _isTableLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadClosedJobs({
+    String? closureReason,
+    String? search,
+    int page = 1,
+  }) async {
+    if (_token == null) return;
+    if (closureReason != null) _closedJobReasonFilter = closureReason;
+    _isClosedLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getAdminJobs(
+        _token!,
+        status: 'closed',
+        closureReason: _closedJobReasonFilter == 'all'
+            ? null
+            : _closedJobReasonFilter,
+        search: search,
+        sortBy: 'closed_at',
+        sortDir: 'desc',
+        page: page,
+        pageSize: 20,
+      );
+      _closedJobs = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _closedJobPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
+    } catch (e) {
+      debugPrint('AdminProvider.loadClosedJobs error: $e');
+    }
+    _isClosedLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadClosedAccounts({
+    String? role,
+    String? banReason,
+    String? search,
+    int page = 1,
+  }) async {
+    if (_token == null) return;
+    if (role != null) _closedAccountRoleFilter = role;
+    if (banReason != null) _closedAccountReasonFilter = banReason;
+    _isClosedLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getAdminUsers(
+        _token!,
+        isBanned: true,
+        role: _closedAccountRoleFilter == 'all'
+            ? null
+            : _closedAccountRoleFilter,
+        banReason: _closedAccountReasonFilter == 'all'
+            ? null
+            : _closedAccountReasonFilter,
+        search: search,
+        sortBy: 'report_banned_at',
+        sortDir: 'desc',
+        page: page,
+        pageSize: 20,
+      );
+      _closedAccounts = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _closedAccountPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
+    } catch (e) {
+      debugPrint('AdminProvider.loadClosedAccounts error: $e');
+    }
+    _isClosedLoading = false;
     notifyListeners();
   }
 
@@ -337,7 +423,10 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadModerationItems({String? status, String? contentType}) async {
+  Future<void> loadModerationItems({
+    String? status,
+    String? contentType,
+  }) async {
     if (_token == null) return;
     if (status != null) _moderationStatusFilter = status;
     if (contentType != null) _moderationTypeFilter = contentType;
@@ -366,6 +455,32 @@ class AdminProvider extends ChangeNotifier {
         action: action,
       );
       if (ok) await Future.wait([loadModerationItems(), loadDashboardStats()]);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> adminCloseJob(String jobPostId) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.closeJob(_token!, jobPostId);
+      if (ok) {
+        await Future.wait([loadScamFlags(), loadModerationItems(), loadDashboardStats()]);
+      }
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> adminCloseAccount(String userId) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.closeAccount(_token!, userId);
+      if (ok) {
+        await Future.wait([loadModerationItems(), loadDashboardStats()]);
+      }
       return ok;
     } catch (_) {
       return false;
@@ -402,10 +517,18 @@ class AdminProvider extends ChangeNotifier {
     _reportsTypeFilter = 'all';
     _scamFlags = [];
     _moderationItems = [];
+    _closedJobs = [];
+    _closedAccounts = [];
     _scamStatusFilter = 'pending';
     _moderationStatusFilter = 'pending';
     _moderationTypeFilter = 'all';
+    _closedJobReasonFilter = 'all';
+    _closedAccountRoleFilter = 'all';
+    _closedAccountReasonFilter = 'all';
+    _closedJobPagination = {};
+    _closedAccountPagination = {};
     _isAiLoading = false;
+    _isClosedLoading = false;
     _error = null;
     notifyListeners();
   }

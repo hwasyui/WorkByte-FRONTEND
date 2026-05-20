@@ -153,6 +153,38 @@ class AboutScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
+                  // ── Authentication section ──────────────────────────────────
+                  _SectionTitle(title: 'Authentication'),
+                  const SizedBox(height: 12),
+
+                  _FeatureCard(
+                    icon: Icons.lock_open_rounded,
+                    iconColor: const Color(0xFF0891B2),
+                    iconBg: const Color(0xFFCFFAFE),
+                    accentColor: const Color(0xFF0891B2),
+                    badge: 'OAuth 2.0',
+                    title: 'Social Sign-In',
+                    description:
+                        'WorkByte supports one-tap sign-in via Google using the '
+                        'OAuth 2.0 Authorization Code flow with OpenID Connect. '
+                        'Each login request is protected by an HMAC-SHA256-signed state '
+                        'token to prevent CSRF attacks — no server-side session storage '
+                        'is needed. Accounts are resolved in three tiers: a returning '
+                        'OAuth user is matched by their Google ID, a new Google login '
+                        'with an already-registered email auto-links the account and '
+                        'marks the email as verified, and a completely new email creates '
+                        'a fresh account with email verification pre-confirmed by Google. '
+                        'The user then chooses their role (freelancer or client) '
+                        'on first login.',
+                    highlights: const [
+                      'Google OAuth 2.0 + OpenID Connect',
+                      'HMAC-SHA256 CSRF state token — no server-side session storage',
+                      '3-tier resolution: provider link → email match → new account',
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+
                   // ── AI Features section ─────────────────────────────────────
                   _SectionTitle(title: 'AI-Powered Features'),
                   const SizedBox(height: 12),
@@ -180,22 +212,100 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 14),
 
                   _FeatureCard(
-                    icon: Icons.hub_outlined,
+                    icon: Icons.auto_awesome_rounded,
                     iconColor: const Color(0xFF0EA5E9),
                     iconBg: const Color(0xFFE0F2FE),
                     accentColor: const Color(0xFF0EA5E9),
-                    badge: 'Job Matching',
-                    title: 'AI Job Matching',
+                    badge: 'Job Recommendations',
+                    title: 'Personalized Job Recommendations',
                     description:
-                        'Our intelligent matching engine analyzes a freelancer\'s profile '
-                        '— including skills, experience, and past performance — and pairs '
-                        'them with the most relevant job postings. Clients also benefit '
-                        'by receiving smart suggestions for the best-fit freelancers '
-                        'for their projects.',
+                        'The homepage feed uses a 3-stage AI pipeline to surface the '
+                        'jobs most likely to match each freelancer. First, a semantic '
+                        'vector search finds the top 100 closest job descriptions. '
+                        'Then a skill-overlap filter removes poor fits. Finally, a '
+                        'CatBoost ML model re-ranks the remaining jobs across 13 features '
+                        '— skills, experience, rate fit, portfolio relevance, and more. '
+                        'Every recommendation also includes SHAP-based explanations '
+                        'showing exactly why a job ranked high and what gaps exist.',
                     highlights: const [
-                      'Matches freelancers to relevant jobs',
-                      'Suggests top candidates to clients',
-                      'Based on skills, experience & performance',
+                      '3-stage pipeline: semantic search → skill filter → ML ranking',
+                      'CatBoost model trained on 13 profile & job features',
+                      'SHAP explanations for every recommendation',
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  _FeatureCard(
+                    icon: Icons.manage_search_rounded,
+                    iconColor: const Color(0xFF059669),
+                    iconBg: const Color(0xFFD1FAE5),
+                    accentColor: const Color(0xFF059669),
+                    badge: 'Job Fit Analysis',
+                    title: 'Deep Job Fit Analysis',
+                    description:
+                        'When a freelancer wants a detailed view of how well they fit a '
+                        'specific job, WorkByte runs a RAG + LLM analysis. It retrieves '
+                        'the job\'s requirements, the freelancer\'s full profile, and '
+                        'relevant past contracts from the database, then asks a local '
+                        'language model for a structured assessment — covering matched '
+                        'skills, skill gaps, strengths, and practical improvement tips. '
+                        'This is a deeper, advisory complement to the quick feed ranking.',
+                    highlights: const [
+                      'Retrieval-Augmented Generation (RAG) over profile & contracts',
+                      'Per-role breakdown: matched skills, gaps & strengths',
+                      'Actionable skill improvement tips from the LLM',
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  _FeatureCard(
+                    icon: Icons.shield_outlined,
+                    iconColor: const Color(0xFF7C3AED),
+                    iconBg: const Color(0xFFF3E8FF),
+                    accentColor: const Color(0xFF7C3AED),
+                    badge: 'Content Moderation',
+                    title: 'Toxicity Detection',
+                    description:
+                        'Every job posting, profile bio, and user-submitted text is '
+                        'automatically scanned by a fine-tuned RoBERTa classifier '
+                        'before it reaches the community. The model scores '
+                        'content across five harm labels and routes likely violations '
+                        'to admin review. Low-risk content is auto-approved; high-risk '
+                        'content can be auto-rejected using stricter thresholds for '
+                        'jobs and profiles. Pending items expire after 30 days.',
+                    highlights: const [
+                      '5 harm labels: Toxicity, Obscene, Threat, Insult, Identity Hate',
+                      'RoBERTa classifier fine-tuned for platform moderation',
+                      'Automated triage with human-readable label explanations for reviewers',
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  _FeatureCard(
+                    icon: Icons.gpp_bad_outlined,
+                    iconColor: const Color(0xFFDC2626),
+                    iconBg: const Color(0xFFFEE2E2),
+                    accentColor: const Color(0xFFDC2626),
+                    badge: 'Scam Detection',
+                    title: 'Job Scam Detection',
+                    description:
+                        'Every new job post is automatically scanned for fraudulent '
+                        'signals before it goes live. An SBERT sentence encoder converts '
+                        'the title and description into a 384-dimensional semantic '
+                        'embedding, which is combined with 10 engineered features — '
+                        'urgent-language signals, unrealistic pay promises, low-skill '
+                        'bait, and suspicious payment keywords (e.g. wire transfer, '
+                        'Bitcoin, advance fee). A Random Forest classifier trained on '
+                        'this 394-feature vector produces a scam probability score. '
+                        'High-confidence posts are auto-closed instantly; borderline '
+                        'cases are queued for admin review.',
+                    highlights: const [
+                      'SBERT + Random Forest on 394 features (embedding + engineered signals)',
+                      'Score ≥ 0.40: job auto-closed immediately',
+                      'Score 0.25–0.39: flagged for admin review without closing',
                     ],
                   ),
 

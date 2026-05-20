@@ -29,6 +29,7 @@ import '../../models/job_post_model.dart';
 import '../../models/freelancer_model.dart';
 import '../../models/ai_job_match_model.dart';
 import '../job_freelancer_view/job_detail.dart';
+import '../recommended/recommended_jobs_screen.dart';
 
 class _CategoryDef {
   final String key;
@@ -524,6 +525,155 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showRecommendationInfoDialog(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.primary,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'How Recommendations Work',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1A1A2E),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              _buildInfoStep('1', const Color(0xFF4F46E5), 'Semantic Search',
+                  'Your profile is encoded into a vector and compared against all open job descriptions to find the top 100 closest semantic matches.'),
+              const SizedBox(height: 12),
+              _buildInfoStep('2', const Color(0xFF059669), 'Skill Filtering',
+                  'Jobs are filtered by skill overlap. Any job where your skill match falls below 20% of the required skills is removed.'),
+              const SizedBox(height: 12),
+              _buildInfoStep('3', const Color(0xFFD97706), 'AI Ranking',
+                  'A CatBoost ML model scores remaining jobs across 13 features — skills, experience level, rate fit, and portfolio relevance — and ranks them by predicted match quality.'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Each recommendation on the full page shows why it ranked high (✓ match reasons) and what may be holding it back (⚠ gap signals), powered by SHAP explanations from the ML model.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF4F46E5),
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'Got it',
+              style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoStep(
+      String step, Color color, String title, String body) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            step,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                body,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF6B7280),
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Sort categories by real count descending
@@ -869,20 +1019,113 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionHeader(
-                            title: 'Recommended for You',
-                            onViewAll: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const JobListScreen(),
+                          // Section header with inline "i" info icon
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Recommended for You',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF333333),
+                                  ),
+                                ),
                               ),
-                            ),
+                              GestureDetector(
+                                onTap: () => _showRecommendationInfoDialog(context),
+                                child: Container(
+                                  width: 26,
+                                  height: 26,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const RecommendedJobsScreen(),
+                                  ),
+                                ),
+                                child: Text(
+                                  'View all >',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF7D7D7D),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
                             height: 178,
                             child: _buildRecommendedJobsList(),
                           ),
+                          const SizedBox(height: 10),
+                          // "View All Recommendations" button
+                          if (!_isLoadingJobs &&
+                              !_noEmbeddingYet &&
+                              _recommendedJobs.isNotEmpty)
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const RecommendedJobsScreen(),
+                                ),
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondary,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 15,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'View All Recommendations',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      size: 15,
+                                      color: AppColors.primary,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 24),
                         ],
                       );

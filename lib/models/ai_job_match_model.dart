@@ -11,6 +11,8 @@ class AIJobMatchModel {
   final double similarityScore;
   final double matchProbability;
   final double skillOverlapPct;
+  final List<String> matchReasons;
+  final List<String> penaltyReasons;
 
   AIJobMatchModel({
     required this.jobPostId,
@@ -25,9 +27,19 @@ class AIJobMatchModel {
     required this.similarityScore,
     required this.matchProbability,
     required this.skillOverlapPct,
+    this.matchReasons = const [],
+    this.penaltyReasons = const [],
   });
 
   factory AIJobMatchModel.fromJson(Map<String, dynamic> json) {
+    List<String> parseLabels(dynamic raw) {
+      if (raw == null) return const [];
+      return (raw as List)
+          .map((r) => (r as Map<String, dynamic>)['label']?.toString() ?? '')
+          .where((l) => l.isNotEmpty)
+          .toList();
+    }
+
     return AIJobMatchModel(
       jobPostId: json['job_post_id']?.toString() ?? '',
       jobTitle: json['job_title']?.toString() ?? '',
@@ -41,6 +53,8 @@ class AIJobMatchModel {
       similarityScore: (json['similarity_score'] as num?)?.toDouble() ?? 0.0,
       matchProbability: (json['match_probability'] as num?)?.toDouble() ?? 0.0,
       skillOverlapPct: (json['skill_overlap_pct'] as num?)?.toDouble() ?? 0.0,
+      matchReasons: parseLabels(json['match_reasons']),
+      penaltyReasons: parseLabels(json['penalty_reasons']),
     );
   }
 

@@ -12,11 +12,9 @@ class AdminJobsPage extends StatefulWidget {
 
 class _AdminJobsPageState extends State<AdminJobsPage> {
   int _currentPage = 1;
-  String? _statusFilter;
+  String _statusFilter = 'all';
 
-  final List<String> _statuses = [
-    'All', 'draft', 'open', 'hiring', 'in_progress', 'completed',
-  ];
+  final List<String> _statuses = ['all', 'draft', 'active', 'closed', 'filled'];
 
   @override
   void initState() {
@@ -30,12 +28,6 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
-        final filtered = _statusFilter == null || _statusFilter == 'All'
-            ? admin.tableJobs
-            : admin.tableJobs
-                .where((j) => j['status'] == _statusFilter)
-                .toList();
-
         final total = (admin.jobPagination['total'] as num?)?.toInt() ?? 0;
         final totalPages =
             (admin.jobPagination['total_pages'] as num?)?.toInt() ?? 1;
@@ -50,13 +42,20 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: _statuses.map((status) {
-                    final isActive = (_statusFilter ?? 'All') == status;
+                    final isActive = _statusFilter == status;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
-                        onTap: () => setState(() {
-                          _statusFilter = status == 'All' ? null : status;
-                        }),
+                        onTap: () {
+                          setState(() {
+                            _statusFilter = status;
+                            _currentPage = 1;
+                          });
+                          admin.loadJobsPage(
+                            1,
+                            status: status == 'all' ? null : status,
+                          );
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
                           padding: const EdgeInsets.symmetric(
@@ -70,7 +69,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            _capitalize(status),
+                            _label(status),
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -112,7 +111,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                         color: Color(0xFF4F46E5),
                       ),
                     )
-                  : filtered.isEmpty
+                  : admin.tableJobs.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -134,14 +133,16 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF4F46E5),
-                      onRefresh: () => admin.loadJobsPage(_currentPage),
+                      onRefresh: () => admin.loadJobsPage(
+                        _currentPage,
+                        status: _statusFilter == 'all' ? null : _statusFilter,
+                      ),
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 8),
+                        itemCount: admin.tableJobs.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, i) =>
-                            _JobCard(job: filtered[i]),
+                            _JobCard(job: admin.tableJobs[i]),
                       ),
                     ),
             ),
@@ -171,7 +172,12 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                           onPressed: _currentPage > 1
                               ? () {
                                   setState(() => _currentPage--);
-                                  admin.loadJobsPage(_currentPage);
+                                  admin.loadJobsPage(
+                                    _currentPage,
+                                    status: _statusFilter == 'all'
+                                        ? null
+                                        : _statusFilter,
+                                  );
                                 }
                               : null,
                           color: const Color(0xFF4F46E5),
@@ -182,7 +188,12 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                           onPressed: _currentPage < totalPages
                               ? () {
                                   setState(() => _currentPage++);
-                                  admin.loadJobsPage(_currentPage);
+                                  admin.loadJobsPage(
+                                    _currentPage,
+                                    status: _statusFilter == 'all'
+                                        ? null
+                                        : _statusFilter,
+                                  );
                                 }
                               : null,
                           color: const Color(0xFF4F46E5),
@@ -199,8 +210,14 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
     );
   }
 
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  String _label(String s) => s
+      .split('_')
+      .map(
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
+      )
+      .join(' ');
 }
 
 class _JobCard extends StatelessWidget {
@@ -209,12 +226,16 @@ class _JobCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (job['status']) {
-      case 'open': return const Color(0xFF059669);
-      case 'hiring': return const Color(0xFF0891B2);
-      case 'in_progress': return const Color(0xFF7C3AED);
-      case 'completed': return const Color(0xFF10B981);
-      case 'draft': return const Color(0xFF9CA3AF);
-      default: return const Color(0xFFD97706);
+      case 'active':
+        return const Color(0xFF059669);
+      case 'filled':
+        return const Color(0xFF0891B2);
+      case 'closed':
+        return const Color(0xFFDC2626);
+      case 'draft':
+        return const Color(0xFF9CA3AF);
+      default:
+        return const Color(0xFFD97706);
     }
   }
 
@@ -224,8 +245,10 @@ class _JobCard extends StatelessWidget {
     final color = _statusColor;
     final proposals = job['proposal_count'] ?? 0;
     final views = job['view_count'] ?? 0;
-    final category = (job['project_category'] as String? ?? '')
-        .replaceAll('_', ' ');
+    final category = (job['project_category'] as String? ?? '').replaceAll(
+      '_',
+      ' ',
+    );
     final postedAt = _formatDate(
       job['posted_at'] as String? ?? job['created_at'] as String?,
     );
@@ -296,10 +319,7 @@ class _JobCard extends StatelessWidget {
                 label: '$proposals proposals',
               ),
               const SizedBox(width: 12),
-              _InfoChip(
-                icon: Icons.visibility_outlined,
-                label: '$views views',
-              ),
+              _InfoChip(icon: Icons.visibility_outlined, label: '$views views'),
               const Spacer(),
               Text(
                 postedAt,

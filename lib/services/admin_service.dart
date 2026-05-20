@@ -71,7 +71,10 @@ class AdminService {
     final meBody = jsonDecode(meRes.body);
     final meData = meBody['details'] ?? meBody['data'] ?? meBody;
     final isAdmin = meData['is_admin'] as bool? ?? false;
-    if (!isAdmin) throw Exception('Access denied. This account does not have admin privileges.');
+    if (!isAdmin)
+      throw Exception(
+        'Access denied. This account does not have admin privileges.',
+      );
 
     return token;
   }
@@ -123,6 +126,85 @@ class AdminService {
         'page_size': pageSize.toString(),
       },
     );
+    final response = await http.get(uri, headers: _headers(token));
+    if (response.statusCode == 200) {
+      return _extract(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<Map<String, dynamic>> getAdminJobs(
+    String token, {
+    String? status,
+    String? closureReason,
+    String? projectType,
+    String? projectScope,
+    String? experienceLevel,
+    String? projectCategory,
+    bool? isAiGenerated,
+    String? search,
+    String sortBy = 'created_at',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final query = <String, String>{
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (closureReason != null && closureReason.isNotEmpty)
+        'closure_reason': closureReason,
+      if (projectType != null && projectType.isNotEmpty)
+        'project_type': projectType,
+      if (projectScope != null && projectScope.isNotEmpty)
+        'project_scope': projectScope,
+      if (experienceLevel != null && experienceLevel.isNotEmpty)
+        'experience_level': experienceLevel,
+      if (projectCategory != null && projectCategory.isNotEmpty)
+        'project_category': projectCategory,
+      if (isAiGenerated != null) 'is_ai_generated': isAiGenerated.toString(),
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      'sort_by': sortBy,
+      'sort_dir': sortDir,
+      'page': page.toString(),
+      'page_size': pageSize.toString(),
+    };
+
+    final uri = Uri.parse(
+      '$_baseUrl/admin/jobs',
+    ).replace(queryParameters: query);
+    final response = await http.get(uri, headers: _headers(token));
+    if (response.statusCode == 200) {
+      return _extract(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<Map<String, dynamic>> getAdminUsers(
+    String token, {
+    String? role,
+    bool? isBanned,
+    bool? emailVerified,
+    String? banReason,
+    String? search,
+    String sortBy = 'created_at',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final query = <String, String>{
+      if (role != null && role.isNotEmpty) 'role': role,
+      if (isBanned != null) 'is_banned': isBanned.toString(),
+      if (emailVerified != null) 'email_verified': emailVerified.toString(),
+      if (banReason != null && banReason.isNotEmpty) 'ban_reason': banReason,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      'sort_by': sortBy,
+      'sort_dir': sortDir,
+      'page': page.toString(),
+      'page_size': pageSize.toString(),
+    };
+
+    final uri = Uri.parse(
+      '$_baseUrl/admin/users',
+    ).replace(queryParameters: query);
     final response = await http.get(uri, headers: _headers(token));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
@@ -275,19 +357,53 @@ class AdminService {
     }
   }
 
+  static Future<bool> closeJob(String token, String jobPostId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/jobs/$jobPostId/close'),
+        headers: _headers(token),
+        body: jsonEncode({}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> closeAccount(String token, String userId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/accounts/$userId/close'),
+        headers: _headers(token),
+        body: jsonEncode({}),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Map<String, dynamic> _extract(Map<String, dynamic> data) {
-    final details = data['details'];
+    final details = data['details'] ?? data['data'] ?? data;
     List<Map<String, dynamic>> items = [];
     Map<String, dynamic> pagination = {};
 
     if (details is Map) {
-      final rawItems = details['items'];
+      final rawItems = details['items'] ?? details['jobs'] ?? details['users'];
       if (rawItems is List) {
         items = List<Map<String, dynamic>>.from(rawItems);
       }
       final rawPag = details['pagination'];
       if (rawPag is Map) {
         pagination = Map<String, dynamic>.from(rawPag);
+      } else {
+        pagination = {
+          if (details['total'] != null) 'total': details['total'],
+          if (details['page'] != null) 'page': details['page'],
+          if (details['page_size'] != null) 'page_size': details['page_size'],
+          if (details['total_pages'] != null)
+            'total_pages': details['total_pages'],
+        };
       }
     } else if (details is List) {
       items = List<Map<String, dynamic>>.from(details);

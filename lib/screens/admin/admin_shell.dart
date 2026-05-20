@@ -12,6 +12,7 @@ import 'pages/admin_users_page.dart';
 import 'pages/admin_jobs_page.dart';
 import 'pages/admin_reports_page.dart';
 import 'pages/admin_ai_page.dart';
+import 'pages/admin_closed_page.dart';
 import '../auth/login.dart';
 
 class AdminShell extends StatelessWidget {
@@ -23,6 +24,7 @@ class AdminShell extends StatelessWidget {
     AdminJobsPage(),
     AdminReportsPage(),
     AdminAiPage(),
+    AdminClosedPage(),
   ];
 
   static const List<String> _titles = [
@@ -31,6 +33,7 @@ class AdminShell extends StatelessWidget {
     'Job Management',
     'Reports',
     'AI Analysis',
+    'Closed Items',
   ];
 
   @override
@@ -99,7 +102,8 @@ class AdminShell extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, size: 20),
-                onPressed: () => context.read<AdminProvider>().loadOverviewData(),
+                onPressed: () =>
+                    context.read<AdminProvider>().loadOverviewData(),
                 tooltip: 'Refresh',
               ),
             ],
@@ -108,10 +112,7 @@ class AdminShell extends StatelessWidget {
             selectedIndex: idx,
             onSelect: (i) => admin.setPage(AdminPage.values[i]),
           ),
-          body: IndexedStack(
-            index: idx,
-            children: _pages,
-          ),
+          body: IndexedStack(index: idx, children: _pages),
         );
       },
     );
@@ -122,10 +123,7 @@ class _MobileDrawer extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelect;
 
-  const _MobileDrawer({
-    required this.selectedIndex,
-    required this.onSelect,
-  });
+  const _MobileDrawer({required this.selectedIndex, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +183,10 @@ class _MobileDrawer extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 child: Text(
                   'NAVIGATION',
                   style: GoogleFonts.poppins(
@@ -237,6 +238,37 @@ class _MobileDrawer extends StatelessWidget {
                 onTap: () {
                   onSelect(3);
                   context.read<AdminProvider>().loadReports();
+                  Navigator.pop(context);
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.smart_toy_rounded,
+                label: 'AI Analysis',
+                isSelected: selectedIndex == 4,
+                badge:
+                    context.read<AdminProvider>().pendingScamFlags +
+                            context
+                                .read<AdminProvider>()
+                                .pendingModerationItems >
+                        0
+                    ? context.read<AdminProvider>().pendingScamFlags +
+                          context.read<AdminProvider>().pendingModerationItems
+                    : null,
+                onTap: () {
+                  onSelect(4);
+                  context.read<AdminProvider>().loadScamFlags();
+                  context.read<AdminProvider>().loadModerationItems();
+                  Navigator.pop(context);
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.lock_clock_rounded,
+                label: 'Closed Items',
+                isSelected: selectedIndex == 5,
+                onTap: () {
+                  onSelect(5);
+                  context.read<AdminProvider>().loadClosedJobs();
+                  context.read<AdminProvider>().loadClosedAccounts();
                   Navigator.pop(context);
                 },
               ),
@@ -344,22 +376,22 @@ class _DrawerItem extends StatelessWidget {
                 ),
               )
             : badge != null
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      badge! > 99 ? '99+' : badge.toString(),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  )
-                : null,
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badge! > 99 ? '99+' : badge.toString(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              )
+            : null,
         onTap: onTap,
       ),
     );

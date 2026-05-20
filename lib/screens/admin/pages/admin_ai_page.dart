@@ -73,7 +73,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                         ),
                       ),
                       Text(
-                        'Scam detection & content moderation',
+                        'Scam detection & toxicity moderation',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),
@@ -123,7 +123,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                 indicatorWeight: 2.5,
                 tabs: const [
                   Tab(text: 'Scam Detection'),
-                  Tab(text: 'Content Moderation'),
+                  Tab(text: 'Toxicity Detection'),
                 ],
               ),
             ],
@@ -134,10 +134,7 @@ class _AdminAiPageState extends State<AdminAiPage>
         Expanded(
           child: TabBarView(
             controller: _tab,
-            children: const [
-              _ScamTab(),
-              _ModerationTab(),
-            ],
+            children: const [_ScamTab(), _ModerationTab()],
           ),
         ),
       ],
@@ -158,7 +155,6 @@ class _ScamTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
-            // Filter chips
             _FilterBar(
               options: _statuses,
               selected: admin.scamStatusFilter,
@@ -166,7 +162,6 @@ class _ScamTab extends StatelessWidget {
               accentColor: const Color(0xFFDC2626),
             ),
 
-            // List
             Expanded(
               child: admin.isAiLoading && admin.scamFlags.isEmpty
                   ? const Center(
@@ -175,24 +170,23 @@ class _ScamTab extends StatelessWidget {
                       ),
                     )
                   : admin.scamFlags.isEmpty
-                      ? _Empty(
-                          icon: Icons.verified_rounded,
-                          message: 'No scam flags found',
-                          sub: 'All job posts look clean',
-                        )
-                      : RefreshIndicator(
-                          color: const Color(0xFF7C3AED),
-                          onRefresh: () =>
-                              admin.loadScamFlags(status: admin.scamStatusFilter),
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: admin.scamFlags.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) =>
-                                _ScamCard(flag: admin.scamFlags[i]),
-                          ),
-                        ),
+                  ? _Empty(
+                      icon: Icons.verified_rounded,
+                      message: 'No scam flags found',
+                      sub: 'All job posts look clean',
+                    )
+                  : RefreshIndicator(
+                      color: const Color(0xFF7C3AED),
+                      onRefresh: () =>
+                          admin.loadScamFlags(status: admin.scamStatusFilter),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: admin.scamFlags.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (ctx, i) =>
+                            _ScamCard(flag: admin.scamFlags[i]),
+                      ),
+                    ),
             ),
           ],
         );
@@ -211,6 +205,7 @@ class _ScamCard extends StatefulWidget {
 
 class _ScamCardState extends State<_ScamCard> {
   bool _loading = false;
+  bool _closing = false;
 
   Future<void> _act(String action) async {
     setState(() => _loading = true);
@@ -230,14 +225,265 @@ class _ScamCardState extends State<_ScamCard> {
     }
   }
 
+  Future<void> _confirmClose(BuildContext ctx) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          'Close Job Post',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'This will close the job post as an admin override. No scam strike is recorded against the client.',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Close Job',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF7C3AED),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _closing = true);
+    final jobPostId = widget.flag['job_post_id']?.toString() ?? '';
+    if (jobPostId.isEmpty) {
+      setState(() => _closing = false);
+      return;
+    }
+    final ok = await context.read<AdminProvider>().adminCloseJob(jobPostId);
+    if (mounted) {
+      setState(() => _closing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          ok ? 'Job post closed' : 'Failed to close job post',
+          style: GoogleFonts.poppins(),
+        ),
+        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      ));
+    }
+  }
+
+  void _showDetail(BuildContext ctx) {
+    final f = widget.flag;
+    final score = (f['scam_score'] as num?)?.toDouble() ?? 0.0;
+    final keywords =
+        (f['detected_keywords'] as List?)?.map((e) => e.toString()).toList() ??
+        [];
+    final flaggedText = f['flagged_text']?.toString() ?? '';
+    final confirmed = (f['total_scam_confirmed'] as num?)?.toInt() ?? 0;
+    final isBanned = f['is_banned'] as bool? ?? false;
+    final autoClosed = f['auto_closed'] as bool? ?? false;
+    final createdAt = f['created_at']?.toString() ?? '';
+    final scoreColor = score >= 0.85
+        ? const Color(0xFFDC2626)
+        : score >= 0.60
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, sc) => ListView(
+          controller: sc,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scoreColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.gpp_bad_outlined, color: scoreColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        f['job_title'] as String? ?? 'Untitled Job',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF111827),
+                        ),
+                      ),
+                      Text(
+                        'Scam Detection Details',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _ScoreBadge(
+                  score: score,
+                  color: scoreColor,
+                  label: score.toStringAsFixed(3),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Color(0xFFF3F4F6)),
+            const SizedBox(height: 12),
+            Text(
+              'CLIENT',
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${f['client_name'] ?? 'Unknown'}  ·  ${f['client_email'] ?? ''}',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF374151),
+              ),
+            ),
+            if (confirmed > 0 || isBanned) ...[
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: [
+                  if (confirmed > 0)
+                    _InfoChip(
+                      label: '$confirmed confirmed scam${confirmed > 1 ? 's' : ''}',
+                      color: const Color(0xFFDC2626),
+                    ),
+                  if (isBanned)
+                    _InfoChip(label: 'BANNED', color: const Color(0xFF111827)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            Text(
+              'ANALYSIS',
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _InfoChip(
+                  label: 'Score: ${score.toStringAsFixed(3)}',
+                  color: scoreColor,
+                ),
+                if (autoClosed)
+                  _InfoChip(
+                    label: 'Auto-closed',
+                    color: const Color(0xFFD97706),
+                  ),
+              ],
+            ),
+            if (keywords.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: keywords.map((kw) => _KeywordChip(text: kw)).toList(),
+              ),
+            ],
+            if (flaggedText.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                'FLAGGED CONTENT',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Text(
+                  flaggedText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF991B1B),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+            if (createdAt.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Flagged at: ${createdAt.split('T').first}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = widget.flag;
     final score = (f['scam_score'] as num?)?.toDouble() ?? 0.0;
     final status = f['status'] as String? ?? 'pending';
-    final keywords = (f['detected_keywords'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
+    final keywords =
+        (f['detected_keywords'] as List?)?.map((e) => e.toString()).toList() ??
         [];
     final confirmed = (f['total_scam_confirmed'] as num?)?.toInt() ?? 0;
     final isBanned = f['is_banned'] as bool? ?? false;
@@ -245,8 +491,8 @@ class _ScamCardState extends State<_ScamCard> {
     final scoreColor = score >= 0.85
         ? const Color(0xFFDC2626)
         : score >= 0.60
-            ? const Color(0xFFD97706)
-            : const Color(0xFF059669);
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -265,7 +511,6 @@ class _ScamCardState extends State<_ScamCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: title + score badge
           Row(
             children: [
               Container(
@@ -296,15 +541,17 @@ class _ScamCardState extends State<_ScamCard> {
           ),
           const SizedBox(height: 10),
 
-          // Row 2: client info
           Row(
             children: [
-              const Icon(Icons.person_outline_rounded,
-                  size: 14, color: Color(0xFF9CA3AF)),
+              const Icon(
+                Icons.person_outline_rounded,
+                size: 14,
+                color: Color(0xFF9CA3AF),
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${f['client_name'] ?? 'Unknown'} · ${f['client_email'] ?? ''}',
+                  '${f['client_name'] ?? 'Unknown'} - ${f['client_email'] ?? ''}',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: const Color(0xFF6B7280),
@@ -324,7 +571,6 @@ class _ScamCardState extends State<_ScamCard> {
             ],
           ),
 
-          // Row 3: keywords
           if (keywords.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -337,8 +583,29 @@ class _ScamCardState extends State<_ScamCard> {
             ),
           ],
 
-          // Row 4: status indicator or action buttons
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => _showDetail(context),
+            child: Row(
+              children: [
+                Text(
+                  'View full details',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF7C3AED),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.open_in_new_rounded,
+                  size: 12,
+                  color: Color(0xFF7C3AED),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           if (status == 'pending')
             _loading
                 ? const Center(
@@ -372,19 +639,44 @@ class _ScamCardState extends State<_ScamCard> {
                   )
           else
             _StatusPill(status: status),
+          if (status != 'removed') ...[
+            const SizedBox(height: 8),
+            _closing
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                  )
+                : _AdminOverrideBar(
+                    label: 'Close Job',
+                    icon: Icons.block_rounded,
+                    color: const Color(0xFF7C3AED),
+                    onTap: () => _confirmClose(context),
+                  ),
+          ],
         ],
       ),
     );
   }
 }
 
-// ─── Content Moderation Tab ───────────────────────────────────────────────────
+// ─── Toxicity Detection Tab ───────────────────────────────────────────────────
 
 class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['pending', 'approved', 'rejected', 'all'];
-  static const _types = ['all', 'job_post', 'freelancer_profile', 'client_profile'];
+  static const _types = [
+    'all',
+    'job_post',
+    'freelancer_profile',
+    'client_profile',
+  ];
   static const _typeLabels = {
     'all': 'All',
     'job_post': 'Job Post',
@@ -392,63 +684,233 @@ class _ModerationTab extends StatelessWidget {
     'client_profile': 'Client',
   };
 
+  void _showAiInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Modal header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.psychology_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Toxicity Detection AI',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E1B4B),
+                            ),
+                          ),
+                          Text(
+                            'How the model works',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF7C3AED),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Modal body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ModalSection(
+                        title: 'Model',
+                        content:
+                            'RoBERTa toxicity classifier fine-tuned for platform moderation (F1 macro 0.72, ~55 ms inference). It scores content across five harm labels — Toxicity, Obscene, Threat, Insult, and Identity Hate — then sends likely violations to admin review.',
+                      ),
+                      const SizedBox(height: 14),
+                      _ModalSection(
+                        title: 'How it works',
+                        content:
+                            'Text is cleaned, tokenized, and scored from 0.0 to 1.0 for each label. Content is flagged when any label crosses the moderation threshold. The frontend also shows the reason for each label so reviewers can understand why the model may have raised it.',
+                      ),
+                      const SizedBox(height: 14),
+                      _ModalSection(
+                        title: 'Auto-actions',
+                        content:
+                            'Pending items auto-expire after 30 days. Low-risk content is auto-approved. High-risk content can be auto-rejected, using stricter thresholds for jobs and profiles.',
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '5 Harm Labels',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const _ToxicLabelRow(
+                        name: 'Toxicity',
+                        desc:
+                            'General toxic or rude language that may be hurtful or harmful.',
+                      ),
+                      const _ToxicLabelRow(
+                        name: 'Obscene',
+                        desc:
+                            'Obscene or profane language, explicit sexual content, or vulgarity.',
+                      ),
+                      const _ToxicLabelRow(
+                        name: 'Threat',
+                        desc:
+                            'Explicit threats of violence or harm directed at individuals or groups.',
+                      ),
+                      const _ToxicLabelRow(
+                        name: 'Insult',
+                        desc:
+                            'Insulting, demeaning, or disrespectful language directed toward others.',
+                      ),
+                      const _ToxicLabelRow(
+                        name: 'Identity Hate',
+                        desc:
+                            'Hate speech targeting identity: race, ethnicity, gender, religion, sexual orientation, nationality, or disability.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         return Column(
           children: [
-            _FilterBar(
-              options: _statuses,
-              selected: admin.moderationStatusFilter,
-              onSelect: (s) => admin.loadModerationItems(status: s),
-              accentColor: const Color(0xFF7C3AED),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _types.map((t) {
-                    final selected = admin.moderationTypeFilter == t;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => admin.loadModerationItems(contentType: t),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? const Color(0xFF7C3AED)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: selected
-                                  ? const Color(0xFF7C3AED)
-                                  : const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Text(
-                            _typeLabels[t] ?? t,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: selected
-                                  ? Colors.white
-                                  : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ),
+            // ── Toxicity detection sub-header with info button ──────────
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF7C3AED),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Powered by RoBERTa - F1 0.72',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF7C3AED),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => _showAiInfo(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
                       ),
-                    );
-                  }).toList(),
-                ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E8FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 13,
+                            color: Color(0xFF7C3AED),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'About this AI',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
+
+            // Unified status + type filter
+            _ModerationFilterSection(
+              statuses: _statuses,
+              types: _types,
+              typeLabels: _typeLabels,
+              selectedStatus: admin.moderationStatusFilter,
+              selectedType: admin.moderationTypeFilter,
+              onStatusSelect: (s) => admin.loadModerationItems(status: s),
+              onTypeSelect: (t) => admin.loadModerationItems(contentType: t),
+            ),
+
             Expanded(
               child: admin.isAiLoading && admin.moderationItems.isEmpty
                   ? const Center(
@@ -457,27 +919,25 @@ class _ModerationTab extends StatelessWidget {
                       ),
                     )
                   : admin.moderationItems.isEmpty
-                      ? _Empty(
-                          icon: Icons.shield_rounded,
-                          message: 'No flagged content found',
-                          sub: 'All content is within guidelines',
-                        )
-                      : RefreshIndicator(
-                          color: const Color(0xFF7C3AED),
-                          onRefresh: () => admin.loadModerationItems(
-                            status: admin.moderationStatusFilter,
-                            contentType: admin.moderationTypeFilter,
-                          ),
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: admin.moderationItems.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _ModerationCard(
-                              item: admin.moderationItems[i],
-                            ),
-                          ),
-                        ),
+                  ? _Empty(
+                      icon: Icons.shield_rounded,
+                      message: 'No flagged content found',
+                      sub: 'All content is within guidelines',
+                    )
+                  : RefreshIndicator(
+                      color: const Color(0xFF7C3AED),
+                      onRefresh: () => admin.loadModerationItems(
+                        status: admin.moderationStatusFilter,
+                        contentType: admin.moderationTypeFilter,
+                      ),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: admin.moderationItems.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (ctx, i) =>
+                            _ModerationCard(item: admin.moderationItems[i]),
+                      ),
+                    ),
             ),
           ],
         );
@@ -485,6 +945,8 @@ class _ModerationTab extends StatelessWidget {
     );
   }
 }
+
+// ─── Moderation Card ──────────────────────────────────────────────────────────
 
 class _ModerationCard extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -496,6 +958,8 @@ class _ModerationCard extends StatefulWidget {
 
 class _ModerationCardState extends State<_ModerationCard> {
   bool _loading = false;
+  bool _labelsExpanded = false;
+  bool _closing = false;
 
   Future<void> _act(String action) async {
     setState(() => _loading = true);
@@ -515,33 +979,338 @@ class _ModerationCardState extends State<_ModerationCard> {
     }
   }
 
+  Future<void> _confirmOverride(BuildContext ctx) async {
+    final item = widget.item;
+    final contentType = item['content_type'] as String? ?? '';
+    final isJob = contentType == 'job_post';
+    final actionLabel = isJob ? 'Close Job Post' : 'Restrict Account';
+    final actionDesc = isJob
+        ? 'This will close the job post as an admin override, bypassing the toxicity flag flow.'
+        : 'This will restrict the user account as an admin override.';
+
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          actionLabel,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          actionDesc,
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: const Color(0xFF6B7280)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              actionLabel,
+              style: GoogleFonts.poppins(
+                color: const Color(0xFFDC2626),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _closing = true);
+    final admin = context.read<AdminProvider>();
+    bool ok;
+    if (isJob) {
+      final contentId = item['content_id']?.toString() ?? '';
+      ok = contentId.isNotEmpty ? await admin.adminCloseJob(contentId) : false;
+    } else {
+      final userId = item['user_id']?.toString() ?? '';
+      ok = userId.isNotEmpty ? await admin.adminCloseAccount(userId) : false;
+    }
+    if (mounted) {
+      setState(() => _closing = false);
+      final msg = isJob
+          ? (ok ? 'Job post closed' : 'Failed to close job post')
+          : (ok ? 'Account restricted' : 'Failed to restrict account');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg, style: GoogleFonts.poppins()),
+        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      ));
+    }
+  }
+
+  void _showDetail(BuildContext ctx) {
+    final item = widget.item;
+    final totalScore = (item['total_score'] as num?)?.toDouble() ?? 0.0;
+    final contentType = item['content_type'] as String? ?? '';
+    final flaggedText =
+        item['flagged_text_excerpt'] as String? ??
+        item['flagged_text'] as String? ??
+        '';
+    final createdAt = item['created_at']?.toString() ?? '';
+    final adminNote = item['admin_note']?.toString() ?? '';
+    final status = item['status'] as String? ?? 'pending';
+
+    final labelScores = _labels.map((l) {
+      final key = l['key'] as String;
+      final score = key == 'toxicity'
+          ? [
+              (item['toxic_score'] as num?)?.toDouble() ?? 0.0,
+              (item['severe_toxic_score'] as num?)?.toDouble() ?? 0.0,
+            ].reduce((a, b) => a > b ? a : b)
+          : (item[key] as num?)?.toDouble() ?? 0.0;
+      return {'meta': l, 'score': score};
+    }).toList();
+
+    final displayTotal = labelScores.fold<double>(
+      0.0,
+      (sum, e) => sum + (e['score'] as double),
+    );
+    final scoreColor = totalScore >= 1.5
+        ? const Color(0xFFDC2626)
+        : totalScore >= 0.5
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, sc) => ListView(
+          controller: sc,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: scoreColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(_typeIcon(contentType), color: scoreColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _typeLabel(contentType),
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF111827),
+                        ),
+                      ),
+                      if ((item['user_email'] as String?)?.isNotEmpty == true)
+                        Text(
+                          item['user_email'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                _ScoreBadge(
+                  score: displayTotal / 5.0,
+                  color: scoreColor,
+                  label: '${displayTotal.toStringAsFixed(2)}/5.0',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Color(0xFFF3F4F6)),
+            const SizedBox(height: 12),
+            Text(
+              'TOXICITY SCORES',
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _LabelsBreakdown(labelScores: labelScores),
+            if (flaggedText.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'FLAGGED CONTENT',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Text(
+                  flaggedText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF991B1B),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+            if (adminNote.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'ADMIN NOTE',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                adminNote,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
+            ],
+            if (createdAt.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Flagged at: ${createdAt.split('T').first}  ·  Status: ${status[0].toUpperCase()}${status.substring(1)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Label definitions matching the current five-label toxicity model.
+  static const _labels = [
+    {
+      'key': 'toxicity',
+      'name': 'Toxicity',
+      'desc': 'General toxic, rude, or severely harmful language',
+    },
+    {
+      'key': 'obscene_score',
+      'name': 'Obscene',
+      'desc': 'Obscene, profane, explicit, or vulgar language',
+    },
+    {
+      'key': 'threat_score',
+      'name': 'Threat',
+      'desc': 'Threats of violence, intimidation, or physical harm',
+    },
+    {
+      'key': 'insult_score',
+      'name': 'Insult',
+      'desc': 'Insulting, demeaning, or personally abusive language',
+    },
+    {
+      'key': 'identity_hate_score',
+      'name': 'Identity Hate',
+      'desc': 'Hate speech targeting protected identity characteristics',
+    },
+  ];
+
+  static const _defaultBlockedMessages = {
+    'job_post':
+        'This job post was removed due to a content policy violation. '
+        'Submit an appeal if you believe this was a mistake.',
+    'freelancer_profile':
+        'Your profile content was flagged for violating our community guidelines. '
+        'Please review our content policy and update your profile accordingly.',
+    'client_profile':
+        'Your profile content was flagged for violating our community guidelines. '
+        'Please review our content policy and update your profile accordingly.',
+  };
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final totalScore = (item['total_score'] as num?)?.toDouble() ?? 0.0;
-    final contentType = _typeLabel(item['content_type'] as String? ?? '');
+    final contentType = item['content_type'] as String? ?? '';
     final status = item['status'] as String? ?? 'pending';
-    final flaggedText = item['flagged_text_excerpt'] as String? ??
+    final flaggedText =
+        item['flagged_text_excerpt'] as String? ??
         item['flagged_text'] as String? ??
         '';
 
     final scoreColor = totalScore >= 1.5
         ? const Color(0xFFDC2626)
         : totalScore >= 0.5
-            ? const Color(0xFFD97706)
-            : const Color(0xFF059669);
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
 
-    const labelKeys = [
-      'toxic',
-      'severe_toxic',
-      'obscene',
-      'threat',
-      'insult',
-      'identity_hate',
-    ];
-    final activeLabels = labelKeys
-        .where((k) => ((item[k] as num?)?.toDouble() ?? 0) >= 0.3)
+    // Build the list of all 5 label scores. Older queue rows may still carry
+    // severe_toxic_score; fold it into Toxicity so the UI matches the model.
+    final labelScores = _labels.map((l) {
+      final key = l['key'] as String;
+      final score = key == 'toxicity'
+          ? [
+              (item['toxic_score'] as num?)?.toDouble() ?? 0.0,
+              (item['severe_toxic_score'] as num?)?.toDouble() ?? 0.0,
+            ].reduce((a, b) => a > b ? a : b)
+          : (item[key] as num?)?.toDouble() ?? 0.0;
+      return {'meta': l, 'score': score};
+    }).toList();
+
+    // Top triggered labels (score >= 0.3) for the summary chips
+    final activeLabels = labelScores
+        .where((e) => (e['score'] as double) >= 0.3)
         .toList();
+    final displayTotal = labelScores.fold<double>(
+      0.0,
+      (sum, e) => sum + (e['score'] as double),
+    );
+
+    final defaultMsg =
+        _defaultBlockedMessages[contentType] ??
+        'This content was removed due to a policy violation. '
+            'Submit an appeal if you believe this was a mistake.';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -560,7 +1329,7 @@ class _ModerationCardState extends State<_ModerationCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: content type + score
+          // ── Row 1: content type icon + score badge ───────────────────
           Row(
             children: [
               Container(
@@ -571,7 +1340,7 @@ class _ModerationCardState extends State<_ModerationCard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  _typeIcon(item['content_type'] as String? ?? ''),
+                  _typeIcon(contentType),
                   color: scoreColor,
                   size: 18,
                 ),
@@ -582,7 +1351,7 @@ class _ModerationCardState extends State<_ModerationCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      contentType,
+                      _typeLabel(contentType),
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -602,29 +1371,75 @@ class _ModerationCardState extends State<_ModerationCard> {
                 ),
               ),
               _ScoreBadge(
-                score: totalScore / 6.0,
+                score: displayTotal / 5.0,
                 color: scoreColor,
-                label: 'Score ${totalScore.toStringAsFixed(2)}/6.0',
+                label: 'Score ${displayTotal.toStringAsFixed(2)}/5.0',
               ),
             ],
           ),
 
-          // Active labels
+          // ── Active label chips (summary) ─────────────────────────────
           if (activeLabels.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: activeLabels.map((k) {
-                final v = (item[k] as num?)?.toDouble() ?? 0.0;
+              children: activeLabels.map((e) {
+                final meta = e['meta'] as Map<String, Object?>;
+                final v = e['score'] as double;
                 return _KeywordChip(
-                  text: '${k.replaceAll('_', ' ')}: ${v.toStringAsFixed(2)}',
+                  text: '${meta['name']}: ${v.toStringAsFixed(2)}',
                 );
               }).toList(),
             ),
           ],
 
-          // Flagged text excerpt
+          // Expandable 5-label breakdown
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => setState(() => _labelsExpanded = !_labelsExpanded),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.analytics_outlined,
+                    size: 14,
+                    color: Color(0xFF7C3AED),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'All 5 label scores and reasons',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF7C3AED),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _labelsExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          if (_labelsExpanded) ...[
+            const SizedBox(height: 8),
+            _LabelsBreakdown(labelScores: labelScores),
+          ],
+
+          // ── Flagged text excerpt ─────────────────────────────────────
           if (flaggedText.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
@@ -648,8 +1463,75 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ],
 
-          // Actions
-          const SizedBox(height: 12),
+          // ── Default blocked message (shown when rejected) ─────────────
+          if (status == 'rejected') ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.message_outlined,
+                        size: 13,
+                        color: Color(0xFFD97706),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Message shown to user',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFD97706),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    defaultMsg,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF92400E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Actions ──────────────────────────────────────────────────
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => _showDetail(context),
+            child: Row(
+              children: [
+                Text(
+                  'View full details',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF7C3AED),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.open_in_new_rounded,
+                  size: 12,
+                  color: Color(0xFF7C3AED),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           if (status == 'pending')
             _loading
                 ? const Center(
@@ -683,6 +1565,24 @@ class _ModerationCardState extends State<_ModerationCard> {
                   )
           else
             _StatusPill(status: status),
+          const SizedBox(height: 8),
+          _closing
+              ? const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF7C3AED),
+                    ),
+                  ),
+                )
+              : _AdminOverrideBar(
+                  label: contentType == 'job_post' ? 'Close Job' : 'Restrict Account',
+                  icon: Icons.block_rounded,
+                  color: const Color(0xFFDC2626),
+                  onTap: () => _confirmOverride(context),
+                ),
         ],
       ),
     );
@@ -712,6 +1612,186 @@ class _ModerationCardState extends State<_ModerationCard> {
       default:
         return Icons.description_outlined;
     }
+  }
+}
+
+// ─── Label breakdown widget ───────────────────────────────────────────────────
+
+class _LabelsBreakdown extends StatelessWidget {
+  final List<Map<String, Object?>> labelScores;
+  const _LabelsBreakdown({required this.labelScores});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: labelScores.map((e) {
+        final meta = e['meta'] as Map<String, Object?>;
+        final v = e['score'] as double;
+        final lColor = v >= 0.5
+            ? const Color(0xFFDC2626)
+            : v >= 0.3
+            ? const Color(0xFFD97706)
+            : const Color(0xFF6B7280);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: lColor.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: lColor.withOpacity(0.15)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      meta['name'] as String,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: lColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        v.toStringAsFixed(3),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: lColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: v.clamp(0.0, 1.0),
+                    backgroundColor: lColor.withOpacity(0.1),
+                    color: lColor,
+                    minHeight: 4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  meta['desc'] as String,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ─── AI info modal helpers ────────────────────────────────────────────────────
+
+class _ToxicLabelRow extends StatelessWidget {
+  final String name;
+  final String desc;
+  const _ToxicLabelRow({required this.name, required this.desc});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3E8FF).withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE9D5FF)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 3),
+              decoration: const BoxDecoration(
+                color: Color(0xFF7C3AED),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF374151),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModalSection extends StatelessWidget {
+  final String title;
+  final String content;
+  const _ModalSection({required this.title, required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          content,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: const Color(0xFF6B7280),
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -745,8 +1825,10 @@ class _FilterBar extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => onSelect(opt),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: active ? accentColor : Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -772,11 +1854,191 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
+// ─── Unified moderation filter (status + content type in one container) ───────
+
+class _ModerationFilterSection extends StatelessWidget {
+  final List<String> statuses;
+  final List<String> types;
+  final Map<String, String> typeLabels;
+  final String selectedStatus;
+  final String selectedType;
+  final ValueChanged<String> onStatusSelect;
+  final ValueChanged<String> onTypeSelect;
+
+  const _ModerationFilterSection({
+    required this.statuses,
+    required this.types,
+    required this.typeLabels,
+    required this.selectedStatus,
+    required this.selectedType,
+    required this.onStatusSelect,
+    required this.onTypeSelect,
+  });
+
+  Widget _chipRow(
+    List<String> options,
+    String selected,
+    String Function(String) label,
+    ValueChanged<String> onTap,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: options.map((opt) {
+          final active = opt == selected;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onTap(opt),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: active ? const Color(0xFF7C3AED) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: active
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFFE5E7EB),
+                  ),
+                ),
+                child: Text(
+                  label(opt),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: active ? Colors.white : const Color(0xFF6B7280),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'STATUS',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _chipRow(
+            statuses,
+            selectedStatus,
+            (s) => s[0].toUpperCase() + s.substring(1),
+            onStatusSelect,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'CONTENT TYPE',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _chipRow(
+            types,
+            selectedType,
+            (t) => typeLabels[t] ?? t,
+            onTypeSelect,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Admin override action bar ────────────────────────────────────────────────
+
+class _AdminOverrideBar extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AdminOverrideBar({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Admin override',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: const Color(0xFF9CA3AF),
+            ),
+          ),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withOpacity(0.25)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 12, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ScoreBadge extends StatelessWidget {
   final double score;
   final Color color;
   final String label;
-  const _ScoreBadge({required this.score, required this.color, required this.label});
+  const _ScoreBadge({
+    required this.score,
+    required this.color,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
