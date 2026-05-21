@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
@@ -19,22 +19,48 @@ class AuthService {
 
   static const String _tokenKey = 'auth_token';
 
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com',
+  );
+
   Future<Map<String, dynamic>> loginWithGoogle() async {
-    final authUrl = '$_baseUrl/auth/oauth/google';
     try {
-      final result = await FlutterWebAuth2.authenticate(
-        url: authUrl,
-        callbackUrlScheme: 'workbyte',
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
+      if (account == null) throw Exception('Google login cancelled');
+
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? idToken = auth.idToken;
+      if (idToken == null) throw Exception('Failed to get Google ID token');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/oauth/google/mobile'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id_token': idToken}),
       );
-      final uri = Uri.parse(result);
-      final error = uri.queryParameters['error'];
-      if (error != null) throw Exception(error);
-      final token = uri.queryParameters['token'];
-      if (token == null || token.isEmpty) throw Exception('No token received');
-      final isNewUser = uri.queryParameters['is_new_user'] == 'true';
-      return {'token': token, 'is_new_user': isNewUser};
+
+      debugPrint('Google mobile login status: ${response.statusCode}');
+      debugPrint('Google mobile login body: ${response.body}');
+
+      Map<String, dynamic> body;
+      try {
+        body = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        throw Exception('Server error (${response.statusCode}): ${response.body.substring(0, response.body.length.clamp(0, 200))}');
+      }
+
+      if (response.statusCode == 200) {
+        final details = body['details'] as Map<String, dynamic>;
+        return {
+          'token': details['access_token'] as String,
+          'is_new_user': details['is_new_user'] as bool,
+        };
+      }
+
+      throw Exception(
+        body['details'] ?? body['message'] ?? body['detail'] ?? 'Google login failed',
+      );
     } on PlatformException catch (e) {
-      if (e.code == 'CANCELED') throw Exception('Google login cancelled');
+      if (e.code == 'sign_in_canceled') throw Exception('Google login cancelled');
       throw Exception('Google login failed: ${e.message}');
     }
   }

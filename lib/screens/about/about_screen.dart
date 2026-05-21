@@ -265,8 +265,8 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF7C3AED),
                     iconBg: const Color(0xFFF3E8FF),
                     accentColor: const Color(0xFF7C3AED),
-                    badge: 'Content Moderation',
-                    title: 'Toxicity Detection',
+                    badge: 'Harmful Text Detection',
+                    title: 'Harmful Text Detection',
                     description:
                         'Every job posting, profile bio, and user-submitted text is '
                         'automatically scanned by a fine-tuned RoBERTa classifier '
