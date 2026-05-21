@@ -52,11 +52,258 @@ class SettingsScreen extends StatelessWidget {
                 onCreateAccount: () =>
                     _showAddRoleDialog(context, auth, profile),
               ),
+              const _SectionDivider(),
+              _SecuritySection(
+                onChangePassword: () =>
+                    _showChangePasswordSheet(context, auth),
+              ),
               const SizedBox(height: 32),
             ],
           );
         },
       ),
+    );
+  }
+
+  void _showChangePasswordSheet(BuildContext context, AuthProvider auth) {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        bool showCurrent = false;
+        bool showNew = false;
+        bool showConfirm = false;
+        String? currentError;
+        String? newError;
+        String? confirmError;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Change Password',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Enter your current password and choose a new one.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF6B7280),
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    _PasswordField(
+                      label: 'Current Password',
+                      hint: 'Enter your current password',
+                      controller: currentCtrl,
+                      isVisible: showCurrent,
+                      errorText: currentError,
+                      onToggleVisibility: () =>
+                          setState(() => showCurrent = !showCurrent),
+                    ),
+                    const SizedBox(height: 14),
+                    _PasswordField(
+                      label: 'New Password',
+                      hint: 'Min. 8 characters',
+                      controller: newCtrl,
+                      isVisible: showNew,
+                      errorText: newError,
+                      onToggleVisibility: () =>
+                          setState(() => showNew = !showNew),
+                    ),
+                    const SizedBox(height: 14),
+                    _PasswordField(
+                      label: 'Confirm New Password',
+                      hint: 'Re-enter your new password',
+                      controller: confirmCtrl,
+                      isVisible: showConfirm,
+                      errorText: confirmError,
+                      onToggleVisibility: () =>
+                          setState(() => showConfirm = !showConfirm),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.primary),
+                              foregroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Consumer<AuthProvider>(
+                            builder: (context, authState, _) {
+                              return ElevatedButton(
+                                onPressed: authState.isLoading
+                                    ? null
+                                    : () async {
+                                        final current =
+                                            currentCtrl.text.trim();
+                                        final newPass = newCtrl.text.trim();
+                                        final confirm =
+                                            confirmCtrl.text.trim();
+
+                                        bool hasError = false;
+                                        if (current.isEmpty) {
+                                          setState(() => currentError =
+                                              'Current password is required');
+                                          hasError = true;
+                                        } else {
+                                          setState(() => currentError = null);
+                                        }
+
+                                        if (newPass.length < 8) {
+                                          setState(() => newError =
+                                              'Password must be at least 8 characters');
+                                          hasError = true;
+                                        } else {
+                                          setState(() => newError = null);
+                                        }
+
+                                        if (confirm != newPass) {
+                                          setState(() => confirmError =
+                                              'Passwords do not match');
+                                          hasError = true;
+                                        } else {
+                                          setState(() => confirmError = null);
+                                        }
+
+                                        if (hasError) return;
+
+                                        final success =
+                                            await auth.changePassword(
+                                          currentPassword: current,
+                                          newPassword: newPass,
+                                        );
+
+                                        if (success) {
+                                          if (sheetContext.mounted) {
+                                            Navigator.pop(sheetContext);
+                                          }
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Password changed successfully.',
+                                                  style: GoogleFonts.poppins(
+                                                      fontSize: 13),
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                backgroundColor:
+                                                    AppColors.primary,
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          setState(() =>
+                                              currentError = auth.error ??
+                                                  'Could not change password');
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  disabledBackgroundColor:
+                                      AppColors.primary.withValues(alpha: 0.6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14),
+                                  elevation: 0,
+                                ),
+                                child: authState.isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Save Changes',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -448,6 +695,202 @@ class _SectionDivider extends StatelessWidget {
     return Container(
       height: 8,
       color: const Color(0xFFF3F4F6),
+    );
+  }
+}
+
+class _SecuritySection extends StatelessWidget {
+  final VoidCallback onChangePassword;
+
+  const _SecuritySection({required this.onChangePassword});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Security',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Manage your account security settings.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.lock_outline_rounded,
+            label: 'Change Password',
+            subtitle: 'Update your account password',
+            onTap: onChangePassword,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Color(0xFF9CA3AF),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final bool isVisible;
+  final String? errorText;
+  final VoidCallback onToggleVisibility;
+
+  const _PasswordField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.isVisible,
+    required this.onToggleVisibility,
+    this.errorText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: !isVisible,
+          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 14,
+              color: const Color(0xFF9CA3AF),
+            ),
+            errorText: errorText,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isVisible
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: const Color(0xFF9CA3AF),
+                size: 20,
+              ),
+              onPressed: onToggleVisibility,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide:
+                  BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFDC2626)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide:
+                  const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

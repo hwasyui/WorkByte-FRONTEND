@@ -210,6 +210,31 @@ class AuthService {
     );
   }
 
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/change-password'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+    throw Exception(
+      data['details'] ?? data['message'] ?? data['detail'] ?? 'Failed to change password',
+    );
+  }
+
   Future<UserModel> getMe(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/auth/me'),

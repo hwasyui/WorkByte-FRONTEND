@@ -275,6 +275,38 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    ProfileProvider? profileProvider,
+  }) async {
+    if (_token == null) return false;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.changePassword(
+        token: _token!,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // call this after an appeal is approved to refresh ban state
   Future<void> refreshUser() async {
     if (_token == null) return;

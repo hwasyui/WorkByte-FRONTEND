@@ -16,6 +16,7 @@ import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/pagination_bar.dart';
 
 class PeopleListScreen extends StatefulWidget {
   final bool showClients;
@@ -27,11 +28,23 @@ class PeopleListScreen extends StatefulWidget {
 }
 
 class _PeopleListScreenState extends State<PeopleListScreen> {
+  static const int _pageSize = 10;
+
   bool _isLoading = true;
   String? _error;
+  int _currentPage = 1;
   List<dynamic> _all = [];
   List<dynamic> _filtered = [];
   final TextEditingController _searchController = TextEditingController();
+
+  int get _totalPages =>
+      _filtered.isEmpty ? 1 : (_filtered.length / _pageSize).ceil();
+
+  List<dynamic> get _pagedItems {
+    final start = (_currentPage - 1) * _pageSize;
+    final end = (start + _pageSize).clamp(0, _filtered.length);
+    return start < _filtered.length ? _filtered.sublist(start, end) : [];
+  }
 
   @override
   void initState() {
@@ -55,6 +68,7 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
             : (p as FreelancerModel).displayName.toLowerCase();
         return name.contains(query);
       }).toList();
+      _currentPage = 1;
     });
   }
 
@@ -91,6 +105,7 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
         _all = mapped;
         _filtered = List.from(mapped);
         _isLoading = false;
+        _currentPage = 1;
       });
     } catch (e) {
       setState(() {
@@ -265,103 +280,122 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
 
             // Body
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline_rounded,
-                            size: 48,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF7D7D7D),
-                              fontSize: 13,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                              strokeWidth: 2,
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            widget.showClients
-                                ? Icons.business_outlined
-                                : Icons.person_outline_rounded,
-                            size: 56,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No ${title.toLowerCase()} found',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF7D7D7D),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Try adjusting your search.',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFB5B4B4),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      color: AppColors.primary,
-                      onRefresh: _loadPeople,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final person = _filtered[index];
-                          return widget.showClients
-                              ? _ClientCard(
-                                  client: person as ClientModel,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => PeopleProfileScreen(
-                                        isClient: true,
-                                        client: person,
-                                      ),
-                                    ),
+                          )
+                        : _error != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 48,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _error!,
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF7D7D7D),
+                                    fontSize: 13,
                                   ),
-                                )
-                              : _FreelancerCard(
-                                  freelancer: person as FreelancerModel,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => PeopleProfileScreen(
-                                        isClient: false,
-                                        freelancer: person,
-                                      ),
-                                    ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _filtered.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  widget.showClients
+                                      ? Icons.business_outlined
+                                      : Icons.person_outline_rounded,
+                                  size: 56,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No ${title.toLowerCase()} found',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF7D7D7D),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                );
-                        },
-                      ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Try adjusting your search.',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFFB5B4B4),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: AppColors.primary,
+                            onRefresh: _loadPeople,
+                            child: ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                              itemCount: _pagedItems.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final person = _pagedItems[index];
+                                return widget.showClients
+                                    ? _ClientCard(
+                                        client: person as ClientModel,
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => PeopleProfileScreen(
+                                              isClient: true,
+                                              client: person,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : _FreelancerCard(
+                                        freelancer: person as FreelancerModel,
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => PeopleProfileScreen(
+                                              isClient: false,
+                                              freelancer: person,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                              },
+                            ),
+                          ),
+                  ),
+                  if (!_isLoading && _error == null && _totalPages > 1)
+                    PaginationBar(
+                      currentPage: _currentPage,
+                      totalPages: _totalPages,
+                      onPrev: _currentPage > 1
+                          ? () => setState(() => _currentPage--)
+                          : null,
+                      onNext: _currentPage < _totalPages
+                          ? () => setState(() => _currentPage++)
+                          : null,
                     ),
+                ],
+              ),
             ),
           ],
         ),

@@ -9,6 +9,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../services/job_post_service.dart';
+import '../../widgets/pagination_bar.dart';
 import '../../widgets/top_bar.dart';
 import 'job_detail.dart';
 
@@ -60,12 +61,25 @@ class JobListScreen extends StatefulWidget {
 
 class _JobListScreenState extends State<JobListScreen> {
   static const Color _primary = AppColors.primary;
+  static const int _pageSize = 10;
 
   final TextEditingController _searchController = TextEditingController();
   List<JobPostModel> _allJobs = [];
   List<JobPostModel> _filteredJobs = [];
   bool _isLoading = true;
   String _sortOption = 'Latest';
+  int _currentPage = 1;
+
+  int get _totalPages =>
+      _filteredJobs.isEmpty ? 1 : (_filteredJobs.length / _pageSize).ceil();
+
+  List<JobPostModel> get _pagedJobs {
+    final start = (_currentPage - 1) * _pageSize;
+    final end = (start + _pageSize).clamp(0, _filteredJobs.length);
+    return start < _filteredJobs.length
+        ? _filteredJobs.sublist(start, end)
+        : [];
+  }
 
   /// Active category filter — starts from widget.categoryFilter, can be cleared
   String? _activeCategoryFilter;
@@ -102,6 +116,7 @@ class _JobListScreenState extends State<JobListScreen> {
       _allJobs = List<JobPostModel>.from(posts);
 
       setState(() {
+        _currentPage = 1;
         _applySortAndFilter();
         _isLoading = false;
       });
@@ -171,11 +186,12 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   // ── Filtering / sorting ────────────────────────────────────────────────────
-  void _onSearch() => setState(() => _applySortAndFilter());
+  void _onSearch() => setState(() { _currentPage = 1; _applySortAndFilter(); });
 
   void _onSortChanged(String value) {
     setState(() {
       _sortOption = value;
+      _currentPage = 1;
       _applySortAndFilter();
     });
   }
@@ -183,6 +199,7 @@ class _JobListScreenState extends State<JobListScreen> {
   void _clearCategoryFilter() {
     setState(() {
       _activeCategoryFilter = null;
+      _currentPage = 1;
       _applySortAndFilter();
     });
   }
@@ -371,22 +388,42 @@ class _JobListScreenState extends State<JobListScreen> {
 
             // ── Job list ──
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary),
-                    )
-                  : _filteredJobs.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      color: _primary,
-                      onRefresh: _fetchJobs,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(29, 16, 29, 16),
-                        itemCount: _filteredJobs.length,
-                        itemBuilder: (context, index) =>
-                            _buildJobCard(_filteredJobs[index]),
-                      ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(color: _primary),
+                          )
+                        : _filteredJobs.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            color: _primary,
+                            onRefresh: _fetchJobs,
+                            child: ListView.builder(
+                              padding:
+                                  const EdgeInsets.fromLTRB(29, 16, 29, 16),
+                              itemCount: _pagedJobs.length,
+                              itemBuilder: (context, index) =>
+                                  _buildJobCard(_pagedJobs[index]),
+                            ),
+                          ),
+                  ),
+                  if (!_isLoading &&
+                      _filteredJobs.isNotEmpty &&
+                      _totalPages > 1)
+                    PaginationBar(
+                      currentPage: _currentPage,
+                      totalPages: _totalPages,
+                      onPrev: _currentPage > 1
+                          ? () => setState(() => _currentPage--)
+                          : null,
+                      onNext: _currentPage < _totalPages
+                          ? () => setState(() => _currentPage++)
+                          : null,
                     ),
+                ],
+              ),
             ),
           ],
         ),
