@@ -7,19 +7,40 @@ import 'package:workbyte_app/screens/dashboard/dashboard.dart';
 import 'package:workbyte_app/screens/freelancer_profile/cv_upload_entry.dart';
 import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile.dart';
 
-class FreelancerProfileSetupScreen extends StatelessWidget {
+class FreelancerProfileSetupScreen extends StatefulWidget {
   const FreelancerProfileSetupScreen({super.key});
 
+  @override
+  State<FreelancerProfileSetupScreen> createState() =>
+      _FreelancerProfileSetupScreenState();
+}
+
+class _FreelancerProfileSetupScreenState
+    extends State<FreelancerProfileSetupScreen> {
   static const Color primary = Color(0xFF4F46E5);
   static const Color secondary = Color(0xFFE0E7FF);
   static const Color background = Color(0xFFF9F9F9);
   static const Color textDark = Color(0xFF111827);
+
+  bool _navigating = false;
 
   @override
   Widget build(BuildContext context) {
     final profile = context.watch<ProfileProvider>();
     final auth = context.read<AuthProvider>();
     final missing = profile.missingOnboardingFields;
+
+    if (profile.isOnboardingComplete && !_navigating) {
+      _navigating = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: background,

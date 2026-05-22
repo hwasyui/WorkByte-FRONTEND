@@ -84,11 +84,13 @@ class AdminService {
     String token, {
     int page = 1,
     int pageSize = 20,
+    String? search,
   }) async {
     final uri = Uri.parse('$_baseUrl/freelancers/browse/all').replace(
       queryParameters: {
         'page': page.toString(),
         'page_size': pageSize.toString(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
     final response = await http.get(uri, headers: _headers(token));
@@ -102,11 +104,13 @@ class AdminService {
     String token, {
     int page = 1,
     int pageSize = 20,
+    String? search,
   }) async {
     final uri = Uri.parse('$_baseUrl/clients/browse/all').replace(
       queryParameters: {
         'page': page.toString(),
         'page_size': pageSize.toString(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
     final response = await http.get(uri, headers: _headers(token));

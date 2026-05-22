@@ -21,6 +21,15 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    signingConfigs {
+        getByName("debug") {
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            storeFile = file("../debug.keystore")
+            storePassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "app.workbyte.com"
         // You can update the following values to match your application needs.

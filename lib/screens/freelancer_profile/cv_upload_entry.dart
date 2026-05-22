@@ -134,7 +134,7 @@ class _CvUploadEntryScreenState extends State<CvUploadEntryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Profile updated from CV! 🎉',
+              'Profile updated from CV! Complete the remaining fields to continue.',
               style: GoogleFonts.poppins(fontSize: 13),
             ),
             backgroundColor: const Color(0xFF4F46E5),
@@ -145,6 +145,7 @@ class _CvUploadEntryScreenState extends State<CvUploadEntryScreen> {
             margin: const EdgeInsets.all(16),
           ),
         );
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (!mounted) return;

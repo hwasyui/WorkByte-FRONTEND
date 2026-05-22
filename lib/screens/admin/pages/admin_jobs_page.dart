@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -13,8 +14,22 @@ class AdminJobsPage extends StatefulWidget {
 class _AdminJobsPageState extends State<AdminJobsPage> {
   int _currentPage = 1;
   String _statusFilter = 'all';
+  final _searchCtrl = TextEditingController();
+  Timer? _debounce;
 
   final List<String> _statuses = ['all', 'draft', 'active', 'closed', 'filled'];
+
+  void _onSearchChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      setState(() => _currentPage = 1);
+      context.read<AdminProvider>().loadJobsPage(
+        1,
+        status: _statusFilter == 'all' ? null : _statusFilter,
+        search: q.isEmpty ? null : q,
+      );
+    });
+  }
 
   @override
   void initState() {
@@ -22,6 +37,13 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().loadJobsPage(1);
     });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -91,7 +113,13 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  _SearchField(
+                    controller: _searchCtrl,
+                    onChanged: _onSearchChanged,
+                    hint: 'Search jobs by title…',
+                  ),
+                  const SizedBox(height: 8),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -108,6 +136,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                               admin.loadJobsPage(
                                 1,
                                 status: status == 'all' ? null : status,
+                                search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
                               );
                             },
                             child: AnimatedContainer(
@@ -181,6 +210,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                       onRefresh: () => admin.loadJobsPage(
                         _currentPage,
                         status: _statusFilter == 'all' ? null : _statusFilter,
+                        search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
                       ),
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -219,9 +249,8 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                                   setState(() => _currentPage--);
                                   admin.loadJobsPage(
                                     _currentPage,
-                                    status: _statusFilter == 'all'
-                                        ? null
-                                        : _statusFilter,
+                                    status: _statusFilter == 'all' ? null : _statusFilter,
+                                    search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
                                   );
                                 }
                               : null,
@@ -235,9 +264,8 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                                   setState(() => _currentPage++);
                                   admin.loadJobsPage(
                                     _currentPage,
-                                    status: _statusFilter == 'all'
-                                        ? null
-                                        : _statusFilter,
+                                    status: _statusFilter == 'all' ? null : _statusFilter,
+                                    search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
                                   );
                                 }
                               : null,
@@ -688,6 +716,60 @@ class _SheetSectionLabel extends StatelessWidget {
     return Text(
       text,
       style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF), letterSpacing: 0.5),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final String hint;
+
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (_, value, __) => TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: GoogleFonts.poppins(fontSize: 13),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF)),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF9CA3AF)),
+          suffixIcon: value.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                  onPressed: () {
+                    controller.clear();
+                    onChanged('');
+                  },
+                  splashRadius: 16,
+                )
+              : null,
+          filled: true,
+          fillColor: const Color(0xFFF9FAFB),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF4F46E5)),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -276,20 +276,39 @@ class AdminProvider extends ChangeNotifier {
     loadDashboardStats();
   }
 
-  Future<void> loadFreelancersPage(int page) async {
+  Future<void> loadFreelancersPage(int page, {String? search}) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
     try {
-      final data = await AdminService.getFreelancers(
-        _token!,
-        page: page,
-        pageSize: 20,
-      );
+      Map<String, dynamic> data;
+      if (search != null && search.trim().isNotEmpty) {
+        // /admin/users supports search; /freelancers/browse/all does not
+        final raw = await AdminService.getAdminUsers(
+          _token!,
+          role: 'freelancer',
+          isBanned: false,
+          search: search,
+          page: page,
+          pageSize: 20,
+        );
+        final rawItems = List<Map<String, dynamic>>.from(raw['items'] ?? []);
+        data = {
+          'items': rawItems.map((u) {
+            final m = Map<String, dynamic>.from(u);
+            // /admin/users returns freelancer_name instead of full_name
+            m['full_name'] = (u['freelancer_name'] as String?)?.isNotEmpty == true
+                ? u['freelancer_name']
+                : u['full_name'] ?? '';
+            return m;
+          }).toList(),
+          'pagination': raw['pagination'] ?? {},
+        };
+      } else {
+        data = await AdminService.getFreelancers(_token!, page: page, pageSize: 20);
+      }
       _tableFreelancers = List<Map<String, dynamic>>.from(data['items'] ?? []);
-      _freelancerPagination = Map<String, dynamic>.from(
-        data['pagination'] ?? {},
-      );
+      _freelancerPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
       _totalFreelancers =
           (_freelancerPagination['total'] as num?)?.toInt() ??
           _tableFreelancers.length;
@@ -300,16 +319,37 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadClientsPage(int page) async {
+  Future<void> loadClientsPage(int page, {String? search}) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
     try {
-      final data = await AdminService.getClients(
-        _token!,
-        page: page,
-        pageSize: 20,
-      );
+      Map<String, dynamic> data;
+      if (search != null && search.trim().isNotEmpty) {
+        // /admin/users supports search; /clients/browse/all does not
+        final raw = await AdminService.getAdminUsers(
+          _token!,
+          role: 'client',
+          isBanned: false,
+          search: search,
+          page: page,
+          pageSize: 20,
+        );
+        final rawItems = List<Map<String, dynamic>>.from(raw['items'] ?? []);
+        data = {
+          'items': rawItems.map((u) {
+            final m = Map<String, dynamic>.from(u);
+            // /admin/users returns client_name instead of full_name
+            m['full_name'] = (u['client_name'] as String?)?.isNotEmpty == true
+                ? u['client_name']
+                : u['full_name'] ?? '';
+            return m;
+          }).toList(),
+          'pagination': raw['pagination'] ?? {},
+        };
+      } else {
+        data = await AdminService.getClients(_token!, page: page, pageSize: 20);
+      }
       _tableClients = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _clientPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
       _totalClients =
@@ -321,7 +361,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadJobsPage(int page, {String? status}) async {
+  Future<void> loadJobsPage(int page, {String? status, String? search}) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
@@ -331,6 +371,7 @@ class AdminProvider extends ChangeNotifier {
         status: status,
         page: page,
         pageSize: 20,
+        search: search,
       );
       _tableJobs = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _jobPagination = Map<String, dynamic>.from(data['pagination'] ?? {});

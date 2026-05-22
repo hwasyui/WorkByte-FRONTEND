@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,10 @@ class _AdminUsersPageState extends State<AdminUsersPage>
   int _freelancerPage = 1;
   int _clientPage = 1;
 
+  final _freelancerSearchCtrl = TextEditingController();
+  final _clientSearchCtrl = TextEditingController();
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
@@ -27,9 +32,28 @@ class _AdminUsersPageState extends State<AdminUsersPage>
     });
   }
 
+  void _onFreelancerSearch(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      setState(() => _freelancerPage = 1);
+      context.read<AdminProvider>().loadFreelancersPage(1, search: q.isEmpty ? null : q);
+    });
+  }
+
+  void _onClientSearch(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      setState(() => _clientPage = 1);
+      context.read<AdminProvider>().loadClientsPage(1, search: q.isEmpty ? null : q);
+    });
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
+    _freelancerSearchCtrl.dispose();
+    _clientSearchCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -91,41 +115,69 @@ class _AdminUsersPageState extends State<AdminUsersPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _UsersList(
-                    users: admin.tableFreelancers,
-                    isLoading: admin.isTableLoading,
-                    type: 'Freelancer',
-                    color: const Color(0xFF059669),
-                    pagination: admin.freelancerPagination,
-                    currentPage: _freelancerPage,
-                    onPageChange: (p) {
-                      setState(() => _freelancerPage = p);
-                      admin.loadFreelancersPage(p);
-                    },
-                    subtitleBuilder: (u) {
-                      final rate = u['estimated_rate'];
-                      if (rate == null) return 'Rate not set';
-                      final currency = u['rate_currency'] ?? 'USD';
-                      final time = u['rate_time'] ?? 'hr';
-                      return '$currency ${rate.toString()} / $time';
-                    },
+                  Column(
+                    children: [
+                      _SearchField(
+                        controller: _freelancerSearchCtrl,
+                        onChanged: _onFreelancerSearch,
+                        hint: 'Search freelancers by name…',
+                      ),
+                      Expanded(
+                        child: _UsersList(
+                          users: admin.tableFreelancers,
+                          isLoading: admin.isTableLoading,
+                          type: 'Freelancer',
+                          color: const Color(0xFF059669),
+                          pagination: admin.freelancerPagination,
+                          currentPage: _freelancerPage,
+                          onPageChange: (p) {
+                            setState(() => _freelancerPage = p);
+                            admin.loadFreelancersPage(
+                              p,
+                              search: _freelancerSearchCtrl.text.isEmpty ? null : _freelancerSearchCtrl.text,
+                            );
+                          },
+                          subtitleBuilder: (u) {
+                            final rate = u['estimated_rate'];
+                            if (rate == null) return 'Rate not set';
+                            final currency = u['rate_currency'] ?? 'USD';
+                            final time = u['rate_time'] ?? 'hr';
+                            return '$currency ${rate.toString()} / $time';
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  _UsersList(
-                    users: admin.tableClients,
-                    isLoading: admin.isTableLoading,
-                    type: 'Client',
-                    color: const Color(0xFF0891B2),
-                    pagination: admin.clientPagination,
-                    currentPage: _clientPage,
-                    onPageChange: (p) {
-                      setState(() => _clientPage = p);
-                      admin.loadClientsPage(p);
-                    },
-                    subtitleBuilder: (u) {
-                      final posted = u['total_jobs_posted'] ?? 0;
-                      final completed = u['total_projects_completed'] ?? 0;
-                      return '$posted jobs posted · $completed completed';
-                    },
+                  Column(
+                    children: [
+                      _SearchField(
+                        controller: _clientSearchCtrl,
+                        onChanged: _onClientSearch,
+                        hint: 'Search clients by name…',
+                      ),
+                      Expanded(
+                        child: _UsersList(
+                          users: admin.tableClients,
+                          isLoading: admin.isTableLoading,
+                          type: 'Client',
+                          color: const Color(0xFF0891B2),
+                          pagination: admin.clientPagination,
+                          currentPage: _clientPage,
+                          onPageChange: (p) {
+                            setState(() => _clientPage = p);
+                            admin.loadClientsPage(
+                              p,
+                              search: _clientSearchCtrl.text.isEmpty ? null : _clientSearchCtrl.text,
+                            );
+                          },
+                          subtitleBuilder: (u) {
+                            final posted = u['total_jobs_posted'] ?? 0;
+                            final completed = u['total_projects_completed'] ?? 0;
+                            return '$posted jobs posted · $completed completed';
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -856,6 +908,64 @@ String _fmt(String? dateStr) {
     return '${dt.day}/${dt.month}/${dt.year}';
   } catch (_) {
     return '-';
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final String hint;
+
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (_, value, __) => TextField(
+          controller: controller,
+          onChanged: onChanged,
+          style: GoogleFonts.poppins(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF)),
+            prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF9CA3AF)),
+            suffixIcon: value.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF9CA3AF)),
+                    onPressed: () {
+                      controller.clear();
+                      onChanged('');
+                    },
+                    splashRadius: 16,
+                  )
+                : null,
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF4F46E5)),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
