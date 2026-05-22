@@ -48,7 +48,7 @@ class AuthProvider extends ChangeNotifier {
       _token = savedToken;
       _currentUser = user;
 
-      if (profileProvider != null) {
+      if (_currentUser!.hasRole && profileProvider != null) {
         await profileProvider.fetchProfile(
           token: _token!,
           userId: _currentUser!.userId,
@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
       _token = token;
       _currentUser = await _service.getMe(token);
 
-      if (!isNewUser && profileProvider != null) {
+      if (!isNewUser && _currentUser!.hasRole && profileProvider != null) {
         await profileProvider.fetchProfile(
           token: _token!,
           userId: _currentUser!.userId,
@@ -123,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
 
       await NotificationService.saveTokenToBackend();
 
-      if (profileProvider != null) {
+      if (_currentUser!.hasRole && profileProvider != null) {
         await profileProvider.fetchProfile(
           token: _token!,
           userId: _currentUser!.userId,
@@ -276,7 +276,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> changePassword({
-    required String currentPassword,
+    required String oldPassword,
     required String newPassword,
     ProfileProvider? profileProvider,
   }) async {
@@ -288,9 +288,38 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _service.changePassword(
         token: _token!,
-        currentPassword: currentPassword,
+        oldPassword: oldPassword,
         newPassword: newPassword,
       );
+      _currentUser = await _service.getMe(_token!);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> setPassword({
+    required String newPassword,
+    ProfileProvider? profileProvider,
+  }) async {
+    if (_token == null) return false;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _service.setPassword(token: _token!, newPassword: newPassword);
+      _currentUser = await _service.getMe(_token!);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -339,6 +368,7 @@ class AuthProvider extends ChangeNotifier {
     ProfileProvider? profileProvider,
     NotificationProvider? notificationProvider,
   }) async {
+    await _service.signOutGoogle();
     await _service.clearSavedToken();
     _token = null;
     _currentUser = null;

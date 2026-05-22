@@ -54,8 +54,14 @@ class SettingsScreen extends StatelessWidget {
               ),
               const _SectionDivider(),
               _SecuritySection(
-                onChangePassword: () =>
-                    _showChangePasswordSheet(context, auth),
+                passwordLoginEnabled:
+                    auth.currentUser?.passwordLoginEnabled ?? true,
+                onPasswordAction: () => _showChangePasswordSheet(
+                  context,
+                  auth,
+                  isSetPassword:
+                      auth.currentUser?.passwordLoginEnabled != true,
+                ),
               ),
               const SizedBox(height: 32),
             ],
@@ -65,7 +71,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showChangePasswordSheet(BuildContext context, AuthProvider auth) {
+  void _showChangePasswordSheet(
+    BuildContext context,
+    AuthProvider auth, {
+    required bool isSetPassword,
+  }) {
     final currentCtrl = TextEditingController();
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
@@ -113,7 +123,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Change Password',
+                      isSetPassword ? 'Set Password' : 'Change Password',
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -123,7 +133,9 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Enter your current password and choose a new one.',
+                      isSetPassword
+                          ? 'Create a password so you can sign in with email and password later.'
+                          : 'Enter your current password and choose a new one.',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -132,16 +144,18 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    _PasswordField(
-                      label: 'Current Password',
-                      hint: 'Enter your current password',
-                      controller: currentCtrl,
-                      isVisible: showCurrent,
-                      errorText: currentError,
-                      onToggleVisibility: () =>
-                          setState(() => showCurrent = !showCurrent),
-                    ),
-                    const SizedBox(height: 14),
+                    if (!isSetPassword) ...[
+                      _PasswordField(
+                        label: 'Current Password',
+                        hint: 'Enter your current password',
+                        controller: currentCtrl,
+                        isVisible: showCurrent,
+                        errorText: currentError,
+                        onToggleVisibility: () =>
+                            setState(() => showCurrent = !showCurrent),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _PasswordField(
                       label: 'New Password',
                       hint: 'Min. 8 characters',
@@ -200,7 +214,7 @@ class SettingsScreen extends StatelessWidget {
                                             confirmCtrl.text.trim();
 
                                         bool hasError = false;
-                                        if (current.isEmpty) {
+                                        if (!isSetPassword && current.isEmpty) {
                                           setState(() => currentError =
                                               'Current password is required');
                                           hasError = true;
@@ -226,11 +240,14 @@ class SettingsScreen extends StatelessWidget {
 
                                         if (hasError) return;
 
-                                        final success =
-                                            await auth.changePassword(
-                                          currentPassword: current,
-                                          newPassword: newPass,
-                                        );
+                                        final success = isSetPassword
+                                            ? await auth.setPassword(
+                                                newPassword: newPass,
+                                              )
+                                            : await auth.changePassword(
+                                                oldPassword: current,
+                                                newPassword: newPass,
+                                              );
 
                                         if (success) {
                                           if (sheetContext.mounted) {
@@ -242,7 +259,9 @@ class SettingsScreen extends StatelessWidget {
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  'Password changed successfully.',
+                                                  isSetPassword
+                                                      ? 'Password login enabled successfully'
+                                                      : 'Password changed successfully',
                                                   style: GoogleFonts.poppins(
                                                       fontSize: 13),
                                                 ),
@@ -258,9 +277,17 @@ class SettingsScreen extends StatelessWidget {
                                             );
                                           }
                                         } else {
-                                          setState(() =>
-                                              currentError = auth.error ??
-                                                  'Could not change password');
+                                          setState(() {
+                                            final message = auth.error ??
+                                                (isSetPassword
+                                                    ? 'Could not set password'
+                                                    : 'Could not change password');
+                                            if (isSetPassword) {
+                                              newError = message;
+                                            } else {
+                                              currentError = message;
+                                            }
+                                          });
                                         }
                                       },
                                 style: ElevatedButton.styleFrom(
@@ -284,7 +311,9 @@ class SettingsScreen extends StatelessWidget {
                                         ),
                                       )
                                     : Text(
-                                        'Save Changes',
+                                        isSetPassword
+                                            ? 'Set Password'
+                                            : 'Save Changes',
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -700,9 +729,13 @@ class _SectionDivider extends StatelessWidget {
 }
 
 class _SecuritySection extends StatelessWidget {
-  final VoidCallback onChangePassword;
+  final bool passwordLoginEnabled;
+  final VoidCallback onPasswordAction;
 
-  const _SecuritySection({required this.onChangePassword});
+  const _SecuritySection({
+    required this.passwordLoginEnabled,
+    required this.onPasswordAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -713,7 +746,7 @@ class _SecuritySection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Security',
+            'Login Methods',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -722,7 +755,7 @@ class _SecuritySection extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Manage your account security settings.',
+            'Manage how you sign in to your account.',
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -731,13 +764,79 @@ class _SecuritySection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.lock_outline_rounded,
-            label: 'Change Password',
-            subtitle: 'Update your account password',
-            onTap: onChangePassword,
+          const _MethodStatusRow(
+            icon: Icons.g_mobiledata_rounded,
+            label: 'Google',
+            status: 'Connected',
+          ),
+          _MethodStatusRow(
+            icon: Icons.password_rounded,
+            label: 'Password login',
+            status: passwordLoginEnabled ? 'Enabled' : 'Not set',
           ),
           const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.lock_outline_rounded,
+            label: passwordLoginEnabled ? 'Change Password' : 'Set Password',
+            subtitle: passwordLoginEnabled
+                ? 'Update your account password'
+                : 'Enable email and password login',
+            onTap: onPasswordAction,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _MethodStatusRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String status;
+
+  const _MethodStatusRow({
+    required this.icon,
+    required this.label,
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          Text(
+            status,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: status == 'Enabled' || status == 'Connected'
+                  ? AppColors.primary
+                  : const Color(0xFF6B7280),
+            ),
+          ),
         ],
       ),
     );

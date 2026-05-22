@@ -85,7 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final isNewUser = result['is_new_user'] as bool;
-    if (isNewUser) {
+    final user = authProvider.currentUser;
+    if (isNewUser || user?.hasRole != true) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
@@ -93,7 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final user = authProvider.currentUser;
     if (user?.isAdmin == true) {
       context.read<AdminProvider>().initWithToken(authProvider.token!);
       Navigator.pushReplacement(
@@ -124,7 +124,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       final user = authProvider.currentUser;
-      if (user?.isAdmin == true) {
+      if (user?.hasRole != true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+        );
+      } else if (user?.isAdmin == true) {
         context.read<AdminProvider>().initWithToken(authProvider.token!);
         Navigator.pushReplacement(
           context,

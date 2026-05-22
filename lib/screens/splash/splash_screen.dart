@@ -6,6 +6,7 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../auth/login.dart';
+import '../auth/oauth_role_select.dart';
 import '../dashboard/dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -35,13 +36,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
+    final user = authProvider.currentUser;
+    Widget nextScreen;
+    if (authProvider.isAuthenticated && user?.hasRole != true) {
+      nextScreen = const OAuthRoleSelectScreen();
+    } else if (authProvider.isAuthenticated) {
+      nextScreen = const HomeScreen();
+    } else {
+      nextScreen = const LoginScreen();
+    }
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => authProvider.isAuthenticated
-            ? const HomeScreen()
-            : const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => nextScreen),
     );
   }
 

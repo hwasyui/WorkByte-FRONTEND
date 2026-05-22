@@ -25,6 +25,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> loginWithGoogle() async {
     try {
+      await signOutGoogle();
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
       if (account == null) throw Exception('Google login cancelled');
 
@@ -96,6 +97,14 @@ class AuthService {
 
   Future<void> clearSavedToken() async {
     await _storage.delete(key: _tokenKey);
+  }
+
+  Future<void> signOutGoogle() async {
+    try {
+      await _googleSignIn.signOut();
+    } on PlatformException catch (e) {
+      debugPrint('Google sign-out skipped: ${e.message}');
+    }
   }
 
   Future<bool> register({
@@ -238,7 +247,7 @@ class AuthService {
 
   Future<void> changePassword({
     required String token,
-    required String currentPassword,
+    required String oldPassword,
     required String newPassword,
   }) async {
     final response = await http.post(
@@ -248,7 +257,7 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        'current_password': currentPassword,
+        'old_password': oldPassword,
         'new_password': newPassword,
       }),
     );
@@ -258,6 +267,27 @@ class AuthService {
     }
     throw Exception(
       data['details'] ?? data['message'] ?? data['detail'] ?? 'Failed to change password',
+    );
+  }
+
+  Future<void> setPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/set-password'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'new_password': newPassword}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['status'] == 'success' || data['data'] != null) return;
+    }
+    throw Exception(
+      data['details'] ?? data['message'] ?? data['detail'] ?? 'Failed to set password',
     );
   }
 
