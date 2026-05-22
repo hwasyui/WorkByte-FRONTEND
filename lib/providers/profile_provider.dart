@@ -89,6 +89,52 @@ class ProfileProvider extends ChangeNotifier {
     return [];
   }
 
+  bool get isOnboardingComplete {
+    if (isClient) {
+      final c = _clientProfile;
+      if (c == null) return false;
+      return (c.fullName?.trim().isNotEmpty ?? false) &&
+          (c.bio?.trim().isNotEmpty ?? false);
+    }
+
+    if (isFreelancer) {
+      final f = _freelancerProfile;
+      if (f == null) return false;
+      return f.fullName.trim().isNotEmpty &&
+          (f.jobTitle?.trim().isNotEmpty ?? false) &&
+          (f.bio?.trim().isNotEmpty ?? false) &&
+          _skills.isNotEmpty &&
+          _experiences.isNotEmpty;
+    }
+
+    return false;
+  }
+
+  List<String> get missingOnboardingFields {
+    if (isClient) {
+      final c = _clientProfile;
+      if (c == null) return ['Profile not loaded'];
+      return [
+        if (c.fullName?.trim().isEmpty ?? true) 'Full name',
+        if (c.bio?.trim().isEmpty ?? true) 'Bio',
+      ];
+    }
+
+    if (isFreelancer) {
+      final f = _freelancerProfile;
+      if (f == null) return ['Profile not loaded'];
+      return [
+        if (f.fullName.trim().isEmpty) 'Full name',
+        if (f.jobTitle.trim().isEmpty) 'Professional title',
+        if (f.bio?.trim().isEmpty ?? true) 'Bio',
+        if (_skills.isEmpty) 'Skills',
+        if (_experiences.isEmpty) 'Work experience',
+      ];
+    }
+
+    return [];
+  }
+
   String get displayName {
     if (isClient) return _clientProfile?.displayName ?? 'User';
     return _freelancerProfile?.displayName ?? 'User';
@@ -101,9 +147,12 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   // Getters for both profiles (used in account switcher)
-  String get freelancerDisplayName => _freelancerProfile?.displayName ?? 'Freelancer Account';
-  String get clientDisplayName => _clientProfile?.displayName ?? 'Company Account';
-  String? get freelancerProfilePictureUrl => _freelancerProfile?.profilePictureUrl;
+  String get freelancerDisplayName =>
+      _freelancerProfile?.displayName ?? 'Freelancer Account';
+  String get clientDisplayName =>
+      _clientProfile?.displayName ?? 'Company Account';
+  String? get freelancerProfilePictureUrl =>
+      _freelancerProfile?.profilePictureUrl;
   String? get clientProfilePictureUrl => _clientProfile?.profilePictureUrl;
 
   String? get bio {
@@ -515,7 +564,7 @@ class ProfileProvider extends ChangeNotifier {
     _educations = const [];
     _experiences = const [];
     _skills = const [];
-    notifyListeners();  // resets both profiles on logout
+    notifyListeners(); // resets both profiles on logout
   }
 
   void _clearImageCache() {

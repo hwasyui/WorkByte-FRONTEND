@@ -32,8 +32,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   bool _isLoading = true;
   String _searchQuery = '';
 
-  // active tabs
-  static const _tabs = ['Active', 'Completed', 'All'];
+  static const List<String> _tabs = [
+    'Active',
+    'Under Review',
+    'Revision Requested',
+    'Completed',
+    'Cancelled',
+    'Disputed',
+    'All',
+  ];
+
+  static const Map<String, List<String>?> _tabStatusMap = {
+    'Active': ['active'],
+    'Under Review': ['under_review'],
+    'Revision Requested': ['revision_requested'],
+    'Completed': ['completed'],
+    'Cancelled': ['cancelled'],
+    'Disputed': ['disputed'],
+    'All': null,
+  };
 
   @override
   void initState() {
@@ -99,41 +116,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   List<ContractModel> get _filtered {
-    final tabIndex = _tabController.index;
-    List<ContractModel> base;
+    final selectedTab = _tabs[_tabController.index];
+    final selectedStatuses = _tabStatusMap[selectedTab];
 
-    if (tabIndex == 0) {
-      base = _allContracts
-          .where(
-            (c) => [
-              'active',
-              'under_review',
-              'revision_requested',
-            ].contains(c.status),
-          )
-          .toList();
-    } else if (tabIndex == 1) {
-      base = _allContracts
-          .where(
-            (c) => ['completed', 'cancelled', 'disputed'].contains(c.status),
-          )
-          .toList();
-    } else {
-      base = _allContracts;
-    }
+    List<ContractModel> base = selectedStatuses == null
+        ? List<ContractModel>.from(_allContracts)
+        : _allContracts
+              .where((c) => selectedStatuses.contains(c.status))
+              .toList();
 
     if (_searchQuery.isNotEmpty) {
-      base = base
-          .where(
-            (c) =>
-                c.contractTitle.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                (c.roleTitle).toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
-          )
-          .toList();
+      final query = _searchQuery.toLowerCase();
+      base = base.where((c) {
+        return c.contractTitle.toLowerCase().contains(query) ||
+            c.roleTitle.toLowerCase().contains(query);
+      }).toList();
     }
 
     return base;
@@ -268,31 +265,37 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   Widget _buildTabBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Row(
-        children: List.generate(_tabs.length, (i) {
-          final selected = _tabController.index == i;
-          return GestureDetector(
-            onTap: () => _tabController.animateTo(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? AppColors.primary : Colors.grey.shade200,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(_tabs.length, (i) {
+            final selected = _tabController.index == i;
+            return GestureDetector(
+              onTap: () => _tabController.animateTo(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected ? AppColors.primary : Colors.grey.shade200,
+                  ),
+                ),
+                child: Text(
+                  _tabs[i],
+                  style: AppText.captionSemiBold.copyWith(
+                    color: selected ? Colors.white : Colors.grey.shade600,
+                  ),
                 ),
               ),
-              child: Text(
-                _tabs[i],
-                style: AppText.captionSemiBold.copyWith(
-                  color: selected ? Colors.white : Colors.grey.shade600,
-                ),
-              ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -349,7 +352,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // Title
                       Text(
                         contract.contractTitle,
                         style: AppText.h3,
@@ -428,7 +430,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                   style: AppText.caption.copyWith(color: Colors.grey.shade600),
                 ),
                 const Spacer(),
-                // Start date
                 Row(
                   children: [
                     Icon(
@@ -448,8 +449,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               ],
             ),
           ),
-
-          // Working Space button
           Padding(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
@@ -485,6 +484,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   Widget _buildEmptyState() {
+    final currentTab = _tabs[_tabController.index];
+
     return ListView(
       children: [
         const SizedBox(height: 80),
@@ -510,9 +511,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                _tabController.index == 0
-                    ? 'Active contracts will appear here'
-                    : 'Completed contracts will appear here',
+                currentTab == 'All'
+                    ? 'All contracts will appear here'
+                    : '$currentTab contracts will appear here',
                 style: AppText.caption.copyWith(color: Colors.grey.shade400),
               ),
             ],

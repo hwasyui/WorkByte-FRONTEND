@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
@@ -53,17 +54,29 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
 
     if (!mounted) return;
 
-    if (success) {
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.error ?? 'Failed to set up profile'),
+        ),
+      );
+      return;
+    }
+
+    if (authProvider.shouldShowProfileSetup(profileProvider)) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const FreelancerProfileSetupScreen()),
         (route) => false,
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Failed to set up profile')),
-      );
+      return;
     }
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -84,9 +97,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                     size: 64,
                     color: AppColors.primary,
                   ),
-
                   const SizedBox(height: 20),
-
                   Text(
                     'Complete your profile',
                     style: AppText.h1.copyWith(
@@ -95,9 +106,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       color: const Color(0xFF111827),
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     'Tell us your name and how you\'ll use WorkByte',
                     textAlign: TextAlign.center,
@@ -106,9 +115,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       fontSize: 14,
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
                   SizedBox(
                     width: double.infinity,
                     child: LoginTextField(
@@ -118,9 +125,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       prefixIcon: const Icon(Icons.person_outline, size: 24),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -132,9 +137,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
@@ -145,7 +148,8 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _selectedRole = 'Freelancer'),
+                            onTap: () =>
+                                setState(() => _selectedRole = 'Freelancer'),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
@@ -169,7 +173,8 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                         ),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _selectedRole = 'Client'),
+                            onTap: () =>
+                                setState(() => _selectedRole = 'Client'),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
@@ -194,9 +199,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 36),
-
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, _) {
                       return GestureDetector(
@@ -217,7 +220,9 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              authProvider.isLoading ? 'Setting up...' : 'Continue',
+                              authProvider.isLoading
+                                  ? 'Setting up...'
+                                  : 'Continue',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
-import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
 import '../../screens/auth/forgot_password.dart';
 import '../../screens/auth/oauth_role_select.dart';
-import '../../screens/dashboard/dashboard.dart';
 import '../../screens/admin/admin_shell.dart';
+import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/admin_provider.dart';
@@ -44,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     setState(() {
-      // Email
       if (email.isEmpty) {
         _emailError = 'Email is required';
       } else if (!_isValidEmail(email)) {
@@ -53,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailError = null;
       }
 
-      // Password
       if (password.isEmpty) {
         _passwordError = 'Password is required';
       } else if (password.length < 8) {
@@ -66,20 +64,49 @@ class _LoginScreenState extends State<LoginScreen> {
     return _emailError == null && _passwordError == null;
   }
 
+  void _routeAfterAuth() {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    if (authProvider.currentUser?.isAdmin == true) {
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
+      );
+      return;
+    }
+
+    if (authProvider.shouldShowProfileSetup(profileProvider)) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FreelancerProfileSetupScreen()),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   Future<void> _handleGoogleLogin() async {
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
-    final result = await authProvider.loginWithGoogle(profileProvider: profileProvider);
+    final result = await authProvider.loginWithGoogle(
+      profileProvider: profileProvider,
+    );
 
     if (!mounted) return;
 
     if (result == null) {
       final err = authProvider.error ?? 'Google login failed';
       if (err != 'Google login cancelled') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err)));
       }
       return;
     }
@@ -93,19 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final user = authProvider.currentUser;
-    if (user?.isAdmin == true) {
-      context.read<AdminProvider>().initWithToken(authProvider.token!);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminShell()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
+    _routeAfterAuth();
   }
 
   Future<void> _handleLogin() async {
@@ -122,25 +137,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      final user = authProvider.currentUser;
-      if (user?.isAdmin == true) {
-        context.read<AdminProvider>().initWithToken(authProvider.token!);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminShell()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    } else {
+    if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Login failed')),
       );
+      return;
     }
+
+    _routeAfterAuth();
   }
 
   @override
@@ -194,9 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ],
                                 ),
                               ),
-
                               const SizedBox(height: 8),
-
                               Text(
                                 'Fill your details or continue with social media',
                                 textAlign: TextAlign.center,
@@ -205,10 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: 14,
                                 ),
                               ),
-
                               const SizedBox(height: 24),
 
-                              /// Email
                               SizedBox(
                                 width: double.infinity,
                                 child: LoginTextField(
@@ -222,10 +222,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 14),
 
-                              /// Password
                               SizedBox(
                                 width: double.infinity,
                                 child: LoginTextField(
@@ -239,17 +237,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 10),
 
-                              /// Forgot password
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: GestureDetector(
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const ForgotPasswordScreen(),
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
                                     ),
                                   ),
                                   child: Text(
@@ -262,10 +259,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 20),
 
-                              /// Login button
                               Consumer<AuthProvider>(
                                 builder: (context, authProvider, child) {
                                   return GestureDetector(
@@ -338,7 +333,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     SocialButton(
                                       assetPath: 'assets/google.png',
                                       iconSize: 34,
-                                      onPressed: _handleGoogleLogin,
+                                      onPressed:
+                                          context.read<AuthProvider>().isLoading
+                                          ? null
+                                          : _handleGoogleLogin,
                                     ),
                                   ],
                                 ),
@@ -348,8 +346,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
-                    /// Bottom wave (scrolls with content)
                     Builder(
                       builder: (context) {
                         final bottomInset = MediaQuery.of(

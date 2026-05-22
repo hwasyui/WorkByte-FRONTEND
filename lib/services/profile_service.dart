@@ -144,7 +144,7 @@ class ProfileService {
       ..headers.addAll(_multipartHeaders(token));
 
     fields.forEach((key, value) {
-      if (value != null) request.fields[key] = value.toString();
+      request.fields[key] = value?.toString() ?? '';
     });
 
     final streamed = await request.send();
@@ -440,9 +440,9 @@ class ProfileService {
     String searchTerm,
   ) async {
     try {
-      final uri = Uri.parse('$_baseUrl/skills/search').replace(
-        queryParameters: {'q': searchTerm},
-      );
+      final uri = Uri.parse(
+        '$_baseUrl/skills/search',
+      ).replace(queryParameters: {'q': searchTerm});
       final res = await http.get(uri, headers: _headers(token));
       if (res.statusCode == 200) {
         final body = _decodeBody(res);

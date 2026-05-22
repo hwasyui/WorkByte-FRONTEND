@@ -72,6 +72,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool shouldShowProfileSetup(ProfileProvider profileProvider) {
+    if (!isAuthenticated || _currentUser == null) return false;
+
+    final role = _currentUser!.type.toLowerCase();
+
+    if (role != 'freelancer') return false;
+
+    return !profileProvider.isOnboardingComplete;
+  }
+
   Future<Map<String, dynamic>?> loginWithGoogle({
     ProfileProvider? profileProvider,
   }) async {
@@ -99,6 +109,11 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return {'is_new_user': isNewUser};
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
+      _isLoading = false;
+      notifyListeners();
+      return null;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
@@ -134,6 +149,11 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
+    } on SessionExpiredException {
+      await handleSessionExpired(profileProvider: profileProvider);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
@@ -216,7 +236,11 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      await _service.resetPassword(email: email, otp: otp, newPassword: newPassword);
+      await _service.resetPassword(
+        email: email,
+        otp: otp,
+        newPassword: newPassword,
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -308,12 +332,23 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // call this after an appeal is approved to refresh ban state
-  Future<void> refreshUser() async {
+  Future<void> refreshUser({
+    ProfileProvider? profileProvider,
+    NotificationProvider? notificationProvider,
+  }) async {
     if (_token == null) return;
+
     try {
       _currentUser = await _service.getMe(_token!);
       notifyListeners();
-    } catch (_) {}
+    } on SessionExpiredException {
+      await handleSessionExpired(
+        profileProvider: profileProvider,
+        notificationProvider: notificationProvider,
+      );
+    } catch (e) {
+      debugPrint('refreshUser failed: $e');
+    }
   }
 
   Future<void> handleSessionExpired({

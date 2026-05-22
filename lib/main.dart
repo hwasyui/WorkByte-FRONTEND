@@ -28,6 +28,8 @@ import 'firebase_options.dart';
 import 'services/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,17 +68,17 @@ class WorkByteApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'WorkByte',
-        navigatorKey: navigatorKey, // ← add this
+        navigatorKey: navigatorKey,
+        scaffoldMessengerKey: scaffoldMessengerKey,
         builder: (context, child) {
           return Consumer2<ConnectivityProvider, AuthProvider>(
             builder: (context, connectivity, auth, _) {
-              // Session expired — redirect to login
               if (auth.sessionExpired) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   auth.clearSessionExpired();
-                  // ← also clear notifications on session expiry
                   context.read<NotificationProvider>().clear();
-                  ScaffoldMessenger.of(context).showSnackBar(
+
+                  scaffoldMessengerKey.currentState?.showSnackBar(
                     const SnackBar(
                       content: Text(
                         'Your session has expired. Please log in again.',
@@ -85,7 +87,8 @@ class WorkByteApp extends StatelessWidget {
                       duration: Duration(seconds: 4),
                     ),
                   );
-                  Navigator.of(context).pushAndRemoveUntil(
+
+                  navigatorKey.currentState?.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
                   );

@@ -72,7 +72,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       for (final e in map.entries) {
         if (seen.contains(e.key)) continue;
         seen.add(e.key);
-        final name = (e.value as Map<String, dynamic>)['name'] as String? ?? e.key;
+        final name =
+            (e.value as Map<String, dynamic>)['name'] as String? ?? e.key;
         result.add({'code': e.key, 'name': name});
       }
     }
@@ -105,12 +106,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
         final rate = profile.freelancerProfile?.estimatedRate;
-        hourlyController.text =
-            rate != null ? ThousandsSeparatorFormatter.format(rate) : '';
-        _selectedRateTime =
-            profile.freelancerProfile?.rateTime ?? 'hourly';
-        _selectedCurrency =
-            profile.freelancerProfile?.rateCurrency ?? 'USD';
+        hourlyController.text = rate != null
+            ? ThousandsSeparatorFormatter.format(rate)
+            : '';
+        _selectedRateTime = profile.freelancerProfile?.rateTime ?? 'hourly';
+        _selectedCurrency = profile.freelancerProfile?.rateCurrency ?? 'USD';
       });
 
       if (auth.token != null && profile.isFreelancer) {
@@ -145,12 +145,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
         _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
         final rate = profile.freelancerProfile?.estimatedRate;
-        hourlyController.text =
-            rate != null ? ThousandsSeparatorFormatter.format(rate) : '';
-        _selectedRateTime =
-            profile.freelancerProfile?.rateTime ?? 'hourly';
-        _selectedCurrency =
-            profile.freelancerProfile?.rateCurrency ?? 'USD';
+        hourlyController.text = rate != null
+            ? ThousandsSeparatorFormatter.format(rate)
+            : '';
+        _selectedRateTime = profile.freelancerProfile?.rateTime ?? 'hourly';
+        _selectedCurrency = profile.freelancerProfile?.rateCurrency ?? 'USD';
       });
     }
   }
@@ -861,19 +860,23 @@ class _ProfileScreenState extends State<ProfileScreen>
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             // Kick off currency load once
-            if (currencies == null && !loadingCurrencies && currencyError == null) {
+            if (currencies == null &&
+                !loadingCurrencies &&
+                currencyError == null) {
               loadingCurrencies = true;
-              _loadCurrencies().then((list) {
-                setDialogState(() {
-                  currencies = list;
-                  loadingCurrencies = false;
-                });
-              }).catchError((e) {
-                setDialogState(() {
-                  currencyError = e.toString();
-                  loadingCurrencies = false;
-                });
-              });
+              _loadCurrencies()
+                  .then((list) {
+                    setDialogState(() {
+                      currencies = list;
+                      loadingCurrencies = false;
+                    });
+                  })
+                  .catchError((e) {
+                    setDialogState(() {
+                      currencyError = e.toString();
+                      loadingCurrencies = false;
+                    });
+                  });
             }
 
             Future<void> pickCurrency() async {
@@ -979,8 +982,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 margin: rt != rateTimes.last
                                     ? const EdgeInsets.only(right: 6)
                                     : null,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 9),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 9,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppColors.primary
@@ -1033,9 +1037,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                             Expanded(
                               child: TextField(
                                 controller: hourlyController,
-                                keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
                                 inputFormatters: [
                                   ThousandsSeparatorFormatter(),
                                 ],
@@ -1133,8 +1138,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                               child: Text(
                                 'Cancel',
@@ -1161,8 +1167,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   context,
                                   listen: false,
                                 );
-                                final messenger =
-                                    ScaffoldMessenger.of(context);
+                                final messenger = ScaffoldMessenger.of(context);
                                 final identifier =
                                     profile.freelancerProfile?.freelancerId ??
                                     auth.currentUser!.userId;
@@ -1170,12 +1175,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 Navigator.pop(dialogContext);
 
                                 final fields = <String, dynamic>{
+                                  'estimated_rate': val != null
+                                      ? val.toString()
+                                      : '',
                                   'rate_time': localRateTime,
                                   'rate_currency': localCurrency,
                                 };
-                                if (val != null) {
-                                  fields['estimated_rate'] = val;
-                                }
 
                                 final success = await profile.updateProfile(
                                   token: auth.token!,
@@ -1209,8 +1214,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 elevation: 0,
                               ),
                               child: Text(
@@ -1297,9 +1303,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final data = await CvAnalysisService().uploadCV(auth.token!, file);
-      final suggested = data['suggested_profile'];
 
-      // Store the CV URL from the response
       final fileUrl = data['file_url'] as String?;
       if (fileUrl != null) {
         setState(() {
@@ -1309,63 +1313,23 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
       }
 
-      if (suggested == null) {
-        // No suggestions — treat as plain upload success
-        await _refreshProfile();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'CV uploaded successfully',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        return;
-      }
-
-      // Has suggestions — go to review screen
-      final profile = CvSuggestedProfile.fromJson(
-        suggested as Map<String, dynamic>,
-      );
-
+      await _refreshProfile();
       if (!mounted) return;
-      final applied = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => CvReviewScreen(
-            token: auth.token!,
-            profile: profile,
-            isInitial: data['is_initial'] as bool? ?? true,
-            analysisData: data['is_initial'] == false ? data : null,
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'CV uploaded successfully',
+            style: GoogleFonts.poppins(fontSize: 13),
           ),
+          backgroundColor: const Color(0xFF4F46E5),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
-
-      if (!mounted) return;
-      await _refreshProfile();
-
-      if (applied == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Profile updated from CV! 🎉',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1393,7 +1357,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final identifier =
         profile.freelancerProfile?.freelancerId ?? auth.currentUser!.userId;
-    final updateFields = {"cv_file_url": null};
+    final updateFields = {'cv_file_url': ''};
 
     final success = await profile.updateProfile(
       token: auth.token!,
@@ -2173,7 +2137,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildSection(
                 title: 'Portfolio',
                 icon: Icons.work_history_outlined,
-                actionButton: _buildAddButton('Add Portfolio', _showPortfolioForm),
+                actionButton: _buildAddButton(
+                  'Add Portfolio',
+                  _showPortfolioForm,
+                ),
                 child: portfolios.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -2977,8 +2944,18 @@ class _PortfolioItem extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
@@ -3033,7 +3010,11 @@ class _PortfolioItem extends StatelessWidget {
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: onDelete,
-                    child: const Icon(Icons.delete, color: Colors.red, size: 18),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                   ),
                 ],
               ],
@@ -3066,8 +3047,7 @@ class _PortfolioItem extends StatelessWidget {
                   ],
                   if (item.projectUrl != null &&
                       item.projectUrl!.isNotEmpty) ...[
-                    if (item.completionDate != null)
-                      const SizedBox(width: 12),
+                    if (item.completionDate != null) const SizedBox(width: 12),
                     const Icon(Icons.link, size: 12, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Expanded(
@@ -3154,10 +3134,7 @@ class _SkillChip extends StatelessWidget {
                 catLabel.isNotEmpty
                     ? '$catLabel · ${_toTitleCase(proficiency)}'
                     : _toTitleCase(proficiency),
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 10,
-                ),
+                style: const TextStyle(color: AppColors.primary, fontSize: 10),
               ),
             ],
           ),
@@ -3777,7 +3754,7 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
         : _intFmt.format(int.parse(intDigits));
 
     final formatted = parts.length > 1
-        ? '$intFormatted.${parts[1]}'  // preserve decimal as typed
+        ? '$intFormatted.${parts[1]}' // preserve decimal as typed
         : intFormatted;
 
     return TextEditingValue(
@@ -3799,7 +3776,10 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
       return _intFmt.format(value.toInt());
     }
     // Show up to 2 decimal places, strip trailing zeros
-    final dec = value.toStringAsFixed(2).split('.')[1].replaceAll(RegExp(r'0+$'), '');
+    final dec = value
+        .toStringAsFixed(2)
+        .split('.')[1]
+        .replaceAll(RegExp(r'0+$'), '');
     return '${_intFmt.format(value.truncate())}.$dec';
   }
 }
@@ -3837,12 +3817,12 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
       _filtered = q.isEmpty
           ? widget.currencies
           : widget.currencies
-              .where(
-                (c) =>
-                    c['code']!.toLowerCase().contains(q) ||
-                    c['name']!.toLowerCase().contains(q),
-              )
-              .toList();
+                .where(
+                  (c) =>
+                      c['code']!.toLowerCase().contains(q) ||
+                      c['name']!.toLowerCase().contains(q),
+                )
+                .toList();
     });
   }
 

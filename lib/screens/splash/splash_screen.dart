@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-import '../../core/constants/colors.dart';
+import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../auth/login.dart';
-import '../dashboard/dashboard.dart';
+import '../../screens/admin/admin_shell.dart';
+import '../../screens/auth/login.dart';
+import '../../screens/dashboard/dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,18 +29,25 @@ class _SplashScreenState extends State<SplashScreen> {
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
-    // Restore session from saved token instead of logging out
     await authProvider.restoreSession(profileProvider: profileProvider);
 
     if (!mounted) return;
 
+    Widget nextScreen;
+
+    if (!authProvider.isAuthenticated) {
+      nextScreen = const LoginScreen();
+    } else if (authProvider.currentUser?.isAdmin == true) {
+      nextScreen = const AdminShell();
+    } else if (authProvider.shouldShowProfileSetup(profileProvider)) {
+      nextScreen = const FreelancerProfileSetupScreen();
+    } else {
+      nextScreen = const HomeScreen();
+    }
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => authProvider.isAuthenticated
-            ? const HomeScreen()
-            : const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => nextScreen),
     );
   }
 
