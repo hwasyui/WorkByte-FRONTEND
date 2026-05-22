@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../screens/admin/admin_shell.dart';
-import '../../screens/auth/login.dart';
-import '../../screens/dashboard/dashboard.dart';
+import '../auth/login.dart';
+import '../auth/oauth_role_select.dart';
+import '../dashboard/dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,16 +33,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
+    final user = authProvider.currentUser;
     Widget nextScreen;
-
-    if (!authProvider.isAuthenticated) {
-      nextScreen = const LoginScreen();
-    } else if (authProvider.currentUser?.isAdmin == true) {
-      nextScreen = const AdminShell();
-    } else if (authProvider.shouldShowProfileSetup(profileProvider)) {
-      nextScreen = const FreelancerProfileSetupScreen();
-    } else {
+    if (authProvider.isAuthenticated && user?.hasRole != true) {
+      nextScreen = const OAuthRoleSelectScreen();
+    } else if (authProvider.isAuthenticated) {
       nextScreen = const HomeScreen();
+    } else {
+      nextScreen = const LoginScreen();
     }
 
     Navigator.pushReplacement(

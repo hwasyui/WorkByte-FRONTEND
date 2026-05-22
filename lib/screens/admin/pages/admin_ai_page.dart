@@ -73,7 +73,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                         ),
                       ),
                       Text(
-                        'Scam detection & toxicity moderation',
+                        'Scam detection & harmful text detection',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),
@@ -123,7 +123,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                 indicatorWeight: 2.5,
                 tabs: const [
                   Tab(text: 'Scam Detection'),
-                  Tab(text: 'Toxicity Detection'),
+                  Tab(text: 'Harmful Text Detection'),
                 ],
               ),
             ],
@@ -666,7 +666,7 @@ class _ScamCardState extends State<_ScamCard> {
   }
 }
 
-// ─── Toxicity Detection Tab ───────────────────────────────────────────────────
+// ─── Harmful Text Detection Tab ──────────────────────────────────────────────
 
 class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
@@ -727,7 +727,7 @@ class _ModerationTab extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Toxicity Detection AI',
+                            'Harmful Text Detection AI',
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -774,19 +774,19 @@ class _ModerationTab extends StatelessWidget {
                       _ModalSection(
                         title: 'Model',
                         content:
-                            'RoBERTa toxicity classifier fine-tuned for platform moderation (F1 macro 0.72, ~55 ms inference). It scores content across five harm labels — Toxicity, Obscene, Threat, Insult, and Identity Hate — then sends likely violations to admin review.',
+                            'A RoBERTa toxicity classifier fine-tuned for platform moderation. It achieves an F1 macro score of 0.72 and runs inference in about 55 ms. The model scores each submission across five harm categories: Toxicity, Obscene, Threat, Insult, and Identity Hate, then routes anything above the threshold to admin review.',
                       ),
                       const SizedBox(height: 14),
                       _ModalSection(
                         title: 'How it works',
                         content:
-                            'Text is cleaned, tokenized, and scored from 0.0 to 1.0 for each label. Content is flagged when any label crosses the moderation threshold. The frontend also shows the reason for each label so reviewers can understand why the model may have raised it.',
+                            'Each submission is cleaned and tokenized before scoring. Every label gets a score between 0.0 and 1.0. If any label crosses the moderation threshold, the content is flagged. Reviewers also see a plain-language reason for each triggered label so they can judge the case quickly.',
                       ),
                       const SizedBox(height: 14),
                       _ModalSection(
                         title: 'Auto-actions',
                         content:
-                            'Pending items auto-expire after 30 days. Low-risk content is auto-approved. High-risk content can be auto-rejected, using stricter thresholds for jobs and profiles.',
+                            'Pending items expire after 30 days. High-risk submissions have their flag auto-confirmed and the content is removed. Low-risk submissions have their flag auto-dismissed and the content stays live. Stricter score thresholds apply to job posts compared to profile bios.',
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -840,7 +840,7 @@ class _ModerationTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
-            // ── Toxicity detection sub-header with info button ──────────
+            // ── Harmful text detection sub-header with info button ──────
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
@@ -986,7 +986,7 @@ class _ModerationCardState extends State<_ModerationCard> {
     final isJob = contentType == 'job_post';
     final actionLabel = isJob ? 'Close Job Post' : 'Restrict Account';
     final actionDesc = isJob
-        ? 'This will close the job post as an admin override, bypassing the toxicity flag flow.'
+        ? 'This will close the job post as an admin override, bypassing the harmful text detection flow.'
         : 'This will restrict the user account as an admin override.';
 
     final confirmed = await showDialog<bool>(
@@ -1152,7 +1152,7 @@ class _ModerationCardState extends State<_ModerationCard> {
             const Divider(color: Color(0xFFF3F4F6)),
             const SizedBox(height: 12),
             Text(
-              'TOXICITY SCORES',
+              'HARM SCORES',
               style: GoogleFonts.poppins(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -1464,8 +1464,8 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ],
 
-          // ── Default blocked message (shown when rejected) ─────────────
-          if (status == 'rejected') ...[
+          // ── Default blocked message (shown when flag confirmed) ──────
+          if (status == 'approved') ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -1549,23 +1549,23 @@ class _ModerationCardState extends State<_ModerationCard> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       _ActionButton(
-                        label: 'Approve',
+                        label: 'Dismiss',
                         icon: Icons.check_circle_outline_rounded,
                         color: const Color(0xFF059669),
-                        onTap: () => _act('approve'),
+                        onTap: () => _act('reject'),
                       ),
                       const SizedBox(width: 8),
                       _ActionButton(
-                        label: 'Reject',
-                        icon: Icons.block_rounded,
+                        label: 'Confirm Flag',
+                        icon: Icons.flag_rounded,
                         color: const Color(0xFFDC2626),
                         filled: true,
-                        onTap: () => _act('reject'),
+                        onTap: () => _act('approve'),
                       ),
                     ],
                   )
           else
-            _StatusPill(status: status),
+            _ModerationStatusPill(status: status),
           const SizedBox(height: 8),
           _closing
               ? const Center(
@@ -1798,7 +1798,7 @@ class _ModalSection extends StatelessWidget {
 
 // ─── Shared small widgets ─────────────────────────────────────────────────────
 
-class _FilterBar extends StatelessWidget {
+class _FilterBar extends StatefulWidget {
   final List<String> options;
   final String selected;
   final ValueChanged<String> onSelect;
@@ -1814,90 +1814,131 @@ class _FilterBar extends StatelessWidget {
   });
 
   @override
+  State<_FilterBar> createState() => _FilterBarState();
+}
+
+class _FilterBarState extends State<_FilterBar> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isFiltered = widget.selected != widget.options.last; // 'all' is last
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
-        ),
+        border: const Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 6),
-              Text(
-                'Filter by Status',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF9CA3AF),
-                  letterSpacing: 0.4,
-                ),
-              ),
-              if (count != null) ...[
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$count items',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: options.map((opt) {
-                final active = opt == selected;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => onSelect(opt),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: Row(
+                children: [
+                  if (widget.count != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: active ? accentColor : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: active
-                            ? null
-                            : Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        opt[0].toUpperCase() + opt.substring(1),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: active ? Colors.white : const Color(0xFF6B7280),
-                        ),
+                        '${widget.count} items',
+                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF6B7280)),
                       ),
                     ),
+                  const Spacer(),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isFiltered ? widget.accentColor.withOpacity(0.08) : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isFiltered ? widget.accentColor.withOpacity(0.3) : const Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tune_rounded, size: 14, color: isFiltered ? widget.accentColor : const Color(0xFF6B7280)),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Filter',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isFiltered ? widget.accentColor : const Color(0xFF6B7280),
+                          ),
+                        ),
+                        if (isFiltered) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            width: 6, height: 6,
+                            decoration: BoxDecoration(color: widget.accentColor, shape: BoxShape.circle),
+                          ),
+                        ],
+                        const SizedBox(width: 4),
+                        Icon(
+                          _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                          size: 14,
+                          color: isFiltered ? widget.accentColor : const Color(0xFF9CA3AF),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }).toList(),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 180),
+            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                  const SizedBox(height: 10),
+                  Text('STATUS', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: widget.options.map((opt) {
+                        final active = opt == widget.selected;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () => widget.onSelect(opt),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: active ? widget.accentColor : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(20),
+                                border: active ? null : Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: Text(
+                                opt[0].toUpperCase() + opt.substring(1),
+                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280)),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1906,9 +1947,9 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// ─── Unified moderation filter (status + content type in one container) ───────
+// ─── Unified moderation filter (status + content type — popup dropdown) ──────
 
-class _ModerationFilterSection extends StatelessWidget {
+class _ModerationFilterSection extends StatefulWidget {
   final List<String> statuses;
   final List<String> types;
   final Map<String, String> typeLabels;
@@ -1927,46 +1968,112 @@ class _ModerationFilterSection extends StatelessWidget {
     required this.onTypeSelect,
   });
 
-  Widget _chipRow(
-    List<String> options,
-    String selected,
-    String Function(String) label,
-    ValueChanged<String> onTap,
-  ) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: options.map((opt) {
-          final active = opt == selected;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => onTap(opt),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: active ? const Color(0xFF7C3AED) : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(20),
-                  border: active
-                      ? null
-                      : Border.all(color: const Color(0xFFE5E7EB), width: 1),
-                ),
-                child: Text(
-                  label(opt),
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: active ? Colors.white : const Color(0xFF6B7280),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+  @override
+  State<_ModerationFilterSection> createState() => _ModerationFilterSectionState();
+}
+
+class _ModerationFilterSectionState extends State<_ModerationFilterSection> {
+  bool get _hasActiveFilter =>
+      widget.selectedStatus != widget.statuses.first ||
+      widget.selectedType != widget.types.first;
+
+  void _openMenu(BuildContext btnCtx) {
+    final RenderBox button = btnCtx.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(btnCtx).context.findRenderObject() as RenderBox;
+    final Offset offset =
+        button.localToGlobal(Offset.zero, ancestor: overlay);
+    showMenu<void>(
+      context: btnCtx,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(
+          offset.dx,
+          offset.dy + button.size.height + 4,
+          button.size.width,
+          0,
+        ),
+        Offset.zero & overlay.size,
       ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      items: [
+        _menuHeader('STATUS'),
+        ...widget.statuses.map(
+          (s) => _menuRadio(
+            s,
+            s[0].toUpperCase() + s.substring(1),
+            widget.selectedStatus,
+            widget.onStatusSelect,
+          ),
+        ),
+        const PopupMenuDivider(),
+        _menuHeader('CONTENT TYPE'),
+        ...widget.types.map(
+          (t) => _menuRadio(
+            t,
+            widget.typeLabels[t] ?? t,
+            widget.selectedType,
+            widget.onTypeSelect,
+          ),
+        ),
+      ],
     );
   }
+
+  PopupMenuEntry<void> _menuHeader(String text) => PopupMenuItem<void>(
+    enabled: false,
+    height: 28,
+    padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+    child: Text(
+      text,
+      style: GoogleFonts.poppins(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFFB0B7C3),
+        letterSpacing: 0.8,
+      ),
+    ),
+  );
+
+  PopupMenuEntry<void> _menuRadio(
+    String value,
+    String label,
+    String selected,
+    ValueChanged<String> onSelect,
+  ) => PopupMenuItem<void>(
+    onTap: () => onSelect(value),
+    height: 36,
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    child: Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: value == selected
+                  ? const Color(0xFF7C3AED)
+                  : const Color(0xFFD1D5DB),
+              width: value == selected ? 5 : 1.5,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight:
+                value == selected ? FontWeight.w600 : FontWeight.w400,
+            color: value == selected
+                ? const Color(0xFF7C3AED)
+                : const Color(0xFF374151),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1984,60 +2091,96 @@ class _ModerationFilterSection extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 6),
-              Text(
-                'Filters',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF9CA3AF),
-                  letterSpacing: 0.4,
+          Expanded(
+            child: Row(
+              children: [
+                if (_hasActiveFilter)
+                  Container(
+                    width: 7,
+                    height: 7,
+                    margin: const EdgeInsets.only(right: 7),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF7C3AED),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                Text(
+                  _hasActiveFilter ? 'Filters active' : 'All content',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: _hasActiveFilter
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFF374151),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Builder(
+            builder: (btnCtx) => GestureDetector(
+              onTap: () => _openMenu(btnCtx),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _hasActiveFilter
+                      ? const Color(0xFFF3E8FF)
+                      : const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _hasActiveFilter
+                        ? const Color(0xFFDDD6FE)
+                        : const Color(0xFFE5E7EB),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 14,
+                      color: _hasActiveFilter
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF6B7280),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Filter',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _hasActiveFilter
+                            ? const Color(0xFF7C3AED)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (_hasActiveFilter) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF7C3AED),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 14,
+                      color: _hasActiveFilter
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF6B7280),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'STATUS',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFB0B7C3),
-              letterSpacing: 0.8,
             ),
-          ),
-          const SizedBox(height: 6),
-          _chipRow(
-            statuses,
-            selectedStatus,
-            (s) => s[0].toUpperCase() + s.substring(1),
-            onStatusSelect,
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          const SizedBox(height: 12),
-          Text(
-            'CONTENT TYPE',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFB0B7C3),
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _chipRow(
-            types,
-            selectedType,
-            (t) => typeLabels[t] ?? t,
-            onTypeSelect,
           ),
         ],
       ),
@@ -2259,6 +2402,47 @@ class _StatusPill extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           status[0].toUpperCase() + status.substring(1),
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ModerationStatusPill extends StatelessWidget {
+  final String status;
+  const _ModerationStatusPill({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    // approved = flag confirmed → content removed (red)
+    // rejected = flag dismissed → content stays (green)
+    final color = switch (status) {
+      'approved' => const Color(0xFFDC2626),
+      'rejected' => const Color(0xFF059669),
+      _ => const Color(0xFF6B7280),
+    };
+    final icon = switch (status) {
+      'approved' => Icons.flag_rounded,
+      'rejected' => Icons.check_circle_rounded,
+      _ => Icons.hourglass_empty_rounded,
+    };
+    final label = switch (status) {
+      'approved' => 'Confirmed',
+      'rejected' => 'Dismissed',
+      _ => status[0].toUpperCase() + status.substring(1),
+    };
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 5),
+        Text(
+          label,
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,

@@ -200,12 +200,34 @@ class AboutScreen extends StatelessWidget {
                         'WorkByte automatically analyzes each freelancer\'s uploaded CV '
                         'to extract skills, qualifications, and work experience. The AI '
                         'turns unstructured resume data into a structured profile, making '
-                        'it easier for clients to evaluate candidates at a glance — no '
-                        'manual reading required.',
+                        'it easier for clients to evaluate candidates at a glance without '
+                        'reading the full document.',
                     highlights: const [
                       'Auto-extracts skills & experience',
                       'Structures CV data into a clear profile',
                       'Speeds up candidate evaluation',
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  _FeatureCard(
+                    icon: Icons.manage_accounts_outlined,
+                    iconColor: const Color(0xFF0891B2),
+                    iconBg: const Color(0xFFCFFAFE),
+                    accentColor: const Color(0xFF0891B2),
+                    badge: 'Profile Setup',
+                    title: 'CV-to-Profile Auto Fill',
+                    description:
+                        'Freelancers can skip filling in their profile manually by uploading '
+                        'a CV instead. WorkByte parses the document and automatically '
+                        'populates the profile fields: skills, bio, work experience, and '
+                        'education. The parsed data is editable before saving, so freelancers '
+                        'stay in control while still saving time on setup.',
+                    highlights: const [
+                      'Upload CV to auto-fill profile fields',
+                      'Parses skills, bio, experience and education',
+                      'Editable before saving',
                     ],
                   ),
 
@@ -265,8 +287,8 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF7C3AED),
                     iconBg: const Color(0xFFF3E8FF),
                     accentColor: const Color(0xFF7C3AED),
-                    badge: 'Content Moderation',
-                    title: 'Toxicity Detection',
+                    badge: 'Harmful Text Detection',
+                    title: 'Harmful Text Detection',
                     description:
                         'Every job posting, profile bio, and user-submitted text is '
                         'automatically scanned by a fine-tuned RoBERTa classifier '

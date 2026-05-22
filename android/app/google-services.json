@@ -12,7 +12,16 @@
           "package_name": "app.workbyte.com"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "655326820214-406svjods64qjnmh5i3mb1jhk4e9q68f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.workbyte.com",
+            "certificate_hash": "F1EF2FC898E7D054869B8A2529F91EE911D98116"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADcvuHe4vCXyRYpMXI40ISEaWYHV1-0Pc"
@@ -20,7 +29,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

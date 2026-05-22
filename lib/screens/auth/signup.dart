@@ -115,7 +115,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     final isNewUser = result['is_new_user'] as bool;
-    if (isNewUser) {
+    final user = authProvider.currentUser;
+    if (isNewUser || user?.hasRole != true) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),

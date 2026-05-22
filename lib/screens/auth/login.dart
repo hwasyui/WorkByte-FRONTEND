@@ -112,7 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final isNewUser = result['is_new_user'] as bool;
-    if (isNewUser) {
+    final user = authProvider.currentUser;
+    if (isNewUser || user?.hasRole != true) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
@@ -120,7 +121,18 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    _routeAfterAuth();
+    if (user?.isAdmin == true) {
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -137,7 +149,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (!success) {
+    if (success) {
+      final user = authProvider.currentUser;
+      if (user?.hasRole != true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+        );
+      } else if (user?.isAdmin == true) {
+        context.read<AdminProvider>().initWithToken(authProvider.token!);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminShell()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Login failed')),
       );

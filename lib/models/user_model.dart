@@ -7,6 +7,7 @@ class UserModel {
   final String? freelancerId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final bool passwordLoginEnabled;
   final bool isReportBanned;
   final String? banMessage;
   final DateTime? reportBannedAt;
@@ -20,6 +21,7 @@ class UserModel {
     this.freelancerId,
     this.createdAt,
     this.updatedAt,
+    this.passwordLoginEnabled = true,
     this.isReportBanned = false, // 👈 NEW
     this.banMessage, // 👈 NEW
     this.reportBannedAt, // 👈 NEW
@@ -38,6 +40,7 @@ class UserModel {
     updatedAt: json['updated_at'] != null
         ? DateTime.tryParse(json['updated_at'].toString())
         : null,
+    passwordLoginEnabled: json['password_login_enabled'] as bool? ?? true,
     isReportBanned: json['is_report_banned'] as bool? ?? false, // 👈 NEW
     banMessage: json['ban_message'] as String?, // 👈 NEW
     reportBannedAt:
@@ -55,9 +58,10 @@ class UserModel {
     if (rawType == 'client' || rawType == 'freelancer') return rawType!;
     if (json['freelancer_id'] != null) return 'freelancer';
     if (json['client_id'] != null) return 'client';
-    return 'client';
+    return 'none';
   }
 
+  bool get hasRole => clientId != null || freelancerId != null;
   bool get isClient => type == 'client';
   bool get isFreelancer => type == 'freelancer';
 }
