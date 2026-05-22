@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/utils/helpers.dart';
 import '../../models/education_model.dart';
 import '../../models/experience_model.dart';
 import '../../models/freelancer_skill_model.dart';
@@ -1424,21 +1425,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
 
-    final uri = Uri.tryParse(cvUrl);
-    if (uri == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid CV URL')));
-      return;
-    }
-
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open CV preview')),
-      );
-    }
+    await openDocumentFromUrl(context, cvUrl);
   }
 
   String _getCvDisplayName(String? path) {

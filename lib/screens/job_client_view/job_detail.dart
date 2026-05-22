@@ -26,6 +26,7 @@ import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
 import '../people_list/people_list_screen.dart';
+import '../../core/utils/helpers.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
   final JobPostModel job;
@@ -164,27 +165,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   Future<void> _openJobFile(JobFileModel file) async {
-    final uri = Uri.parse(file.fileUrl);
-    try {
-      final canOpen = await canLaunchUrl(uri);
-      if (canOpen) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    await openDocumentFromUrl(context, file.fileUrl, fileName: file.fileName);
   }
 
   Future<void> _fetchProposals() async {
@@ -782,31 +763,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   Future<void> _openFile(ProposalFileModel file) async {
-    final uri = Uri.parse(file.fileUrl);
-
-    try {
-      final canOpen = await canLaunchUrl(uri);
-      if (canOpen) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file. Try downloading it manually.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
+    await openDocumentFromUrl(context, file.fileUrl, fileName: file.fileName);
   }
 
   String _capitalize(String s) =>

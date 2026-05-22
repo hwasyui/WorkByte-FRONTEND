@@ -21,6 +21,7 @@ import '../../providers/contract_provider.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
 import '../dm/dm_chat_screen.dart';
+import '../../core/utils/helpers.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
@@ -269,12 +270,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      _showSnack('Could not open file.', isError: true);
-    }
+    await openDocumentFromUrl(context, url);
   }
 
   @override
@@ -538,17 +534,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                       return;
                     }
 
-                    final opened = await launchUrl(
-                      uri,
-                      mode: LaunchMode.externalApplication,
+                    if (!mounted) return;
+                    await openDocumentFromUrl(
+                      context,
+                      pdfUrl,
+                      fileName: 'contract_${_contract.contractId}.pdf',
                     );
-
-                    if (!opened) {
-                      _showSnack(
-                        'Could not open contract file.',
-                        isError: true,
-                      );
-                    }
                   } catch (e) {
                     debugPrint('open contract pdf error: $e');
                     _showSnack('Could not open contract file.', isError: true);

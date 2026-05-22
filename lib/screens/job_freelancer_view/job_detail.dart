@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
+import '../../core/utils/helpers.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobPostModel job;
@@ -170,27 +171,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> openJobFile(JobFileModel file) async {
-    final uri = Uri.parse(file.fileUrl);
-    try {
-      final canOpen = await canLaunchUrl(uri);
-      if (canOpen) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    await openDocumentFromUrl(context, file.fileUrl, fileName: file.fileName);
   }
 
   Future<void> analyzeJob() async {

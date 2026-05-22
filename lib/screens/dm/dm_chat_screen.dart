@@ -13,6 +13,7 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
+import '../../core/utils/helpers.dart';
 import 'dm_thread_list.dart';
 
 class DMChatScreen extends StatefulWidget {
@@ -490,34 +491,7 @@ class _DMChatScreenState extends State<DMChatScreen>
   }
 
   Future<void> _openAttachment(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Invalid attachment URL',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open attachment',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
+    await openDocumentFromUrl(context, url);
   }
 
   @override
