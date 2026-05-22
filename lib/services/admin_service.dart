@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -425,6 +426,12 @@ class AdminService {
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
+        if (details is List) {
+          return {
+            'items': List<Map<String, dynamic>>.from(details),
+            'pagination': <String, dynamic>{},
+          };
+        }
         if (details is Map) {
           final rawItems = details['items'] ?? details['appeals'] ?? [];
           final rawPag = details['pagination'];
@@ -454,8 +461,11 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       );
-      return res.statusCode == 200;
-    } catch (_) {
+      debugPrint('resolveAppeal status: ${res.statusCode}');
+      debugPrint('resolveAppeal body: ${res.body}');
+      return res.statusCode == 200 || res.statusCode == 201;
+    } catch (e) {
+      debugPrint('resolveAppeal error: $e');
       return false;
     }
   }

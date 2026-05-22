@@ -7,6 +7,7 @@ class AppealModel {
   final String status;
   final String? adminNote;
   final String? jobTitle;
+  final int appealAttempt;
   final DateTime createdAt;
   final DateTime? actionedAt;
 
@@ -19,6 +20,7 @@ class AppealModel {
     required this.status,
     this.adminNote,
     this.jobTitle,
+    this.appealAttempt = 1,
     required this.createdAt,
     this.actionedAt,
   });
@@ -33,6 +35,7 @@ class AppealModel {
       status: json['status']?.toString() ?? 'pending',
       adminNote: json['admin_note']?.toString(),
       jobTitle: json['job_title']?.toString(),
+      appealAttempt: (json['appeal_attempt'] as num?)?.toInt() ?? 1,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),

@@ -222,7 +222,7 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        'current_password': currentPassword,
+        'old_password': currentPassword,
         'new_password': newPassword,
       }),
     );

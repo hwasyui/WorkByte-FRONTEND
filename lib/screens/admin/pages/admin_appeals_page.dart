@@ -174,6 +174,7 @@ class _AppealCard extends StatelessWidget {
     final actionedAt = _fmtDate(appeal['actioned_at']?.toString());
     final adminNote = appeal['admin_note'] as String?;
     final appealId = appeal['appeal_id']?.toString() ?? '';
+    final appealAttempt = (appeal['appeal_attempt'] as num?)?.toInt() ?? 1;
 
     final statusColor = status == 'approved'
         ? const Color(0xFF059669)
@@ -259,6 +260,23 @@ class _AppealCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Attempt $appealAttempt/2',
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF6B7280),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

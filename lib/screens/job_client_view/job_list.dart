@@ -569,12 +569,15 @@ class JobListScreenState extends State<JobListScreen> {
                             color: Color(0xFFDC2626),
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            'Closed by AI scam detection · Tap to appeal',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFDC2626),
+                          Flexible(
+                            child: Text(
+                              'Closed by AI scam detection · Tap to appeal',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFDC2626),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

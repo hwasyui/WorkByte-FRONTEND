@@ -31,20 +31,40 @@ class AppealService {
       }),
     );
 
-    final body = jsonDecode(response.body);
-    debugPrint('POST /appeals response: $body');
+    debugPrint('POST /appeals status: ${response.statusCode}');
+    debugPrint('POST /appeals body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final inner = body['details'] ?? body['data'] ?? body;
-      return AppealModel.fromJson(inner as Map<String, dynamic>);
+      try {
+        final body = jsonDecode(response.body);
+        final inner = body['details'] ?? body['data'] ?? body;
+        return AppealModel.fromJson(inner as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('Error parsing appeal response: $e');
+        throw Exception('Failed to parse appeal response: $e');
+      }
     }
 
-    throw Exception(
-      body['details'] ??
-          body['message'] ??
-          body['detail'] ??
-          'Failed to submit appeal',
-    );
+    // Try to parse error response - handle both JSON and plain text
+    String errorMsg = 'HTTP ${response.statusCode}: Failed to submit appeal';
+    try {
+      if (response.body.isNotEmpty && response.body.startsWith('{')) {
+        final body = jsonDecode(response.body);
+        errorMsg = body['details'] ??
+            body['message'] ??
+            body['detail'] ??
+            errorMsg;
+      } else {
+        // Plain text response
+        errorMsg = response.body.isNotEmpty
+            ? response.body
+            : errorMsg;
+      }
+    } catch (e) {
+      debugPrint('Error parsing error response: $e');
+      // Keep default errorMsg
+    }
+    throw Exception(errorMsg);
   }
 
   /// GET /appeals/mine
@@ -57,22 +77,93 @@ class AppealService {
       },
     );
 
-    final body = jsonDecode(response.body);
-    debugPrint('GET /appeals/mine response: $body');
+    debugPrint('GET /appeals/mine status: ${response.statusCode}');
+    debugPrint('GET /appeals/mine body: ${response.body}');
 
     if (response.statusCode == 200) {
-      final inner = body['details'] ?? body['data'] ?? body;
-      final list = inner is List ? inner : (inner['appeals'] as List? ?? []);
-      return list
-          .map((e) => AppealModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      try {
+        final body = jsonDecode(response.body);
+        final inner = body['details'] ?? body['data'] ?? body;
+        final list = inner is List ? inner : (inner['appeals'] as List? ?? []);
+        return list
+            .map((e) => AppealModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        debugPrint('Error parsing appeals response: $e');
+        throw Exception('Failed to parse appeals response: $e');
+      }
     }
 
-    throw Exception(
-      body['details'] ??
-          body['message'] ??
-          body['detail'] ??
-          'Failed to load appeals',
+    String errorMsg = 'HTTP ${response.statusCode}: Failed to load appeals';
+    try {
+      if (response.body.isNotEmpty && response.body.startsWith('{')) {
+        final body = jsonDecode(response.body);
+        errorMsg = body['details'] ??
+            body['message'] ??
+            body['detail'] ??
+            errorMsg;
+      } else {
+        errorMsg = response.body.isNotEmpty ? response.body : errorMsg;
+      }
+    } catch (e) {
+      debugPrint('Error parsing error response: $e');
+    }
+    throw Exception(errorMsg);
+  }
+
+  /// GET /appeals/status
+  /// Check appeal eligibility and remaining attempts for a target
+  /// Returns: {state, can_appeal, appeals_remaining, message}
+  Future<Map<String, dynamic>> getAppealStatus({
+    required String token,
+    required String targetType,
+    required String targetId,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/appeals/status').replace(
+      queryParameters: {
+        'target_type': targetType,
+        'target_id': targetId,
+      },
     );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    debugPrint('GET /appeals/status status: ${response.statusCode}');
+    debugPrint('GET /appeals/status body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      try {
+        final body = jsonDecode(response.body);
+        final inner = body['details'] ?? body['data'] ?? body;
+        return inner is Map<String, dynamic>
+            ? inner
+            : <String, dynamic>{};
+      } catch (e) {
+        debugPrint('Error parsing appeal status response: $e');
+        throw Exception('Failed to parse appeal status response: $e');
+      }
+    }
+
+    String errorMsg = 'HTTP ${response.statusCode}: Failed to check appeal status';
+    try {
+      if (response.body.isNotEmpty && response.body.startsWith('{')) {
+        final body = jsonDecode(response.body);
+        errorMsg = body['details'] ??
+            body['message'] ??
+            body['detail'] ??
+            errorMsg;
+      } else {
+        errorMsg = response.body.isNotEmpty ? response.body : errorMsg;
+      }
+    } catch (e) {
+      debugPrint('Error parsing error response: $e');
+    }
+    throw Exception(errorMsg);
   }
 }

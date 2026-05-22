@@ -228,11 +228,13 @@ class AdminProvider extends ChangeNotifier {
         AdminService.getFreelancers(_token!, page: 1, pageSize: 5),
         AdminService.getClients(_token!, page: 1, pageSize: 5),
         AdminService.getJobPosts(_token!, page: 1, pageSize: 5),
+        AdminService.getAppeals(_token!, status: 'pending', pageSize: 50),
       ]);
 
       final freelancerResult = results[0];
       final clientResult = results[1];
       final jobResult = results[2];
+      final appealsResult = results[3];
 
       _recentFreelancers = List<Map<String, dynamic>>.from(
         freelancerResult['items'] ?? [],
@@ -258,6 +260,15 @@ class AdminProvider extends ChangeNotifier {
           _recentClients.length;
       _totalJobs =
           (_jobPagination['total'] as num?)?.toInt() ?? _recentJobs.length;
+
+      // Pre-populate pending appeals for the sidebar badge
+      final pendingItems = List<Map<String, dynamic>>.from(
+        appealsResult['items'] ?? [],
+      );
+      if (pendingItems.isNotEmpty) {
+        // Merge into _appeals without overwriting if appeals page already loaded
+        if (_appeals.isEmpty) _appeals = pendingItems;
+      }
     } catch (e) {
       debugPrint('AdminProvider.loadOverviewData error: $e');
     }

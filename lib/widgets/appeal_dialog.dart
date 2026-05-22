@@ -71,6 +71,22 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
   bool get _canSubmit => _msgCtrl.text.trim().length >= 20;
 
   @override
+  void initState() {
+    super.initState();
+    // Fetch appeal status when dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.token != null) {
+        context.read<AppealProvider>().fetchAppealStatus(
+          token: auth.token!,
+          targetType: widget.targetType,
+          targetId: widget.targetId,
+        );
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _msgCtrl.dispose();
     super.dispose();
@@ -294,6 +310,92 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
               ),
             ),
           ],
+
+          // ── appeal status banner ──
+          Consumer<AppealProvider>(
+            builder: (_, provider, __) {
+              if (provider.isCheckingStatus || provider.appealStatus.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              
+              final status = provider.appealStatus;
+              final appealsRemaining = status['appeals_remaining'] as int? ?? 2;
+              final currentState = status['state'] as String? ?? 'unknown';
+              
+              if (appealsRemaining <= 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14, bottom: 14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEEEE),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFE53935).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_rounded,
+                          size: 16,
+                          color: Color(0xFFE53935),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'You have exhausted all appeal attempts. This decision is final.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFFE53935),
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              
+              return Padding(
+                padding: const EdgeInsets.only(top: 14, bottom: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You have $appealsRemaining appeal${appealsRemaining != 1 ? 's' : ''} remaining. '
+                          'If both are rejected, this decision becomes final.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
 
           const SizedBox(height: 16),
           Text(
