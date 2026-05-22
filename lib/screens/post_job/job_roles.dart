@@ -5,6 +5,7 @@ import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../../../../providers/skill_provider.dart';
 import '../../../../models/skill_model.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'job_files.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,7 +76,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
   void _onNext() {
     final err = _validate();
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      AppSnackBar.show(context, err, type: SnackBarType.error);
       return;
     }
     final provider = context.read<JobPostProvider>();

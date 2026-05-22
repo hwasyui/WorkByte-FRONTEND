@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../providers/profile_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -254,27 +255,7 @@ class SettingsScreen extends StatelessWidget {
                                             Navigator.pop(sheetContext);
                                           }
                                           if (context.mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  isSetPassword
-                                                      ? 'Password login enabled successfully'
-                                                      : 'Password changed successfully',
-                                                  style: GoogleFonts.poppins(
-                                                      fontSize: 13),
-                                                ),
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                backgroundColor:
-                                                    AppColors.primary,
-                                              ),
-                                            );
+                                            AppSnackBar.show(context, isSetPassword ? 'Password set successfully!' : 'Password changed successfully!', type: SnackBarType.error);
                                           }
                                         } else {
                                           setState(() {
@@ -538,33 +519,7 @@ class SettingsScreen extends StatelessWidget {
                                           if (sheetContext.mounted) {
                                             Navigator.pop(sheetContext);
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    targetRole == 'client'
-                                                        ? 'Client account created successfully.'
-                                                        : 'Freelancer account created successfully.',
-                                                    style:
-                                                        GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                  behavior:
-                                                      SnackBarBehavior
-                                                          .floating,
-                                                  shape:
-                                                      RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          10,
-                                                        ),
-                                                  ),
-                                                  backgroundColor:
-                                                      AppColors.primary,
-                                                ),
-                                              );
+                                              AppSnackBar.show(context, targetRole, type: SnackBarType.error);
                                             }
                                           }
                                         } else {

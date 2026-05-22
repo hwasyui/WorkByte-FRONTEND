@@ -1,6 +1,7 @@
-import 'package:workbyte_app/models/cv_suggested_profile.dart';
+﻿import 'package:workbyte_app/models/cv_suggested_profile.dart';
 import 'package:workbyte_app/services/cv_analysis_service.dart';
 import 'package:flutter/material.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CvReviewScreen extends StatefulWidget {
@@ -58,23 +59,7 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
         applyEducation: _applyEducation
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Profile updated successfully! 🎉',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          backgroundColor: _primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      AppSnackBar.show(context, 'Profile updated successfully! 🎉', type: SnackBarType.error);
       Navigator.of(context).pop(true);
     } catch (e) {
       setState(

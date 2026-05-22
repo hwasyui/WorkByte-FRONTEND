@@ -26,6 +26,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
+import 'core/utils/app_snackbar.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -76,14 +77,11 @@ class WorkByteApp extends StatelessWidget {
                   auth.clearSessionExpired();
                   // ← also clear notifications on session expiry
                   context.read<NotificationProvider>().clear();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Your session has expired. Please log in again.',
-                      ),
-                      backgroundColor: Colors.redAccent,
-                      duration: Duration(seconds: 4),
-                    ),
+                  AppSnackBar.show(
+                    context,
+                    'Your session has expired. Please log in again.',
+                    type: SnackBarType.error,
+                    duration: const Duration(seconds: 4),
                   );
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),

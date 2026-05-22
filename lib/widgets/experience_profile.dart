@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../core/constants/colors.dart';
 
 class ExperienceProfile extends StatefulWidget {
@@ -67,17 +68,11 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       if (startDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Start date is required')),
-        );
+        AppSnackBar.show(context, 'Start date is required', type: SnackBarType.error);
         return;
       }
       if (!isPresent && endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End date is required unless currently working here'),
-          ),
-        );
+        AppSnackBar.show(context, 'End date is required unless currently working here', type: SnackBarType.error);
         return;
       }
       setState(() => _isSubmitting = true);

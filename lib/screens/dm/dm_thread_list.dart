@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +8,7 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'dm_chat_screen.dart';
 
 class DMThreadListScreen extends StatefulWidget {
@@ -102,38 +103,14 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Message request accepted.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Message request accepted.', type: SnackBarType.error);
 
       await _loadThreads();
       await _loadRequests();
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to accept request.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to accept request.', type: SnackBarType.error);
     }
   }
 
@@ -149,38 +126,14 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Message request declined.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: const Color(0xFF7D7D7D),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Message request declined.', type: SnackBarType.error);
 
       await _loadThreads();
       await _loadRequests();
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to decline request.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to decline request.', type: SnackBarType.error);
     }
   }
 

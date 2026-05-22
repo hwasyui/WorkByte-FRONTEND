@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../core/constants/colors.dart';
 
 class EducationProfile extends StatefulWidget {
@@ -69,11 +70,7 @@ class _EducationProfileState extends State<EducationProfile> {
   void _submit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       if (!isCurrent && endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End date is required if not currently studying'),
-          ),
-        );
+        AppSnackBar.show(context, 'End date is required if not currently studying', type: SnackBarType.error);
         return;
       }
       setState(() => _isSubmitting = true);

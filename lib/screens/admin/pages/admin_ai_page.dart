@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 
 class AdminAiPage extends StatefulWidget {
   const AdminAiPage({super.key});
@@ -216,12 +217,7 @@ class _ScamCardState extends State<_ScamCard> {
     if (mounted) {
       setState(() => _loading = false);
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Action failed', style: GoogleFonts.poppins()),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        AppSnackBar.show(context, 'Action failed', type: SnackBarType.error);
       }
     }
   }
@@ -267,13 +263,11 @@ class _ScamCardState extends State<_ScamCard> {
     final ok = await context.read<AdminProvider>().adminCloseJob(jobPostId);
     if (mounted) {
       setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok ? 'Job post closed' : 'Failed to close job post',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-      ));
+      AppSnackBar.show(
+        context,
+        ok ? 'Job post closed' : 'Failed to close job post',
+        type: ok ? SnackBarType.success : SnackBarType.error,
+      );
     }
   }
 
@@ -970,12 +964,7 @@ class _ModerationCardState extends State<_ModerationCard> {
     if (mounted) {
       setState(() => _loading = false);
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Action failed', style: GoogleFonts.poppins()),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        AppSnackBar.show(context, 'Action failed', type: SnackBarType.error);
       }
     }
   }
@@ -1038,10 +1027,7 @@ class _ModerationCardState extends State<_ModerationCard> {
       final msg = isJob
           ? (ok ? 'Job post closed' : 'Failed to close job post')
           : (ok ? 'Account restricted' : 'Failed to restrict account');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg, style: GoogleFonts.poppins()),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-      ));
+      AppSnackBar.show(context, msg, type: ok ? SnackBarType.success : SnackBarType.error);
     }
   }
 

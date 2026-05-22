@@ -13,6 +13,7 @@ import '../../screens/admin/admin_shell.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../core/utils/app_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -77,9 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result == null) {
       final err = authProvider.error ?? 'Google login failed';
       if (err != 'Google login cancelled') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        AppSnackBar.show(context, err, type: SnackBarType.error);
       }
       return;
     }
@@ -142,9 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Login failed')),
-      );
+      AppSnackBar.show(context, authProvider.error ?? 'Login failed', type: SnackBarType.error);
     }
   }
 

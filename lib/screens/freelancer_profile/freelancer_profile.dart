@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
@@ -30,6 +30,7 @@ import '../../widgets/edit_profile_form.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
 import '../../widgets/portfolio_profile.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'upload_cv.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -185,15 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       educationId: educationId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Education deleted successfully'
-              : 'Failed to delete education',
-        ),
-      ),
-    );
+    AppSnackBar.show(context, success ? 'Education deleted.' : (profile.error ?? 'Failed to delete education.'), type: SnackBarType.error);
   }
 
   Future<void> _deleteExperience(String workExperienceId) async {
@@ -205,15 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       workExperienceId: workExperienceId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Experience deleted successfully'
-              : 'Failed to delete experience',
-        ),
-      ),
-    );
+    AppSnackBar.show(context, success ? 'Experience deleted.' : (profile.error ?? 'Failed to delete experience.'), type: SnackBarType.error);
   }
 
   Future<void> _deleteSkill(String freelancerSkillId) async {
@@ -225,13 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       freelancerSkillId: freelancerSkillId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? 'Skill deleted successfully' : 'Failed to delete skill',
-        ),
-      ),
-    );
+    AppSnackBar.show(context, success ? 'Skill removed.' : (profile.error ?? 'Failed to remove skill.'), type: SnackBarType.error);
   }
 
   Future<void> _deletePortfolio(String portfolioId) async {
@@ -244,15 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-                ? 'Portfolio deleted successfully'
-                : 'Failed to delete portfolio',
-          ),
-        ),
-      );
+      AppSnackBar.show(context, success ? 'Portfolio deleted.' : (profile.error ?? 'Failed to delete portfolio.'), type: SnackBarType.error);
     }
   }
 
@@ -280,9 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Portfolio added successfully')),
-            );
+            AppSnackBar.show(context, 'Portfolio added successfully', type: SnackBarType.error);
           }
         },
       ),
@@ -505,9 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               data['image'] != profile.profilePictureUrl &&
               !data['image'].toString().startsWith('http')) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Uploading profile picture...')),
-              );
+              AppSnackBar.show(context, 'Uploading profile picture...', type: SnackBarType.error);
             }
 
             final picSuccess = await profile.uploadProfilePicture(
@@ -518,13 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             if (!picSuccess) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      profile.error ?? 'Failed to upload profile picture',
-                    ),
-                  ),
-                );
+                AppSnackBar.show(context, profile.error ?? 'Failed to upload profile picture', type: SnackBarType.error);
               }
               return;
             }
@@ -556,17 +517,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             profile.forceRefreshProfilePicture();
 
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile updated successfully')),
-              );
+              AppSnackBar.show(context, 'Profile updated successfully', type: SnackBarType.error);
             }
           } else {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
-              );
+              AppSnackBar.show(context, profile.error ?? 'Failed to update profile', type: SnackBarType.error);
             }
           }
         },
@@ -598,15 +553,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Education added successfully'
-                    : 'Failed to add education',
-              ),
-            ),
-          );
+          AppSnackBar.show(context, success ? 'Education added.' : (profile.error ?? 'Failed to add education.'), type: SnackBarType.error);
         },
       ),
     );
@@ -639,15 +586,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Experience added successfully'
-                    : 'Failed to add experience',
-              ),
-            ),
-          );
+          AppSnackBar.show(context, success ? 'Experience added.' : (profile.error ?? 'Failed to add experience.'), type: SnackBarType.error);
         },
       ),
     );
@@ -798,15 +737,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           await _refreshProfile();
                         }
                         if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
-                            ),
-                          );
+                          AppSnackBar.show(context, success ? 'Bio updated.' : (profile.error ?? 'Failed to update bio.'), type: SnackBarType.error);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -1188,19 +1119,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     _selectedCurrency = localCurrency;
                                   });
                                   await _refreshProfile();
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Rate saved successfully'),
-                                    ),
-                                  );
+                                  AppSnackBar.show(context, 'Rate saved successfully', type: SnackBarType.error);
                                 } else {
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        profile.error ?? 'Failed to save rate',
-                                      ),
-                                    ),
-                                  );
+                                  AppSnackBar.show(context, profile.error ?? 'Failed to save rate', type: SnackBarType.error);
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -1248,9 +1169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final proficiency = skillData["proficiency_level"] as String;
 
           if (skillId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please select a skill')),
-            );
+            AppSnackBar.show(context, 'Please select a skill', type: SnackBarType.error);
             return;
           }
 
@@ -1263,13 +1182,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success ? 'Skill added successfully' : 'Failed to add skill',
-              ),
-            ),
-          );
+          AppSnackBar.show(context, success ? 'Skill added.' : (profile.error ?? 'Failed to add skill.'), type: SnackBarType.error);
         },
       ),
     );
@@ -1312,20 +1225,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         // No suggestions — treat as plain upload success
         await _refreshProfile();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'CV uploaded successfully',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppSnackBar.show(context, 'CV uploaded successfully', type: SnackBarType.info);
         return;
       }
 
@@ -1350,37 +1250,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       await _refreshProfile();
 
       if (applied == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Profile updated from CV! 🎉',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppSnackBar.show(context, 'Profile updated from CV! 🎉', type: SnackBarType.info);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: const Color(0xFFC62828),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      AppSnackBar.show(context, e.toString(), type: SnackBarType.error);
     } finally {
       if (mounted) setState(() => _isUploadingCV = false);
     }
@@ -1406,38 +1280,28 @@ class _ProfileScreenState extends State<ProfileScreen>
         uploadedCVPath = null;
         _cvRemoved = true;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CV removed successfully')));
+      AppSnackBar.show(context, 'CV removed successfully', type: SnackBarType.error);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(profile.error ?? 'Failed to remove CV')),
-      );
+      AppSnackBar.show(context, profile.error ?? 'Failed to remove CV', type: SnackBarType.error);
     }
   }
 
   Future<void> _previewCV(String? cvUrl) async {
     if (cvUrl == null || cvUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No CV available to preview')),
-      );
+      AppSnackBar.show(context, 'No CV available to preview', type: SnackBarType.error);
       return;
     }
 
     final uri = Uri.tryParse(cvUrl);
     if (uri == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid CV URL')));
+      AppSnackBar.show(context, 'Invalid CV URL', type: SnackBarType.error);
       return;
     }
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open CV preview')),
-      );
+      AppSnackBar.show(context, 'Could not open CV preview', type: SnackBarType.error);
     }
   }
 

@@ -1,4 +1,4 @@
-import 'package:workbyte_app/widgets/appeal_dialog.dart';
+﻿import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +11,7 @@ import '../../screens/auth/login.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../models/job_post_model.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'dart:io';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -99,9 +100,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load jobs: ${e.toString()}')),
-        );
+        AppSnackBar.show(context, 'Failed to load jobs: ${e.toString()}', type: SnackBarType.error);
       }
     }
   }
@@ -271,15 +270,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         );
                         if (success) await _refreshProfile();
                         if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
-                            ),
-                          );
+                          AppSnackBar.show(context, success ? 'Bio updated.' : (profile.error ?? 'Failed to update bio.'), type: SnackBarType.error);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -535,16 +526,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           );
                           if (success) await _refreshProfile();
                           if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Website saved successfully'
-                                      : profile.error ??
-                                            'Failed to save Website',
-                                ),
-                              ),
-                            );
+                            AppSnackBar.show(context, success ? 'Website updated.' : (profile.error ?? 'Failed to update website.'), type: SnackBarType.error);
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -600,9 +582,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               data['image'] != profile.profilePictureUrl &&
               !data['image'].toString().startsWith('http')) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Uploading profile picture...')),
-              );
+              AppSnackBar.show(context, 'Uploading profile picture...', type: SnackBarType.error);
             }
 
             final success = await profile.uploadProfilePicture(
@@ -613,13 +593,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
             if (!success) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      profile.error ?? 'Failed to upload profile picture',
-                    ),
-                  ),
-                );
+                AppSnackBar.show(context, profile.error ?? 'Failed to upload profile picture', type: SnackBarType.error);
               }
               return;
             }
@@ -632,13 +606,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
 
             if (!success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    profile.error ?? 'Failed to delete profile picture',
-                  ),
-                ),
-              );
+              AppSnackBar.show(context, profile.error ?? 'Failed to delete profile picture', type: SnackBarType.error);
               return;
             }
           }
@@ -659,11 +627,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
 
             if (!success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
-              );
+              AppSnackBar.show(context, profile.error ?? 'Failed to update profile', type: SnackBarType.error);
               return;
             }
           }
@@ -673,9 +637,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           profile.forceRefreshProfilePicture();
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully')),
-            );
+            AppSnackBar.show(context, 'Profile updated successfully', type: SnackBarType.error);
             Navigator.pop(context);
           }
         },

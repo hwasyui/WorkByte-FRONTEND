@@ -5,6 +5,7 @@ import '../../core/constants/colors.dart';
 import '../../models/dm_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'dm_chat_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -444,12 +445,7 @@ class _ThreadTile extends StatelessWidget {
                             .declineThread(token, thread.threadId)
                             .then((ok) {
                           if (!ok) {
-                            messenger.showSnackBar(SnackBar(
-                              content: Text(
-                                  dmProvider.error ?? 'Failed',
-                                  style: GoogleFonts.poppins()),
-                              backgroundColor: Colors.red,
-                            ));
+                            AppSnackBar.show(context, dmProvider.error ?? 'Failed', type: SnackBarType.error);
                           }
                         });
                       },
@@ -475,11 +471,7 @@ class _ThreadTile extends StatelessWidget {
                             .acceptThread(token, thread.threadId)
                             .then((ok) {
                           if (ok) {
-                            messenger.showSnackBar(SnackBar(
-                              content: Text('Request accepted!',
-                                  style: GoogleFonts.poppins()),
-                              backgroundColor: Colors.green,
-                            ));
+                            AppSnackBar.show(context, 'Request accepted!', type: SnackBarType.success);
                           }
                         });
                       },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 
 class AdminJobsPage extends StatefulWidget {
   const AdminJobsPage({super.key});
@@ -475,15 +476,11 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
     );
     if (mounted) {
       setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok ? 'Job closed successfully' : 'Failed to close job',
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      AppSnackBar.show(
+        context,
+        ok ? 'Job closed successfully' : 'Failed to close job',
+        type: ok ? SnackBarType.success : SnackBarType.error,
+      );
       if (ok) Navigator.pop(context);
     }
   }

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +6,7 @@ import '../../core/constants/colors.dart';
 import '../../models/dm_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../services/dm_service.dart';
 
 class DmChatScreen extends StatefulWidget {
@@ -189,15 +190,7 @@ class _DmChatScreenState extends State<DmChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, e.toString(), type: SnackBarType.error);
       setState(() => _isSending = false);
     }
   }
@@ -215,12 +208,7 @@ class _DmChatScreenState extends State<DmChatScreen> {
           orElse: () => _thread.copyWithStatus('active'),
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Request accepted!', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppSnackBar.show(context, 'Request accepted!', type: SnackBarType.success);
     }
   }
 
@@ -977,14 +965,7 @@ class _PdfSharedCard extends StatelessWidget {
                   GestureDetector(
                     onTap: () {
                       // URL launch handled by url_launcher if available
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'PDF URL: $pdfUrl',
-                            style: GoogleFonts.poppins(fontSize: 12),
-                          ),
-                        ),
-                      );
+                      AppSnackBar.show(context, 'PDF URL: $pdfUrl', type: SnackBarType.error);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(

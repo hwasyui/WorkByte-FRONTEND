@@ -3,6 +3,7 @@ import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'job_roles.dart';
 
 class PostNewJobJobDetail extends StatefulWidget {
@@ -78,9 +79,7 @@ class PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     setState(() => _submitted = true);
     final error = _validate();
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      AppSnackBar.show(context, error, type: SnackBarType.error);
       return;
     }
 

@@ -8,6 +8,7 @@ import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../screens/auth/login.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/app_snackbar.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -105,9 +106,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   Future<void> _handleReset() async {
     if (_otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the complete 6-digit code')),
-      );
+      AppSnackBar.show(context, 'Please enter the complete 6-digit code', type: SnackBarType.warning);
       return;
     }
     if (!_validate()) return;
@@ -123,12 +122,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset! You can now log in.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppSnackBar.show(context, 'Password reset! You can now log in.', type: SnackBarType.success);
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -137,12 +131,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } else {
       for (final c in _otpControllers) c.clear();
       _otpFocusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Invalid or expired code. Try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.show(context, authProvider.error ?? 'Invalid or expired code. Try again.', type: SnackBarType.error);
     }
   }
 
@@ -156,16 +145,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _startTimer();
       for (final c in _otpControllers) c.clear();
       _otpFocusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A new reset code has been sent.')),
-      );
+      AppSnackBar.show(context, 'A new reset code has been sent.', type: SnackBarType.info);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Failed to resend code.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.show(context, authProvider.error ?? 'Failed to resend code.', type: SnackBarType.error);
     }
   }
 

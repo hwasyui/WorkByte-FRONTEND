@@ -1,4 +1,4 @@
-import 'package:workbyte_app/core/constants/colors.dart';
+﻿import 'package:workbyte_app/core/constants/colors.dart';
 import 'package:workbyte_app/models/client_model.dart';
 import 'package:workbyte_app/models/job_file_model.dart';
 import 'package:workbyte_app/models/job_post_model.dart';
@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'submit_proposal.dart';
 
 class JobDetailScreen extends StatefulWidget {
@@ -180,16 +181,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Could not open file.', type: SnackBarType.error);
     }
   }
 
@@ -203,9 +195,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (!mounted) return;
     setState(() => analyzing = false);
     if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Analysis failed. Please try again.')),
-      );
+      AppSnackBar.show(context, 'Analysis failed. Please try again.', type: SnackBarType.error);
       return;
     }
     showAnalysisSheet(result);
@@ -534,16 +524,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   void onApplyRole(JobRoleModel role) {
     if (hasAppliedToThisJobPost(widget.job.jobPostId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You have already applied to this job.')),
-      );
+      AppSnackBar.show(context, 'You have already applied to this job.', type: SnackBarType.error);
       return;
     }
 
     if (isRoleFilled(role)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This role is already full.')),
-      );
+      AppSnackBar.show(context, 'This role is already full.', type: SnackBarType.error);
       return;
     }
 

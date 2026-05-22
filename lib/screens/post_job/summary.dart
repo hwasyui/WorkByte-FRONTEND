@@ -1,10 +1,11 @@
-import 'dart:io';
+﻿import 'dart:io';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'success.dart';
 
 class PostNewJobSummary extends StatefulWidget {
@@ -30,9 +31,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     final draft = provider.draftJobData;
 
     if (draft == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft data missing. Please start over.')),
-      );
+      AppSnackBar.show(context, 'Draft data missing. Please start over.', type: SnackBarType.error);
       setState(() => _isSubmitting = false);
       return;
     }
@@ -45,9 +44,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
 
     if (!mounted) return;
     if (created == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.error ?? 'Failed to create job post')),
-      );
+      AppSnackBar.show(context, provider.error ?? 'Failed to create job post', type: SnackBarType.error);
       setState(() => _isSubmitting = false);
       return;
     }
@@ -61,9 +58,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       final roleCreated = await provider.createJobRole(token, payload);
       if (!mounted) return;
       if (roleCreated == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.error ?? 'Failed to create role')),
-        );
+        AppSnackBar.show(context, provider.error ?? 'Failed to create role', type: SnackBarType.error);
         setState(() => _isSubmitting = false);
         return;
       }
@@ -100,21 +95,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
         );
 
         if (!success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Some files failed to upload'),
-              backgroundColor: Color(0xFFFF9800),
-            ),
-          );
+          AppSnackBar.show(context, 'Some files failed to upload', type: SnackBarType.warning);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Upload error: $e'),
-              backgroundColor: const Color(0xFFFF9800),
-            ),
-          );
+          AppSnackBar.show(context, 'Upload error: $e', type: SnackBarType.warning);
         }
       }
     }
@@ -136,9 +121,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(result.message)));
+    AppSnackBar.show(context, result.message, type: SnackBarType.error);
   }
 
   @override

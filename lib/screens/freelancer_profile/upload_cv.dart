@@ -1,8 +1,9 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'analyze_cv.dart';
 
 class UploadCVScreen extends StatefulWidget {
@@ -31,18 +32,14 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
+        AppSnackBar.show(context, 'Error picking file: $e', type: SnackBarType.error);
       }
     }
   }
 
   Future<void> _uploadAndAnalyze() async {
     if (_selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a file first')),
-      );
+      AppSnackBar.show(context, 'Please select a file first', type: SnackBarType.error);
       return;
     }
     setState(() => _isUploading = true);

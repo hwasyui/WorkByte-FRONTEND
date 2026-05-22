@@ -1,8 +1,9 @@
-import 'package:workbyte_app/core/constants/colors.dart';
+﻿import 'package:workbyte_app/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/report_provider.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../providers/auth_provider.dart';
 
 /// Shows the report bottom sheet.
@@ -163,20 +164,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
     if (ok) {
       provider.reset();
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Report submitted. Thank you for keeping the community safe.',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        ),
-      );
+      AppSnackBar.show(context, 'Report submitted. Thank you for keeping the community safe.', type: SnackBarType.error);
     }
   }
 

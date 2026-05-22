@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +10,7 @@ import '../../core/constants/colors.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_message_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../providers/contract_provider.dart';
 
 class GenerateContractScreen extends StatefulWidget {
@@ -286,13 +287,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    AppSnackBar.show(context, message, type: SnackBarType.error);
   }
 
   Future<void> _selectDate() async {
@@ -397,15 +392,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Contract generated successfully!',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: _primary,
-          ),
-        );
+        AppSnackBar.show(context, 'Contract generated successfully!', type: SnackBarType.error);
 
         await contractProvider.fetchContractById(token, widget.contractId);
         if (mounted) {
@@ -435,12 +422,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   Future<void> _openContractPdf() async {
     if (_contract?.contractPdfUrl == null ||
         _contract!.contractPdfUrl!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No PDF available', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      AppSnackBar.show(context, 'No PDF available', type: SnackBarType.warning);
       return;
     }
 
@@ -462,28 +444,12 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'PDF downloaded successfully to $filePath',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppSnackBar.show(context, 'PDF downloaded successfully to $filePath', type: SnackBarType.success);
       } else {
         throw Exception('Failed to download PDF');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to download PDF: $e',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to download PDF: $e', type: SnackBarType.error);
     }
   }
 
@@ -495,15 +461,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
     if (_contract!.contractPdfUrl == null ||
         _contract!.contractPdfUrl!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Contract PDF must be generated first',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      AppSnackBar.show(context, 'Contract PDF must be generated first', type: SnackBarType.warning);
       return;
     }
 
@@ -524,38 +482,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       setState(() => _sending = false);
 
       if (sent != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Contract sent to freelancer successfully!',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: AppColors.primary,
-          ),
-        );
+        AppSnackBar.show(context, 'Contract sent to freelancer successfully!', type: SnackBarType.error);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              messageProvider.error ?? 'Failed to send contract',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppSnackBar.show(context, messageProvider.error ?? 'Failed to send contract', type: SnackBarType.error);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to send contract: $e',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppSnackBar.show(context, 'Failed to send contract: $e', type: SnackBarType.error);
       }
     }
   }

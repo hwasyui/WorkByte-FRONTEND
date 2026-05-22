@@ -1,4 +1,4 @@
-import 'package:workbyte_app/services/dm_service.dart';
+﻿import 'package:workbyte_app/services/dm_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,6 +25,7 @@ import '../../models/freelancer_model.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../people_list/people_list_screen.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
@@ -174,16 +175,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Could not open file.', type: SnackBarType.error);
     }
   }
 
@@ -254,16 +246,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (!mounted) return;
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to accept bid.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to accept bid.', type: SnackBarType.error);
       return;
     }
 
@@ -277,17 +260,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .toList();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bid accepted. Continue with contract setup.',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        backgroundColor: _primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppSnackBar.show(context, 'Bid accepted. Continue with contract setup.', type: SnackBarType.error);
 
     _createAndNavigateToContract(proposal);
   }
@@ -319,19 +292,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (!mounted) return;
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to reject bid.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to reject bid.', type: SnackBarType.error);
       return;
     }
 
@@ -345,17 +306,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .toList();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bid rejected.',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    AppSnackBar.show(context, 'Bid rejected.', type: SnackBarType.error);
   }
 
   Future<void> _createAndNavigateToContract(ProposalModel proposal) async {
@@ -396,29 +347,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to create contract: ${contractProvider.error}',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.show(context, 'Failed to create contract: ${contractProvider.error}', type: SnackBarType.error);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error: ${e.toString()}',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Error: ${e.toString()}', type: SnackBarType.error);
     }
   }
 
@@ -445,16 +378,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       Navigator.pop(context);
 
       if (freelancer == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not load profile.',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.show(context, 'Could not load profile.', type: SnackBarType.error);
         return;
       }
 
@@ -468,16 +392,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not load profile.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Could not load profile.', type: SnackBarType.error);
     }
   }
 
@@ -728,16 +643,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       if (!mounted) return;
 
       if (freelancer == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Freelancer profile not found.',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.show(context, 'Freelancer profile not found.', type: SnackBarType.error);
         return;
       }
 
@@ -750,34 +656,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.alreadyExists
-                ? 'Conversation already exists.'
-                : 'Message sent!',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: _primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, result.alreadyExists ? 'Chat thread already exists.' : 'Message sent!', type: SnackBarType.error);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to send message.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.show(context, 'Failed to send message.', type: SnackBarType.error);
     }
   }
 
@@ -793,19 +676,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open file. Try downloading it manually.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      AppSnackBar.show(context, 'Could not open file. Try downloading it manually.', type: SnackBarType.error);
     }
   }
 

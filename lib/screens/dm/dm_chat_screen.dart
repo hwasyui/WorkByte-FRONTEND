@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +13,7 @@ import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'dm_thread_list.dart';
 
 class DMChatScreen extends StatefulWidget {
@@ -178,15 +179,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, e.toString(), type: SnackBarType.error);
     } finally {
       if (mounted) {
         setState(() => _isSendingFile = false);
@@ -237,15 +230,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, e.toString(), type: SnackBarType.error);
     } finally {
       if (mounted) setState(() => _isPickingFile = false);
     }
@@ -340,15 +325,7 @@ class _DMChatScreenState extends State<DMChatScreen>
     final hasPermission = await _audioRecorder.hasPermission();
     if (!hasPermission) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Microphone permission denied',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, 'Microphone permission denied', type: SnackBarType.error);
       return;
     }
 
@@ -406,15 +383,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, e.toString(), type: SnackBarType.error);
     } finally {
       final file = File(path);
       if (await file.exists()) await file.delete();
@@ -477,15 +446,7 @@ class _DMChatScreenState extends State<DMChatScreen>
         _isAudioPlaying = false;
         _playingMessageId = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal memutar audio: ${e.toString().replaceFirst('Exception: ', '')}',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, 'Gagal memutar audio: ${e.toString()}', type: SnackBarType.error);
     }
   }
 
@@ -493,30 +454,14 @@ class _DMChatScreenState extends State<DMChatScreen>
     final uri = Uri.tryParse(url);
     if (uri == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Invalid attachment URL',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, 'Invalid attachment URL', type: SnackBarType.error);
       return;
     }
 
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open attachment',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppSnackBar.show(context, 'Could not open attachment', type: SnackBarType.error);
     }
   }
 

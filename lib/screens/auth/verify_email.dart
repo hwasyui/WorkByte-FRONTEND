@@ -7,6 +7,7 @@ import '../../core/constants/text_styles.dart';
 import '../../widgets/primary_button.dart';
 import '../../screens/auth/login.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/app_snackbar.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -79,9 +80,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   Future<void> _handleVerify() async {
     if (_otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the complete 6-digit code')),
-      );
+      AppSnackBar.show(context, 'Please enter the complete 6-digit code', type: SnackBarType.warning);
       return;
     }
 
@@ -94,29 +93,18 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email verified! You can now log in.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppSnackBar.show(context, 'Email verified! You can now log in.', type: SnackBarType.success);
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     } else {
-      // clear all boxes on wrong code
       for (final c in _controllers) {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Invalid code. Try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.show(context, authProvider.error ?? 'Invalid code. Try again.', type: SnackBarType.error);
     }
   }
 
@@ -132,16 +120,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A new verification code has been sent.')),
-      );
+      AppSnackBar.show(context, 'A new verification code has been sent.', type: SnackBarType.info);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Failed to resend code.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.show(context, authProvider.error ?? 'Failed to resend code.', type: SnackBarType.error);
     }
   }
 

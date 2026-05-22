@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 
 class AdminAppealsPage extends StatefulWidget {
   const AdminAppealsPage({super.key});
@@ -519,19 +520,11 @@ class _AppealCard extends StatelessWidget {
         );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok
-              ? 'Appeal ${isApprove ? 'approved' : 'rejected'} successfully'
-              : 'Failed to process appeal',
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        backgroundColor: ok
-            ? (isApprove ? const Color(0xFF059669) : const Color(0xFFDC2626))
-            : const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      AppSnackBar.show(
+        context,
+        ok ? 'Appeal ${isApprove ? 'approved' : 'rejected'} successfully' : 'Failed to process appeal',
+        type: ok ? SnackBarType.success : SnackBarType.error,
+      );
     }
   }
 

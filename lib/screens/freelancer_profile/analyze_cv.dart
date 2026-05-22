@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../services/cv_analysis_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/app_snackbar.dart';
 import 'analyze_cv_result.dart';
 
 class AnalyzingCVScreen extends StatefulWidget {
@@ -60,9 +61,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
     final token = context.read<AuthProvider>().token;
     if (token == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication required to analyze CV')),
-        );
+        AppSnackBar.show(context, 'Authentication required to analyze CV', type: SnackBarType.error);
         Navigator.pop(context);
       }
       return;
@@ -105,9 +104,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CV analysis failed: ${e.toString()}')),
-      );
+      AppSnackBar.show(context, 'CV analysis failed: ${e.toString()}', type: SnackBarType.error);
       Navigator.pop(context);
     }
   }
