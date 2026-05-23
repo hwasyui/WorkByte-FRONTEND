@@ -149,12 +149,212 @@ class _ScamTab extends StatelessWidget {
 
   static const _statuses = ['pending', 'safe', 'removed', 'all'];
 
+  void _showAiInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.security_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Job Scam Detection AI',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E1B4B),
+                            ),
+                          ),
+                          Text(
+                            'How the model works',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF7C3AED),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _ModalSection(
+                        title: 'Model',
+                        content:
+                            'BAAI/bge-base-en-v1.5 encodes each job post into a 768-dimensional semantic embedding that captures meaning beyond keywords. A Random Forest classifier then predicts a scam probability score from 0.0 (clean) to 1.0 (highly suspicious). Detected keywords are extracted alongside the score to explain each decision.',
+                      ),
+                      const SizedBox(height: 14),
+                      const _ModalSection(
+                        title: 'Dataset',
+                        content:
+                            'Trained on a labeled dataset of real job postings split into two classes — Legitimate and Scam. Legitimate samples are genuine job ads from real employers; scam samples are fraudulent posts with fake salaries, vague roles, unrealistic offers, or phishing intent. Class balance was maintained during training.',
+                      ),
+                      const SizedBox(height: 14),
+                      const _ModalSection(
+                        title: 'How it works',
+                        content:
+                            'The full text of a job post (title + description) is cleaned and encoded by BGE-base into a fixed-length embedding vector. Random Forest scores the vector and outputs a confidence score. Posts above the high-confidence threshold are auto-closed immediately. Posts in the medium-risk range are queued here for admin review, with flagged keywords surfaced so reviewers can decide quickly.',
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '2 Dataset Labels',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const _ScamLabelRow(
+                        name: 'Legitimate',
+                        desc:
+                            'Genuine job ads with clear responsibilities, realistic salaries, verifiable company info, and standard hiring processes.',
+                        color: Color(0xFF059669),
+                        bgColor: Color(0xFFF0FDF4),
+                        borderColor: Color(0xFFBBF7D0),
+                      ),
+                      const _ScamLabelRow(
+                        name: 'Scam',
+                        desc:
+                            'Fraudulent posts using fake salaries, vague job roles, unrealistic offers, suspicious links, or phishing tactics designed to deceive applicants.',
+                        color: Color(0xFFDC2626),
+                        bgColor: Color(0xFFFEF2F2),
+                        borderColor: Color(0xFFFECACA),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         return Column(
           children: [
+            // Sub-header with "About this AI" button
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF7C3AED),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Powered by SBERT - Random Forest',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF7C3AED),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => _showAiInfo(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E8FF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 13,
+                            color: Color(0xFF7C3AED),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'About this AI',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             _FilterBar(
               options: _statuses,
               selected: admin.scamStatusFilter,
@@ -294,34 +494,40 @@ class _ScamCardState extends State<_ScamCard> {
         ? const Color(0xFFD97706)
         : const Color(0xFF059669);
 
-    showModalBottomSheet(
+    showDialog(
       context: ctx,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.65,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, sc) => ListView(
-          controller: sc,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+      barrierColor: Colors.black54,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(dialogCtx).size.height * 0.82,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF6B7280)),
+                      splashRadius: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                  children: [
             Row(
               children: [
                 Container(
@@ -473,6 +679,10 @@ class _ScamCardState extends State<_ScamCard> {
               ),
             ],
           ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1078,34 +1288,40 @@ class _ModerationCardState extends State<_ModerationCard> {
         ? const Color(0xFFD97706)
         : const Color(0xFF059669);
 
-    showModalBottomSheet(
+    showDialog(
       context: ctx,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, sc) => ListView(
-          controller: sc,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+      barrierColor: Colors.black54,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(dialogCtx).size.height * 0.82,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF6B7280)),
+                      splashRadius: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                  children: [
             Row(
               children: [
                 Container(
@@ -1223,6 +1439,10 @@ class _ModerationCardState extends State<_ModerationCard> {
               ),
             ],
           ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1792,6 +2012,75 @@ class _ModalSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ScamLabelRow extends StatelessWidget {
+  final String name;
+  final String desc;
+  final Color color;
+  final Color bgColor;
+  final Color borderColor;
+
+  const _ScamLabelRow({
+    required this.name,
+    required this.desc,
+    required this.color,
+    required this.bgColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: bgColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 3),
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF374151),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

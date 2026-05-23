@@ -322,15 +322,15 @@ class _JobCard extends StatelessWidget {
     final postedAt = _formatDate(job['posted_at'] as String? ?? job['created_at'] as String?);
 
     return GestureDetector(
-      onTap: () => showModalBottomSheet(
+      onTap: () => showDialog(
         context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        barrierColor: Colors.black54,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          clipBehavior: Clip.antiAlias,
+          child: _JobDetailSheet(job: job),
         ),
-        builder: (_) => _JobDetailSheet(job: job),
       ),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -545,26 +545,33 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
     final postedAt = _fmt(job['posted_at'] as String? ?? job['created_at'] as String?);
     final canClose = status != 'closed';
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      maxChildSize: 0.95,
-      minChildSize: 0.4,
-      expand: false,
-      builder: (_, sc) => Column(
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.82,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // close button row
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 4),
-            child: Center(
-              child: Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2)),
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+            child: Row(
+              children: [
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF6B7280)),
+                  splashRadius: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
           ),
-          Expanded(
+          Flexible(
             child: ListView(
-              controller: sc,
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
                 Row(
                   children: [
