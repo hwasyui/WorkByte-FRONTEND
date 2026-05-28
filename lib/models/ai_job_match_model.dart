@@ -13,6 +13,7 @@ class AIJobMatchModel {
   final double skillOverlapPct;
   final List<String> matchReasons;
   final List<String> penaltyReasons;
+  final String? clientName;
 
   AIJobMatchModel({
     required this.jobPostId,
@@ -29,6 +30,7 @@ class AIJobMatchModel {
     required this.skillOverlapPct,
     this.matchReasons = const [],
     this.penaltyReasons = const [],
+    this.clientName,
   });
 
   factory AIJobMatchModel.fromJson(Map<String, dynamic> json) {
@@ -55,6 +57,9 @@ class AIJobMatchModel {
       skillOverlapPct: (json['skill_overlap_pct'] as num?)?.toDouble() ?? 0.0,
       matchReasons: parseLabels(json['match_reasons']),
       penaltyReasons: parseLabels(json['penalty_reasons']),
+      clientName: json['client_name']?.toString() ??
+          json['company_name']?.toString() ??
+          json['client_display_name']?.toString(),
     );
   }
 

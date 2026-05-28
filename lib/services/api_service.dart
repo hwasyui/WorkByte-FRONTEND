@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'auth_service.dart';
 
 class ApiService {
+  static void _checkUnauthorized(http.Response response) {
+    if (response.statusCode == 401) throw const SessionExpiredException();
+  }
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
     '',
@@ -291,6 +295,7 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       );
+      _checkUnauthorized(response);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
@@ -300,7 +305,7 @@ class ApiService {
       }
     } catch (e) {
       print('Error calling AI analysis: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -326,6 +331,7 @@ class ApiService {
         },
       );
 
+      _checkUnauthorized(response);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final details = data['details'] ?? data['data'] ?? {};
@@ -336,7 +342,7 @@ class ApiService {
       }
     } catch (e) {
       print('Error getting AI recommendations: $e');
-      return {};
+      rethrow;
     }
   }
 

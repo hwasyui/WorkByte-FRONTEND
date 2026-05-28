@@ -542,7 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             "full_name": data['name'],
             if ((data['job'] as String?)?.isNotEmpty == true &&
                 data['job'] != '-')
-              "job_title": data['job'],
+              "title": data['job'],
           };
 
           final success = await profile.updateProfile(

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:workbyte_app/providers/notification_provider.dart';
+import 'package:workbyte_app/services/auth_service.dart';
 import 'package:workbyte_app/screens/category/category_list.dart';
 import 'package:workbyte_app/screens/dashboard/notification.dart';
 import 'package:workbyte_app/services/job_post_service.dart';
@@ -140,13 +141,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentNavIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<AIJobMatchModel> _recommendedJobs = [];
   bool _isLoadingJobs = true;
   bool _noEmbeddingYet = false;
+  bool _noSkillsYet = false;
 
   List<FreelancerModel> _topFreelancers = [];
   bool _isLoadingFreelancers = true;
@@ -157,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadRecommendedJobs();
       _loadTopFreelancers();
@@ -165,12 +168,31 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadRecommendedJobs();
+    }
+  }
+
   Future<void> _loadRecommendedJobs() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
       setState(() => _isLoadingJobs = false);
       return;
     }
+    setState(() {
+      _isLoadingJobs = true;
+      _noEmbeddingYet = false;
+      _noSkillsYet = false;
+      _recommendedJobs = [];
+    });
     try {
       final result = await ApiService.getAIJobRecommendations(
         auth.token!,
@@ -185,12 +207,28 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       final matches = result['matches'] as List? ?? [];
+      final debug = result['_debug'] as Map?;
+      final skillCount =
+          (debug?['freelancer_skill_count'] as num?)?.toInt() ?? 1;
+      if (matches.isEmpty && skillCount == 0) {
+        setState(() {
+          _noSkillsYet = true;
+          _isLoadingJobs = false;
+        });
+        return;
+      }
       setState(() {
         _recommendedJobs = matches
             .map((m) => AIJobMatchModel.fromJson(Map<String, dynamic>.from(m)))
             .toList();
         _isLoadingJobs = false;
       });
+    } on SessionExpiredException {
+      if (!mounted) return;
+      await context.read<AuthProvider>().handleSessionExpired(
+        profileProvider: context.read<ProfileProvider>(),
+        notificationProvider: context.read<NotificationProvider>(),
+      );
     } catch (e) {
       if (mounted) setState(() => _isLoadingJobs = false);
       debugPrint('Error loading AI recommendations: $e');
@@ -230,6 +268,194 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showShapSheet(BuildContext ctx, AIJobMatchModel job) {
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (_, sc) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: sc,
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            color: AppColors.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Why this job was recommended',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF333333),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        job.jobTitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                      if (job.matchReasons.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Strengths',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...job.matchReasons.map(
+                          (r) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 14,
+                                  color: Color(0xFF059669),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    r,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF333333),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (job.penaltyReasons.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Considerations',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFD97706),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...job.penaltyReasons.map(
+                          (r) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 14,
+                                  color: Color(0xFFD97706),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    r,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: const Color(0xFF333333),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendationEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _loadRecommendedJobs,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.refresh_rounded,
+                    size: 14,
+                    color: AppColors.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Refresh',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecommendedJobsList() {
     if (_isLoadingJobs) {
       return const Center(
@@ -240,38 +466,31 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     if (_noEmbeddingYet) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Complete your profile to get AI job recommendations',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
-          ),
-        ),
+      return _buildRecommendationEmptyState(
+        'Complete your profile to get AI job recommendations',
+      );
+    }
+    if (_noSkillsYet) {
+      return _buildRecommendationEmptyState(
+        'Add skills to your profile to get AI-powered job recommendations',
       );
     }
     if (_recommendedJobs.isEmpty) {
-      return Center(
-        child: Text(
-          'No recommendations yet',
-          style: TextStyle(color: Colors.grey[500]),
-        ),
-      );
+      return _buildRecommendationEmptyState('No recommendations yet');
     }
     return ListView.builder(
       scrollDirection: Axis.horizontal,
       itemCount: _recommendedJobs.length,
       itemBuilder: (context, index) {
         final job = _recommendedJobs[index];
+        final hasShap =
+            job.matchReasons.isNotEmpty || job.penaltyReasons.isNotEmpty;
         return Row(
           children: [
             GestureDetector(
               onTap: () => _tapJob(job),
               child: JobCard(
-                posterName: job.experienceLevel != null
-                    ? job.experienceLevel!.toUpperCase()
-                    : 'ANY LEVEL',
+                posterName: job.clientName ?? 'Client',
                 posterAvatar: Container(
                   width: 35,
                   height: 35,
@@ -291,6 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
+                onWhyTap: hasShap ? () => _showShapSheet(context, job) : null,
               ),
             ),
             if (index < _recommendedJobs.length - 1) const SizedBox(width: 12),
@@ -1089,8 +1309,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        const RecommendedJobsScreen(),
+                                    builder: (_) => RecommendedJobsScreen(
+                                        initialJobs: _recommendedJobs.isNotEmpty ? _recommendedJobs : null,
+                                      ),
                                   ),
                                 ),
                                 child: Text(
@@ -1109,59 +1330,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             height: 178,
                             child: _buildRecommendedJobsList(),
                           ),
-                          const SizedBox(height: 10),
-                          // "View All Recommendations" button
-                          if (!_isLoadingJobs &&
-                              !_noEmbeddingYet &&
-                              _recommendedJobs.isNotEmpty)
-                            GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const RecommendedJobsScreen(),
-                                ),
-                              ),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondary,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.18),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.auto_awesome_rounded,
-                                      size: 15,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'View All Recommendations',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(
-                                      Icons.arrow_forward_rounded,
-                                      size: 15,
-                                      color: AppColors.primary,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
                           const SizedBox(height: 24),
                         ],
                       );

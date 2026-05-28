@@ -12,6 +12,7 @@ class JobCard extends StatelessWidget {
   final String jobType;
   final bool bookmarked;
   final int? matchScore;
+  final VoidCallback? onWhyTap;
 
   const JobCard({
     super.key,
@@ -24,6 +25,7 @@ class JobCard extends StatelessWidget {
     required this.jobType,
     this.bookmarked = false,
     this.matchScore,
+    this.onWhyTap,
   });
 
   @override
@@ -55,6 +57,17 @@ class JobCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onWhyTap != null) ...[
+                GestureDetector(
+                  onTap: onWhyTap,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               if (matchScore != null)
                 _MatchBadge(score: matchScore!)
               else

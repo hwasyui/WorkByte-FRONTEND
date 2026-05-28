@@ -13,7 +13,9 @@ const int _kPageSize = 10;
 const int _kFetchLimit = 50;
 
 class RecommendedJobsScreen extends StatefulWidget {
-  const RecommendedJobsScreen({super.key});
+  final List<AIJobMatchModel>? initialJobs;
+
+  const RecommendedJobsScreen({super.key, this.initialJobs});
 
   @override
   State<RecommendedJobsScreen> createState() => _RecommendedJobsScreenState();
@@ -23,12 +25,18 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
   List<AIJobMatchModel> _jobs = [];
   bool _isLoading = true;
   bool _noEmbedding = false;
+  bool _noSkills = false;
   int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadJobs());
+    if (widget.initialJobs != null && widget.initialJobs!.isNotEmpty) {
+      _jobs = List.from(widget.initialJobs!);
+      _isLoading = false;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadJobs());
+    }
   }
 
   Future<void> _loadJobs() async {
@@ -52,6 +60,16 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
         return;
       }
       final matches = result['matches'] as List? ?? [];
+      final debug = result['_debug'] as Map?;
+      final skillCount =
+          (debug?['freelancer_skill_count'] as num?)?.toInt() ?? 1;
+      if (matches.isEmpty && skillCount == 0) {
+        setState(() {
+          _noSkills = true;
+          _isLoading = false;
+        });
+        return;
+      }
       setState(() {
         _jobs = matches
             .map((m) => AIJobMatchModel.fromJson(Map<String, dynamic>.from(m)))
@@ -298,6 +316,8 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                     )
                   : _noEmbedding
                   ? _buildNoEmbeddingState()
+                  : _noSkills
+                  ? _buildNoSkillsState()
                   : _jobs.isEmpty
                   ? _buildEmptyState()
                   : _isPastResults
@@ -487,6 +507,52 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
     );
   }
 
+  Widget _buildNoSkillsState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.workspace_premium_outlined,
+                color: AppColors.primary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Add skills to get recommendations',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Our AI needs at least one skill on your profile to match you with relevant jobs.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF7D7D7D),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Text(
@@ -509,8 +575,7 @@ class _RecommendedJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasReasons = job.matchReasons.isNotEmpty;
-    final hasPenalties = job.penaltyReasons.isNotEmpty;
+    final hasShap = job.matchReasons.isNotEmpty || job.penaltyReasons.isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -564,23 +629,33 @@ class _RecommendedJobCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        job.experienceLevel != null
-                            ? job.experienceLevel!.toUpperCase()
-                            : 'ANY LEVEL',
+                        job.clientName ?? 'Client',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: const Color(0xFF9CA3AF),
                           fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: Color(0xFFD1D5DB),
-                ),
+                if (hasShap)
+                  GestureDetector(
+                    onTap: () => _showShapSheet(context, job),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  )
+                else
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: Color(0xFFD1D5DB),
+                  ),
               ],
             ),
 
@@ -617,78 +692,158 @@ class _RecommendedJobCard extends StatelessWidget {
               ],
             ),
 
-            // ── SHAP match reasons ──
-            if (hasReasons) ...[
-              const SizedBox(height: 10),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              const SizedBox(height: 10),
-              ...job.matchReasons.map(
-                (reason) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        size: 14,
-                        color: Color(0xFF059669),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          reason,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF065F46),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-
-            // ── SHAP penalty reasons ──
-            if (hasPenalties) ...[
-              if (!hasReasons) ...[
-                const SizedBox(height: 10),
-                const Divider(height: 1, color: Color(0xFFF0F0F0)),
-                const SizedBox(height: 10),
-              ],
-              ...job.penaltyReasons.map(
-                (reason) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        size: 14,
-                        color: Color(0xFFD97706),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          reason,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF92400E),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
+}
+
+void _showShapSheet(BuildContext context, AIJobMatchModel job) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (_, sc) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: sc,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Why this job was recommended',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF333333),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      job.jobTitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    if (job.matchReasons.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Strengths',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF059669),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...job.matchReasons.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                size: 14,
+                                color: Color(0xFF059669),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  r,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: const Color(0xFF333333),
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (job.penaltyReasons.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Considerations',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFD97706),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...job.penaltyReasons.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 14,
+                                color: Color(0xFFD97706),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  r,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: const Color(0xFF333333),
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _Tag extends StatelessWidget {

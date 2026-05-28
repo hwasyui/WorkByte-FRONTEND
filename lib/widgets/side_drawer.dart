@@ -458,7 +458,7 @@ class SideDrawer extends StatelessWidget {
                             ),
                             _AccountTile(
                               name: profile.clientDisplayName,
-                              roleLabel: 'Company',
+                              roleLabel: 'Client',
                               profilePicUrl: profile.clientProfilePictureUrl,
                               isActive: profile.isClient,
                               onTap: !profile.isClient

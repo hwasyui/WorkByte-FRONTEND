@@ -13,6 +13,7 @@ import 'package:workbyte_app/providers/proposal_provider.dart';
 import 'package:workbyte_app/providers/saved_items_provider.dart';
 import 'package:workbyte_app/providers/skill_provider.dart';
 import 'package:workbyte_app/services/api_service.dart';
+import 'package:workbyte_app/services/auth_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:workbyte_app/widgets/job_detail_header.dart';
 import 'package:workbyte_app/widgets/job_detail_tab_bar.dart';
@@ -43,6 +44,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   List<JobRoleModel> roles = [];
   bool rolesLoading = true;
   bool analyzing = false;
+  bool _analysisCancelled = false;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
 
@@ -175,14 +177,46 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> analyzeJob() async {
+    _analysisCancelled = false;
     setState(() => analyzing = true);
-    final token = context.read<AuthProvider>().token!;
-    final result = await ApiService.analyzeJobMatch(
-      token,
-      widget.job.jobPostId,
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => _AnalysisLoadingDialog(
+        onCancel: () {
+          _analysisCancelled = true;
+          setState(() => analyzing = false);
+          Navigator.of(context, rootNavigator: true).pop();
+        },
+      ),
     );
+
+    final token = context.read<AuthProvider>().token!;
+    Map<String, dynamic>? result;
+    try {
+      result = await ApiService.analyzeJobMatch(token, widget.job.jobPostId);
+    } on SessionExpiredException {
+      if (!mounted) return;
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      setState(() => analyzing = false);
+      await context.read<AuthProvider>().handleSessionExpired(
+        profileProvider: context.read<ProfileProvider>(),
+      );
+      return;
+    }
+
     if (!mounted) return;
+    if (_analysisCancelled) return;
+
+    if (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
     setState(() => analyzing = false);
+
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Analysis failed. Please try again.')),
@@ -482,26 +516,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: analyzing
+            ? AppColors.primary.withValues(alpha: 0.5)
+            : AppColors.primary,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (analyzing)
-            const SizedBox(
-              width: 10,
-              height: 10,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: Colors.white,
-              ),
-            )
-          else
-            const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
+          const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
           const SizedBox(width: 4),
           Text(
-            analyzing ? 'Analyzing...' : 'Analyze',
+            'Analyze',
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -1387,9 +1413,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.06),
+          color: primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: primary.withOpacity(0.25)),
+          border: Border.all(color: primary.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -1665,6 +1691,166 @@ class SkillChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _AnalysisLoadingDialog extends StatefulWidget {
+  final VoidCallback onCancel;
+  const _AnalysisLoadingDialog({required this.onCancel});
+
+  @override
+  State<_AnalysisLoadingDialog> createState() => _AnalysisLoadingDialogState();
+}
+
+class _AnalysisLoadingDialogState extends State<_AnalysisLoadingDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
+  late AnimationController _cycleController;
+  int _msgIndex = 0;
+  int _dotCount = 0;
+
+  static const _messages = [
+    'Scanning skill overlap',
+    'Reviewing job requirements',
+    'Calculating match score',
+    'Analyzing your experience',
+    'Generating insights',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _pulseAnim = Tween<double>(begin: 0.85, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _cycleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          _cycleController.reset();
+          _cycleController.forward();
+          setState(() {
+            _dotCount = (_dotCount + 1) % 4;
+            if (_dotCount == 0) {
+              _msgIndex = (_msgIndex + 1) % _messages.length;
+            }
+          });
+        }
+      });
+    _cycleController.forward();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _cycleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              blurRadius: 40,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnim,
+              builder: (_, child) =>
+                  Transform.scale(scale: _pulseAnim.value, child: child),
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: const BoxDecoration(
+                  color: AppColors.secondary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: AppColors.primary,
+                  size: 38,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '${_messages[_msgIndex]}${'.' * _dotCount}',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF333333),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Our AI is reviewing the job requirements\nagainst your profile.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF9CA3AF),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                minHeight: 4,
+                backgroundColor: const Color(0xFFF3F4F6),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: widget.onCancel,
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7280),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+              ),
+              child: Text(
+                'Stop Analysis',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
