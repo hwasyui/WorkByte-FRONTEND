@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "12893610585",
-    "project_id": "workbyte-a5280",
-    "storage_bucket": "workbyte-a5280.firebasestorage.app"
+    "project_number": "655326820214",
+    "project_id": "formal-clarity-481507-b3",
+    "storage_bucket": "formal-clarity-481507-b3.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:12893610585:android:970a8f5be2ae5feccb4748",
+        "mobilesdk_app_id": "1:655326820214:android:ade8738b0174aeac53ac57",
         "android_client_info": {
           "package_name": "app.workbyte.com"
         }
@@ -18,13 +18,17 @@
           "client_type": 1,
           "android_info": {
             "package_name": "app.workbyte.com",
-            "certificate_hash": "F1EF2FC898E7D054869B8A2529F91EE911D98116"
+            "certificate_hash": "f1ef2fc898e7d054869b8a2529f91ee911d98116"
           }
+        },
+        {
+          "client_id": "655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyADcvuHe4vCXyRYpMXI40ISEaWYHV1-0Pc"
+          "current_key": "AIzaSyCmwzOFwYKG-YHPfoOeepNQUj9lvwWrzEE"
         }
       ],
       "services": {

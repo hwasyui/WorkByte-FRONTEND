@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:workbyte_app/services/notification_service.dart';
 import '../models/user_model.dart';
@@ -14,6 +16,7 @@ class AuthProvider extends ChangeNotifier {
   String? _token;
   UserModel? _currentUser;
   bool _sessionExpired = false;
+  bool _backendUnavailable = false;
 
   bool get isLoading => _isLoading;
   bool get isRestoring => _isRestoring;
@@ -23,6 +26,11 @@ class AuthProvider extends ChangeNotifier {
   String? get userId => _currentUser?.userId;
   bool get isAuthenticated => _token != null && _currentUser != null;
   bool get sessionExpired => _sessionExpired;
+  bool get backendUnavailable => _backendUnavailable;
+
+  void clearBackendUnavailable() {
+    _backendUnavailable = false;
+  }
 
   // ban state convenience getters
   bool get isReportBanned => _currentUser?.isReportBanned ?? false;
@@ -59,13 +67,15 @@ class AuthProvider extends ChangeNotifier {
       // Token is genuinely invalid/expired — safe to clear
       await handleSessionExpired(profileProvider: profileProvider);
     } catch (e) {
-      // 👇 Network error, timeout, server down — keep the token, stay logged in
       final savedToken = await _service.getSavedToken();
       if (savedToken != null) {
-        _token = savedToken; // restore token even if getMe() failed
+        _token = savedToken;
       }
-      // Don't clear anything — session survives connectivity loss
-      debugPrint('restoreSession: non-auth error, keeping session: $e');
+      if (e is TimeoutException || e is SocketException) {
+        _backendUnavailable = true;
+      } else {
+        debugPrint('restoreSession: non-auth error, keeping session: $e');
+      }
     }
 
     _isRestoring = false;

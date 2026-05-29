@@ -6,6 +6,7 @@ import '../../providers/profile_provider.dart';
 import '../auth/login.dart';
 import '../auth/oauth_role_select.dart';
 import '../dashboard/dashboard.dart';
+import '../server_unavailable_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,6 +33,14 @@ class _SplashScreenState extends State<SplashScreen> {
     await authProvider.restoreSession(profileProvider: profileProvider);
 
     if (!mounted) return;
+
+    if (authProvider.backendUnavailable) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ServerUnavailableScreen()),
+      );
+      return;
+    }
 
     final user = authProvider.currentUser;
     Widget nextScreen;

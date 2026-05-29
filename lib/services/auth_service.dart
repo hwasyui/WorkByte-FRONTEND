@@ -292,13 +292,15 @@ class AuthService {
   }
 
   Future<UserModel> getMe(String token) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/auth/me'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final response = await http
+        .get(
+          Uri.parse('$_baseUrl/auth/me'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
