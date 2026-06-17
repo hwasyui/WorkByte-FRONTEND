@@ -453,7 +453,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         widget.contractId,
       );
 
-      final response = await http.get(Uri.parse(pdfUrl));
+      final response = await http.get(
+        Uri.parse(pdfUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
       if (response.statusCode == 200) {
         final directory = await getApplicationDocumentsDirectory();
         final fileName = 'contract_${widget.contractId}.pdf';

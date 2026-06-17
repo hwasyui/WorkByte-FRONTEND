@@ -270,7 +270,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   Future<void> _openUrl(String url) async {
-    await openDocumentFromUrl(context, url);
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(context, url, token: token);
   }
 
   @override
@@ -538,6 +539,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     await openDocumentFromUrl(
                       context,
                       pdfUrl,
+                      token: token,
                       fileName: 'contract_${_contract.contractId}.pdf',
                     );
                   } catch (e) {

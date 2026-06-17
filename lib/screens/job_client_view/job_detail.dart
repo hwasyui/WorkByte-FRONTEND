@@ -165,7 +165,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   Future<void> _openJobFile(JobFileModel file) async {
-    await openDocumentFromUrl(context, file.fileUrl, fileName: file.fileName);
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(context, file.fileUrl, token: token, fileName: file.fileName);
   }
 
   Future<void> _fetchProposals() async {
@@ -763,7 +764,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   Future<void> _openFile(ProposalFileModel file) async {
-    await openDocumentFromUrl(context, file.fileUrl, fileName: file.fileName);
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(context, file.fileUrl, token: token, fileName: file.fileName);
   }
 
   String _capitalize(String s) =>
