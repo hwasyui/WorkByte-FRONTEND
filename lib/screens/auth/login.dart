@@ -127,6 +127,11 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (_) => const AdminShell()),
       );
+    } else if (authProvider.shouldShowProfileSetup(profileProvider)) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FreelancerProfileSetupScreen()),
+      );
     } else {
       Navigator.pushReplacement(
         context,

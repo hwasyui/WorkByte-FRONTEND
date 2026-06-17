@@ -45,6 +45,24 @@ class PortfolioService {
     throw Exception(body['message'] ?? 'Failed to fetch portfolios');
   }
 
+  Future<List<PortfolioModel>> getPortfoliosByFreelancer(
+    String token,
+    String freelancerId,
+  ) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/portfolios/freelancer/$freelancerId'),
+      headers: _headers(token),
+    );
+    final body = _decodeBody(res);
+    debugPrint('GET /portfolios/freelancer/$freelancerId: ${res.statusCode}');
+
+    if (res.statusCode == 200) {
+      final raw = body['details'] ?? body['data'] ?? body;
+      return _parseList(raw);
+    }
+    throw Exception(body['message'] ?? 'Failed to fetch portfolios');
+  }
+
   Future<PortfolioModel> createPortfolio(
     String token,
     Map<String, dynamic> data,
