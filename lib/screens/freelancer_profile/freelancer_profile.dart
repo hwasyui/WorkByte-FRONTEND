@@ -57,6 +57,29 @@ class _ProfileScreenState extends State<ProfileScreen>
   // Cached currency list loaded once from REST Countries API
   static List<Map<String, String>>? _currencyCache;
 
+  static const List<Map<String, String>> _fallbackCurrencies = [
+    {'code': 'USD', 'name': 'United States Dollar'},
+    {'code': 'EUR', 'name': 'Euro'},
+    {'code': 'GBP', 'name': 'British Pound Sterling'},
+    {'code': 'IDR', 'name': 'Indonesian Rupiah'},
+    {'code': 'JPY', 'name': 'Japanese Yen'},
+    {'code': 'SGD', 'name': 'Singapore Dollar'},
+    {'code': 'AUD', 'name': 'Australian Dollar'},
+    {'code': 'CAD', 'name': 'Canadian Dollar'},
+    {'code': 'CHF', 'name': 'Swiss Franc'},
+    {'code': 'CNY', 'name': 'Chinese Yuan'},
+    {'code': 'INR', 'name': 'Indian Rupee'},
+    {'code': 'MYR', 'name': 'Malaysian Ringgit'},
+    {'code': 'PHP', 'name': 'Philippine Peso'},
+    {'code': 'THB', 'name': 'Thai Baht'},
+    {'code': 'HKD', 'name': 'Hong Kong Dollar'},
+    {'code': 'KRW', 'name': 'South Korean Won'},
+    {'code': 'NZD', 'name': 'New Zealand Dollar'},
+    {'code': 'BRL', 'name': 'Brazilian Real'},
+    {'code': 'AED', 'name': 'UAE Dirham'},
+    {'code': 'SAR', 'name': 'Saudi Riyal'},
+  ];
+
   Future<List<Map<String, String>>> _loadCurrencies() async {
     if (_currencyCache != null) return _currencyCache!;
     final res = await http.get(
@@ -104,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        _cvRemoved = false;
         final rate = profile.freelancerProfile?.estimatedRate;
         hourlyController.text = rate != null
             ? ThousandsSeparatorFormatter.format(rate)
@@ -143,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         aboutText = profile.bio ?? '';
         uploadedCVPath = profile.freelancerProfile?.cvFileUrl;
-        _cvRemoved = profile.freelancerProfile?.cvFileUrl == null;
+        _cvRemoved = false;
         final rate = profile.freelancerProfile?.estimatedRate;
         hourlyController.text = rate != null
             ? ThousandsSeparatorFormatter.format(rate)
@@ -873,6 +896,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   })
                   .catchError((e) {
                     setDialogState(() {
+                      currencies = _fallbackCurrencies;
                       currencyError = e.toString();
                       loadingCurrencies = false;
                     });
@@ -1316,20 +1340,37 @@ class _ProfileScreenState extends State<ProfileScreen>
       await _refreshProfile();
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'CV uploaded successfully',
-            style: GoogleFonts.poppins(fontSize: 13),
+      if (fileUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'CV uploaded successfully',
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFF4F46E5),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
-          backgroundColor: const Color(0xFF4F46E5),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'CV upload failed. Please try again.',
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFFC62828),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1870,6 +1911,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             children: [
+              if (!profile.isProfileComplete && profile.isFreelancer) ...[
+                _buildProfileCompletionBanner(profile.missingProfileFields),
+                const SizedBox(height: 16),
+              ],
               _buildSection(
                 title: 'Rate',
                 icon: Icons.payments_outlined,
@@ -2165,6 +2210,107 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildProfileCompletionBanner(List<String> missing) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFFFCC02).withOpacity(0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFECB3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFF57F17),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Profile incomplete',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF5D4037),
+                      ),
+                    ),
+                    Text(
+                      'Fill in the missing info to unlock all features.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        color: const Color(0xFF795548),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: missing
+                .map(
+                  (field) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFFFCC02).withOpacity(0.7),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.circle,
+                          size: 6,
+                          color: Color(0xFFF57F17),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          field,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5D4037),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
     );
   }
 
