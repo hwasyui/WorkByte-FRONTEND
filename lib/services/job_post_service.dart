@@ -382,7 +382,10 @@ class JobPostService {
     );
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
-      final list = body['data'] ?? body['details'] ?? [];
+      final details = body['details'];
+      final list = (details is Map && details['items'] != null)
+          ? details['items']
+          : (details is List ? details : (body['data'] ?? []));
       return (list as List)
           .map((e) => JobPostModel.fromJson(e as Map<String, dynamic>))
           .toList();

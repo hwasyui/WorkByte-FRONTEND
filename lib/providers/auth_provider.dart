@@ -390,11 +390,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> tryRefresh() async {
+    final newToken = await _service.refreshAccessToken();
+    if (newToken == null) return false;
+    _token = newToken;
+    notifyListeners();
+    return true;
+  }
+
   Future<void> handleSessionExpired({
     ProfileProvider? profileProvider,
     NotificationProvider? notificationProvider,
   }) async {
     await _service.clearSavedToken();
+    await _service.clearRefreshToken();
     _token = null;
     _currentUser = null;
     _error = null;
@@ -413,8 +422,11 @@ class AuthProvider extends ChangeNotifier {
     ProfileProvider? profileProvider,
     NotificationProvider? notificationProvider,
   }) async {
+    final refreshToken = await _service.getSavedRefreshToken();
+    if (refreshToken != null) await _service.logout(refreshToken);
     await _service.signOutGoogle();
     await _service.clearSavedToken();
+    await _service.clearRefreshToken();
     _token = null;
     _currentUser = null;
     _error = null;

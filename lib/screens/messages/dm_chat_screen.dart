@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/utils/helpers.dart';
 import '../../models/dm_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
@@ -976,14 +977,16 @@ class _PdfSharedCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () {
-                      // URL launch handled by url_launcher if available
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'PDF URL: $pdfUrl',
-                            style: GoogleFonts.poppins(fontSize: 12),
-                          ),
-                        ),
+                      final token = context.read<AuthProvider>().token;
+                      openDocumentFromUrl(
+                        context,
+                        pdfUrl,
+                        token: token,
+                        fileName: 'contract.pdf',
+                        onRefreshToken: () async {
+                          final ok = await context.read<AuthProvider>().tryRefresh();
+                          return ok ? context.read<AuthProvider>().token : null;
+                        },
                       );
                     },
                     child: Container(

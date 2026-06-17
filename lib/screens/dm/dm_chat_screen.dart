@@ -471,7 +471,11 @@ class _DMChatScreenState extends State<DMChatScreen>
 
     try {
       await _audioPlayer.setVolume(1.0);
-      await _audioPlayer.play(UrlSource(url));
+      // UrlSource doesn't support custom headers, so download with auth first
+      final token = context.read<AuthProvider>().token;
+      final tempFile = await downloadToTempFile(url, token: token);
+      if (tempFile == null) throw Exception('Failed to download audio');
+      await _audioPlayer.play(DeviceFileSource(tempFile.path));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -491,7 +495,16 @@ class _DMChatScreenState extends State<DMChatScreen>
   }
 
   Future<void> _openAttachment(String url) async {
-    await openDocumentFromUrl(context, url);
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(
+      context,
+      url,
+      token: token,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   @override
@@ -814,12 +827,15 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
 
     if (attachment.fileType == 'image') {
+      final token = context.read<AuthProvider>().token;
+      final isBackend = isOurBackendUrl(attachment.fileUrl);
       return GestureDetector(
         onTap: () => _openAttachment(attachment.fileUrl),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Image.network(
             attachment.fileUrl,
+            headers: (token != null && isBackend) ? {'Authorization': 'Bearer $token'} : {},
             width: 190,
             height: 190,
             fit: BoxFit.cover,

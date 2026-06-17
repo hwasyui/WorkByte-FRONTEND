@@ -1430,7 +1430,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
 
-    await openDocumentFromUrl(context, cvUrl);
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(
+      context,
+      cvUrl,
+      token: token,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   String _getCvDisplayName(String? path) {
