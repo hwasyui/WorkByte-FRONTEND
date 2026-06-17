@@ -289,7 +289,7 @@ class ApiService {
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/ai/job_matching/analyse/job/$jobPostId'),
+        Uri.parse('$_baseUrl/ai/job-engine/analyse/job/$jobPostId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -305,43 +305,6 @@ class ApiService {
       }
     } catch (e) {
       print('Error calling AI analysis: $e');
-      rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>> getAIJobRecommendations(
-    String token, {
-    int limit = 10,
-    String? experienceLevel,
-  }) async {
-    try {
-      final queryParams = <String, String>{'limit': limit.toString()};
-      if (experienceLevel != null)
-        queryParams['experience_level'] = experienceLevel;
-
-      final uri = Uri.parse(
-        '$_baseUrl/ai/job_matching/match/freelancer-to-jobs',
-      ).replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      _checkUnauthorized(response);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final details = data['details'] ?? data['data'] ?? {};
-        return Map<String, dynamic>.from(details);
-      } else {
-        print('AI recommendations failed: ${response.body}');
-        return {};
-      }
-    } catch (e) {
-      print('Error getting AI recommendations: $e');
       rethrow;
     }
   }

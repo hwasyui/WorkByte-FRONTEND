@@ -238,21 +238,20 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF0EA5E9),
                     iconBg: const Color(0xFFE0F2FE),
                     accentColor: const Color(0xFF0EA5E9),
-                    badge: 'Job Recommendations',
-                    title: 'Personalized Job Recommendations',
+                    badge: 'Job Discovery',
+                    title: 'Smart Job Discovery',
                     description:
-                        'The homepage feed uses a 3-stage AI pipeline to surface the '
-                        'jobs most likely to match each freelancer. First, a semantic '
-                        'vector search finds the top 100 closest job descriptions. '
-                        'Then a skill-overlap filter removes poor fits. Finally, a '
-                        'CatBoost ML model re-ranks the remaining jobs across 13 features '
-                        '— skills, experience, rate fit, portfolio relevance, and more. '
-                        'Every recommendation also includes SHAP-based explanations '
-                        'showing exactly why a job ranked high and what gaps exist.',
+                        'The homepage surfaces two personalised feeds. '
+                        'Most Relevant ranks active jobs by cosine similarity between '
+                        'the freelancer\'s profile vector (skills, bio, experience, '
+                        'portfolio) and each job description — so the closest semantic '
+                        'matches appear first. Most Popular ranks jobs by proposal '
+                        'count and view count, highlighting the opportunities that '
+                        'are attracting the most attention on the platform.',
                     highlights: const [
-                      '3-stage pipeline: semantic search → skill filter → ML ranking',
-                      'CatBoost model trained on 13 profile & job features',
-                      'SHAP explanations for every recommendation',
+                      'Most Relevant: cosine similarity between profile & job embeddings',
+                      'Most Popular: ranked by proposal count then view count',
+                      'Profile completeness improves relevant feed quality',
                     ],
                   ),
 

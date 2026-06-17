@@ -1,17 +1,63 @@
-# app
+# 📱 WorkByte Frontend
 
-A new Flutter project.
+Flutter mobile application for **WorkByte**, a freelance job marketplace with AI-powered features.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📌 Overview
 
-A few resources to get you started if this is your first Flutter project:
+This repository contains the Flutter frontend of WorkByte, including:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+* Authentication (email/OTP + Google OAuth 2.0)
+* Job discovery: Most Relevant feed (profile-matched via cosine similarity) and Most Popular feed (ranked by proposals + views)
+* Job browsing, search, and category filtering
+* Proposal submission and contract management
+* AI features: job fit analysis, CV upload & analysis
+* Freelancer & client profiles with portfolio, skills, and work experience
+* Direct messaging (DM) with WebSocket real-time support
+* Push notifications via Firebase Cloud Messaging (FCM)
+* Admin panel (web view)
+* Report, appeal, and moderation flows
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🏗️ Tech Stack
+
+* **Framework**: Flutter (Dart)
+* **State Management**: Provider
+* **HTTP Client**: http package
+* **Auth**: JWT + Google Sign-In SDK
+* **Push Notifications**: Firebase Cloud Messaging (FCM)
+* **Real-time**: WebSocket (DM threads)
+* **Storage**: Supabase Storage (via backend)
+
+---
+
+## 🔗 Related Repositories
+
+* Backend: https://github.com/hwasyui/WorkByte-BACKEND
+* Database: https://github.com/hwasyui/WorkByte-DATABASE
+
+---
+
+## 👥 Team Members & Commit Codes
+
+| Code  | Name           | GitHub                            |
+| ----- | -------------- | --------------------------------- |
+| [ASW] | hwasyui        | https://github.com/hwasyui        |
+| [IKP] | tannpsy        | https://github.com/tannpsy        |
+| [SKF] | sarahkimberlyy | https://github.com/sarahkimberlyy |
+
+---
+
+## 📝 Notes
+
+* Configure `.env` with `BACKEND` URL before running
+* Run `flutter pub get` to install dependencies
+* Firebase `google-services.json` must be placed in `android/app/`
+
+---
+
+## 📄 License
+
+This project is for academic (capstone) purposes.

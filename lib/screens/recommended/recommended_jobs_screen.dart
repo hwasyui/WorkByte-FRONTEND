@@ -2,89 +2,69 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
-import '../../models/ai_job_match_model.dart';
 import '../../models/job_post_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/api_service.dart';
+import '../../services/job_post_service.dart';
 import '../job_freelancer_view/job_detail.dart';
 import '../job_freelancer_view/job_list.dart';
 
 const int _kPageSize = 10;
-const int _kFetchLimit = 50;
 
 class RecommendedJobsScreen extends StatefulWidget {
-  final List<AIJobMatchModel>? initialJobs;
-
-  const RecommendedJobsScreen({super.key, this.initialJobs});
+  const RecommendedJobsScreen({super.key});
 
   @override
   State<RecommendedJobsScreen> createState() => _RecommendedJobsScreenState();
 }
 
 class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
-  List<AIJobMatchModel> _jobs = [];
+  final _service = JobPostService();
+
+  List<JobPostModel> _jobs = [];
   bool _isLoading = true;
   bool _noEmbedding = false;
-  bool _noSkills = false;
   int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialJobs != null && widget.initialJobs!.isNotEmpty) {
-      _jobs = List.from(widget.initialJobs!);
-      _isLoading = false;
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadJobs());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadJobs());
   }
 
   Future<void> _loadJobs() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _noEmbedding = false;
+    });
     final token = context.read<AuthProvider>().token;
     if (token == null) {
       setState(() => _isLoading = false);
       return;
     }
     try {
-      final result = await ApiService.getAIJobRecommendations(
-        token,
-        limit: _kFetchLimit,
-      );
+      final jobs = await _service.getRelevantJobs(token, limit: 50);
       if (!mounted) return;
-      if (result.isEmpty) {
+      if (jobs.isEmpty) {
         setState(() {
           _noEmbedding = true;
           _isLoading = false;
         });
         return;
       }
-      final matches = result['matches'] as List? ?? [];
-      final debug = result['_debug'] as Map?;
-      final skillCount =
-          (debug?['freelancer_skill_count'] as num?)?.toInt() ?? 1;
-      if (matches.isEmpty && skillCount == 0) {
-        setState(() {
-          _noSkills = true;
-          _isLoading = false;
-        });
-        return;
-      }
       setState(() {
-        _jobs = matches
-            .map((m) => AIJobMatchModel.fromJson(Map<String, dynamic>.from(m)))
-            .toList();
+        _jobs = jobs;
         _isLoading = false;
       });
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      debugPrint('Error loading recommended jobs: $e');
+      debugPrint('Error loading relevant jobs: $e');
     }
   }
 
-  int get _totalPages => (_jobs.isEmpty ? 1 : (_jobs.length / _kPageSize).ceil());
+  int get _totalPages =>
+      _jobs.isEmpty ? 1 : (_jobs.length / _kPageSize).ceil();
 
-  List<AIJobMatchModel> get _pageJobs {
+  List<JobPostModel> get _pageJobs {
     final start = (_currentPage - 1) * _kPageSize;
     final end = (start + _kPageSize).clamp(0, _jobs.length);
     if (start >= _jobs.length) return [];
@@ -93,12 +73,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
 
   bool get _isPastResults => _currentPage > _totalPages;
 
-  Future<void> _tapJob(AIJobMatchModel match) async {
-    final token = context.read<AuthProvider>().token;
-    if (token == null) return;
-    final data = await ApiService.getJobPostById(token, match.jobPostId);
-    if (!mounted || data == null) return;
-    final job = JobPostModel.fromJson(data);
+  void _tapJob(JobPostModel job) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
@@ -129,12 +104,14 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              'How Recommendations Work',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1A1A2E),
+            Expanded(
+              child: Text(
+                'How Most Relevant Works',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1A1A2E),
+                ),
               ),
             ),
           ],
@@ -147,25 +124,25 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
               _InfoStep(
                 step: '1',
                 color: const Color(0xFF4F46E5),
-                title: 'Semantic Search',
+                title: 'Profile Embedding',
                 body:
-                    'Your profile is encoded into a vector and compared against all open job descriptions to find the top 100 closest semantic matches.',
+                    'Your profile — skills, bio, experience, and portfolio — is encoded into a vector that captures your expertise.',
               ),
               const SizedBox(height: 12),
               _InfoStep(
                 step: '2',
                 color: const Color(0xFF059669),
-                title: 'Skill Filtering',
+                title: 'Cosine Similarity',
                 body:
-                    'Jobs are filtered by skill overlap. Any job where your skill match falls below 20% of the required skills is removed.',
+                    'Each active job post is compared against your profile vector using cosine similarity to measure how closely aligned the job requirements are with your skills.',
               ),
               const SizedBox(height: 12),
               _InfoStep(
                 step: '3',
                 color: const Color(0xFFD97706),
-                title: 'AI Ranking',
+                title: 'Ranked Results',
                 body:
-                    'A CatBoost ML model scores remaining jobs across 13 features — skills, experience level, rate fit, and portfolio relevance — and ranks them by predicted match quality.',
+                    'Jobs are ranked from highest to lowest similarity score, so the most relevant opportunities appear first.',
               ),
               const SizedBox(height: 16),
               Container(
@@ -185,7 +162,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Each job shows why it ranked high (✓ match reasons) and what may be holding it back (⚠ gap signals), powered by SHAP explanations from the ML model.',
+                        'Keep your profile up to date — adding skills, work experience, and portfolio items improves the quality of your relevant feed.',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: const Color(0xFF4F46E5),
@@ -255,7 +232,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      'Recommended for You',
+                      'Most Relevant',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -295,7 +272,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
                 child: Text(
-                  '${_jobs.length} personalized match${_jobs.length == 1 ? '' : 'es'} · AI-ranked',
+                  '${_jobs.length} job${_jobs.length == 1 ? '' : 's'} matched to your profile',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: const Color(0xFF9CA3AF),
@@ -316,8 +293,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                     )
                   : _noEmbedding
                   ? _buildNoEmbeddingState()
-                  : _noSkills
-                  ? _buildNoSkillsState()
                   : _jobs.isEmpty
                   ? _buildEmptyState()
                   : _isPastResults
@@ -335,17 +310,16 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
   }
 
   Widget _buildJobList() {
-    final page = _pageJobs;
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _loadJobs,
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-        itemCount: page.length,
+        itemCount: _pageJobs.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) => _RecommendedJobCard(
-          job: page[index],
-          onTap: () => _tapJob(page[index]),
+        itemBuilder: (context, index) => _RelevantJobCard(
+          job: _pageJobs[index],
+          onTap: () => _tapJob(_pageJobs[index]),
         ),
       ),
     );
@@ -370,9 +344,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             onTap: () => setState(() => _currentPage--),
           ),
           Text(
-            _isPastResults
-                ? 'End'
-                : 'Page $_currentPage of $_totalPages',
+            _isPastResults ? 'End' : 'Page $_currentPage of $_totalPages',
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -400,7 +372,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             Container(
               width: 64,
               height: 64,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.secondary,
                 shape: BoxShape.circle,
               ),
@@ -412,7 +384,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              "You've seen all your personalized matches.",
+              "You've seen all your relevant matches.",
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 16,
@@ -471,7 +443,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             Container(
               width: 64,
               height: 64,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.secondary,
                 shape: BoxShape.circle,
               ),
@@ -483,7 +455,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Complete your profile to unlock recommendations',
+              'Complete your profile to see relevant jobs',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 15,
@@ -493,53 +465,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your skills, experience, and portfolio so our AI can match you with the best jobs.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: const Color(0xFF7D7D7D),
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoSkillsState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.workspace_premium_outlined,
-                color: AppColors.primary,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Add skills to get recommendations',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Our AI needs at least one skill on your profile to match you with relevant jobs.',
+              'Add your skills, experience, and portfolio so we can match you with the most relevant jobs.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 13,
@@ -556,7 +482,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Text(
-        'No recommendations yet',
+        'No relevant jobs found',
         style: GoogleFonts.poppins(
           fontSize: 14,
           color: const Color(0xFF9CA3AF),
@@ -566,17 +492,15 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
   }
 }
 
-// ── Recommended job card ──────────────────────────────────────────────────────
-class _RecommendedJobCard extends StatelessWidget {
-  final AIJobMatchModel job;
+// ── Relevant job card ─────────────────────────────────────────────────────────
+class _RelevantJobCard extends StatelessWidget {
+  final JobPostModel job;
   final VoidCallback onTap;
 
-  const _RecommendedJobCard({required this.job, required this.onTap});
+  const _RelevantJobCard({required this.job, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final hasShap = job.matchReasons.isNotEmpty || job.penaltyReasons.isNotEmpty;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -641,21 +565,11 @@ class _RecommendedJobCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (hasShap)
-                  GestureDetector(
-                    onTap: () => _showShapSheet(context, job),
-                    child: const Icon(
-                      Icons.auto_awesome,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  )
-                else
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: Color(0xFFD1D5DB),
-                  ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: Color(0xFFD1D5DB),
+                ),
               ],
             ),
 
@@ -682,168 +596,13 @@ class _RecommendedJobCard extends StatelessWidget {
                   color: const Color(0xFF6B7280),
                   bg: const Color(0xFFF3F4F6),
                 ),
-                if (job.skillOverlapPct > 0)
-                  _Tag(
-                    label:
-                        '${job.skillOverlapPct.toStringAsFixed(0)}% skill match',
-                    color: const Color(0xFF059669),
-                    bg: const Color(0xFFD1FAE5),
-                  ),
               ],
             ),
-
           ],
         ),
       ),
     );
   }
-}
-
-void _showShapSheet(BuildContext context, AIJobMatchModel job) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
-      builder: (_, sc) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: sc,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Why this job was recommended',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF333333),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      job.jobTitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                    if (job.matchReasons.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Strengths',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF059669),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...job.matchReasons.map(
-                        (r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.check_circle_rounded,
-                                size: 14,
-                                color: Color(0xFF059669),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  r,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: const Color(0xFF333333),
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (job.penaltyReasons.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Considerations',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFD97706),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...job.penaltyReasons.map(
-                        (r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 14,
-                                color: Color(0xFFD97706),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  r,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: const Color(0xFF333333),
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _Tag extends StatelessWidget {

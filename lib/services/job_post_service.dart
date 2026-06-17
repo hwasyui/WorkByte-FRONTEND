@@ -335,4 +335,58 @@ class JobPostService {
       throw Exception(body['details'] ?? 'Failed to delete job file');
     }
   }
+
+  // ─── Relevant & Popular feeds ──────────────────────────────────────────────
+
+  Future<List<JobPostModel>> getRelevantJobs(
+    String token, {
+    int limit = 10,
+    String? category,
+  }) async {
+    final params = <String, String>{'limit': limit.toString()};
+    if (category != null) params['category'] = category;
+
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-posts/relevant').replace(
+        queryParameters: params,
+      ),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      final list = body['data'] ?? body['details'] ?? [];
+      return (list as List)
+          .map((e) => JobPostModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load relevant jobs');
+  }
+
+  Future<List<JobPostModel>> getPopularJobs(
+    String token, {
+    int page = 1,
+    int pageSize = 10,
+    String? category,
+  }) async {
+    final params = <String, String>{
+      'page': page.toString(),
+      'page_size': pageSize.toString(),
+    };
+    if (category != null) params['category'] = category;
+
+    final res = await http.get(
+      Uri.parse('$_baseUrl/job-posts/popular').replace(
+        queryParameters: params,
+      ),
+      headers: _headers(token),
+    );
+    final body = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      final list = body['data'] ?? body['details'] ?? [];
+      return (list as List)
+          .map((e) => JobPostModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load popular jobs');
+  }
 }
