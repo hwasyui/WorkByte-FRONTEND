@@ -18,6 +18,7 @@ class AuthService {
   );
 
   static const String _tokenKey = 'auth_token';
+  static const String _refreshTokenKey = 'refresh_token';
 
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId: '655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com',
@@ -51,6 +52,8 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final details = body['details'] as Map<String, dynamic>;
+        final refreshToken = details['refresh_token'] as String?;
+        if (refreshToken != null) await saveRefreshToken(refreshToken);
         return {
           'token': details['access_token'] as String,
           'is_new_user': details['is_new_user'] as bool,
@@ -79,7 +82,11 @@ class AuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final inner = body['details'] ?? body['data'] ?? body;
       final token = inner['access_token'] as String?;
-      if (token != null) return token;
+      if (token != null) {
+        final refreshToken = inner['refresh_token'] as String?;
+        if (refreshToken != null) await saveRefreshToken(refreshToken);
+        return token;
+      }
     }
 
     throw Exception(
@@ -97,6 +104,53 @@ class AuthService {
 
   Future<void> clearSavedToken() async {
     await _storage.delete(key: _tokenKey);
+  }
+
+  Future<void> saveRefreshToken(String token) async {
+    await _storage.write(key: _refreshTokenKey, value: token);
+  }
+
+  Future<String?> getSavedRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
+  }
+
+  Future<void> clearRefreshToken() async {
+    await _storage.delete(key: _refreshTokenKey);
+  }
+
+  Future<String?> refreshAccessToken() async {
+    final refreshToken = await getSavedRefreshToken();
+    if (refreshToken == null) return null;
+
+    final res = await http.post(
+      Uri.parse('$_baseUrl/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh_token': refreshToken}),
+    );
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(res.body);
+      final details = body['details'] as Map<String, dynamic>;
+      final newAccess = details['access_token'] as String;
+      final newRefresh = details['refresh_token'] as String;
+      await saveToken(newAccess);
+      await saveRefreshToken(newRefresh);
+      return newAccess;
+    }
+
+    await clearSavedToken();
+    await clearRefreshToken();
+    return null;
+  }
+
+  Future<void> logout(String refreshToken) async {
+    try {
+      await http.post(
+        Uri.parse('$_baseUrl/auth/logout'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refreshToken}),
+      );
+    } catch (_) {}
   }
 
   Future<void> signOutGoogle() async {

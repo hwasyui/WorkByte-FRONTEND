@@ -190,7 +190,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Future<void> openJobFile(JobFileModel file) async {
     final token = context.read<AuthProvider>().token;
-    await openDocumentFromUrl(context, file.fileUrl, token: token, fileName: file.fileName);
+    await openDocumentFromUrl(
+      context,
+      file.fileUrl,
+      token: token,
+      fileName: file.fileName,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   Future<void> analyzeJob() async {

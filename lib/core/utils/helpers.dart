@@ -1,15 +1,24 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
+String get _backendBase =>
+    (dotenv.env['BACKEND'] ?? '').replaceAll(RegExp(r'/$'), '');
+
 /// Downloads [url] with an optional JWT [token] to a temp file and returns it.
 /// Returns null if the download fails.
+bool isOurBackendUrl(String url) =>
+    _backendBase.isNotEmpty && url.startsWith(_backendBase);
+
 Future<File?> downloadToTempFile(String url, {String? token}) async {
   final uri = Uri.tryParse(url);
   if (uri == null) return null;
-  final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+  final headers = (token != null && isOurBackendUrl(url))
+      ? {'Authorization': 'Bearer $token'}
+      : <String, String>{};
   final response = await http.get(uri, headers: headers);
   if (response.statusCode != 200) return null;
   final tempDir = await getTemporaryDirectory();
@@ -24,6 +33,7 @@ Future<void> openDocumentFromUrl(
   String url, {
   String? token,
   String? fileName,
+  Future<String?> Function()? onRefreshToken,
 }) async {
   final uri = Uri.tryParse(url);
   if (uri == null) {
@@ -44,8 +54,20 @@ Future<void> openDocumentFromUrl(
   );
 
   try {
-    final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-    final response = await http.get(uri, headers: headers);
+    final isBackend = isOurBackendUrl(url);
+    var headers = (token != null && isBackend)
+        ? {'Authorization': 'Bearer $token'}
+        : <String, String>{};
+    var response = await http.get(uri, headers: headers);
+
+    if (response.statusCode == 401 && isBackend && onRefreshToken != null) {
+      final newToken = await onRefreshToken();
+      if (newToken != null) {
+        headers = {'Authorization': 'Bearer $newToken'};
+        response = await http.get(uri, headers: headers);
+      }
+    }
+
     if (response.statusCode != 200) {
       throw Exception('Server returned ${response.statusCode}');
     }

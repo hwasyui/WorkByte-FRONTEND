@@ -983,6 +983,10 @@ class _PdfSharedCard extends StatelessWidget {
                         pdfUrl,
                         token: token,
                         fileName: 'contract.pdf',
+                        onRefreshToken: () async {
+                          final ok = await context.read<AuthProvider>().tryRefresh();
+                          return ok ? context.read<AuthProvider>().token : null;
+                        },
                       );
                     },
                     child: Container(

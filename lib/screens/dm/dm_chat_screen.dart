@@ -496,7 +496,15 @@ class _DMChatScreenState extends State<DMChatScreen>
 
   Future<void> _openAttachment(String url) async {
     final token = context.read<AuthProvider>().token;
-    await openDocumentFromUrl(context, url, token: token);
+    await openDocumentFromUrl(
+      context,
+      url,
+      token: token,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   @override
@@ -820,13 +828,14 @@ class _DMChatScreenState extends State<DMChatScreen>
 
     if (attachment.fileType == 'image') {
       final token = context.read<AuthProvider>().token;
+      final isBackend = isOurBackendUrl(attachment.fileUrl);
       return GestureDetector(
         onTap: () => _openAttachment(attachment.fileUrl),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Image.network(
             attachment.fileUrl,
-            headers: token != null ? {'Authorization': 'Bearer $token'} : {},
+            headers: (token != null && isBackend) ? {'Authorization': 'Bearer $token'} : {},
             width: 190,
             height: 190,
             fit: BoxFit.cover,

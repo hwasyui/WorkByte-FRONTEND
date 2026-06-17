@@ -271,7 +271,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   Future<void> _openUrl(String url) async {
     final token = context.read<AuthProvider>().token;
-    await openDocumentFromUrl(context, url, token: token);
+    await openDocumentFromUrl(
+      context,
+      url,
+      token: token,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   @override
@@ -541,6 +549,10 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                       pdfUrl,
                       token: token,
                       fileName: 'contract_${_contract.contractId}.pdf',
+                      onRefreshToken: () async {
+                        final ok = await context.read<AuthProvider>().tryRefresh();
+                        return ok ? context.read<AuthProvider>().token : null;
+                      },
                     );
                   } catch (e) {
                     debugPrint('open contract pdf error: $e');
