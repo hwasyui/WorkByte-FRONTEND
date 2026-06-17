@@ -1056,18 +1056,44 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           const SizedBox(height: 58),
 
-          Center(
-            child: _buildStarRating(
-              rating:
+          Builder(
+            builder: (context) {
+              final rating =
                   Provider.of<ProfileProvider>(
                     context,
                     listen: false,
                   ).clientProfile?.averageRatingGiven ??
-                  0.0,
-              size: 18,
-            ),
+                  0.0;
+              final safeRating = rating.clamp(0.0, 5.0);
+              final fullStars = safeRating.floor();
+              final hasHalf = (safeRating - fullStars) >= 0.5;
+              return Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...List.generate(5, (i) {
+                      if (i < fullStars) {
+                        return const Icon(Icons.star_rounded, size: 16, color: Colors.amber);
+                      } else if (i == fullStars && hasHalf) {
+                        return const Icon(Icons.star_half_rounded, size: 16, color: Colors.amber);
+                      }
+                      return const Icon(Icons.star_outline_rounded, size: 16, color: Colors.amber);
+                    }),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${safeRating.toStringAsFixed(1)}/5',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[700],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
           Consumer2<AuthProvider, ProfileProvider>(
             builder: (context, auth, profile, child) {
@@ -1075,21 +1101,44 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 children: [
                   Text(
                     profile.displayName,
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A2E),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     auth.currentUser?.email ?? '',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Client',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ],
               );
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1098,14 +1147,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _showEditProfile,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit Profile'),
+                    icon: const Icon(Icons.edit_rounded, size: 15),
+                    label: Text(
+                      'Edit Profile',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
@@ -1221,12 +1277,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               indicatorColor: primaryColor,
               indicatorWeight: 2.5,
               labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+              unselectedLabelColor: Colors.grey[400],
+              labelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
-              unselectedLabelStyle: const TextStyle(fontSize: 14),
+              unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+              ),
               tabs: const [
                 Tab(text: 'About'),
                 Tab(text: 'Posted Jobs'),
@@ -1242,17 +1301,31 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   Widget _buildStarRating({required double rating, required double size}) {
     final fullStars = rating.floor();
     final hasHalfStar = rating % 1 != 0;
+    final starColor = rating > 0 ? Colors.amber : Colors.grey[300]!;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (index) {
-        if (index < fullStars) {
-          return Icon(Icons.star, color: Colors.grey[400], size: size);
-        } else if (index == fullStars && hasHalfStar) {
-          return Icon(Icons.star_half, color: Colors.grey[400], size: size);
-        }
-        return Icon(Icons.star_outline, color: Colors.grey[400], size: size);
-      }),
+      children: [
+        ...List.generate(5, (index) {
+          if (index < fullStars) {
+            return Icon(Icons.star_rounded, color: starColor, size: size);
+          } else if (index == fullStars && hasHalfStar) {
+            return Icon(Icons.star_half_rounded, color: starColor, size: size);
+          }
+          return Icon(Icons.star_outline_rounded, color: starColor, size: size);
+        }),
+        if (rating > 0) ...[
+          const SizedBox(width: 5),
+          Text(
+            rating.toStringAsFixed(1),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.amber[700],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1269,13 +1342,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             child: bioText.isEmpty
                 ? _buildEmptyBio(_editAbout)
                 : Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: Text(
                       bioText,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
-                        height: 1.5,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                        height: 1.6,
                       ),
                     ),
                   ),
@@ -1288,12 +1361,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             hasEdit: true,
             onEdit: _editWebsite,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Text(
                 websiteUrl.isEmpty ? 'No website added' : websiteUrl,
-                style: TextStyle(
-                  color: websiteUrl.isEmpty ? Colors.grey : primaryColor,
-                  fontSize: 14,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: websiteUrl.isEmpty ? Colors.grey[400] : primaryColor,
+                  fontWeight: websiteUrl.isNotEmpty
+                      ? FontWeight.w500
+                      : FontWeight.normal,
                   decoration: websiteUrl.isNotEmpty
                       ? TextDecoration.underline
                       : null,
@@ -1309,7 +1385,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             title: 'Statistics',
             icon: Icons.bar_chart_outlined,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -1342,14 +1418,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11.5,
+            color: Colors.grey[500],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }
@@ -1648,12 +1731,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEECFB), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1661,7 +1745,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1669,31 +1753,39 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   children: [
                     if (icon != null) ...[
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: AppColors.secondary,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(icon, color: AppColors.primary, size: 22),
+                        child: Icon(icon, color: AppColors.primary, size: 20),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                     ],
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                     if (hasEdit) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: onEdit,
-                        child: const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: primaryColor,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEECFB),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: const Icon(
+                            Icons.edit_rounded,
+                            size: 13,
+                            color: primaryColor,
+                          ),
                         ),
                       ),
                     ],
@@ -1703,6 +1795,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ],
             ),
           ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
           child,
         ],
       ),

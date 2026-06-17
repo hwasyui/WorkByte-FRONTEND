@@ -1683,46 +1683,83 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           Consumer<ReviewProvider>(
             builder: (context, reviewProvider, child) {
-              final trustScore = reviewProvider.trustScore;
+              final rating = reviewProvider.trustScore?.weightedReviewAvg ?? 0.0;
+              final safeRating = rating.clamp(0.0, 5.0);
+              final fullStars = safeRating.floor();
+              final hasHalf = (safeRating - fullStars) >= 0.5;
               return Center(
-                child: _buildStarRating(
-                  rating: trustScore?.weightedReviewAvg ?? 0.0,
-                  size: 18,
-                  color: Colors.amber,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...List.generate(5, (i) {
+                      if (i < fullStars) {
+                        return const Icon(Icons.star_rounded, size: 16, color: Colors.amber);
+                      } else if (i == fullStars && hasHalf) {
+                        return const Icon(Icons.star_half_rounded, size: 16, color: Colors.amber);
+                      }
+                      return const Icon(Icons.star_outline_rounded, size: 16, color: Colors.amber);
+                    }),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${safeRating.toStringAsFixed(1)}/5',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[700],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
           Consumer2<AuthProvider, ProfileProvider>(
             builder: (context, auth, profile, child) {
+              final hasTitle = profile.jobTitle.isNotEmpty && profile.jobTitle != '-';
               return Column(
                 children: [
                   Text(
                     profile.displayName,
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A2E),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     auth.currentUser?.email ?? '',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  if (profile.jobTitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      profile.jobTitle,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[500],
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      hasTitle ? profile.jobTitle : 'Freelancer',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
                 ],
               );
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1731,14 +1768,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _showEditProfile,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit Profile'),
+                    icon: const Icon(Icons.edit_rounded, size: 15),
+                    label: Text(
+                      'Edit Profile',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
@@ -1754,14 +1798,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       );
                     },
-                    icon: const Icon(Icons.analytics_outlined, size: 18),
-                    label: const Text('Analyze CV'),
+                    icon: const Icon(Icons.analytics_outlined, size: 16),
+                    label: Text(
+                      'Analyze CV',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: primaryColor),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      side: const BorderSide(color: primaryColor, width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
@@ -1875,12 +1926,15 @@ class _ProfileScreenState extends State<ProfileScreen>
               indicatorColor: primaryColor,
               indicatorWeight: 2.5,
               labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+              unselectedLabelColor: Colors.grey[400],
+              labelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
-              unselectedLabelStyle: const TextStyle(fontSize: 14),
+              unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+              ),
               tabs: const [
                 Tab(text: 'About'),
                 Tab(text: 'Reviews'),
@@ -1921,17 +1975,46 @@ class _ProfileScreenState extends State<ProfileScreen>
                 hasEdit: true,
                 onEdit: _editHourly,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Text(
-                    hourlyController.text.isEmpty
-                        ? 'No rate set'
-                        : '$_selectedCurrency ${hourlyController.text} / $_selectedRateTime',
-                    style: TextStyle(
-                      color: hourlyController.text.isEmpty
-                          ? Colors.grey
-                          : Colors.black87,
-                    ),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: hourlyController.text.isEmpty
+                      ? Text(
+                          'No rate set',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.grey[400],
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$_selectedCurrency ${hourlyController.text}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '/ $_selectedRateTime',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: Colors.grey[500],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1941,11 +2024,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 hasEdit: true,
                 onEdit: _editAbout,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   child: Text(
                     bioText.isEmpty ? 'No information added yet' : bioText,
-                    style: TextStyle(
-                      color: bioText.isEmpty ? Colors.grey : Colors.black87,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: bioText.isEmpty
+                          ? Colors.grey[400]
+                          : const Color(0xFF374151),
                     ),
                   ),
                 ),
@@ -2861,12 +2948,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEECFB), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -2874,7 +2962,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -2882,31 +2970,39 @@ class _ProfileScreenState extends State<ProfileScreen>
                   children: [
                     if (icon != null) ...[
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: AppColors.secondary,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(icon, color: AppColors.primary, size: 22),
+                        child: Icon(icon, color: AppColors.primary, size: 20),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                     ],
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                     if (hasEdit) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: onEdit,
-                        child: const Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: primaryColor,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEECFB),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: const Icon(
+                            Icons.edit_rounded,
+                            size: 13,
+                            color: primaryColor,
+                          ),
                         ),
                       ),
                     ],
@@ -2916,6 +3012,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
           child,
         ],
       ),
