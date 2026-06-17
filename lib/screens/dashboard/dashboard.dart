@@ -238,6 +238,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _popularJobs = jobs;
         _isLoadingPopular = false;
       });
+    } on SessionExpiredException {
+      if (!mounted) return;
+      await context.read<AuthProvider>().handleSessionExpired(
+        profileProvider: context.read<ProfileProvider>(),
+        notificationProvider: context.read<NotificationProvider>(),
+      );
     } catch (e) {
       if (mounted) setState(() => _isLoadingPopular = false);
       debugPrint('Error loading popular jobs: $e');

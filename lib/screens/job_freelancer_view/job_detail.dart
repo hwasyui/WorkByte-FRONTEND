@@ -80,6 +80,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       fetchRoles();
       fetchAllSkills();
       fetchMyProposals();
+      fetchJobFiles();
+    });
+  }
+
+  Future<void> fetchJobFiles() async {
+    final token = context.read<AuthProvider>().token!;
+    await context.read<JobPostProvider>().fetchJobFiles(
+      token,
+      widget.job.jobPostId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _jobFiles = context.read<JobPostProvider>().filesForJob(
+        widget.job.jobPostId,
+      );
+      _filesLoading = false;
     });
   }
 
