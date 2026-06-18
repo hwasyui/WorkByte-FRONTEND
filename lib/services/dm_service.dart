@@ -4,6 +4,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/dm_model.dart';
 
+class DMFailureException implements Exception {
+  final String message;
+
+  const DMFailureException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class DMService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
@@ -16,8 +25,12 @@ class DMService {
   };
 
   dynamic _unwrap(http.Response res) {
-    final body = jsonDecode(res.body);
-    return body['details'] ?? body['data'] ?? body;
+    try {
+      final body = jsonDecode(res.body);
+      return body['details'] ?? body['data'] ?? body['message'] ?? body;
+    } catch (_) {
+      return res.body;
+    }
   }
 
   Future<DMThreadStartResult> startThread({
@@ -183,7 +196,7 @@ class DMService {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw Exception(body is String ? body : 'Failed to send message');
+    throw DMFailureException(body is String ? body : 'Failed to send message');
   }
 
   Future<DMMessageModel> sendFileMessage({
@@ -211,14 +224,16 @@ class DMService {
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);
 
-    debugPrint('POST /dm/threads/$threadId/messages/upload -> ${res.statusCode}');
+    debugPrint(
+      'POST /dm/threads/$threadId/messages/upload -> ${res.statusCode}',
+    );
     final body = _unwrap(res);
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw Exception(body is String ? body : 'Failed to send file');
+    throw DMFailureException(body is String ? body : 'Failed to send file');
   }
 
   Future<void> markThreadAsRead({

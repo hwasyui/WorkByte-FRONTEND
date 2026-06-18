@@ -12,7 +12,6 @@ import 'providers/proposal_provider.dart';
 import 'providers/proposal_file_provider.dart';
 import 'providers/contract_provider.dart';
 import 'providers/contract_submission_provider.dart';
-import 'providers/contract_message_provider.dart';
 import 'providers/review_provider.dart';
 import 'providers/skill_provider.dart';
 import 'providers/notification_provider.dart';
@@ -59,7 +58,6 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProposalFileProvider()),
         ChangeNotifierProvider(create: (_) => ContractProvider()),
         ChangeNotifierProvider(create: (_) => ContractSubmissionProvider()),
-        ChangeNotifierProvider(create: (_) => ContractMessageProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => SavedItemsProvider()),

@@ -53,6 +53,27 @@ class DMAttachmentModel {
     this.createdAt,
   });
 
+  factory DMAttachmentModel.localFile({
+    required String tempId,
+    required String fileName,
+    required String filePath,
+    String fileType = 'document',
+    String mimeType = 'application/octet-stream',
+    int? fileSizeBytes,
+  }) {
+    return DMAttachmentModel(
+      attachmentId: 'local_$tempId',
+      dmMessageId: tempId,
+      fileName: fileName,
+      fileUrl: filePath,
+      fileType: fileType,
+      mimeType: mimeType,
+      fileSizeBytes: fileSizeBytes,
+      durationSeconds: null,
+      createdAt: DateTime.now(),
+    );
+  }
+
   factory DMAttachmentModel.fromJson(Map<String, dynamic> json) {
     return DMAttachmentModel(
       attachmentId: json['attachment_id'] as String? ?? '',
@@ -132,6 +153,61 @@ class DMMessageModel {
       'status_change',
     };
     return type != null && systemTypes.contains(type);
+  }
+
+  bool get isSending => status == 'sending';
+  bool get isFailed => status == 'failed' || status == 'blocked';
+
+  String? get failureReason {
+    final value = metadata?['failure_reason'] ?? metadata?['reason'];
+    return value?.toString();
+  }
+
+  DMMessageModel copyWith({
+    String? dmMessageId,
+    String? threadId,
+    String? senderId,
+    String? messageText,
+    Map<String, dynamic>? metadata,
+    bool? isRead,
+    DateTime? readAt,
+    DateTime? sentAt,
+    String? status,
+    List<DMAttachmentModel>? attachments,
+  }) {
+    return DMMessageModel(
+      dmMessageId: dmMessageId ?? this.dmMessageId,
+      threadId: threadId ?? this.threadId,
+      senderId: senderId ?? this.senderId,
+      messageText: messageText ?? this.messageText,
+      metadata: metadata ?? this.metadata,
+      isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
+      sentAt: sentAt ?? this.sentAt,
+      status: status ?? this.status,
+      attachments: attachments ?? this.attachments,
+    );
+  }
+
+  factory DMMessageModel.localSending({
+    required String tempId,
+    required String threadId,
+    required String senderId,
+    required String messageText,
+    List<DMAttachmentModel> attachments = const [],
+  }) {
+    return DMMessageModel(
+      dmMessageId: tempId,
+      threadId: threadId,
+      senderId: senderId,
+      messageText: messageText,
+      metadata: {'is_local': true},
+      isRead: false,
+      readAt: null,
+      sentAt: DateTime.now(),
+      status: 'sending',
+      attachments: attachments,
+    );
   }
 }
 

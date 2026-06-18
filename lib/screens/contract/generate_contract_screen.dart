@@ -5,11 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:workbyte_app/providers/dm_provider.dart';
 
 import '../../core/constants/colors.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/contract_message_provider.dart';
 import '../../providers/contract_provider.dart';
 
 class GenerateContractScreen extends StatefulWidget {
@@ -336,6 +336,26 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     );
   }
 
+  Map<String, dynamic> _buildGenerationData({required bool sendNotification}) {
+    final paymentSchedule = _buildPaymentScheduleString();
+
+    return {
+      'end_date': _endDateController.text,
+      'agreed_duration': _buildDurationString(),
+      'termination_notice':
+          int.tryParse(_selectedTerminationNotice ?? '30') ?? 30,
+      'governing_law': 'Indonesian Law',
+      'confidentiality': _confidentiality,
+      'confidentiality_text': _confidentialityTextController.text.trim(),
+      'late_payment_penalty': _latepaymentPenalty,
+      'dispute_resolution': _selectedDisputeResolution ?? 'negotiation',
+      'revision_rounds': int.tryParse(_revisionRoundsController.text) ?? 2,
+      'additional_clauses': _additionalClausesController.text.trim(),
+      'payment_schedule': paymentSchedule,
+      'send_notification': sendNotification,
+    };
+  }
+
   Future<void> _generateContract() async {
     if (_endDateController.text.isEmpty) {
       _showError('Please set an end date');
@@ -373,20 +393,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       final paymentSchedule = _buildPaymentScheduleString();
       _paymentScheduleController.text = paymentSchedule;
 
-      final generationData = {
-        'end_date': _endDateController.text,
-        'agreed_duration': _buildDurationString(),
-        'termination_notice':
-            int.tryParse(_selectedTerminationNotice ?? '30') ?? 30,
-        'governing_law': 'Indonesian Law',
-        'confidentiality': _confidentiality,
-        'confidentiality_text': _confidentialityTextController.text.trim(),
-        'late_payment_penalty': _latepaymentPenalty,
-        'dispute_resolution': _selectedDisputeResolution ?? 'negotiation',
-        'revision_rounds': int.tryParse(_revisionRoundsController.text) ?? 2,
-        'additional_clauses': _additionalClausesController.text.trim(),
-        'payment_schedule': paymentSchedule,
-      };
+      final generationData = _buildGenerationData(sendNotification: false);
 
       final success = await contractProvider.generateContractPdf(
         token,
@@ -496,70 +503,54 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       return;
     }
 
-    if (_contract!.contractPdfUrl == null ||
-        _contract!.contractPdfUrl!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Contract PDF must be generated first',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    if (!_validateMilestones()) return;
 
     final token = context.read<AuthProvider>().token!;
-    final messageProvider = context.read<ContractMessageProvider>();
+    final contractProvider = context.read<ContractProvider>();
 
     setState(() => _sending = true);
 
     try {
-      final sent = await messageProvider.sendMessage(
-        token: token,
-        contractId: widget.contractId,
-        messageText: 'Your contract PDF is ready. Please review it.',
+      final saveSuccess = await _saveContractDetails();
+      if (!saveSuccess) {
+        setState(() => _sending = false);
+        return;
+      }
+
+      final generationData = _buildGenerationData(sendNotification: true);
+
+      final success = await contractProvider.generateContractPdf(
+        token,
+        widget.contractId,
+        generationData,
       );
 
       if (!mounted) return;
 
       setState(() => _sending = false);
 
-      if (sent != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Contract sent to freelancer successfully!',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: AppColors.primary,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Contract sent to freelancer successfully!'
+                : contractProvider.error ?? 'Failed to send contract',
+            style: GoogleFonts.poppins(),
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              messageProvider.error ?? 'Failed to send contract',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+          backgroundColor: success ? AppColors.primary : Colors.red,
+        ),
+      );
+
+      if (success) {
+        await contractProvider.fetchContractById(token, widget.contractId);
+        if (mounted) {
+          setState(() => _contract = contractProvider.currentContract);
+        }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to send contract: $e',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _showError('Failed to send contract: $e');
     }
   }
 
@@ -768,16 +759,19 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    _buildActionButton(
-                      onPressed: _generating ? null : _generateContract,
-                      icon: _generating ? null : Icons.picture_as_pdf_outlined,
-                      label: 'Generate Contract PDF',
-                      loading: _generating,
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    if (_contract?.contractPdfUrl != null) ...[
-                      const SizedBox(height: 12),
+                    if (_contract?.contractPdfUrl == null ||
+                        _contract!.contractPdfUrl!.isEmpty) ...[
+                      _buildActionButton(
+                        onPressed: _generating ? null : _generateContract,
+                        icon: _generating
+                            ? null
+                            : Icons.picture_as_pdf_outlined,
+                        label: 'Generate Contract PDF',
+                        loading: _generating,
+                        backgroundColor: _primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ] else ...[
                       _buildActionButton(
                         onPressed: _sending ? null : _sendToFreelancer,
                         icon: _sending ? null : Icons.send_outlined,

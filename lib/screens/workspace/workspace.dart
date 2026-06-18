@@ -55,8 +55,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(() => setState(() {}));
+    _tabController = TabController(length: _tabs.length, vsync: this)
+      ..addListener(() {
+        if (mounted) setState(() {});
+      });
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadContracts());
   }
 
@@ -264,27 +266,44 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
 
   Widget _buildTabBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(_tabs.length, (i) {
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+        ),
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          onTap: (_) => setState(() {}),
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          dividerColor: Colors.transparent,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: EdgeInsets.zero,
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
+          tabs: List.generate(_tabs.length, (i) {
             final selected = _tabController.index == i;
-            return GestureDetector(
-              onTap: () => _tabController.animateTo(i),
+
+            return Tab(
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(right: 10),
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                  horizontal: 18,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.primary : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: selected ? AppColors.primary : Colors.grey.shade200,
-                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: selected
+                      ? null
+                      : Border.all(color: Colors.grey.shade200),
+                  color: selected ? Colors.transparent : Colors.white,
                 ),
                 child: Text(
                   _tabs[i],

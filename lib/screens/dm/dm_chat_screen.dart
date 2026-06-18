@@ -144,71 +144,53 @@ class _DMChatScreenState extends State<DMChatScreen>
     if (!hasText && !hasFile) return;
 
     final token = context.read<AuthProvider>().token;
-    if (token == null) return;
+    final currentUserId = context.read<AuthProvider>().userId;
+
+    if (token == null || currentUserId == null) return;
 
     _focusNode.unfocus();
     _sendButtonController.forward();
 
+    final pickedFile = _selectedFile;
+    final pickedFilePath = _selectedFilePath;
+
+    _messageController.clear();
+
+    if (hasFile) {
+      setState(() {
+        _selectedFile = null;
+        _selectedFilePath = null;
+        _isSendingFile = true;
+      });
+    }
+
     try {
-      if (hasText) {
-        _messageController.clear();
-        await _sendMessageCore(token, text);
-      }
-
-      if (hasFile) {
-        setState(() => _isSendingFile = true);
-
-        final sent = await context.read<DMProvider>().sendFileMessage(
+      if (hasFile && pickedFile != null && pickedFilePath != null) {
+        await context.read<DMProvider>().sendFileMessage(
           token: token,
           threadId: widget.thread.threadId,
-          filePath: _selectedFilePath!,
-          fileName: _selectedFile!.name,
+          filePath: pickedFilePath,
+          fileName: pickedFile.name,
+          fileSizeBytes: pickedFile.size,
+          senderId: currentUserId,
+          messageText: hasText ? text : null,
         );
-
-        context.read<DMProvider>().insertIncomingMessage(
-          widget.thread.threadId,
-          sent,
+      } else {
+        await context.read<DMProvider>().sendMessage(
+          token: token,
+          threadId: widget.thread.threadId,
+          messageText: text,
+          senderId: currentUserId,
         );
-
-        setState(() {
-          _selectedFile = null;
-          _selectedFilePath = null;
-        });
-
-        _scrollToBottom();
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+
+      _scrollToBottom();
     } finally {
       if (mounted) {
         setState(() => _isSendingFile = false);
       }
       _sendButtonController.reverse();
     }
-  }
-
-  Future<void> _sendMessageCore(String token, String text) async {
-    final message = await context.read<DMProvider>().sendMessage(
-      token: token,
-      threadId: widget.thread.threadId,
-      messageText: text,
-    );
-
-    context.read<DMProvider>().insertIncomingMessage(
-      widget.thread.threadId,
-      message,
-    );
-
-    _scrollToBottom();
   }
 
   void _toggleVoiceNote() {
@@ -252,6 +234,36 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
   }
 
+  void _showFailedMessageReason(DMMessageModel message) {
+    final reason =
+        message.failureReason ??
+        'This message failed to send. Please check the content and try again.';
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          'Message failed',
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        content: Text(reason, style: GoogleFonts.poppins(fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _fileExtension(String name) {
     final parts = name.split('.');
     return parts.length > 1 ? parts.last.toUpperCase() : 'FILE';
@@ -270,8 +282,24 @@ class _DMChatScreenState extends State<DMChatScreen>
     String messageId,
   ) {
     const barHeights = [
-      8.0, 14.0, 20.0, 12.0, 18.0, 10.0, 22.0, 16.0, 8.0,
-      14.0, 20.0, 10.0, 18.0, 12.0, 22.0, 8.0, 16.0, 14.0,
+      8.0,
+      14.0,
+      20.0,
+      12.0,
+      18.0,
+      10.0,
+      22.0,
+      16.0,
+      8.0,
+      14.0,
+      20.0,
+      10.0,
+      18.0,
+      12.0,
+      22.0,
+      8.0,
+      16.0,
+      14.0,
     ];
     final isThisPlaying = _playingMessageId == messageId && _isAudioPlaying;
     final durSec = attachment.durationSeconds?.round() ?? 0;
@@ -368,8 +396,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       _recordingSeconds = 0;
     });
 
-    _recordingTimer =
-        Timer.periodic(const Duration(seconds: 1), (_) {
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _recordingSeconds++);
     });
   }
@@ -390,18 +417,16 @@ class _DMChatScreenState extends State<DMChatScreen>
     if (token == null) return;
 
     try {
-      final fileName =
-          'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      final sent = await context.read<DMProvider>().sendFileMessage(
+      final fileName = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final currentUserId = context.read<AuthProvider>().userId;
+      if (currentUserId == null) return;
+
+      await context.read<DMProvider>().sendFileMessage(
         token: token,
         threadId: widget.thread.threadId,
         filePath: path,
         fileName: fileName,
-      );
-
-      context.read<DMProvider>().insertIncomingMessage(
-        widget.thread.threadId,
-        sent,
+        senderId: currentUserId,
       );
 
       _scrollToBottom();
@@ -750,7 +775,11 @@ class _DMChatScreenState extends State<DMChatScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (message.attachments.isNotEmpty)
-                      _buildAttachmentPreview(message.attachments.first, isOwn, message.dmMessageId),
+                      _buildAttachmentPreview(
+                        message.attachments.first,
+                        isOwn,
+                        message.dmMessageId,
+                      ),
                     if (message.messageText.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -782,15 +811,31 @@ class _DMChatScreenState extends State<DMChatScreen>
                           ),
                           if (isOwn) ...[
                             const SizedBox(width: 6),
-                            Icon(
-                              message.isRead
-                                  ? Icons.done_all_rounded
-                                  : Icons.done_rounded,
-                              size: 14,
-                              color: message.isRead
-                                  ? const Color(0xFFBDEBFF)
-                                  : Colors.white.withValues(alpha: 0.85),
-                            ),
+                            if (message.isSending)
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              )
+                            else if (message.isFailed)
+                              GestureDetector(
+                                onTap: () => _showFailedMessageReason(message),
+                                child: const Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 15,
+                                  color: Colors.amberAccent,
+                                ),
+                              )
+                            else
+                              Icon(
+                                message.isRead
+                                    ? Icons.done_all_rounded
+                                    : Icons.done_rounded,
+                                size: 14,
+                                color: message.isRead
+                                    ? const Color(0xFFBDEBFF)
+                                    : Colors.white.withValues(alpha: 0.85),
+                              ),
                           ],
                         ],
                       ),
@@ -817,7 +862,11 @@ class _DMChatScreenState extends State<DMChatScreen>
         name.endsWith('.aac');
   }
 
-  Widget _buildAttachmentPreview(DMAttachmentModel attachment, bool isOwn, String messageId) {
+  Widget _buildAttachmentPreview(
+    DMAttachmentModel attachment,
+    bool isOwn,
+    String messageId,
+  ) {
     final fileName = attachment.fileName?.trim().isNotEmpty == true
         ? attachment.fileName!.trim()
         : 'Attachment';
@@ -835,7 +884,9 @@ class _DMChatScreenState extends State<DMChatScreen>
           borderRadius: BorderRadius.circular(16),
           child: Image.network(
             attachment.fileUrl,
-            headers: (token != null && isBackend) ? {'Authorization': 'Bearer $token'} : {},
+            headers: (token != null && isBackend)
+                ? {'Authorization': 'Bearer $token'}
+                : {},
             width: 190,
             height: 190,
             fit: BoxFit.cover,
@@ -1042,7 +1093,11 @@ class _DMChatScreenState extends State<DMChatScreen>
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                  : const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
             ),
           ),
         ],

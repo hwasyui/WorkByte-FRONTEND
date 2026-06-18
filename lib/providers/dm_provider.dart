@@ -135,45 +135,45 @@ class DMProvider extends ChangeNotifier {
     required String token,
     required String threadId,
     required String messageText,
+    required String senderId,
   }) async {
-    _isSending = true;
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+    final tempMessage = DMMessageModel.localSending(
+      tempId: tempId,
+      threadId: threadId,
+      senderId: senderId,
+      messageText: messageText,
+    );
+
+    final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
+    _messagesByThread[threadId] = [...current, tempMessage];
     notifyListeners();
 
     try {
-      final msg = await _service.sendMessage(
+      final realMessage = await _service.sendMessage(
         token: token,
         threadId: threadId,
         messageText: messageText,
       );
 
-      final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
-      _messagesByThread[threadId] = [...current, msg];
-
-      final threadIndex = _threads.indexWhere((t) => t.threadId == threadId);
-      if (threadIndex >= 0) {
-        final old = _threads[threadIndex];
-        _threads[threadIndex] = DMThreadModel(
-          threadId: old.threadId,
-          status: old.status,
-          initiatorId: old.initiatorId,
-          otherUser: old.otherUser,
-          jobPost: old.jobPost,
-          unreadCount: old.unreadCount,
-          createdAt: old.createdAt,
-          updatedAt: msg.sentAt ?? DateTime.now(),
-          lastMessage: DMLastMessagePreview(
-            messageText: msg.messageText,
-            sentAt: msg.sentAt,
-            senderId: msg.senderId,
-          ),
-        );
-      }
-
+      _replaceMessage(threadId, tempId, realMessage);
+      _updateThreadPreview(threadId, realMessage);
       notifyListeners();
-      return msg;
-    } finally {
-      _isSending = false;
+
+      return realMessage;
+    } catch (e) {
+      final failedMessage = tempMessage.copyWith(
+        status: 'failed',
+        metadata: {
+          'failure_reason': e.toString().replaceFirst('Exception: ', ''),
+        },
+      );
+
+      _replaceMessage(threadId, tempId, failedMessage);
       notifyListeners();
+
+      return failedMessage;
     }
   }
 
@@ -257,13 +257,33 @@ class DMProvider extends ChangeNotifier {
     required String threadId,
     required String filePath,
     required String fileName,
+    required String senderId,
     String? messageText,
+    int? fileSizeBytes,
   }) async {
-    _isSending = true;
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+    final tempAttachment = DMAttachmentModel.localFile(
+      tempId: tempId,
+      fileName: fileName,
+      filePath: filePath,
+      fileSizeBytes: fileSizeBytes,
+    );
+
+    final tempMessage = DMMessageModel.localSending(
+      tempId: tempId,
+      threadId: threadId,
+      senderId: senderId,
+      messageText: messageText?.trim() ?? '',
+      attachments: [tempAttachment],
+    );
+
+    final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
+    _messagesByThread[threadId] = [...current, tempMessage];
     notifyListeners();
 
     try {
-      final msg = await _service.sendFileMessage(
+      final realMessage = await _service.sendFileMessage(
         token: token,
         threadId: threadId,
         filePath: filePath,
@@ -271,34 +291,23 @@ class DMProvider extends ChangeNotifier {
         messageText: messageText,
       );
 
-      final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
-      _messagesByThread[threadId] = [...current, msg];
-
-      final threadIndex = _threads.indexWhere((t) => t.threadId == threadId);
-      if (threadIndex >= 0) {
-        final old = _threads[threadIndex];
-        _threads[threadIndex] = DMThreadModel(
-          threadId: old.threadId,
-          status: old.status,
-          initiatorId: old.initiatorId,
-          otherUser: old.otherUser,
-          jobPost: old.jobPost,
-          unreadCount: old.unreadCount,
-          createdAt: old.createdAt,
-          updatedAt: msg.sentAt ?? DateTime.now(),
-          lastMessage: DMLastMessagePreview(
-            messageText: msg.messageText.isNotEmpty ? msg.messageText : '📎 $fileName',
-            sentAt: msg.sentAt,
-            senderId: msg.senderId,
-          ),
-        );
-      }
-
+      _replaceMessage(threadId, tempId, realMessage);
+      _updateThreadPreview(threadId, realMessage);
       notifyListeners();
-      return msg;
-    } finally {
-      _isSending = false;
+
+      return realMessage;
+    } catch (e) {
+      final failedMessage = tempMessage.copyWith(
+        status: 'failed',
+        metadata: {
+          'failure_reason': e.toString().replaceFirst('Exception: ', ''),
+        },
+      );
+
+      _replaceMessage(threadId, tempId, failedMessage);
       notifyListeners();
+
+      return failedMessage;
     }
   }
 
@@ -326,5 +335,50 @@ class DMProvider extends ChangeNotifier {
     _isLoadingRequests = false;
     _isSending = false;
     notifyListeners();
+  }
+
+  void _replaceMessage(
+    String threadId,
+    String oldMessageId,
+    DMMessageModel newMessage,
+  ) {
+    final current = _messagesByThread[threadId] ?? <DMMessageModel>[];
+
+    _messagesByThread[threadId] = current.map((message) {
+      if (message.dmMessageId == oldMessageId) {
+        return newMessage;
+      }
+      return message;
+    }).toList();
+  }
+
+  void _updateThreadPreview(String threadId, DMMessageModel msg) {
+    final threadIndex = _threads.indexWhere((t) => t.threadId == threadId);
+    if (threadIndex < 0) return;
+
+    final old = _threads[threadIndex];
+
+    final previewText = msg.messageText.trim().isNotEmpty
+        ? msg.messageText.trim()
+        : msg.attachments.isNotEmpty
+        ? '📎 ${msg.attachments.first.fileName}'
+        : '';
+
+    _threads[threadIndex] = DMThreadModel(
+      threadId: old.threadId,
+      status: old.status,
+      initiatorId: old.initiatorId,
+      contractId: old.contractId,
+      otherUser: old.otherUser,
+      jobPost: old.jobPost,
+      unreadCount: old.unreadCount,
+      createdAt: old.createdAt,
+      updatedAt: msg.sentAt ?? DateTime.now(),
+      lastMessage: DMLastMessagePreview(
+        messageText: previewText,
+        sentAt: msg.sentAt,
+        senderId: msg.senderId,
+      ),
+    );
   }
 }
