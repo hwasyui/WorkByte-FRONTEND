@@ -2,7 +2,7 @@ import 'dart:io';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:open_filex/open_filex.dart';
+import '../../../widgets/file_viewer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import 'success.dart';
@@ -130,15 +130,12 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
   }
 
   Future<void> _openDraftFile(String localPath) async {
-    final result = await OpenFilex.open(localPath);
-    if (result.type == ResultType.done) {
-      return;
-    }
-
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(result.message)));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FileViewerScreen(filePath: localPath),
+      ),
+    );
   }
 
   @override

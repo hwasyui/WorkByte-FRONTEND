@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:workbyte_app/widgets/file_viewer.dart';
 
 String get _backendBase =>
     (dotenv.env['BACKEND'] ?? '').replaceAll(RegExp(r'/$'), '');
@@ -81,12 +81,11 @@ Future<void> openDocumentFromUrl(
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
 
-    final result = await OpenFilex.open(filePath);
-    if (result.type != ResultType.done && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message)),
-      );
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FileViewerScreen(filePath: filePath, fileName: name),
+      ),
+    );
   } catch (e) {
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
