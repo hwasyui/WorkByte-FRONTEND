@@ -21,7 +21,9 @@ import 'package:workbyte_app/widgets/report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
@@ -732,6 +734,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               tags: tags,
               bookmarked: saved.isJobSaved(widget.job.jobPostId),
               onBookmark: () => saved.toggleSaveJob(widget.job),
+              onShare: () => Share.share(
+                jobShareUrl(widget.job.jobPostId),
+                subject: widget.job.jobTitle,
+              ),
               titleTrailing: profile.isClient ? null : buildAnalyzeButton(),
               // 👇 NEW: pass null for own jobs so flag icon is hidden
               onReport: isOwnJob

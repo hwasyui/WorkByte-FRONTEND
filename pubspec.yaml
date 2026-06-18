@@ -49,6 +49,8 @@ dependencies:
   fl_chart: ^0.69.0
   record: 5.0.0
   audioplayers: ^6.1.0
+  app_links: ^6.3.4
+  share_plus: ^10.1.4
 
   flutter_pdfview: ^1.4.4
   video_player: ^2.9.2

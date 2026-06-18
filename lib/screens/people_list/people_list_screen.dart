@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:workbyte_app/widgets/report_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../models/client_model.dart';
@@ -899,6 +901,23 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               ),
             ),
             actions: [
+              // ── Share ──
+              if (_targetUserId != null)
+                GestureDetector(
+                  onTap: () => Share.share(profileShareUrl(_targetUserId!)),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(Icons.share_outlined,
+                          color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
               // ── Bookmark (existing) ──
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {

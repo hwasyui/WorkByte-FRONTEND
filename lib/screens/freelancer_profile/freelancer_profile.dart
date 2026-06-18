@@ -11,6 +11,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1632,6 +1634,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.maybePop(context),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 48,
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) => IconButton(
+                    icon: const Icon(Icons.share_outlined, color: Colors.white),
+                    onPressed: auth.userId == null
+                        ? null
+                        : () => Share.share(profileShareUrl(auth.userId!)),
+                  ),
                 ),
               ),
               Positioned(

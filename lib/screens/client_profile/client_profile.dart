@@ -1,5 +1,7 @@
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -997,6 +999,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.maybePop(context),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 48,
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) => IconButton(
+                    icon: const Icon(Icons.share_outlined, color: Colors.white),
+                    onPressed: auth.userId == null
+                        ? null
+                        : () => Share.share(profileShareUrl(auth.userId!)),
+                  ),
                 ),
               ),
               Positioned(
