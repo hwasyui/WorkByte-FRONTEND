@@ -32,7 +32,8 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="app.workbyte.com"/>
+                    android:host="workbyte.angelica-whiharto.com"
+                    android:pathPrefix="/share"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>

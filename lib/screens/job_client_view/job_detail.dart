@@ -2,6 +2,8 @@ import 'package:workbyte_app/services/dm_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
@@ -858,6 +860,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               jobTitle: widget.job.jobTitle,
               category: _projectCategoryLabel(widget.job.projectCategory),
               tags: _tags,
+              onShare: () => Share.share(
+                jobShareUrl(widget.job.jobPostId),
+                subject: widget.job.jobTitle,
+              ),
               // 👇 NEW: no report button on own job post
               onReport: null,
             ),

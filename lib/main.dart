@@ -2,7 +2,9 @@ import 'package:workbyte_app/providers/connectivity_provider.dart';
 import 'package:workbyte_app/screens/app_gate.dart';
 import 'package:workbyte_app/screens/auth/login.dart';
 import 'package:workbyte_app/screens/no_internet_screen.dart';
+import 'package:workbyte_app/services/deep_link_service.dart';
 import 'package:flutter/material.dart';
+import 'package:app_links/app_links.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -40,6 +42,18 @@ void main() async {
     );
   } catch (_) {}
   await NotificationService.initialize(navigatorKey: navigatorKey);
+
+  // Register navigator key so DeepLinkService can push routes.
+  DeepLinkService.init(navigatorKey);
+
+  // Capture the link that cold-started the app (if any).
+  final appLinks = AppLinks();
+  final initialLink = await appLinks.getInitialLink();
+  DeepLinkService.setPendingLink(initialLink);
+
+  // Handle links received while the app is already running.
+  appLinks.uriLinkStream.listen(DeepLinkService.setPendingLink);
+
   runApp(const WorkByteApp());
 }
 
