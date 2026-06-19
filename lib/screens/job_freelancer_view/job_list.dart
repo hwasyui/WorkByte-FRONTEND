@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/constants/job_categories.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -13,40 +14,7 @@ import '../../widgets/pagination_bar.dart';
 import '../../widgets/top_bar.dart';
 import 'job_detail.dart';
 
-// ── Category meta ────────────────────────────────────────────────────────────
-const Map<String, String> kCategoryLabels = {
-  'mobiledev': 'Mobile Dev',
-  'backenddev': 'Backend Dev',
-  'webdev': 'Web Dev',
-  'uiuxdesign': 'UI/UX Design',
-  'graphicdesign': 'Graphic Design',
-  'copywriting': 'Copywriting',
-  'dataanalytics': 'Data Analytics',
-  'videoediting': 'Video Editing',
-  'marketing': 'Marketing',
-  'general': 'General',
-  // legacy snake_case keys (keep for backward compat)
-  'mobile_dev': 'Mobile Dev',
-  'backend_dev': 'Backend Dev',
-  'web_dev': 'Web Dev',
-  'ui_ux_design': 'UI/UX Design',
-  'graphic_design': 'Graphic Design',
-  'data_analytics': 'Data Analytics',
-  'video_editing': 'Video Editing',
-};
-
-const Map<String, IconData> kCategoryIcons = {
-  'mobiledev': Icons.phone_android_rounded,
-  'backenddev': Icons.dns_rounded,
-  'webdev': Icons.language_rounded,
-  'uiuxdesign': Icons.design_services_rounded,
-  'graphicdesign': Icons.brush_rounded,
-  'copywriting': Icons.edit_note_rounded,
-  'dataanalytics': Icons.bar_chart_rounded,
-  'videoediting': Icons.videocam_rounded,
-  'marketing': Icons.campaign_rounded,
-  'general': Icons.work_outline_rounded,
-};
+// kCategoryLabels and kCategoryIcons are imported from core/constants/job_categories.dart
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class JobListScreen extends StatefulWidget {
@@ -69,6 +37,8 @@ class _JobListScreenState extends State<JobListScreen> {
   bool _isLoading = true;
   String _sortOption = 'Latest';
   int _currentPage = 1;
+  String? _projectTypeFilter;
+  String? _experienceLevelFilter;
 
   int get _totalPages =>
       _filteredJobs.isEmpty ? 1 : (_filteredJobs.length / _pageSize).ceil();
@@ -208,22 +178,171 @@ class _JobListScreenState extends State<JobListScreen> {
     final query = _searchController.text.toLowerCase();
 
     _filteredJobs = _allJobs.where((j) {
-      // Text search
       final matchesQuery = j.jobTitle.toLowerCase().contains(query);
-
-      // Category filter
-      final matchesCategory =
-          _activeCategoryFilter == null ||
-          (j.projectCategory).toLowerCase() ==
-              _activeCategoryFilter!.toLowerCase();
-
-      return matchesQuery && matchesCategory;
+      final matchesCategory = _activeCategoryFilter == null ||
+          j.projectCategory.toLowerCase() == _activeCategoryFilter!.toLowerCase();
+      final matchesType = _projectTypeFilter == null ||
+          j.projectType.toLowerCase() == _projectTypeFilter!.toLowerCase();
+      final matchesLevel = _experienceLevelFilter == null ||
+          (j.experienceLevel ?? '').toLowerCase() == _experienceLevelFilter!.toLowerCase();
+      return matchesQuery && matchesCategory && matchesType && matchesLevel;
     }).toList();
 
     _filteredJobs.sort(
       (a, b) => _sortOption == 'Latest'
           ? (b.createdAt ?? '').compareTo(a.createdAt ?? '')
           : (a.createdAt ?? '').compareTo(b.createdAt ?? ''),
+    );
+  }
+
+  int get _activeFilterCount =>
+      (_projectTypeFilter != null ? 1 : 0) +
+      (_experienceLevelFilter != null ? 1 : 0) +
+      (_sortOption != 'Latest' ? 1 : 0);
+
+  void _clearAllFilters() {
+    setState(() {
+      _projectTypeFilter = null;
+      _experienceLevelFilter = null;
+      _sortOption = 'Latest';
+      _currentPage = 1;
+      _applySortAndFilter();
+    });
+  }
+
+  void _showFilterSheet() {
+    String tempSort = _sortOption;
+    String? tempType = _projectTypeFilter;
+    String? tempLevel = _experienceLevelFilter;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          Widget _filterSection(String title, List<String?> values, List<String> labels, String? selected, void Function(String?) onSelect) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1A1A2E))),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: List.generate(values.length, (i) {
+                    final isSelected = selected == values[i];
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => onSelect(values[i])),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white,
+                          border: Border.all(color: isSelected ? AppColors.primary : const Color(0xFFE0E0E0)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          labels[i],
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF555555),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            );
+          }
+
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text('Filter & Sort', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1A1A2E))),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () {
+                        setSheetState(() {
+                          tempSort = 'Latest';
+                          tempType = null;
+                          tempLevel = null;
+                        });
+                      },
+                      child: Text('Clear all', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _filterSection(
+                  'Sort By',
+                  [null, 'Oldest'],
+                  ['Latest', 'Oldest'],
+                  tempSort == 'Latest' ? null : tempSort,
+                  (v) => tempSort = v ?? 'Latest',
+                ),
+                const SizedBox(height: 20),
+                _filterSection(
+                  'Project Type',
+                  [null, 'individual', 'team'],
+                  ['All', 'Individual', 'Team'],
+                  tempType,
+                  (v) => tempType = v,
+                ),
+                const SizedBox(height: 20),
+                _filterSection(
+                  'Experience Level',
+                  [null, 'entry', 'intermediate', 'expert'],
+                  ['All', 'Entry Level', 'Intermediate', 'Expert'],
+                  tempLevel,
+                  (v) => tempLevel = v,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _sortOption = tempSort;
+                        _projectTypeFilter = tempType;
+                        _experienceLevelFilter = tempLevel;
+                        _currentPage = 1;
+                        _applySortAndFilter();
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: Text('Apply Filters', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -344,47 +463,109 @@ class _JobListScreenState extends State<JobListScreen> {
                 ),
               ),
 
-            // ── Search bar ──
+            // ── Search bar + filter button ──
             Padding(
               padding: const EdgeInsets.fromLTRB(29, 12, 29, 0),
-              child: Container(
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFF0F0F1)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF333333),
-                        ),
-                        decoration: InputDecoration(
-                          hintText: isFiltered
-                              ? 'Search in ${kCategoryLabels[_activeCategoryFilter] ?? _activeCategoryFilter}...'
-                              : 'Search jobs...',
-                          hintStyle: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: const Color(0xFF7D7D7D),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: const Color(0xFFF0F0F1)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF333333),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: isFiltered
+                                    ? 'Search in ${kCategoryLabels[_activeCategoryFilter] ?? _activeCategoryFilter}...'
+                                    : 'Search jobs...',
+                                hintStyle: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                ),
+                                border: InputBorder.none,
+                              ),
+                            ),
                           ),
-                          border: InputBorder.none,
-                        ),
+                          const Icon(Icons.search, color: Color(0xFF7D7D7D), size: 22),
+                        ],
                       ),
                     ),
-                    const Icon(
-                      Icons.search,
-                      color: Color(0xFF7D7D7D),
-                      size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: _showFilterSheet,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: _activeFilterCount > 0 ? AppColors.primary : Colors.white,
+                            border: Border.all(color: _activeFilterCount > 0 ? AppColors.primary : const Color(0xFFF0F0F1)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.tune_rounded,
+                            color: _activeFilterCount > 0 ? Colors.white : const Color(0xFF7D7D7D),
+                            size: 22,
+                          ),
+                        ),
+                        if (_activeFilterCount > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF5252),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$_activeFilterCount',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Active filter chips ──
+            if (_activeFilterCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(29, 10, 29, 0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    if (_sortOption != 'Latest')
+                      _activeChip(_sortOption, () => setState(() { _sortOption = 'Latest'; _currentPage = 1; _applySortAndFilter(); })),
+                    if (_projectTypeFilter != null)
+                      _activeChip(_projectTypeFilter == 'team' ? 'Team' : 'Individual', () => setState(() { _projectTypeFilter = null; _currentPage = 1; _applySortAndFilter(); })),
+                    if (_experienceLevelFilter != null)
+                      _activeChip({'entry': 'Entry Level', 'intermediate': 'Intermediate', 'expert': 'Expert'}[_experienceLevelFilter] ?? _experienceLevelFilter!, () => setState(() { _experienceLevelFilter = null; _currentPage = 1; _applySortAndFilter(); })),
                   ],
                 ),
               ),
-            ),
 
             // ── Job list ──
             Expanded(
@@ -427,6 +608,28 @@ class _JobListScreenState extends State<JobListScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _activeChip(String label, VoidCallback onRemove) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.secondary,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary)),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(Icons.close_rounded, size: 13, color: AppColors.primary.withValues(alpha: 0.7)),
+          ),
+        ],
       ),
     );
   }

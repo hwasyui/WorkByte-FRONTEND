@@ -7,6 +7,7 @@ import 'package:workbyte_app/services/deep_link_service.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
+import '../../core/constants/job_categories.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
 import '../../models/job_role_skill_model.dart';
@@ -791,25 +792,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  String _projectCategoryLabel(String? value) {
-    if (value == null || value.trim().isEmpty) return 'General';
-
-    const labels = {
-      'mobile_dev': 'Mobile Dev',
-      'backend_dev': 'Backend Dev',
-      'web_dev': 'Web Dev',
-      'ui_ux_design': 'UI/UX Design',
-      'graphic_design': 'Graphic Design',
-      'copywriting': 'Copywriting',
-      'data_analytics': 'Data Analytics',
-      'video_editing': 'Video Editing',
-      'general': 'General',
-    };
-
-    final key = value.trim().toLowerCase();
-    return labels[key] ?? 'General';
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -858,7 +840,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         ? _client!.websiteUrl!
                         : ''),
               jobTitle: widget.job.jobTitle,
-              category: _projectCategoryLabel(widget.job.projectCategory),
+              category: categoryLabel(widget.job.projectCategory),
               tags: _tags,
               onShare: () => Share.share(
                 jobShareUrl(widget.job.jobPostId),

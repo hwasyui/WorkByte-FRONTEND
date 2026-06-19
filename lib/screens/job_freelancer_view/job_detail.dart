@@ -1,4 +1,5 @@
 import 'package:workbyte_app/core/constants/colors.dart';
+import 'package:workbyte_app/core/constants/job_categories.dart';
 import 'package:workbyte_app/models/client_model.dart';
 import 'package:workbyte_app/models/job_file_model.dart';
 import 'package:workbyte_app/models/job_post_model.dart';
@@ -730,7 +731,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   : client?.displayName ?? 'Client',
               username: clientLoading ? '' : client?.websiteUrl ?? '',
               jobTitle: widget.job.jobTitle,
-              category: capitalize(widget.job.projectCategory),
+              category: categoryLabel(widget.job.projectCategory),
               tags: tags,
               bookmarked: saved.isJobSaved(widget.job.jobPostId),
               onBookmark: () => saved.toggleSaveJob(widget.job),

@@ -446,6 +446,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                 icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
                 style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
                 isExpanded: true,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 items: List.generate(31, (i) {
                   final num = (i + 1).toString();
                   return DropdownMenuItem(value: num, child: Text(num));
@@ -471,6 +472,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                 icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
                 style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
                 isExpanded: true,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 items: const [
                   DropdownMenuItem(value: 'day', child: Text('Day')),
                   DropdownMenuItem(value: 'week', child: Text('Week')),

@@ -39,7 +39,13 @@ class JobDetailHeader extends StatelessWidget {
       children: [
         // ── Teal section ─────────────────────────────────────────────
         Container(
-          color: AppColors.primary,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, Color(0xFF6C63FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
@@ -55,9 +61,9 @@ class JobDetailHeader extends StatelessWidget {
                   GestureDetector(
                     onTap: onBack ?? () => Navigator.of(context).pop(),
                     child: const Icon(
-                      Icons.chevron_left,
+                      Icons.arrow_back_ios_new_rounded,
                       color: Colors.white,
-                      size: 32,
+                      size: 20,
                     ),
                   ),
                   const Spacer(),
@@ -93,47 +99,54 @@ class JobDetailHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              // Company logo + poster info — unchanged
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFAF9FE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: companyLogo,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        posterName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF9FE),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
                       ),
-                      Text(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: companyLogo,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      posterName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
                         username,
                         style: GoogleFonts.poppins(
-                          fontSize: 10,
+                          color: Colors.white,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white70,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),

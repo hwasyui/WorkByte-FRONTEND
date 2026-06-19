@@ -887,38 +887,20 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
             backgroundColor: AppColors.primary,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
               ),
             ),
             actions: [
               // ── Share ──
               if (_targetUserId != null)
-                GestureDetector(
-                  onTap: () => Share.share(profileShareUrl(_targetUserId!)),
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(0, 8, 8, 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(Icons.share_outlined,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
+                IconButton(
+                  onPressed: () => Share.share(profileShareUrl(_targetUserId!)),
+                  icon: const Icon(Icons.share_outlined, color: Colors.white, size: 22),
                 ),
-              // ── Bookmark (existing) ──
+              // ── Bookmark ──
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {
                   final isSaved = widget.isClient
@@ -926,60 +908,31 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                       : saved.isFreelancerSaved(
                           widget.freelancer?.freelancerId ?? '',
                         );
-                  return GestureDetector(
-                    onTap: () {
+                  return IconButton(
+                    onPressed: () {
                       if (widget.isClient && widget.client != null) {
                         saved.toggleSaveClient(widget.client!);
-                      } else if (!widget.isClient &&
-                          widget.freelancer != null) {
+                      } else if (!widget.isClient && widget.freelancer != null) {
                         saved.toggleSaveFreelancer(widget.freelancer!);
                       }
                     },
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          isSaved
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
+                    icon: Icon(
+                      isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                      color: Colors.white,
+                      size: 22,
                     ),
                   );
                 },
               ),
-
-              // 👇 NEW: Report button — hidden if viewing own profile
+              // ── Report — hidden if viewing own profile ──
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
-                  // Don't show report button on the user's own profile
                   if (_targetUserId != null && _targetUserId == auth.userId) {
                     return const SizedBox.shrink();
                   }
-                  return GestureDetector(
-                    onTap: _openReportSheet,
-                    child: Container(
-                      margin: const EdgeInsets.fromLTRB(0, 8, 12, 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: const Icon(
-                          Icons.flag_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
+                  return IconButton(
+                    onPressed: _openReportSheet,
+                    icon: const Icon(Icons.flag_rounded, color: Colors.white, size: 22),
                   );
                 },
               ),
