@@ -729,7 +729,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               posterName: clientLoading
                   ? '...'
                   : client?.displayName ?? 'Client',
-              username: clientLoading ? '' : client?.websiteUrl ?? '',
+              username: clientLoading ? '' : (client?.websiteUrl?.isNotEmpty == true ? client!.websiteUrl! : '-'),
               jobTitle: widget.job.jobTitle,
               category: categoryLabel(widget.job.projectCategory),
               tags: tags,

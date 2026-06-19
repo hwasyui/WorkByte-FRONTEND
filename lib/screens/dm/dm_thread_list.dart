@@ -603,7 +603,7 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
                             child: Text(
                               subtitle,
                               style: GoogleFonts.poppins(
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
                               ),

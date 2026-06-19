@@ -1538,38 +1538,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverToBoxAdapter(child: _buildStickyHeader()),
-          ],
-          body: TabBarView(
-            controller: _tabController,
-            children: [_buildAboutTab(), _buildReviewsTab(), _buildSavedTab()],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDotGrid() {
-    return Column(
-      children: List.generate(
-        4,
-        (row) => Row(
-          children: List.generate(
-            5,
-            (col) => Padding(
-              padding: const EdgeInsets.all(3),
-              child: Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.35),
-                  shape: BoxShape.circle,
-                ),
+        top: false,
+        child: Column(
+          children: [
+            _buildStickyHeader(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [_buildAboutTab(), _buildReviewsTab(), _buildSavedTab()],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1584,83 +1563,56 @@ class _ProfileScreenState extends State<ProfileScreen>
           Stack(
             clipBehavior: Clip.none,
             children: [
-              ClipPath(
-                clipper: _ProfileBannerClipper(),
-                child: Container(
-                  height: 185,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    image: DecorationImage(
-                      image: AssetImage('assets/profile.png'),
-                      fit: BoxFit.cover,
-                      opacity: 0.18,
+              Container(
+                height: 175,
+                width: double.infinity,
+                color: AppColors.secondary,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                        Row(
+                          children: [
+                            Consumer<AuthProvider>(
+                              builder: (context, auth, _) => IconButton(
+                                icon: const Icon(
+                                  Icons.share_outlined,
+                                  color: AppColors.primary,
+                                ),
+                                onPressed: auth.userId == null
+                                    ? null
+                                    : () => Share.share(
+                                        profileShareUrl(auth.userId!),
+                                      ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.bookmarks_outlined,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () => _tabController.animateTo(2),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 10,
-                        left: -45,
-                        child: Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 40,
-                        left: 30,
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      Positioned(top: 16, right: 56, child: _buildDotGrid()),
-                    ],
-                  ),
                 ),
               ),
               Positioned(
-                top: 0,
-                left: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.maybePop(context),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 48,
-                child: Consumer<AuthProvider>(
-                  builder: (context, auth, _) => IconButton(
-                    icon: const Icon(Icons.share_outlined, color: Colors.white),
-                    onPressed: auth.userId == null
-                        ? null
-                        : () => Share.share(profileShareUrl(auth.userId!)),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.bookmarks_outlined,
-                    color: Colors.white,
-                  ),
-                  onPressed: () => _tabController.animateTo(2),
-                ),
-              ),
-              Positioned(
-                bottom: -48,
+                bottom: -44,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -1668,7 +1620,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
-                      color: AppColors.secondary,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Consumer<ProfileProvider>(
                       builder: (context, profile, child) {
@@ -1702,41 +1660,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
 
-          const SizedBox(height: 58),
-
-          Consumer<ReviewProvider>(
-            builder: (context, reviewProvider, child) {
-              final rating = reviewProvider.trustScore?.weightedReviewAvg ?? 0.0;
-              final safeRating = rating.clamp(0.0, 5.0);
-              final fullStars = safeRating.floor();
-              final hasHalf = (safeRating - fullStars) >= 0.5;
-              return Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...List.generate(5, (i) {
-                      if (i < fullStars) {
-                        return const Icon(Icons.star_rounded, size: 16, color: Colors.amber);
-                      } else if (i == fullStars && hasHalf) {
-                        return const Icon(Icons.star_half_rounded, size: 16, color: Colors.amber);
-                      }
-                      return const Icon(Icons.star_outline_rounded, size: 16, color: Colors.amber);
-                    }),
-                    const SizedBox(width: 5),
-                    Text(
-                      '${safeRating.toStringAsFixed(1)}/5',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber[700],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 56),
 
           Consumer2<AuthProvider, ProfileProvider>(
             builder: (context, auth, profile, child) {
@@ -1749,14 +1673,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    auth.currentUser?.email ?? '',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey[500],
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1772,13 +1688,47 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Text(
                       hasTitle ? profile.jobTitle : 'Freelancer',
                       style: GoogleFonts.poppins(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    auth.currentUser?.email ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
                 ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          Consumer<ReviewProvider>(
+            builder: (context, reviewProvider, child) {
+              final rating = reviewProvider.trustScore?.weightedReviewAvg ?? 0.0;
+              final safeRating = rating.clamp(0.0, 5.0);
+              final total = reviewProvider.trustScore?.totalReviews ?? 0;
+              return Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 15, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${safeRating.toStringAsFixed(1)}  ·  $total reviews',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -2241,7 +2191,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                     : Column(
                         children: experiences.map<Widget>((e) {
                           return _ExperienceItem(
-                            logo: Icons.work,
                             title: e.jobTitle,
                             company: e.companyName,
                             period: _formatPeriod(
@@ -2249,7 +2198,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                               endDate: e.endDate,
                               isCurrent: e.isCurrent,
                             ),
-                            logoColor: primaryColor,
                             onDelete: () =>
                                 _deleteExperience(e.workExperienceId),
                           );
@@ -2368,7 +2316,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Text(
                       'Fill in the missing info to unlock all features.',
                       style: GoogleFonts.poppins(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: const Color(0xFF795548),
                         height: 1.3,
                       ),
@@ -3059,19 +3007,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 }
 
 class _ExperienceItem extends StatelessWidget {
-  final IconData logo;
   final String title;
   final String company;
   final String period;
-  final Color logoColor;
   final VoidCallback? onDelete;
 
   const _ExperienceItem({
-    required this.logo,
     required this.title,
     required this.company,
     required this.period,
-    required this.logoColor,
     this.onDelete,
   });
 
@@ -3081,16 +3025,6 @@ class _ExperienceItem extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(logo, color: AppColors.primary, size: 22),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3150,20 +3084,6 @@ class _EducationItem extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.school_outlined,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3521,7 +3441,7 @@ class _TrustScoreCard extends StatelessWidget {
                           Text(
                             '/100',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               color: Colors.grey[500],
                             ),
                           ),
@@ -3915,27 +3835,6 @@ Map<String, double> _buildCategoryAverages(List<Review> reviews) {
     final count = counts[key] ?? 1;
     return MapEntry(key, total / count);
   });
-}
-
-class _ProfileBannerClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, 0);
-    path.lineTo(0, size.height - 30);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height + 20,
-      size.width,
-      size.height - 30,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(_ProfileBannerClipper oldClipper) => false;
 }
 
 class _ExpandableReviewText extends StatefulWidget {

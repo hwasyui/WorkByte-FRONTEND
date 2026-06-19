@@ -31,6 +31,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   List<ContractModel> _allContracts = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String _sortOption = 'Latest';
 
   static const List<String> _tabs = [
     'Active',
@@ -135,6 +136,20 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       }).toList();
     }
 
+    switch (_sortOption) {
+      case 'Oldest':
+        base.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+        break;
+      case 'Budget: High to Low':
+        base.sort((a, b) => b.agreedBudget.compareTo(a.agreedBudget));
+        break;
+      case 'Budget: Low to High':
+        base.sort((a, b) => a.agreedBudget.compareTo(b.agreedBudget));
+        break;
+      default:
+        base.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+    }
+
     return base;
   }
 
@@ -206,7 +221,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
             child: Row(
               children: [
                 Text(
-                  'Latest',
+                  _sortOption,
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -543,32 +558,72 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   void _showSortSheet() {
+    const options = ['Latest', 'Oldest', 'Budget: High to Low', 'Budget: Low to High'];
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sort by', style: AppText.h3),
-            const SizedBox(height: 16),
-            ...[
-              'Latest',
-              'Oldest',
-              'Budget: High to Low',
-              'Budget: Low to High',
-            ].map(
-              (label) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(label, style: AppText.body),
-                onTap: () => Navigator.pop(context),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Sort by',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((option) {
+                final isSelected = _sortOption == option;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _sortOption = option);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : const Color(0xFFE0E0E0),
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      option,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : const Color(0xFF555555),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

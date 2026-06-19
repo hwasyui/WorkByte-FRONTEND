@@ -207,7 +207,7 @@ class JobListScreenState extends State<JobListScreen> {
                   Text(
                     'My Jobs',
                     style: GoogleFonts.poppins(
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1A1A2E),
                     ),
@@ -738,32 +738,69 @@ class JobListScreenState extends State<JobListScreen> {
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Sort by',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            for (final option in ['Latest', 'Oldest'])
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(option, style: const TextStyle(fontSize: 13)),
-                trailing: _sortOption == option
-                    ? const Icon(Icons.check, color: AppColors.primary)
-                    : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  _onSortChanged(option);
-                },
+            Text(
+              'Sort by',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1A2E),
               ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Latest', 'Oldest'].map((option) {
+                final isSelected = _sortOption == option;
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _onSortChanged(option);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _primary : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? _primary : const Color(0xFFE0E0E0),
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      option,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : const Color(0xFF555555),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

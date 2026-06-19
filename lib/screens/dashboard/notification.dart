@@ -85,7 +85,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           children: [
             // ── App bar ──────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
               child: Row(
                 children: [
                   IconButton(
@@ -98,15 +98,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                   Text(
                     'Notifications',
-                    style: GoogleFonts.figtree(
-                      fontSize: 16,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF333333),
-                      height: 19 / 16,
                     ),
                   ),
                   const Spacer(),
-                  // Mark all read button
                   Consumer<NotificationProvider>(
                     builder: (context, provider, _) {
                       if (provider.unreadCount == 0)
@@ -124,22 +122,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       );
                     },
                   ),
-                  Text(
-                    'Latest',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF7D7D7D),
-                      height: 18 / 12,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.filter_list,
-                    size: 20,
-                    color: Color(0xFF333333),
-                  ),
-                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -199,7 +181,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           const SizedBox(height: 12),
                           Text(
                             'No notifications yet',
-                            style: GoogleFonts.figtree(
+                            style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF7D7D7D),

@@ -485,7 +485,7 @@ class _FreelancerCard extends StatelessWidget {
                               Text(
                                 'Top Rated',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFFD4A017),
                                 ),
@@ -517,12 +517,14 @@ class _FreelancerCard extends StatelessWidget {
                         label: '${freelancer.totalProjects} projects',
                       ),
                       const SizedBox(width: 8),
-                      _StatChip(
-                        icon: Icons.attach_money_rounded,
-                        label: freelancer.estimatedRate != null
-                            ? freelancer.formattedRate
-                            : 'Rate not set',
-                        isHighlight: freelancer.estimatedRate != null,
+                      Flexible(
+                        child: _StatChip(
+                          icon: Icons.attach_money_rounded,
+                          label: freelancer.estimatedRate != null
+                              ? freelancer.formattedRate
+                              : 'Rate not set',
+                          isHighlight: freelancer.estimatedRate != null,
+                        ),
                       ),
                     ],
                   ),
@@ -714,12 +716,16 @@ class _StatChip extends StatelessWidget {
             color: isHighlight ? AppColors.primary : const Color(0xFF9CA3AF),
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: isHighlight ? AppColors.primary : const Color(0xFF7D7D7D),
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isHighlight ? AppColors.primary : const Color(0xFF7D7D7D),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -1100,7 +1106,9 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                         if (widget.isClient) ...[
                           _DetailRow(
                             label: 'Website',
-                            value: widget.client?.websiteUrl ?? 'Not provided',
+                            value: (widget.client?.websiteUrl?.isNotEmpty == true)
+                                ? widget.client!.websiteUrl!
+                                : '-',
                           ),
                           const Divider(height: 20, color: Color(0xFFF0F0F1)),
                           _DetailRow(label: 'Rating', value: badge),

@@ -41,11 +41,11 @@ class NotificationItem extends StatelessWidget {
 
         // Avatar
         CircleAvatar(
-          radius: 12.5,
+          radius: 20,
           backgroundColor: AppColors.secondary,
           child: ClipOval(child: avatar),
         ),
-        const SizedBox(width: 13),
+        const SizedBox(width: 14),
 
         // Text content
         Expanded(
@@ -55,35 +55,34 @@ class NotificationItem extends StatelessWidget {
               // Message with bold prefix
               RichText(
                 text: TextSpan(
-                  style: GoogleFonts.figtree(
-                    fontSize: 12,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
-                    height: 14 / 12,
+                    height: 1.4,
                   ),
                   children: [
                     TextSpan(text: '$boldPrefix '),
                     TextSpan(
                       text: message,
-                      style: GoogleFonts.figtree(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                        height: 14 / 12,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF333333),
+                        height: 1.4,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               // Timestamp
               Text(
                 timestamp,
-                style: GoogleFonts.figtree(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
                   color: const Color(0xFF9E9E9E),
-                  height: 12 / 10,
                 ),
               ),
             ],

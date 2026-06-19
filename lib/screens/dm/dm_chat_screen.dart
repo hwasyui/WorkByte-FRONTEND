@@ -618,7 +618,7 @@ class _DMChatScreenState extends State<DMChatScreen>
             child: Text(
               'Accept Request',
               style: GoogleFonts.poppins(
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
@@ -704,7 +704,7 @@ class _DMChatScreenState extends State<DMChatScreen>
                   Text(
                     _systemMessageLabel(message.metadata?['type']),
                     style: GoogleFonts.poppins(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6C757D),
                     ),

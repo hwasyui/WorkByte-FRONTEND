@@ -55,7 +55,7 @@ class _FreelancerProfileSetupScreenState
                   children: [
                     Text(
                       'Complete your profile',
-                      style: GoogleFonts.figtree(
+                      style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: textDark,

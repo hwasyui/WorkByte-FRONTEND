@@ -838,7 +838,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ? ''
                   : (_client?.websiteUrl?.isNotEmpty == true
                         ? _client!.websiteUrl!
-                        : ''),
+                        : '-'),
               jobTitle: widget.job.jobTitle,
               category: categoryLabel(widget.job.projectCategory),
               tags: _tags,
@@ -1279,7 +1279,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         child: Text(
                           isExpanded ? 'Show less' : 'Read more',
                           style: GoogleFonts.poppins(
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,
                           ),
@@ -1447,7 +1447,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 11.5,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF5B6178),
             ),

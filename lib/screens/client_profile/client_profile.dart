@@ -891,6 +891,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           }
 
           return SafeArea(
+            top: false,
             child: Column(
               children: [
                 _buildStickyHeader(),
@@ -912,30 +913,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  Widget _buildDotGrid() {
-    return Column(
-      children: List.generate(
-        4,
-        (row) => Row(
-          children: List.generate(
-            5,
-            (col) => Padding(
-              padding: const EdgeInsets.all(3),
-              child: Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.35),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStickyHeader() {
     final auth = context.read<AuthProvider>();
 
@@ -947,86 +924,56 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           Stack(
             clipBehavior: Clip.none,
             children: [
-              // ── Banner ─────────────────────────────────────────────────
-              ClipPath(
-                clipper: _ProfileBannerClipper(),
-                child: Container(
-                  height: 185,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    image: DecorationImage(
-                      image: AssetImage('assets/profile.png'),
-                      fit: BoxFit.cover,
-                      opacity: 0.18,
+              Container(
+                height: 175,
+                width: double.infinity,
+                color: AppColors.secondary,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                        Row(
+                          children: [
+                            Consumer<AuthProvider>(
+                              builder: (context, auth, _) => IconButton(
+                                icon: const Icon(
+                                  Icons.share_outlined,
+                                  color: AppColors.primary,
+                                ),
+                                onPressed: auth.userId == null
+                                    ? null
+                                    : () => Share.share(
+                                        profileShareUrl(auth.userId!),
+                                      ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.bookmarks_outlined,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () => _tabController.animateTo(2),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 10,
-                        left: -45,
-                        child: Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 40,
-                        left: 30,
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      Positioned(top: 16, right: 56, child: _buildDotGrid()),
-                    ],
-                  ),
-                ),
-              ),
-              // ── Nav buttons ────────────────────────────────────────────
-              Positioned(
-                top: 0,
-                left: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.maybePop(context),
                 ),
               ),
               Positioned(
-                top: 0,
-                right: 48,
-                child: Consumer<AuthProvider>(
-                  builder: (context, auth, _) => IconButton(
-                    icon: const Icon(Icons.share_outlined, color: Colors.white),
-                    onPressed: auth.userId == null
-                        ? null
-                        : () => Share.share(profileShareUrl(auth.userId!)),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.bookmarks_outlined,
-                    color: Colors.white,
-                  ),
-                  onPressed: () => _tabController.animateTo(2),
-                ),
-              ),
-              // ── Profile avatar ─────────────────────────────────────────
-              Positioned(
-                bottom: -48,
+                bottom: -44,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -1034,7 +981,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 4),
-                      color: AppColors.secondary,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Consumer<ProfileProvider>(
                       builder: (context, profile, child) {
@@ -1068,46 +1021,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ],
           ),
 
-          const SizedBox(height: 58),
-
-          Builder(
-            builder: (context) {
-              final rating =
-                  Provider.of<ProfileProvider>(
-                    context,
-                    listen: false,
-                  ).clientProfile?.averageRatingGiven ??
-                  0.0;
-              final safeRating = rating.clamp(0.0, 5.0);
-              final fullStars = safeRating.floor();
-              final hasHalf = (safeRating - fullStars) >= 0.5;
-              return Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...List.generate(5, (i) {
-                      if (i < fullStars) {
-                        return const Icon(Icons.star_rounded, size: 16, color: Colors.amber);
-                      } else if (i == fullStars && hasHalf) {
-                        return const Icon(Icons.star_half_rounded, size: 16, color: Colors.amber);
-                      }
-                      return const Icon(Icons.star_outline_rounded, size: 16, color: Colors.amber);
-                    }),
-                    const SizedBox(width: 5),
-                    Text(
-                      '${safeRating.toStringAsFixed(1)}/5',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber[700],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 56),
 
           Consumer2<AuthProvider, ProfileProvider>(
             builder: (context, auth, profile, child) {
@@ -1119,14 +1033,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    auth.currentUser?.email ?? '',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey[500],
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1142,13 +1048,51 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     child: Text(
                       'Client',
                       style: GoogleFonts.poppins(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    auth.currentUser?.email ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
                 ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          Builder(
+            builder: (context) {
+              final rating =
+                  Provider.of<ProfileProvider>(
+                    context,
+                    listen: false,
+                  ).clientProfile?.averageRatingGiven ??
+                  0.0;
+              final safeRating = rating.clamp(0.0, 5.0);
+              return Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 15, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${safeRating.toStringAsFixed(1)}  ·  avg. rating given',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -1817,23 +1761,3 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 }
 
-class _ProfileBannerClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, 0);
-    path.lineTo(0, size.height - 30);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height + 20,
-      size.width,
-      size.height - 30,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(_ProfileBannerClipper oldClipper) => false;
-}

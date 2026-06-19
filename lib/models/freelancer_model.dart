@@ -59,7 +59,14 @@ class FreelancerModel {
     if (estimatedRate == null) return 'Rate not set';
     final currency = rateCurrency ?? 'USD';
     final period = rateTime ?? 'hourly';
-    return '$currency ${estimatedRate!.toStringAsFixed(0)} / $period';
+    const abbr = {
+      'hourly': 'hr',
+      'monthly': 'mo',
+      'weekly': 'wk',
+      'daily': 'day',
+      'yearly': 'yr',
+    };
+    return '$currency ${estimatedRate!.toStringAsFixed(0)} / ${abbr[period.toLowerCase()] ?? period}';
   }
 
   FreelancerModel copyWith({

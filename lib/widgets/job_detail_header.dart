@@ -67,18 +67,6 @@ class JobDetailHeader extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // 👇 NEW: report flag — only shown when onReport is provided
-                  if (onReport != null) ...[
-                    GestureDetector(
-                      onTap: onReport,
-                      child: const Icon(
-                        Icons.flag_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
                   GestureDetector(
                     onTap: onShare,
                     child: const Icon(
@@ -96,6 +84,17 @@ class JobDetailHeader extends StatelessWidget {
                       size: 24,
                     ),
                   ),
+                  if (onReport != null) ...[
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: onReport,
+                      child: const Icon(
+                        Icons.flag_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),

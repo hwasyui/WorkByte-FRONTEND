@@ -927,7 +927,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                     Text(
                       subtitle,
                       style: GoogleFonts.poppins(
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: const Color(0xFF8A8F98),
                         height: 1.4,
                       ),
@@ -1138,7 +1138,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         Text(
           'This will be saved as: ${_buildDurationString().isEmpty ? '-' : _buildDurationString()}',
           style: GoogleFonts.poppins(
-            fontSize: 11.5,
+            fontSize: 12,
             color: const Color(0xFF8A8F98),
           ),
         ),
@@ -1193,7 +1193,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         Text(
           'Break the project into milestones and assign payment percentages.',
           style: GoogleFonts.poppins(
-            fontSize: 11.5,
+            fontSize: 12,
             color: const Color(0xFF8A8F98),
             height: 1.45,
           ),

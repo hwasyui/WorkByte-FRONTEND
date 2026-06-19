@@ -1327,7 +1327,7 @@ class _QuickAccessCard extends StatelessWidget {
             Text(
               subtitle,
               style: GoogleFonts.poppins(
-                fontSize: 11,
+                fontSize: 12,
                 color: const Color(0xFF7D7D7D),
               ),
             ),
