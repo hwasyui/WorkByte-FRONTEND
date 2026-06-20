@@ -44,59 +44,97 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _StatCard(
+            child: LayoutBuilder(
+              builder: (_, constraints) {
+                final wide = constraints.maxWidth > 640;
+                final usersCard = _StatCard(
                   icon: Icons.people_alt_rounded,
                   iconColor: const Color(0xFF4F46E5),
                   iconBg: const Color(0xFFEEF2FF),
                   title: 'Total Users',
-                  subtitle: 'Overview of all registered users',
+                  subtitle: 'All registered users on the platform',
                   value: admin.totalUsers,
                   label: 'Total Users',
                   growthText: admin.totalUsers > 0 && newUsers > 0
-                      ? '+${(newUsers / admin.totalUsers * 100).round()}% vs last month'
+                      ? '+${(newUsers / admin.totalUsers * 100).round()}% this month'
                       : null,
                   chartColor: const Color(0xFF4F46E5),
                   useBarChart: false,
-                ),
-                const SizedBox(height: 20),
-                _StatCard(
+                );
+                final freelancersCard = _StatCard(
                   icon: Icons.person_rounded,
                   iconColor: const Color(0xFF059669),
                   iconBg: const Color(0xFFECFDF5),
                   title: 'Freelancers',
-                  subtitle: 'Overview of all freelancers',
+                  subtitle: 'All registered freelancers',
                   value: admin.totalFreelancers,
                   label: 'Freelancers',
                   growthText: admin.totalFreelancers > 0 && newFreelancers > 0
-                      ? '+${(newFreelancers / admin.totalFreelancers * 100).round()}% vs last month'
+                      ? '+${(newFreelancers / admin.totalFreelancers * 100).round()}% this month'
                       : null,
                   chartColor: const Color(0xFF059669),
                   useBarChart: true,
-                ),
-                const SizedBox(height: 20),
-                _StatCard(
+                );
+                final jobsCard = _StatCard(
                   icon: Icons.work_rounded,
                   iconColor: const Color(0xFF0891B2),
                   iconBg: const Color(0xFFECFEFF),
                   title: 'Jobs',
-                  subtitle: 'Overview of all job postings',
+                  subtitle: 'All job postings on the platform',
                   value: totalJobs,
                   label: 'Total Jobs',
                   growthText: null,
                   chartColor: const Color(0xFF0891B2),
                   useBarChart: false,
-                ),
-                const SizedBox(height: 20),
-                _ReportsCard(
+                );
+                final reportsCard = _ReportsCard(
                   pending: pending,
                   accepted: accepted,
                   dismissed: dismissed,
                   total: totalReports,
-                ),
-                const SizedBox(height: 20),
-              ],
+                );
+
+                if (wide) {
+                  return Column(
+                    children: [
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: usersCard),
+                            const SizedBox(width: 16),
+                            Expanded(child: freelancersCard),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: jobsCard),
+                            const SizedBox(width: 16),
+                            Expanded(child: reportsCard),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    usersCard,
+                    const SizedBox(height: 16),
+                    freelancersCard,
+                    const SizedBox(height: 16),
+                    jobsCard,
+                    const SizedBox(height: 16),
+                    reportsCard,
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
             ),
           ),
         );

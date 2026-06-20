@@ -39,8 +39,8 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _closedAccounts = [];
   bool _isAiLoading = false;
   bool _isClosedLoading = false;
-  String _scamStatusFilter = 'pending';
-  String _moderationStatusFilter = 'pending';
+  String _scamStatusFilter = 'all';
+  String _moderationStatusFilter = 'all';
   String _moderationTypeFilter = 'all';
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
@@ -384,6 +384,23 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<List<Map<String, dynamic>>> loadClientJobsList(String clientId) async {
+    if (_token == null) return [];
+    try {
+      final data = await AdminService.getAdminJobs(
+        _token!,
+        clientId: clientId,
+        pageSize: 100,
+        sortBy: 'created_at',
+        sortDir: 'desc',
+      );
+      return List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadClientJobsList error: $e');
+      return [];
+    }
+  }
+
   Future<void> loadClosedJobs({
     String? closureReason,
     String? search,
@@ -626,8 +643,8 @@ class AdminProvider extends ChangeNotifier {
     _moderationItems = [];
     _closedJobs = [];
     _closedAccounts = [];
-    _scamStatusFilter = 'pending';
-    _moderationStatusFilter = 'pending';
+    _scamStatusFilter = 'all';
+    _moderationStatusFilter = 'all';
     _moderationTypeFilter = 'all';
     _closedJobReasonFilter = 'all';
     _closedAccountRoleFilter = 'all';

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
+import '../../../widgets/admin/filter_dropdown_bar.dart';
 
 class AdminClosedPage extends StatefulWidget {
   const AdminClosedPage({super.key});
@@ -172,14 +173,25 @@ class _ClosedJobsTab extends StatelessWidget {
 
         return Column(
           children: [
-            _ClosedJobsFilterSection(
-              reasons: reasons,
-              selectedReason: admin.closedJobReasonFilter,
+            FilterDropdownBar(
+              summaryText: admin.closedJobReasonFilter == 'all'
+                  ? 'All reasons'
+                  : _label(admin.closedJobReasonFilter),
+              hasActiveFilter: admin.closedJobReasonFilter != 'all',
+              accentColor: const Color(0xFFD97706),
               count: total,
-              onReasonSelect: (value) {
-                onResetPage();
-                admin.loadClosedJobs(closureReason: value, page: 1);
-              },
+              groups: [
+                FilterGroupData(
+                  label: 'REASON',
+                  options: reasons,
+                  labelFor: _label,
+                  selected: admin.closedJobReasonFilter,
+                  onSelect: (value) {
+                    onResetPage();
+                    admin.loadClosedJobs(closureReason: value, page: 1);
+                  },
+                ),
+              ],
             ),
             Expanded(
               child: admin.isClosedLoading && admin.closedJobs.isEmpty
@@ -245,20 +257,35 @@ class _ClosedAccountsTab extends StatelessWidget {
 
         return Column(
           children: [
-            _ClosedAccountsFilterSection(
-              roles: roles,
-              reasons: reasons,
-              selectedRole: admin.closedAccountRoleFilter,
-              selectedReason: admin.closedAccountReasonFilter,
+            FilterDropdownBar(
+              summaryText: admin.closedAccountRoleFilter != 'all' || admin.closedAccountReasonFilter != 'all'
+                  ? 'Filters active'
+                  : 'All accounts',
+              hasActiveFilter: admin.closedAccountRoleFilter != 'all' || admin.closedAccountReasonFilter != 'all',
+              accentColor: const Color(0xFFD97706),
               count: total,
-              onRoleSelect: (value) {
-                onResetPage();
-                admin.loadClosedAccounts(role: value, page: 1);
-              },
-              onReasonSelect: (value) {
-                onResetPage();
-                admin.loadClosedAccounts(banReason: value, page: 1);
-              },
+              groups: [
+                FilterGroupData(
+                  label: 'ROLE',
+                  options: roles,
+                  labelFor: _label,
+                  selected: admin.closedAccountRoleFilter,
+                  onSelect: (value) {
+                    onResetPage();
+                    admin.loadClosedAccounts(role: value, page: 1);
+                  },
+                ),
+                FilterGroupData(
+                  label: 'REASON',
+                  options: reasons,
+                  labelFor: _label,
+                  selected: admin.closedAccountReasonFilter,
+                  onSelect: (value) {
+                    onResetPage();
+                    admin.loadClosedAccounts(banReason: value, page: 1);
+                  },
+                ),
+              ],
             ),
             Expanded(
               child: admin.isClosedLoading && admin.closedAccounts.isEmpty
@@ -442,177 +469,6 @@ class _RecordCard extends StatelessWidget {
   }
 }
 
-class _ClosedJobsFilterSection extends StatelessWidget {
-  final List<String> reasons;
-  final String selectedReason;
-  final int count;
-  final ValueChanged<String> onReasonSelect;
-
-  const _ClosedJobsFilterSection({
-    required this.reasons,
-    required this.selectedReason,
-    required this.count,
-    required this.onReasonSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2)),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 6),
-              Text(
-                'Filter by Reason',
-                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF), letterSpacing: 0.4),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-                child: Text('$count closed', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF6B7280))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: reasons.map((r) {
-                final active = selectedReason == r;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => onReasonSelect(r),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: active ? const Color(0xFFD97706) : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: active ? null : Border.all(color: const Color(0xFFE5E7EB), width: 1),
-                      ),
-                      child: Text(
-                        _label(r),
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280)),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClosedAccountsFilterSection extends StatelessWidget {
-  final List<String> roles;
-  final List<String> reasons;
-  final String selectedRole;
-  final String selectedReason;
-  final int count;
-  final ValueChanged<String> onRoleSelect;
-  final ValueChanged<String> onReasonSelect;
-
-  const _ClosedAccountsFilterSection({
-    required this.roles,
-    required this.reasons,
-    required this.selectedRole,
-    required this.selectedReason,
-    required this.count,
-    required this.onRoleSelect,
-    required this.onReasonSelect,
-  });
-
-  Widget _chipRow(List<String> options, String selected, ValueChanged<String> onTap) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: options.map((opt) {
-          final active = selected == opt;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => onTap(opt),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: active ? const Color(0xFFD97706) : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(20),
-                  border: active ? null : Border.all(color: const Color(0xFFE5E7EB), width: 1),
-                ),
-                child: Text(
-                  _label(opt),
-                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280)),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2)),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.filter_list_rounded, size: 15, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 6),
-              Text(
-                'Filters',
-                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF9CA3AF), letterSpacing: 0.4),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-                child: Text('$count restricted', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF6B7280))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('ROLE', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
-          const SizedBox(height: 6),
-          _chipRow(roles, selectedRole, onRoleSelect),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          const SizedBox(height: 12),
-          Text('REASON', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
-          const SizedBox(height: 6),
-          _chipRow(reasons, selectedReason, onReasonSelect),
-        ],
-      ),
-    );
-  }
-}
 
 class _Pagination extends StatelessWidget {
   final int page;

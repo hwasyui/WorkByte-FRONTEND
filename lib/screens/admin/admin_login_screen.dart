@@ -80,18 +80,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
+                  Image.asset(
+                    'web/icons/Icon-maskable-512.png',
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.shield_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(width: 12),
                   Column(

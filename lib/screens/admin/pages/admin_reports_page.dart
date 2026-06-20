@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../widgets/admin/filter_dropdown_bar.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -25,7 +26,36 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       builder: (context, admin, _) {
         return Column(
           children: [
-            _FilterBar(admin: admin),
+            FilterDropdownBar(
+              summaryText: admin.reportsStatusFilter != 'all' || admin.reportsTypeFilter != 'all'
+                  ? 'Filters active'
+                  : 'All reports',
+              hasActiveFilter: admin.reportsStatusFilter != 'all' || admin.reportsTypeFilter != 'all',
+              accentColor: const Color(0xFFD97706),
+              count: admin.reports.length,
+              groups: [
+                FilterGroupData(
+                  label: 'STATUS',
+                  options: const ['all', 'pending', 'accepted', 'dismissed'],
+                  labelFor: (s) => s == 'all' ? 'All' : '${s[0].toUpperCase()}${s.substring(1)}',
+                  selected: admin.reportsStatusFilter,
+                  onSelect: (s) => admin.loadReports(status: s),
+                ),
+                FilterGroupData(
+                  label: 'TYPE',
+                  options: const ['all', 'freelancer', 'client', 'job_post'],
+                  labelFor: (t) {
+                    switch (t) {
+                      case 'all': return 'All';
+                      case 'job_post': return 'Job Post';
+                      default: return '${t[0].toUpperCase()}${t.substring(1)}';
+                    }
+                  },
+                  selected: admin.reportsTypeFilter,
+                  onSelect: (t) => admin.loadReports(reportedType: t),
+                ),
+              ],
+            ),
             Expanded(
               child: admin.isTableLoading
                   ? const Center(
@@ -125,211 +155,6 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   }
 }
 
-class _FilterBar extends StatelessWidget {
-  final AdminProvider admin;
-  const _FilterBar({required this.admin});
-
-  @override
-  Widget build(BuildContext context) {
-    final statusOptions = ['all', 'pending', 'accepted', 'dismissed'];
-    final typeOptions = ['all', 'freelancer', 'client', 'job_post'];
-    final reportCount = admin.reports.length;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header row
-          Row(
-            children: [
-              const Icon(
-                Icons.filter_list_rounded,
-                size: 15,
-                color: Color(0xFF9CA3AF),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Filters',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF9CA3AF),
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$reportCount report${reportCount == 1 ? '' : 's'}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Status row
-          Text(
-            'STATUS',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFB0B7C3),
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: statusOptions.map((s) {
-                final isActive = admin.reportsStatusFilter == s;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => admin.loadReports(status: s),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? _statusColor(s)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: isActive
-                            ? null
-                            : Border.all(
-                                color: const Color(0xFFE5E7EB), width: 1),
-                      ),
-                      child: Text(
-                        _statusLabel(s),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isActive
-                              ? Colors.white
-                              : const Color(0xFF6B7280),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          const SizedBox(height: 12),
-
-          // Type row
-          Text(
-            'TYPE',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFB0B7C3),
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: typeOptions.map((t) {
-                final isActive = admin.reportsTypeFilter == t;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => admin.loadReports(reportedType: t),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? const Color(0xFF4F46E5)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: isActive
-                            ? null
-                            : Border.all(
-                                color: const Color(0xFFE5E7EB), width: 1),
-                      ),
-                      child: Text(
-                        _typeLabel(t),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isActive
-                              ? Colors.white
-                              : const Color(0xFF6B7280),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'pending':  return const Color(0xFFD97706);
-      case 'accepted': return const Color(0xFF059669);
-      case 'dismissed': return const Color(0xFF6B7280);
-      default: return const Color(0xFF4F46E5);
-    }
-  }
-
-  String _statusLabel(String s) {
-    switch (s) {
-      case 'all': return 'All';
-      case 'pending': return 'Pending';
-      case 'accepted': return 'Accepted';
-      case 'dismissed': return 'Dismissed';
-      default: return s;
-    }
-  }
-
-  String _typeLabel(String t) {
-    switch (t) {
-      case 'all': return 'All Types';
-      case 'freelancer': return 'Freelancer';
-      case 'client': return 'Client';
-      case 'job_post': return 'Job Post';
-      default: return t;
-    }
-  }
-}
 
 class _ReportCard extends StatelessWidget {
   final Map<String, dynamic> report;

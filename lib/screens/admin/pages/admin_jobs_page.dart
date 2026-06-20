@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../widgets/admin/filter_dropdown_bar.dart';
 
 class AdminJobsPage extends StatefulWidget {
   const AdminJobsPage({super.key});
@@ -56,125 +57,44 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
 
         return Column(
           children: [
-            // Filter bar
+            // Search bar
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                border: const Border(
-                  bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+                border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: _SearchField(
+                controller: _searchCtrl,
+                onChanged: _onSearchChanged,
+                hint: 'Search jobs by title…',
+              ),
+            ),
+            // Filter dropdown
+            FilterDropdownBar(
+              summaryText: _statusFilter == 'all' ? 'All jobs' : _label(_statusFilter),
+              hasActiveFilter: _statusFilter != 'all',
+              accentColor: const Color(0xFF4F46E5),
+              count: total,
+              groups: [
+                FilterGroupData(
+                  label: 'STATUS',
+                  options: _statuses,
+                  labelFor: _label,
+                  selected: _statusFilter,
+                  onSelect: (status) {
+                    setState(() {
+                      _statusFilter = status;
+                      _currentPage = 1;
+                    });
+                    admin.loadJobsPage(
+                      1,
+                      status: status == 'all' ? null : status,
+                      search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
+                    );
+                  },
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.filter_list_rounded,
-                        size: 15,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Filter by Status',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9CA3AF),
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$total jobs',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _SearchField(
-                    controller: _searchCtrl,
-                    onChanged: _onSearchChanged,
-                    hint: 'Search jobs by title…',
-                  ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _statuses.map((status) {
-                        final isActive = _statusFilter == status;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _statusFilter = status;
-                                _currentPage = 1;
-                              });
-                              admin.loadJobsPage(
-                                1,
-                                status: status == 'all' ? null : status,
-                                search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-                              );
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? const Color(0xFF4F46E5)
-                                    : const Color(0xFFF3F4F6),
-                                borderRadius: BorderRadius.circular(20),
-                                border: isActive
-                                    ? null
-                                    : Border.all(
-                                        color: const Color(0xFFE5E7EB),
-                                        width: 1,
-                                      ),
-                              ),
-                              child: Text(
-                                _label(status),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: isActive
-                                      ? Colors.white
-                                      : const Color(0xFF6B7280),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
 
             // Jobs list

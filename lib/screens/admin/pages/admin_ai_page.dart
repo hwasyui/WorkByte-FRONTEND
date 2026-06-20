@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
+import '../../../widgets/admin/filter_dropdown_bar.dart';
 
 class AdminAiPage extends StatefulWidget {
   const AdminAiPage({super.key});
@@ -51,12 +52,12 @@ class _AdminAiPageState extends State<AdminAiPage>
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3E8FF),
+                      color: const Color(0xFFEEF2FF),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       Icons.smart_toy_rounded,
-                      color: Color(0xFF7C3AED),
+                      color: Color(0xFF4F46E5),
                       size: 20,
                     ),
                   ),
@@ -117,9 +118,9 @@ class _AdminAiPageState extends State<AdminAiPage>
                   fontWeight: FontWeight.w600,
                 ),
                 unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-                labelColor: const Color(0xFF7C3AED),
+                labelColor: const Color(0xFF4F46E5),
                 unselectedLabelColor: const Color(0xFF6B7280),
-                indicatorColor: const Color(0xFF7C3AED),
+                indicatorColor: const Color(0xFF4F46E5),
                 indicatorWeight: 2.5,
                 tabs: const [
                   Tab(text: 'Scam Detection'),
@@ -147,7 +148,7 @@ class _AdminAiPageState extends State<AdminAiPage>
 class _ScamTab extends StatelessWidget {
   const _ScamTab();
 
-  static const _statuses = ['pending', 'safe', 'removed', 'all'];
+  static const _statuses = ['all', 'pending', 'safe', 'removed'];
 
   void _showAiInfo(BuildContext context) {
     showDialog(
@@ -304,7 +305,7 @@ class _ScamTab extends StatelessWidget {
                     width: 6,
                     height: 6,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF7C3AED),
+                      color: Color(0xFF4F46E5),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -313,7 +314,7 @@ class _ScamTab extends StatelessWidget {
                     'Powered by SBERT - Random Forest',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: const Color(0xFF7C3AED),
+                      color: const Color(0xFF4F46E5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -326,9 +327,9 @@ class _ScamTab extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3E8FF),
+                        color: const Color(0xFFEEF2FF),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                        border: Border.all(color: const Color(0xFFC7D2FE)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -336,7 +337,7 @@ class _ScamTab extends StatelessWidget {
                           const Icon(
                             Icons.info_outline_rounded,
                             size: 13,
-                            color: Color(0xFF7C3AED),
+                            color: Color(0xFF4F46E5),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -344,7 +345,7 @@ class _ScamTab extends StatelessWidget {
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF7C3AED),
+                              color: const Color(0xFF4F46E5),
                             ),
                           ),
                         ],
@@ -355,12 +356,22 @@ class _ScamTab extends StatelessWidget {
               ),
             ),
 
-            _FilterBar(
-              options: _statuses,
-              selected: admin.scamStatusFilter,
-              onSelect: (s) => admin.loadScamFlags(status: s),
+            FilterDropdownBar(
+              summaryText: admin.scamStatusFilter == 'all'
+                  ? 'All flags'
+                  : '${admin.scamStatusFilter[0].toUpperCase()}${admin.scamStatusFilter.substring(1)}',
+              hasActiveFilter: admin.scamStatusFilter != 'all',
               accentColor: const Color(0xFFDC2626),
               count: admin.scamFlags.length,
+              groups: [
+                FilterGroupData(
+                  label: 'STATUS',
+                  options: _statuses,
+                  labelFor: (s) => '${s[0].toUpperCase()}${s.substring(1)}',
+                  selected: admin.scamStatusFilter,
+                  onSelect: (s) => admin.loadScamFlags(status: s),
+                ),
+              ],
             ),
 
             Expanded(
@@ -881,7 +892,7 @@ class _ScamCardState extends State<_ScamCard> {
 class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
-  static const _statuses = ['pending', 'approved', 'rejected', 'all'];
+  static const _statuses = ['all', 'pending', 'approved', 'rejected'];
   static const _types = [
     'all',
     'job_post',
@@ -1060,7 +1071,7 @@ class _ModerationTab extends StatelessWidget {
                     width: 6,
                     height: 6,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF7C3AED),
+                      color: Color(0xFF4F46E5),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1069,7 +1080,7 @@ class _ModerationTab extends StatelessWidget {
                     'Powered by RoBERTa - F1 0.72',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: const Color(0xFF7C3AED),
+                      color: const Color(0xFF4F46E5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1082,9 +1093,9 @@ class _ModerationTab extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3E8FF),
+                        color: const Color(0xFFEEF2FF),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                        border: Border.all(color: const Color(0xFFC7D2FE)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1092,7 +1103,7 @@ class _ModerationTab extends StatelessWidget {
                           const Icon(
                             Icons.info_outline_rounded,
                             size: 13,
-                            color: Color(0xFF7C3AED),
+                            color: Color(0xFF4F46E5),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1100,7 +1111,7 @@ class _ModerationTab extends StatelessWidget {
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF7C3AED),
+                              color: const Color(0xFF4F46E5),
                             ),
                           ),
                         ],
@@ -1111,15 +1122,28 @@ class _ModerationTab extends StatelessWidget {
               ),
             ),
 
-            // Unified status + type filter
-            _ModerationFilterSection(
-              statuses: _statuses,
-              types: _types,
-              typeLabels: _typeLabels,
-              selectedStatus: admin.moderationStatusFilter,
-              selectedType: admin.moderationTypeFilter,
-              onStatusSelect: (s) => admin.loadModerationItems(status: s),
-              onTypeSelect: (t) => admin.loadModerationItems(contentType: t),
+            FilterDropdownBar(
+              summaryText: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all'
+                  ? 'Filters active'
+                  : 'All content',
+              hasActiveFilter: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all',
+              accentColor: const Color(0xFF4F46E5),
+              groups: [
+                FilterGroupData(
+                  label: 'STATUS',
+                  options: _statuses,
+                  labelFor: (s) => '${s[0].toUpperCase()}${s.substring(1)}',
+                  selected: admin.moderationStatusFilter,
+                  onSelect: (s) => admin.loadModerationItems(status: s),
+                ),
+                FilterGroupData(
+                  label: 'CONTENT TYPE',
+                  options: _types,
+                  labelFor: (t) => _typeLabels[t] ?? t,
+                  selected: admin.moderationTypeFilter,
+                  onSelect: (t) => admin.loadModerationItems(contentType: t),
+                ),
+              ],
             ),
 
             Expanded(
@@ -2080,398 +2104,6 @@ class _ScamLabelRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Shared small widgets ─────────────────────────────────────────────────────
-
-class _FilterBar extends StatefulWidget {
-  final List<String> options;
-  final String selected;
-  final ValueChanged<String> onSelect;
-  final Color accentColor;
-  final int? count;
-
-  const _FilterBar({
-    required this.options,
-    required this.selected,
-    required this.onSelect,
-    required this.accentColor,
-    this.count,
-  });
-
-  @override
-  State<_FilterBar> createState() => _FilterBarState();
-}
-
-class _FilterBarState extends State<_FilterBar> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFiltered = widget.selected != widget.options.last; // 'all' is last
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: Row(
-                children: [
-                  if (widget.count != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${widget.count} items',
-                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF6B7280)),
-                      ),
-                    ),
-                  const Spacer(),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isFiltered ? widget.accentColor.withOpacity(0.08) : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isFiltered ? widget.accentColor.withOpacity(0.3) : const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.tune_rounded, size: 14, color: isFiltered ? widget.accentColor : const Color(0xFF6B7280)),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Filter',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: isFiltered ? widget.accentColor : const Color(0xFF6B7280),
-                          ),
-                        ),
-                        if (isFiltered) ...[
-                          const SizedBox(width: 5),
-                          Container(
-                            width: 6, height: 6,
-                            decoration: BoxDecoration(color: widget.accentColor, shape: BoxShape.circle),
-                          ),
-                        ],
-                        const SizedBox(width: 4),
-                        Icon(
-                          _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                          size: 14,
-                          color: isFiltered ? widget.accentColor : const Color(0xFF9CA3AF),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 180),
-            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1, color: Color(0xFFF3F4F6)),
-                  const SizedBox(height: 10),
-                  Text('STATUS', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: widget.options.map((opt) {
-                        final active = opt == widget.selected;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GestureDetector(
-                            onTap: () => widget.onSelect(opt),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                              decoration: BoxDecoration(
-                                color: active ? widget.accentColor : const Color(0xFFF3F4F6),
-                                borderRadius: BorderRadius.circular(20),
-                                border: active ? null : Border.all(color: const Color(0xFFE5E7EB)),
-                              ),
-                              child: Text(
-                                opt[0].toUpperCase() + opt.substring(1),
-                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280)),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Unified moderation filter (status + content type — popup dropdown) ──────
-
-class _ModerationFilterSection extends StatefulWidget {
-  final List<String> statuses;
-  final List<String> types;
-  final Map<String, String> typeLabels;
-  final String selectedStatus;
-  final String selectedType;
-  final ValueChanged<String> onStatusSelect;
-  final ValueChanged<String> onTypeSelect;
-
-  const _ModerationFilterSection({
-    required this.statuses,
-    required this.types,
-    required this.typeLabels,
-    required this.selectedStatus,
-    required this.selectedType,
-    required this.onStatusSelect,
-    required this.onTypeSelect,
-  });
-
-  @override
-  State<_ModerationFilterSection> createState() => _ModerationFilterSectionState();
-}
-
-class _ModerationFilterSectionState extends State<_ModerationFilterSection> {
-  bool get _hasActiveFilter =>
-      widget.selectedStatus != widget.statuses.first ||
-      widget.selectedType != widget.types.first;
-
-  void _openMenu(BuildContext btnCtx) {
-    final RenderBox button = btnCtx.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(btnCtx).context.findRenderObject() as RenderBox;
-    final Offset offset =
-        button.localToGlobal(Offset.zero, ancestor: overlay);
-    showMenu<void>(
-      context: btnCtx,
-      position: RelativeRect.fromRect(
-        Rect.fromLTWH(
-          offset.dx,
-          offset.dy + button.size.height + 4,
-          button.size.width,
-          0,
-        ),
-        Offset.zero & overlay.size,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 3,
-      items: [
-        _menuHeader('STATUS'),
-        ...widget.statuses.map(
-          (s) => _menuRadio(
-            s,
-            s[0].toUpperCase() + s.substring(1),
-            widget.selectedStatus,
-            widget.onStatusSelect,
-          ),
-        ),
-        const PopupMenuDivider(),
-        _menuHeader('CONTENT TYPE'),
-        ...widget.types.map(
-          (t) => _menuRadio(
-            t,
-            widget.typeLabels[t] ?? t,
-            widget.selectedType,
-            widget.onTypeSelect,
-          ),
-        ),
-      ],
-    );
-  }
-
-  PopupMenuEntry<void> _menuHeader(String text) => PopupMenuItem<void>(
-    enabled: false,
-    height: 28,
-    padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
-    child: Text(
-      text,
-      style: GoogleFonts.poppins(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFFB0B7C3),
-        letterSpacing: 0.8,
-      ),
-    ),
-  );
-
-  PopupMenuEntry<void> _menuRadio(
-    String value,
-    String label,
-    String selected,
-    ValueChanged<String> onSelect,
-  ) => PopupMenuItem<void>(
-    onTap: () => onSelect(value),
-    height: 36,
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    child: Row(
-      children: [
-        Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: value == selected
-                  ? const Color(0xFF7C3AED)
-                  : const Color(0xFFD1D5DB),
-              width: value == selected ? 5 : 1.5,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            fontWeight:
-                value == selected ? FontWeight.w600 : FontWeight.w400,
-            color: value == selected
-                ? const Color(0xFF7C3AED)
-                : const Color(0xFF374151),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                if (_hasActiveFilter)
-                  Container(
-                    width: 7,
-                    height: 7,
-                    margin: const EdgeInsets.only(right: 7),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF7C3AED),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                Text(
-                  _hasActiveFilter ? 'Filters active' : 'All content',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _hasActiveFilter
-                        ? const Color(0xFF7C3AED)
-                        : const Color(0xFF374151),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Builder(
-            builder: (btnCtx) => GestureDetector(
-              onTap: () => _openMenu(btnCtx),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _hasActiveFilter
-                      ? const Color(0xFFF3E8FF)
-                      : const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _hasActiveFilter
-                        ? const Color(0xFFDDD6FE)
-                        : const Color(0xFFE5E7EB),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.tune_rounded,
-                      size: 14,
-                      color: _hasActiveFilter
-                          ? const Color(0xFF7C3AED)
-                          : const Color(0xFF6B7280),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Filter',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _hasActiveFilter
-                            ? const Color(0xFF7C3AED)
-                            : const Color(0xFF6B7280),
-                      ),
-                    ),
-                    if (_hasActiveFilter) ...[
-                      const SizedBox(width: 5),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF7C3AED),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 14,
-                      color: _hasActiveFilter
-                          ? const Color(0xFF7C3AED)
-                          : const Color(0xFF6B7280),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

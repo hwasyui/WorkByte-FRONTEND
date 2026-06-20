@@ -23,18 +23,11 @@ class AdminSidebar extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
                   child: Row(
                     children: [
-                      Container(
+                      Image.asset(
+                        'assets/workbyte-logo.png',
                         width: 36,
                         height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4F46E5),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.shield_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(width: 12),
                       Column(

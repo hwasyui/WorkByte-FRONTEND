@@ -147,6 +147,7 @@ class AdminService {
     String? experienceLevel,
     String? projectCategory,
     bool? isAiGenerated,
+    String? clientId,
     String? search,
     String sortBy = 'created_at',
     String sortDir = 'desc',
@@ -166,6 +167,7 @@ class AdminService {
       if (projectCategory != null && projectCategory.isNotEmpty)
         'project_category': projectCategory,
       if (isAiGenerated != null) 'is_ai_generated': isAiGenerated.toString(),
+      if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       'sort_by': sortBy,
       'sort_dir': sortDir,
@@ -470,6 +472,66 @@ class AdminService {
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
       debugPrint('resolveAppeal error: $e');
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getJobDetail(
+    String token,
+    String jobPostId,
+  ) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+        headers: _headers(token),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) return Map<String, dynamic>.from(details);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<List<Map<String, dynamic>>> getJobRoles(
+    String token,
+    String jobPostId,
+  ) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
+        headers: _headers(token),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is List) return List<Map<String, dynamic>>.from(details);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<bool> submitJobReport(
+    String token, {
+    required String jobPostId,
+    required List<String> reasons,
+    String? customReason,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/reports'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'reported_type': 'job_post',
+          'job_post_id': jobPostId,
+          'reasons': reasons,
+          if (customReason != null && customReason.isNotEmpty)
+            'custom_reason': customReason,
+        }),
+      );
+      return res.statusCode == 200 || res.statusCode == 201;
+    } catch (_) {
       return false;
     }
   }

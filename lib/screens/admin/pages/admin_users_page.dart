@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/admin_service.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -385,9 +386,14 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
   bool _loadingProfile = false;
   Map<String, dynamic>? _fullProfile;
 
+  bool _loadingJobs = false;
+  List<Map<String, dynamic>> _clientJobs = [];
+
   String get _userId => (widget.user['user_id'] ?? widget.user['id'])?.toString() ?? '';
   String get _freelancerId => widget.user['freelancer_id']?.toString() ?? '';
+  String get _clientId => widget.user['client_id']?.toString() ?? '';
   bool get _isFreelancer => widget.type == 'Freelancer';
+  bool get _isClient => widget.type == 'Client';
 
   @override
   void initState() {
@@ -395,6 +401,28 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
     if (_isFreelancer && _freelancerId.isNotEmpty) {
       _loadFullProfile();
     }
+    if (_isClient && _clientId.isNotEmpty) {
+      _loadClientJobs();
+    }
+  }
+
+  Future<void> _loadClientJobs() async {
+    setState(() => _loadingJobs = true);
+    final jobs = await context.read<AdminProvider>().loadClientJobsList(_clientId);
+    if (mounted) setState(() { _clientJobs = jobs; _loadingJobs = false; });
+  }
+
+  void _showJobDetail(Map<String, dynamic> job) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black45,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+        clipBehavior: Clip.antiAlias,
+        child: _JobDetailDialog(job: job),
+      ),
+    );
   }
 
   Future<void> _loadFullProfile() async {
@@ -765,6 +793,70 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                       ],
                     ],
                   ),
+                  // ── Posted Jobs ───────────────────────────────────────
+                  const SizedBox(height: 20),
+                  _UserSectionLabel('POSTED JOBS'),
+                  const SizedBox(height: 8),
+                  if (_loadingJobs)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4F46E5)))),
+                    )
+                  else if (_clientJobs.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text('No jobs posted yet.', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF))),
+                    )
+                  else
+                    Column(
+                      children: _clientJobs.map((job) {
+                        final title = job['job_title']?.toString() ?? 'Untitled';
+                        final rawDate = job['posted_at']?.toString() ?? job['created_at']?.toString();
+                        final date = _fmtDate(rawDate);
+                        final status = job['status']?.toString() ?? '';
+                        return InkWell(
+                          onTap: () => _showJobDetail(job),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32, height: 32,
+                                  decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8)),
+                                  child: const Icon(Icons.work_outline_rounded, size: 16, color: Color(0xFF6B7280)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(title, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF111827)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      Text('Posted $date', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF))),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: status == 'open' ? const Color(0xFFDCFCE7) : status == 'closed' ? const Color(0xFFFEE2E2) : const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    status,
+                                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600,
+                                      color: status == 'open' ? const Color(0xFF16A34A) : status == 'closed' ? const Color(0xFFDC2626) : const Color(0xFF6B7280)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFFD1D5DB)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                 ],
 
                 // ── Close button ─────────────────────────────────────────
@@ -802,6 +894,337 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
       final dt = DateTime.parse(d);
       return '${dt.month}/${dt.year}';
     } catch (_) { return d.split('T').first; }
+  }
+}
+
+class _JobDetailDialog extends StatefulWidget {
+  final Map<String, dynamic> job;
+  const _JobDetailDialog({required this.job});
+  @override
+  State<_JobDetailDialog> createState() => _JobDetailDialogState();
+}
+
+class _JobDetailDialogState extends State<_JobDetailDialog> {
+  bool _loading = true;
+  Map<String, dynamic>? _detail;
+  List<Map<String, dynamic>> _roles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDetails();
+  }
+
+  Future<void> _fetchDetails() async {
+    final token = context.read<AdminProvider>().token;
+    final jobPostId = widget.job['job_post_id']?.toString() ?? '';
+    if (token == null || jobPostId.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+    final results = await Future.wait([
+      AdminService.getJobDetail(token, jobPostId),
+      AdminService.getJobRoles(token, jobPostId),
+    ]);
+    if (mounted) {
+      setState(() {
+        _detail = results[0] as Map<String, dynamic>?;
+        _roles = results[1] as List<Map<String, dynamic>>;
+        _loading = false;
+      });
+    }
+  }
+
+  static String _fmt(String? d) {
+    if (d == null || d.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(d);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return d.split('T').first;
+    }
+  }
+
+  Widget _row(String label, String value, {Color? valueColor, bool multiLine = false}) {
+    if (value.isEmpty || value == '-') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: multiLine
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
+                const SizedBox(height: 4),
+                Text(value, style: GoogleFonts.poppins(fontSize: 13, color: valueColor ?? const Color(0xFF374151), height: 1.5)),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 120, child: Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.5))),
+                Expanded(child: Text(value, style: GoogleFonts.poppins(fontSize: 13, color: valueColor ?? const Color(0xFF111827)))),
+              ],
+            ),
+    );
+  }
+
+  void _showReportDialog() {
+    final reasons = <String>{};
+    final customController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) {
+          bool submitting = false;
+          final allReasons = ['spam', 'scam', 'inappropriate_content', 'harassment', 'other'];
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 60),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Report This Job', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF111827))),
+                  const SizedBox(height: 4),
+                  Text('Select one or more reasons', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280))),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: allReasons.map((r) {
+                      final active = reasons.contains(r);
+                      return GestureDetector(
+                        onTap: () => setInner(() { if (active) reasons.remove(r); else reasons.add(r); }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: active ? const Color(0xFFDC2626) : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(r.replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280))),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: customController,
+                    maxLines: 2,
+                    style: GoogleFonts.poppins(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Additional details (optional)',
+                      hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280))),
+                      ),
+                      const SizedBox(width: 8),
+                      submitting
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)))
+                          : ElevatedButton(
+                              onPressed: (reasons.isEmpty && customController.text.trim().isEmpty) ? null : () async {
+                                setInner(() => submitting = true);
+                                final token = context.read<AdminProvider>().token ?? '';
+                                final jobPostId = widget.job['job_post_id']?.toString() ?? '';
+                                final ok = await AdminService.submitJobReport(
+                                  token,
+                                  jobPostId: jobPostId,
+                                  reasons: reasons.toList(),
+                                  customReason: customController.text.trim().isEmpty ? null : customController.text.trim(),
+                                );
+                                if (ctx.mounted) Navigator.of(ctx).pop();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(ok ? 'Report submitted.' : 'Failed to submit report.'),
+                                    backgroundColor: ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                  ));
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFDC2626),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                elevation: 0,
+                              ),
+                              child: Text('Submit Report', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                            ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.job['job_title']?.toString() ?? 'Untitled';
+    final status = widget.job['status']?.toString() ?? '';
+    final d = _detail ?? widget.job;
+
+    final statusColor = status == 'open'
+        ? const Color(0xFF16A34A)
+        : status == 'closed'
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF6B7280);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1E2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.work_outline_rounded, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: statusColor.withOpacity(0.18), borderRadius: BorderRadius.circular(20)),
+                      child: Text(status.toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor, letterSpacing: 0.6)),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20)),
+            ],
+          ),
+        ),
+        // Body
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 480),
+          child: _loading
+              ? const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5), strokeWidth: 2)),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _row('Project Type', d['project_type']?.toString() ?? ''),
+                      _row('Scope', d['project_scope']?.toString() ?? ''),
+                      _row('Experience', d['experience_level']?.toString() ?? ''),
+                      _row('Category', d['project_category']?.toString() ?? ''),
+                      _row('Created', _fmt(d['created_at']?.toString())),
+                      _row('Posted', _fmt(d['posted_at']?.toString())),
+                      if ((d['closure_reason']?.toString() ?? '').isNotEmpty)
+                        _row('Closure Reason', d['closure_reason'].toString(), valueColor: const Color(0xFFDC2626)),
+
+                      // Description
+                      if ((d['job_description']?.toString() ?? '').isNotEmpty) ...[
+                        const Divider(color: Color(0xFFF3F4F6)),
+                        const SizedBox(height: 4),
+                        _row('Description', d['job_description'].toString(), multiLine: true),
+                      ],
+
+                      // Roles
+                      if (_roles.isNotEmpty) ...[
+                        const Divider(color: Color(0xFFF3F4F6)),
+                        const SizedBox(height: 4),
+                        Text('ROLES (${_roles.length})', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB0B7C3), letterSpacing: 0.8)),
+                        const SizedBox(height: 10),
+                        ..._roles.map((role) {
+                          final rTitle = role['role_title']?.toString() ?? 'Untitled Role';
+                          final budget = role['role_budget'];
+                          final currency = role['budget_currency']?.toString() ?? 'USD';
+                          final budgetType = role['budget_type']?.toString() ?? '';
+                          final positions = role['positions_available']?.toString() ?? '1';
+                          final rDesc = role['role_description']?.toString() ?? '';
+                          String budgetStr = '';
+                          if (budget != null) {
+                            budgetStr = '$currency $budget';
+                            if (budgetType.isNotEmpty) budgetStr += ' / $budgetType';
+                          }
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(child: Text(rTitle, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)))),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12)),
+                                      child: Text('$positions slot(s)', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF4F46E5), fontWeight: FontWeight.w500)),
+                                    ),
+                                  ],
+                                ),
+                                if (budgetStr.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(budgetStr, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF059669), fontWeight: FontWeight.w500)),
+                                ],
+                                if (rDesc.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(rDesc, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4)),
+                                ],
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+        ),
+        // Footer: Report button
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF3F4F6)))),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _loading ? null : _showReportDialog,
+              icon: const Icon(Icons.flag_outlined, size: 16),
+              label: Text('Report This Job', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFDC2626)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -97,6 +97,7 @@ flutter:
   assets:
     - assets/google.png
     - assets/workbyte-logo.png
+    - web/icons/Icon-maskable-512.png
     - assets/workbyte2.png
     - assets/workbyte-purple.png
     - assets/login-header.png
