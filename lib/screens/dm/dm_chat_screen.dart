@@ -234,30 +234,89 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
   }
 
+  static const _harmfulLabelNames = {
+    'identity_hate': 'Identity Hate',
+    'toxic': 'Toxicity',
+    'toxicity': 'Toxicity',
+    'severe_toxic': 'Severe Toxicity',
+    'obscene': 'Obscene',
+    'threat': 'Threat',
+    'insult': 'Insult',
+  };
+
+  static String _formatHarmfulLabel(String raw) =>
+      _harmfulLabelNames[raw.trim().toLowerCase()] ??
+      raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
+
   void _showFailedMessageReason(DMMessageModel message) {
-    final reason =
-        message.failureReason ??
-        'This message failed to send. Please check the content and try again.';
+    final raw = message.failureReason ?? '';
+    final isHarmful = raw.toLowerCase().contains('detected as harmful') ||
+        raw.toLowerCase().contains('harmful content');
+
+    if (isHarmful) {
+      final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(raw);
+      final labels = labelMatch != null
+          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
+          : '';
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+              const SizedBox(width: 8),
+              Text('Message Blocked', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This message contains harmful content and was not saved.',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+              ),
+              if (labels.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Detected: $labels',
+                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Text(
+                'This message will disappear once you refresh the app. Please be mindful of the content in your next message.',
+                style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.primary)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final reason = raw.isNotEmpty
+        ? raw
+        : 'This message failed to send. Please check the content and try again.';
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(
-          'Message failed',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
+        title: Text('Message Failed', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
         content: Text(reason, style: GoogleFonts.poppins(fontSize: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
+            child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.primary)),
           ),
         ],
       ),

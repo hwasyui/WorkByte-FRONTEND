@@ -108,7 +108,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         return;
       }
 
-      // If fixed budget, always use role's budget — ignore whatever is in the field
+      // If fixed budget, always use role's budget; ignore whatever is in the field
       final double proposedBudget =
           _isFixedBudget && widget.role.roleBudget != null
           ? widget.role.roleBudget!
@@ -144,13 +144,81 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         );
       }
     } catch (e) {
-      _showError('Failed to submit proposal. Please try again.');
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _showError(msg.isNotEmpty ? msg : 'Failed to submit proposal. Please try again.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
+  static const _harmfulLabelNames = {
+    'identity_hate': 'Identity Hate',
+    'toxic': 'Toxicity',
+    'toxicity': 'Toxicity',
+    'severe_toxic': 'Severe Toxicity',
+    'obscene': 'Obscene',
+    'threat': 'Threat',
+    'insult': 'Insult',
+  };
+
+  static String _formatHarmfulLabel(String raw) =>
+      _harmfulLabelNames[raw.trim().toLowerCase()] ??
+      raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
+
   void _showError(String message) {
+    final isHarmful = message.toLowerCase().contains('detected as harmful') ||
+        message.toLowerCase().contains('harmful content');
+
+    if (isHarmful) {
+      final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(message);
+      final labels = labelMatch != null
+          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
+          : '';
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+              const SizedBox(width: 8),
+              Text('Proposal Blocked', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your cover letter contains harmful content and was not submitted.',
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+              ),
+              if (labels.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Detected: $labels',
+                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Text(
+                'Please revise your cover letter and try again.',
+                style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.poppins(fontSize: 13)),
@@ -383,7 +451,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       );
     }
 
-    // Negotiable — show editable field
+    // Negotiable: show editable field
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -557,7 +625,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             color: const Color(0xFF7D7D7D),
           ),
         ),
-        // Soft nudge — only shown when no files attached
+        // Soft nudge, only shown when no files attached
         if (_attachedFiles.isEmpty) ...[
           const SizedBox(height: 6),
           Row(
