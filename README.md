@@ -1,6 +1,6 @@
 # 📱 WorkByte Frontend
 
-Flutter mobile application for **WorkByte**, a freelance job marketplace with AI-powered features.
+Flutter mobile application for **WorkByte**, providing a modern interface for clients and freelancers to interact and collaborate. A freelance job marketplace with AI-powered features.
 
 ---
 
