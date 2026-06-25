@@ -6,7 +6,11 @@ import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/login.dart';
+import '../../screens/auth/verify_email.dart';
+import '../../screens/auth/oauth_role_select.dart';
+import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,12 +22,14 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController(); // ← NEW
   final TextEditingController _nameController = TextEditingController();
 
-  // Field-level error messages
   String? _nameError;
   String? _emailError;
   String? _passwordError;
+  String? _confirmPasswordError; // ← NEW
 
   String _selectedRole = 'Freelancer';
 
@@ -31,19 +37,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose(); // ← NEW
     _nameController.dispose();
     super.dispose();
   }
 
-  // ─── Validate email format ────────────────────────────────────────────────
   bool _isValidEmail(String email) {
-    return RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+    return RegExp(r'^[\w\.\+\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$').hasMatch(email);
   }
 
-  // ─── Run all validations, return true if all pass ─────────────────────────
   bool _validate() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim(); // ← NEW
     final fullName = _nameController.text.trim();
 
     setState(() {
@@ -65,7 +71,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailError = null;
       }
 
-      // Password — matches backend: min 8 characters
+      // Password
       if (password.isEmpty) {
         _passwordError = 'Password is required';
       } else if (password.length < 8) {
@@ -73,9 +79,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
       } else {
         _passwordError = null;
       }
+
+      // ← NEW: Confirm Password
+      if (confirmPassword.isEmpty) {
+        _confirmPasswordError = 'Please confirm your password';
+      } else if (confirmPassword != password) {
+        _confirmPasswordError = 'Passwords do not match';
+      } else {
+        _confirmPasswordError = null;
+      }
     });
 
-    return _nameError == null && _emailError == null && _passwordError == null;
+    return _nameError == null &&
+        _emailError == null &&
+        _passwordError == null &&
+        _confirmPasswordError == null; // ← NEW
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final result = await authProvider.loginWithGoogle(profileProvider: profileProvider);
+
+    if (!mounted) return;
+
+    if (result == null) {
+      final err = authProvider.error ?? 'Google sign-up failed';
+      if (err != 'Google login cancelled') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err)),
+        );
+      }
+      return;
+    }
+
+    final isNewUser = result['is_new_user'] as bool;
+    final user = authProvider.currentUser;
+    if (isNewUser || user?.hasRole != true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+      );
+    } else {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    }
   }
 
   Future<void> _handleSignUp() async {
@@ -98,16 +150,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (success) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful! Please login.')),
-      );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: email)),
       );
     } else {
       if (!mounted) return;
-      // Show backend error (e.g. email already registered)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Registration failed')),
       );
@@ -117,260 +165,232 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 160),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 26),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// Title
-                    Text(
-                      'Sign Up',
-                      style: AppText.h1.copyWith(
-                        color: const Color(0xFF333333),
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      'Fill your details or continue with social media',
-                      style: AppText.caption.copyWith(
-                        color: const Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 50),
-
-                    /// Full name
-                    LoginTextField(
-                      hintText: 'Full name',
-                      controller: _nameController,
-                      errorText: _nameError,
-                      prefixIcon: const Icon(
-                        Icons.person_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    /// Email
-                    LoginTextField(
-                      hintText: 'Email address',
-                      controller: _emailController,
-                      errorText: _emailError,
-                      prefixIcon: const Icon(
-                        Icons.mail_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    /// Password
-                    LoginTextField(
-                      hintText: 'Password',
-                      controller: _passwordController,
-                      isPassword: true,
-                      errorText: _passwordError,
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 26),
-
-                    /// Role Toggle (Freelancer / Client)
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() => _selectedRole = 'Freelancer');
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _selectedRole == 'Freelancer'
-                                      ? AppColors.primary
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Freelancer',
-                                  style: TextStyle(
-                                    color: _selectedRole == 'Freelancer'
-                                        ? Colors.white
-                                        : const Color(0xFF7D7D7D),
-                                    fontWeight: FontWeight.w600,
+        child: Column(
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Image.asset('assets/workbyte-purple.png', height: 90),
+                                const SizedBox(height: 32),
+                                Text(
+                                  'Sign Up',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.h1.copyWith(
+                                    fontSize: 32,
+                                    color: const Color(0xFF333333),
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() => _selectedRole = 'Client');
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fill your details or continue with social media',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.caption.copyWith(color: const Color(0xFF7D7D7D)),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: _selectedRole == 'Client'
-                                      ? AppColors.primary
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Client',
-                                  style: TextStyle(
-                                    color: _selectedRole == 'Client'
-                                        ? Colors.white
-                                        : const Color(0xFF7D7D7D),
-                                    fontWeight: FontWeight.w600,
+                                const SizedBox(height: 24),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Full name',
+                                    controller: _nameController,
+                                    errorText: _nameError,
+                                    prefixIcon: const Icon(Icons.person_outline, size: 24),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Email address',
+                                    controller: _emailController,
+                                    errorText: _emailError,
+                                    prefixIcon: const Icon(Icons.mail_outline, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Password',
+                                    controller: _passwordController,
+                                    isPassword: true,
+                                    errorText: _passwordError,
+                                    prefixIcon: const Icon(Icons.lock_outline, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Confirm password',
+                                    controller: _confirmPasswordController,
+                                    isPassword: true,
+                                    errorText: _confirmPasswordError,
+                                    prefixIcon: const Icon(Icons.lock_outline, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 26),
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F1F1),
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(() => _selectedRole = 'Freelancer'),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: _selectedRole == 'Freelancer'
+                                                  ? AppColors.primary
+                                                  : Colors.transparent,
+                                              borderRadius: BorderRadius.circular(30),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              'Freelancer',
+                                              style: TextStyle(
+                                                color: _selectedRole == 'Freelancer'
+                                                    ? Colors.white
+                                                    : const Color(0xFF7D7D7D),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(() => _selectedRole = 'Client'),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: _selectedRole == 'Client'
+                                                  ? AppColors.primary
+                                                  : Colors.transparent,
+                                              borderRadius: BorderRadius.circular(30),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              'Client',
+                                              style: TextStyle(
+                                                color: _selectedRole == 'Client'
+                                                    ? Colors.white
+                                                    : const Color(0xFF7D7D7D),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                Consumer<AuthProvider>(
+                                  builder: (context, authProvider, child) {
+                                    return PrimaryButton(
+                                      label: authProvider.isLoading ? 'Signing Up...' : 'Sign Up',
+                                      onPressed: authProvider.isLoading ? null : _handleSignUp,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: Text(
+                                    'Or continue with',
+                                    style: AppText.caption.copyWith(color: const Color(0xFF7D7D7D)),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SocialButton(
+                                        assetPath: 'assets/google.png',
+                                        iconSize: 34,
+                                        onPressed: _handleGoogleSignUp,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    /// Sign Up button
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, child) {
-                        return PrimaryButton(
-                          label: authProvider.isLoading
-                              ? 'Signing Up...'
-                              : 'Sign Up',
-                          onPressed: authProvider.isLoading
-                              ? null
-                              : _handleSignUp,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    /// Or continue with
-                    Center(
-                      child: Text(
-                        'Or continue with',
-                        style: AppText.caption.copyWith(
-                          color: const Color(0xFF7D7D7D),
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    /// Social buttons
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SocialButton(
-                            assetPath: 'assets/google.png',
-                            iconSize: 34,
-                            onPressed: () {},
-                          ),
-                          const SizedBox(width: 8),
-                          SocialButton(
-                            assetPath: 'assets/linkedin.png',
-                            iconSize: 36,
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
-
-              /// Bottom wave
-              Builder(
-                builder: (context) {
-                  final bottomInset = MediaQuery.of(context).padding.bottom;
-
-                  return ClipPath(
-                    clipper: _WaveClipper(),
-                    child: Container(
-                      height: 140 + bottomInset,
-                      padding: EdgeInsets.only(bottom: bottomInset),
-                      color: AppColors.primary,
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Have an account? ',
-                            style: AppText.caption.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Login',
-                              style: AppText.captionSemiBold.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   );
                 },
               ),
-            ],
-          ),
+            ),
+            Builder(
+              builder: (context) {
+                final bottomInset = MediaQuery.of(context).padding.bottom;
+                return ClipPath(
+                  clipper: _WaveClipper(),
+                  child: Container(
+                    width: double.infinity,
+                    height: 80 + bottomInset,
+                    padding: EdgeInsets.only(bottom: bottomInset),
+                    color: const Color(0xFFE0E7FF),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Have an account? ',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Login',
+                            style: AppText.captionSemiBold.copyWith(
+                              color: const Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

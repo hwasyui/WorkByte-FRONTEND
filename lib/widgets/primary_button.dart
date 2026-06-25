@@ -20,20 +20,47 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width ?? double.infinity,
-      height: height,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      height: height + 6, 
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient( 
+              colors: [
+                AppColors.primary,
+                const Color(0xFF6366F1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(30), 
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.25),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ),
-        child: Text(
-          label,
-          style: AppText.captionSemiBold.copyWith(color: Colors.white),
+          child: Center(
+            child: Row( 
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: AppText.captionSemiBold.copyWith(
+                    color: Colors.white,
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // const Icon(
+                //   Icons.arrow_forward, 
+                //   color: Colors.white,
+                //   size: 18,
+                // ),
+              ],
+            ),
+          ),
         ),
       ),
     );

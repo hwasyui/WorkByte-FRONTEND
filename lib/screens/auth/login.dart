@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/login_text_field.dart';
-import '../../widgets/primary_button.dart';
 import '../../widgets/social_button.dart';
 import '../../screens/auth/signup.dart';
+import '../../screens/auth/forgot_password.dart';
+import '../../screens/auth/oauth_role_select.dart';
+import '../../screens/admin/admin_shell.dart';
 import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/admin_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+    return RegExp(r'^[\w\.\+\-]+@([\w\-]+\.)+[a-zA-Z]{2,}$').hasMatch(email);
   }
 
   bool _validate() {
@@ -40,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     setState(() {
-      // Email
       if (email.isEmpty) {
         _emailError = 'Email is required';
       } else if (!_isValidEmail(email)) {
@@ -49,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailError = null;
       }
 
-      // Password
       if (password.isEmpty) {
         _passwordError = 'Password is required';
       } else if (password.length < 8) {
@@ -62,216 +64,345 @@ class _LoginScreenState extends State<LoginScreen> {
     return _emailError == null && _passwordError == null;
   }
 
-  Future<void> _handleLogin() async {
-    if (!_validate()) return;
+  void _routeAfterAuth() {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.currentUser?.isAdmin == true) {
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
+      );
+      return;
+    }
 
-    final success = await context.read<AuthProvider>().login(
-      _emailController.text.trim(),
-      _passwordController.text,
-      profileProvider: context.read<ProfileProvider>(),
+    if (authProvider.shouldShowProfileSetup(profileProvider)) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FreelancerProfileSetupScreen()),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final result = await authProvider.loginWithGoogle(
+      profileProvider: profileProvider,
     );
 
-    if (success) {
-      if (!mounted) return;
+    if (!mounted) return;
+
+    if (result == null) {
+      final err = authProvider.error ?? 'Google login failed';
+      if (err != 'Google login cancelled') {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+
+    final isNewUser = result['is_new_user'] as bool;
+    final user = authProvider.currentUser;
+    if (isNewUser || user?.hasRole != true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+      );
+      return;
+    }
+
+    if (user?.isAdmin == true) {
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
+      );
+    } else if (authProvider.shouldShowProfileSetup(profileProvider)) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FreelancerProfileSetupScreen()),
+      );
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_validate()) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final success = await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+      profileProvider: profileProvider,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      final user = authProvider.currentUser;
+      if (user?.hasRole != true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+        );
+      } else if (user?.isAdmin == true) {
+        context.read<AdminProvider>().initWithToken(authProvider.token!);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminShell()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
     } else {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(authProvider.error ?? 'Login failed')),
       );
+      return;
     }
+
+    _routeAfterAuth();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 160),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 26),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome back',
-                      style: AppText.h1.copyWith(
-                        color: const Color(0xFF333333),
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      'Fill your details or continue with social media',
-                      style: AppText.caption.copyWith(
-                        color: const Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 50),
-
-                    /// Email
-                    LoginTextField(
-                      hintText: 'Email address',
-                      controller: _emailController,
-                      errorText: _emailError,
-                      keyboardType: TextInputType.emailAddress,
-                      prefixIcon: const Icon(
-                        Icons.mail_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    /// Password
-                    LoginTextField(
-                      hintText: 'Password',
-                      controller: _passwordController,
-                      isPassword: true,
-                      errorText: _passwordError,
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                        size: 24,
-                        color: Color(0xFF7D7D7D),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    /// Forgot password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () {},
-                        child: Text(
-                          'Forgot password?',
-                          style: AppText.caption.copyWith(
-                            color: const Color(0xFF7D7D7D),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    /// Login button
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, child) {
-                        return PrimaryButton(
-                          label: authProvider.isLoading
-                              ? 'Logging in...'
-                              : 'Login',
-                          onPressed: authProvider.isLoading
-                              ? null
-                              : _handleLogin,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    Center(
-                      child: Text(
-                        'Or continue with',
-                        style: AppText.caption.copyWith(
-                          color: const Color(0xFF7D7D7D),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SocialButton(
-                            assetPath: 'assets/google.png',
-                            iconSize: 34,
-                            onPressed: () {},
-                          ),
-                          const SizedBox(width: 8),
-                          SocialButton(
-                            assetPath: 'assets/linkedin.png',
-                            iconSize: 36,
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
-
-              /// Bottom wave
-              Builder(
-                builder: (context) {
-                  final bottomInset = MediaQuery.of(context).padding.bottom;
-                  return ClipPath(
-                    clipper: _WaveClipper(),
-                    child: Container(
-                      height: 140 + bottomInset,
-                      padding: EdgeInsets.only(bottom: bottomInset),
-                      color: AppColors.primary,
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'New user? ',
-                            style: AppText.caption.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignUpScreen(),
+        child: Column(
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Image.asset('assets/workbyte-purple.png', height: 90),
+                                const SizedBox(height: 32),
+                                RichText(
+                                  textAlign: TextAlign.center,
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: 'Welcome ',
+                                        style: AppText.h1.copyWith(
+                                          fontSize: 32,
+                                          color: const Color(0xFF111827),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: 'back',
+                                        style: AppText.h1.copyWith(
+                                          fontSize: 32,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Create account',
-                              style: AppText.captionSemiBold.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fill your details or continue with social media',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.caption.copyWith(
+                                    color: const Color(0xFF6B7280),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Email address',
+                                    controller: _emailController,
+                                    errorText: _emailError,
+                                    keyboardType: TextInputType.emailAddress,
+                                    prefixIcon: const Icon(Icons.mail_outline, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: LoginTextField(
+                                    hintText: 'Password',
+                                    controller: _passwordController,
+                                    isPassword: true,
+                                    errorText: _passwordError,
+                                    prefixIcon: const Icon(Icons.lock_outline, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                    ),
+                                    child: Text(
+                                      'Forgot password?',
+                                      style: AppText.caption.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Consumer<AuthProvider>(
+                                  builder: (context, authProvider, child) {
+                                    return GestureDetector(
+                                      onTap: authProvider.isLoading ? null : _handleLogin,
+                                      child: Container(
+                                        width: double.infinity,
+                                        height: 55,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(30),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.primary.withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 5),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            authProvider.isLoading ? 'Logging in...' : 'Login',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                                Row(
+                                  children: [
+                                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: Text(
+                                        'Or continue with',
+                                        style: AppText.caption.copyWith(
+                                          color: const Color(0xFF9CA3AF),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SocialButton(
+                                        assetPath: 'assets/google.png',
+                                        iconSize: 34,
+                                        onPressed: context.read<AuthProvider>().isLoading
+                                            ? null
+                                            : _handleGoogleLogin,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   );
                 },
               ),
-            ],
-          ),
+            ),
+            Builder(
+              builder: (context) {
+                final bottomInset = MediaQuery.of(context).padding.bottom;
+                return ClipPath(
+                  clipper: _WaveClipper(),
+                  child: Container(
+                    width: double.infinity,
+                    height: 80 + bottomInset,
+                    padding: EdgeInsets.only(bottom: bottomInset),
+                    color: const Color(0xFFE0E7FF),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'New user? ',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Create account',
+                            style: AppText.captionSemiBold.copyWith(
+                              color: const Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

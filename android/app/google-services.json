@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "655326820214",
+    "project_id": "formal-clarity-481507-b3",
+    "storage_bucket": "formal-clarity-481507-b3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:655326820214:android:ade8738b0174aeac53ac57",
+        "android_client_info": {
+          "package_name": "app.workbyte.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "655326820214-406svjods64qjnmh5i3mb1jhk4e9q68f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.workbyte.com",
+            "certificate_hash": "f1ef2fc898e7d054869b8a2529f91ee911d98116"
+          }
+        },
+        {
+          "client_id": "655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmwzOFwYKG-YHPfoOeepNQUj9lvwWrzEE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "655326820214-se1d5coqfoe8304tduftv3n2roqt4fb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

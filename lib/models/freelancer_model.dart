@@ -12,6 +12,7 @@ class FreelancerModel {
   final int totalProjects;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final double? weightedReviewAvg;
 
   const FreelancerModel({
     required this.freelancerId,
@@ -27,6 +28,7 @@ class FreelancerModel {
     this.totalProjects = 0,
     this.createdAt,
     this.updatedAt,
+    this.weightedReviewAvg,
   });
 
   factory FreelancerModel.fromJson(Map<String, dynamic> json) =>
@@ -37,7 +39,7 @@ class FreelancerModel {
         bio: json['bio'] as String?,
         cvFileUrl: json['cv_file_url'] as String?,
         profilePictureUrl: json['profile_picture_url'] as String?,
-        jobTitle: '-',
+        jobTitle: json['title'] as String? ?? json['job_title'] as String? ?? '-',
         estimatedRate: (json['estimated_rate'] as num?)?.toDouble(),
         rateTime: json['rate_time'] as String?,
         rateCurrency: json['rate_currency'] as String?,
@@ -48,6 +50,7 @@ class FreelancerModel {
         updatedAt: json['updated_at'] != null
             ? DateTime.tryParse(json['updated_at'].toString())
             : null,
+        weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
       );
 
   String get displayName => fullName.isNotEmpty ? fullName : 'Freelancer';
@@ -56,7 +59,14 @@ class FreelancerModel {
     if (estimatedRate == null) return 'Rate not set';
     final currency = rateCurrency ?? 'USD';
     final period = rateTime ?? 'hourly';
-    return '$currency ${estimatedRate!.toStringAsFixed(0)} / $period';
+    const abbr = {
+      'hourly': 'hr',
+      'monthly': 'mo',
+      'weekly': 'wk',
+      'daily': 'day',
+      'yearly': 'yr',
+    };
+    return '$currency ${estimatedRate!.toStringAsFixed(0)} / ${abbr[period.toLowerCase()] ?? period}';
   }
 
   FreelancerModel copyWith({
@@ -68,13 +78,17 @@ class FreelancerModel {
     double? estimatedRate,
     String? rateTime,
     String? rateCurrency,
+    bool clearProfilePicture = false,
+    double? weightedReviewAvg,
   }) => FreelancerModel(
     freelancerId: freelancerId,
     userId: userId,
     fullName: fullName ?? this.fullName,
     bio: bio ?? this.bio,
     cvFileUrl: cvFileUrl ?? this.cvFileUrl,
-    profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+    profilePictureUrl: clearProfilePicture
+        ? null
+        : (profilePictureUrl ?? this.profilePictureUrl),
     jobTitle: jobTitle ?? this.jobTitle,
     estimatedRate: estimatedRate ?? this.estimatedRate,
     rateTime: rateTime ?? this.rateTime,
@@ -82,5 +96,6 @@ class FreelancerModel {
     totalProjects: totalProjects,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    weightedReviewAvg: weightedReviewAvg ?? this.weightedReviewAvg,
   );
 }

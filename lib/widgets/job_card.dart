@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/colors.dart';
-import '../../../core/constants/text_styles.dart';
+import '../core/constants/colors.dart';
+import '../core/constants/text_styles.dart';
 
 class JobCard extends StatelessWidget {
   final String posterName;
@@ -11,6 +11,8 @@ class JobCard extends StatelessWidget {
   final String salary;
   final String jobType;
   final bool bookmarked;
+  final int? matchScore;
+  final VoidCallback? onWhyTap;
 
   const JobCard({
     super.key,
@@ -22,6 +24,8 @@ class JobCard extends StatelessWidget {
     required this.salary,
     required this.jobType,
     this.bookmarked = false,
+    this.matchScore,
+    this.onWhyTap,
   });
 
   @override
@@ -30,8 +34,8 @@ class JobCard extends StatelessWidget {
       width: 253,
       height: 178,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFF0F0F1)),
+        color: AppColors.secondary,
+        border: Border.all(color: AppColors.secondary),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(14),
@@ -53,11 +57,25 @@ class JobCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                size: 20,
-                color: const Color(0xFF7D7D7D),
-              ),
+              if (onWhyTap != null) ...[
+                GestureDetector(
+                  onTap: onWhyTap,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (matchScore != null)
+                _MatchBadge(score: matchScore!)
+              else
+                Icon(
+                  bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  size: 20,
+                  color: const Color(0xFF7D7D7D),
+                ),
             ],
           ),
           const SizedBox(height: 10),
@@ -102,6 +120,36 @@ class JobCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MatchBadge extends StatelessWidget {
+  final int score;
+  const _MatchBadge({required this.score});
+
+  Color get _color {
+    if (score >= 65) return AppColors.primary;
+    if (score >= 40) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '$score%',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: _color,
+        ),
       ),
     );
   }

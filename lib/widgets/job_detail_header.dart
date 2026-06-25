@@ -2,21 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
-/// Reusable teal header used on job detail screens.
-/// Shows back/share/bookmark actions, company logo, poster name,
-/// username, job title, category, and tag chips.
 class JobDetailHeader extends StatelessWidget {
   final Widget companyLogo;
   final String posterName;
   final String username;
   final String jobTitle;
   final String category;
-  final List<String>
-  tags; // e.g. ['Rp. 6.000.000', 'Team', '23/02/2023', 'Milestone']
+  final List<String> tags;
   final bool bookmarked;
   final VoidCallback? onBack;
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
+  final VoidCallback? onReport; // 👈 NEW
+  final Widget? titleTrailing;
 
   const JobDetailHeader({
     super.key,
@@ -30,6 +28,8 @@ class JobDetailHeader extends StatelessWidget {
     this.onBack,
     this.onShare,
     this.onBookmark,
+    this.onReport, // 👈 NEW
+    this.titleTrailing,
   });
 
   @override
@@ -39,7 +39,13 @@ class JobDetailHeader extends StatelessWidget {
       children: [
         // ── Teal section ─────────────────────────────────────────────
         Container(
-          color: AppColors.primary,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, Color(0xFF6C63FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
@@ -55,9 +61,9 @@ class JobDetailHeader extends StatelessWidget {
                   GestureDetector(
                     onTap: onBack ?? () => Navigator.of(context).pop(),
                     child: const Icon(
-                      Icons.chevron_left,
+                      Icons.arrow_back_ios_new_rounded,
                       color: Colors.white,
-                      size: 32,
+                      size: 20,
                     ),
                   ),
                   const Spacer(),
@@ -78,56 +84,73 @@ class JobDetailHeader extends StatelessWidget {
                       size: 24,
                     ),
                   ),
+                  if (onReport != null) ...[
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: onReport,
+                      child: const Icon(
+                        Icons.flag_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
-              // Company logo + poster info
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Logo in circular white bg
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFAF9FE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: companyLogo,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        posterName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF9FE),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
                       ),
-                      Text(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: companyLogo,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      posterName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
                         username,
                         style: GoogleFonts.poppins(
-                          fontSize: 10,
+                          color: Colors.white,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white70,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
 
-        // ── White rounded card section ────────────────────────────────
+        // ── White rounded card section ── unchanged
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(
@@ -141,18 +164,27 @@ class JobDetailHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Job title
-              Text(
-                jobTitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF333333),
-                  height: 30 / 20,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      jobTitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF333333),
+                        height: 30 / 20,
+                      ),
+                    ),
+                  ),
+                  if (titleTrailing != null) ...[
+                    const SizedBox(width: 10),
+                    titleTrailing!,
+                  ],
+                ],
               ),
               const SizedBox(height: 8),
-              // Category
               Text(
                 category,
                 style: GoogleFonts.poppins(
@@ -162,7 +194,6 @@ class JobDetailHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // Tag chips row
               Wrap(
                 spacing: 8,
                 runSpacing: 6,
