@@ -15,7 +15,7 @@ class JobPostProvider extends ChangeNotifier {
   JobPostModel? _currentJobPost;
   List<JobRoleModel> _jobRoles = [];
 
-  // ── NEW: active category filter (null = show all) ─────────────────────────
+  // ── Active category filter (null = show all) ──────────────────────────────
   String? _categoryFilter;
 
   // ── Per-role skills cache: jobRoleId → List<JobRoleSkillModel>
@@ -63,7 +63,7 @@ class JobPostProvider extends ChangeNotifier {
   List<JobRoleSkillModel> skillsForRole(String jobRoleId) =>
       _roleSkillsCache[jobRoleId] ?? [];
 
-  // ── NEW: category getters ─────────────────────────────────────────────────
+  // ── Category getters ──────────────────────────────────────────────────────
 
   /// The inferred category of the currently loaded job post.
   String? get currentProjectCategory => _currentJobPost?.projectCategory;
@@ -71,7 +71,7 @@ class JobPostProvider extends ChangeNotifier {
   /// Active filter; null means no filtering applied.
   String? get categoryFilter => _categoryFilter;
 
-  /// Job posts filtered by [_categoryFilter]. Use this in your list widgets.
+  /// Job posts filtered by [_categoryFilter]. Use this in list widgets.
   List<JobPostModel> get filteredJobPosts {
     if (_categoryFilter == null || _categoryFilter!.isEmpty) return _jobPosts;
     return _jobPosts
@@ -161,18 +161,16 @@ class JobPostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── NEW: fetch and filter by category in one call ─────────────────────────
   Future<void> fetchJobPostsByCategory(String token, String category) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      final all = await _jobPostService.getAllJobPosts(
+      _jobPosts = await _jobPostService.getAllJobPosts(
         token,
         pageSize: 100,
         category: category,
       );
-      _jobPosts = all;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
@@ -223,11 +221,16 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateJobPost(
-    String token,
-    String jobPostId,
-    Map<String, dynamic> data,
-  ) async {
+  /// Updates a job post and returns the refreshed [JobPostModel] on success,
+  /// or null on failure. The [data] map should only contain fields that
+  /// actually changed — the backend uses `exclude_unset` so a sparse payload
+  /// is correct.
+  Future<JobPostModel?> updateJobPost({
+    required String token,
+    required String jobPostId,
+    required Map<String, dynamic> data,
+  }) async {
+    _error = null;
     try {
       final updated = await _jobPostService.updateJobPost(
         token,
@@ -239,11 +242,11 @@ class JobPostProvider extends ChangeNotifier {
           .map((j) => j.jobPostId == jobPostId ? updated : j)
           .toList();
       notifyListeners();
-      return true;
+      return updated;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
-      return false;
+      return null;
     }
   }
 
