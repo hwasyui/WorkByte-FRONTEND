@@ -55,12 +55,51 @@ class JobFileModel {
 
   /// Extract extension automatically if backend doesn’t provide file_type
   String get resolvedFileType {
-    if (fileType.isNotEmpty) return fileType.toLowerCase();
+    final type = fileType.toLowerCase();
+
+    // Ignore generic mime types
+    if (type.isNotEmpty &&
+        type != 'application/octet-stream' &&
+        !type.contains('/')) {
+      return type;
+    }
 
     if (fileName.contains('.')) {
       return fileName.split('.').last.toLowerCase();
     }
-    return '';
+
+    // Handle MIME types
+    switch (type) {
+      case 'application/pdf':
+        return 'pdf';
+
+      case 'image/jpeg':
+        return 'jpg';
+
+      case 'image/png':
+        return 'png';
+
+      case 'image/webp':
+        return 'webp';
+
+      case 'video/mp4':
+        return 'mp4';
+
+      case 'audio/mpeg':
+        return 'mp3';
+
+      case 'application/msword':
+        return 'doc';
+
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return 'docx';
+
+      case 'application/zip':
+        return 'zip';
+
+      default:
+        return '';
+    }
   }
 
   /// Icon lookup based on file type

@@ -25,10 +25,12 @@ import '../../providers/contract_provider.dart';
 import '../../providers/skill_provider.dart';
 import '../../services/proposal_service.dart';
 import '../../models/freelancer_model.dart';
+import '../../models/contract_model.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
 import '../people_list/people_list_screen.dart';
+import '../workspace/workspace_detail.dart';
 import '../../core/utils/helpers.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
@@ -56,17 +58,21 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   List<ProposalModel> _proposals = [];
   bool _proposalsLoading = true;
 
+  List<ContractModel> _workers = [];
+  bool _workersLoading = true;
+  final Map<String, FreelancerModel?> _workerProfiles = {};
+
   Map<String, List<JobRoleSkillModel>> _roleSkillsMap = {};
   List<SkillModel> _allSkills = [];
   List<JobFileModel> _jobFiles = [];
   bool _filesLoading = true;
 
-  // ── Live job state (updated after edits) ──────────────────────────────────
+  // â”€â”€ Live job state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   late JobPostModel _job;
 
   List<String> get _tabs => [
     'Bidding (${_job.proposalCount})',
-    'Workers (0)',
+    'Workers (${_workers.length})',
     'Details',
   ];
 
@@ -100,6 +106,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       _fetchClient();
       _fetchRoles();
       _fetchProposals();
+      _fetchWorkers();
       _fetchAllSkills();
       _fetchJobFiles();
     });
@@ -217,71 +224,79 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Edit job post ──────────────────────────────────────────────────────────
-
-  /// Returns true if the current user owns this job and the job is not closed.
-  bool get _canEdit {
-    final auth = context.read<AuthProvider>();
-    return auth.userId != null &&
-        auth.userId == _job.clientId &&
-        _job.status.toLowerCase() != 'closed';
-  }
-
-  void _openEditSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _EditJobSheet(
-        job: _job,
-        onSaved: (updated) {
-          setState(() => _job = updated);
-        },
-      ),
-    );
-  }
-
-  Future<void> _publishJob() async {
-    if (_job.status != 'draft') return;
-    final confirmed = await _showActionDialog(
-      title: 'Publish Job',
-      message:
-          'Publishing this job will make it visible to freelancers and open for bidding. Continue?',
-      primaryLabel: 'Publish',
-      secondaryLabel: 'Cancel',
-      icon: Icons.rocket_launch_rounded,
-      accent: _primary,
-    );
-    if (confirmed != true || !mounted) return;
-
+  Future<void> _fetchWorkers() async {
     final token = context.read<AuthProvider>().token!;
-    final provider = context.read<JobPostProvider>();
-    final updated = await provider.updateJobPost(
-      token: token,
-      jobPostId: _job.jobPostId,
-      data: {'status': 'active'},
-    );
+    final contractProvider = context.read<ContractProvider>();
+
+    await contractProvider.fetchContractsByClient(token, _job.clientId);
+
     if (!mounted) return;
-    if (updated != null) {
-      setState(() => _job = updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Job published successfully.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: _primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+
+    final filtered = contractProvider.contracts
+        .where((contract) => contract.jobPostId == _job.jobPostId)
+        .toList();
+
+    setState(() {
+      _workers = filtered;
+      _workersLoading = false;
+    });
+
+    await _prefetchWorkerProfiles(filtered, token);
+  }
+
+  Future<void> _prefetchWorkerProfiles(
+    List<ContractModel> contracts,
+    String token,
+  ) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final ids = contracts.map((c) => c.freelancerId).toSet();
+
+    for (final freelancerId in ids) {
+      if (_workerProfiles.containsKey(freelancerId)) continue;
+
+      final freelancer = await profileProvider.fetchFreelancerById(
+        token: token,
+        freelancerId: freelancerId,
       );
-    } else {
+
+      if (!mounted) return;
+      _workerProfiles[freelancerId] = freelancer;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  FreelancerModel? _workerProfile(String freelancerId) =>
+      _workerProfiles[freelancerId];
+
+  Future<void> _openWorkerContract(ContractModel contract) async {
+    final token = context.read<AuthProvider>().token;
+    final contractProvider = context.read<ContractProvider>();
+
+    try {
+      final pdfUrl = await contractProvider.fetchPdfUrl(
+        token!,
+        contract.contractId,
+      );
+      if (!mounted) return;
+      await openDocumentFromUrl(
+        context,
+        pdfUrl,
+        token: token,
+        fileName: 'contract_${contract.contractId}.pdf',
+        onRefreshToken: () async {
+          final ok = await context.read<AuthProvider>().tryRefresh();
+          return ok ? context.read<AuthProvider>().token : null;
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to publish job.',
+            'Could not open contract.',
             style: GoogleFonts.poppins(fontSize: 12),
           ),
           backgroundColor: Colors.red,
@@ -289,6 +304,131 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ),
       );
     }
+  }
+
+  void _openWorkspace(ContractModel contract) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            WorkspaceDetailScreen(contract: contract, viewerRole: 'client'),
+      ),
+    );
+  }
+
+  String _workerName(FreelancerModel? freelancer, ContractModel contract) {
+    final fullName = freelancer?.fullName.trim();
+    if (fullName != null && fullName.isNotEmpty) return fullName;
+
+    final displayName = freelancer?.displayName.trim();
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+
+    final contractName = contract.freelancerName?.trim();
+    if (contractName != null && contractName.isNotEmpty) return contractName;
+
+    return 'Freelancer';
+  }
+
+  String _workerTitle(FreelancerModel? freelancer, ContractModel contract) {
+    final title = freelancer?.jobTitle.trim();
+    if (title != null && title.isNotEmpty && title != '-') return title;
+
+    if (contract.roleTitle.trim().isNotEmpty) return contract.roleTitle;
+
+    return 'Freelancer';
+  }
+
+  String _workerDateLabel(ContractModel contract) {
+    if (contract.startDate != null && contract.startDate!.trim().isNotEmpty) {
+      return 'Started ${_formatDate(contract.startDate!)}';
+    }
+
+    if (contract.createdAt != null && contract.createdAt!.trim().isNotEmpty) {
+      return 'Created ${_formatDate(contract.createdAt!)}';
+    }
+
+    return 'Date unavailable';
+  }
+
+  String _workerActionLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'Open Contract';
+      case 'active':
+      case 'under_review':
+      case 'revision_requested':
+        return 'Open Workspace';
+      case 'completed':
+      case 'cancelled':
+        return 'View Workspace';
+      default:
+        return 'Open Workspace';
+    }
+  }
+
+  Future<void> _handleWorkerAction(ContractModel contract) async {
+    switch (contract.status.toLowerCase()) {
+      case 'draft':
+        await _openWorkerContract(contract);
+        return;
+      case 'active':
+      case 'under_review':
+      case 'revision_requested':
+      case 'completed':
+      case 'cancelled':
+      default:
+        _openWorkspace(contract);
+    }
+  }
+
+  Widget _workerStatusBadge(String status) {
+    late final String label;
+    late final Color textColor;
+    late final Color bgColor;
+
+    switch (status.toLowerCase()) {
+      case 'draft':
+        label = 'Draft';
+        textColor = const Color(0xFF8E6C00);
+        bgColor = const Color(0xFFFFF4CC);
+        break;
+      case 'active':
+        label = 'Active';
+        textColor = AppColors.primary;
+        bgColor = AppColors.primary.withValues(alpha: 0.10);
+        break;
+      case 'under_review':
+        label = 'Under Review';
+        textColor = const Color(0xFF2196F3);
+        bgColor = const Color(0xFFE3F2FD);
+        break;
+      case 'revision_requested':
+        label = 'Revision Requested';
+        textColor = const Color(0xFFFF9800);
+        bgColor = const Color(0xFFFFF3E0);
+        break;
+      case 'completed':
+        label = 'Completed';
+        textColor = const Color(0xFF4CAF50);
+        bgColor = const Color(0xFFE8F5E9);
+        break;
+      case 'cancelled':
+        label = 'Cancelled';
+        textColor = const Color(0xFF757575);
+        bgColor = const Color(0xFFF5F5F5);
+        break;
+      default:
+        label = _capitalize(status.replaceAll('_', ' '));
+        textColor = const Color(0xFF667085);
+        bgColor = const Color(0xFFF2F4F7);
+        break;
+    }
+
+    return _modernStatusBadge(
+      label: label,
+      textColor: textColor,
+      bgColor: bgColor,
+    );
   }
 
   Future<void> _closeJob() async {
@@ -341,7 +481,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
-  // ── Proposal actions ───────────────────────────────────────────────────────
+  // â”€â”€ Proposal actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _acceptBid(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
@@ -909,7 +1049,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -917,9 +1057,23 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final avatarUrl = _client?.profilePictureUrl;
 
     final isClosed = _job.status.toLowerCase() == 'closed';
-    final isDraft = _job.status.toLowerCase() == 'draft';
     final isOwnJob = auth.currentUser?.clientId == _job.clientId;
-    final isScamClosure = isClosed && _job.closureReason == 'scam';
+    final closureReason = _job.closureReason?.trim().toLowerCase();
+    final closureNote = _job.closureNote?.trim();
+    final isScamClosure = isClosed && closureReason == 'scam';
+    final hasClosureDetails =
+        (closureReason?.isNotEmpty ?? false) ||
+        (closureNote?.isNotEmpty ?? false);
+    const ownerClosureReasons = {
+      'owner_closed',
+      'manual_close',
+      'job_filled',
+      'hiring_paused',
+    };
+    final canSubmitAppeal =
+        isClosed &&
+        hasClosureDetails &&
+        !ownerClosureReasons.contains(closureReason);
 
     final companyLogo = _clientLoading
         ? const SizedBox(
@@ -944,9 +1098,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      // ── Floating action bar for owners ──
+      // â”€â”€ Floating action bar for owners â”€â”€
       bottomNavigationBar: isOwnJob
-          ? _buildOwnerActionBar(isClosed: isClosed, isDraft: isDraft)
+          ? _buildOwnerActionBar(isClosed: isClosed)
           : null,
       body: SingleChildScrollView(
         child: Column(
@@ -972,31 +1126,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               onReport: null,
             ),
 
-            // ── Draft banner ──
-            if (isDraft && isOwnJob)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: _infoBanner(
-                  icon: Icons.edit_note_rounded,
-                  iconColor: const Color(0xFF7C3AED),
-                  bgColor: const Color(0xFFF5F3FF),
-                  borderColor: const Color(0xFFDDD6FE),
-                  title: 'This job is saved as a draft',
-                  body:
-                      'It\'s not visible to freelancers yet. Edit the details, then publish when you\'re ready.',
-                  actions: [
-                    _bannerAction(
-                      label: 'Publish now',
-                      icon: Icons.rocket_launch_rounded,
-                      color: const Color(0xFF7C3AED),
-                      onTap: _publishJob,
-                    ),
-                  ],
-                ),
-              ),
-
-            // ── Closed job banner ──
-            if (isClosed && isOwnJob)
+            // â”€â”€ Closed job banner â”€â”€
+            if (isClosed && isOwnJob && hasClosureDetails)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Container(
@@ -1075,6 +1206,16 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   height: 1.45,
                                 ),
                               ),
+                            ] else if (canSubmitAppeal) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'This closure was applied by platform review. If you believe it was incorrect, you can submit an appeal for admin review.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                  height: 1.45,
+                                ),
+                              ),
                             ],
                             if (_job.closureReason != null &&
                                 _job.closureReason!.isNotEmpty) ...[
@@ -1114,7 +1255,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 ),
                               ),
                             ],
-                            if (isScamClosure) ...[
+                            if (canSubmitAppeal) ...[
                               const SizedBox(height: 10),
                               GestureDetector(
                                 onTap: () => AppealDialog.show(
@@ -1173,9 +1314,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Owner action bar ───────────────────────────────────────────────────────
+  // â”€â”€ Owner action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  Widget _buildOwnerActionBar({required bool isClosed, required bool isDraft}) {
+  Widget _buildOwnerActionBar({required bool isClosed}) {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -1192,70 +1333,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ),
         child: Row(
           children: [
-            // Edit button — always shown for non-closed jobs
-            if (!isClosed) ...[
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: _openEditSheet,
-                    icon: const Icon(Icons.edit_rounded, size: 18),
-                    label: Text(
-                      'Edit job',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _primary,
-                      side: const BorderSide(
-                        color: AppColors.primary,
-                        width: 1.5,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-
-            // Publish button — draft only
-            if (isDraft)
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: _publishJob,
-                    icon: const Icon(
-                      Icons.rocket_launch_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Publish',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-            // Close job button — active/filled, not closed
-            if (!isClosed && !isDraft)
+            if (!isClosed)
               Expanded(
                 child: SizedBox(
                   height: 48,
@@ -1285,8 +1363,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                 ),
               ),
-
-            // Closed state — read-only label
             if (isClosed)
               Expanded(
                 child: Container(
@@ -1313,103 +1389,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  // ── Info banner helper ─────────────────────────────────────────────────────
-
-  Widget _infoBanner({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required Color borderColor,
-    required String title,
-    required String body,
-    List<Widget> actions = const [],
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: iconColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: iconColor.withValues(alpha: 0.75),
-                    height: 1.45,
-                  ),
-                ),
-                if (actions.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Wrap(spacing: 8, children: actions),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bannerAction({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _clientAvatarFallback() => Container(
     width: 64,
     height: 64,
@@ -1420,7 +1399,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: const Icon(Icons.business, size: 32, color: AppColors.primary),
   );
 
-  // ── Bidding tab ────────────────────────────────────────────────────────────
+  // â”€â”€ Bidding tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildBiddingTab() {
     if (_proposalsLoading) {
@@ -2105,24 +2084,72 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: const Icon(Icons.person, color: Color(0xFF7D7D7D), size: 24),
   );
 
-  // ── Workers tab ────────────────────────────────────────────────────────────
+  // â”€â”€ Workers tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildWorkersTab() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Center(
-        child: Text(
-          'No workers yet.',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: const Color(0xFF7D7D7D),
+    if (_workersLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_workers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 48, 24, 48),
+        child: Center(
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.group_off_outlined,
+                  size: 34,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No workers yet',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Workers will appear here after you've hired freelancers.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF7D7D7D),
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      child: Column(
+        children: _workers
+            .map((contract) => _buildWorkerCard(contract))
+            .toList(),
       ),
     );
   }
-
-  // ── Details tab ────────────────────────────────────────────────────────────
+  // â”€â”€ Details tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildDetailsTab() {
     return Padding(
@@ -2347,7 +2374,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 if (role.positionsFilled > 0) ...[
                   const SizedBox(width: 4),
                   Text(
-                    '· ${role.positionsFilled} filled',
+                    'Â· ${role.positionsFilled} filled',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: _primary,
@@ -2388,6 +2415,130 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   return _skillChip(name, isRequired, importance);
                 }).toList(),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkerCard(ContractModel contract) {
+    final freelancer = _workerProfile(contract.freelancerId);
+    final avatarUrl = freelancer?.profilePictureUrl?.trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEDEEF2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _avatarFallback(),
+                        )
+                      : _avatarFallback(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _workerName(freelancer, contract),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _workerTitle(freelancer, contract),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: const Color(0xFF8A8F98),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _workerStatusBadge(contract.status),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _softChip(
+                  '${contract.budgetCurrency} ${contract.agreedBudget.toStringAsFixed(0)}',
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+                _softChip(
+                  _workerDateLabel(contract),
+                  icon: Icons.calendar_today_outlined,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => _handleWorkerAction(contract),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: Icon(
+                  contract.status.toLowerCase() == 'draft'
+                      ? Icons.description_outlined
+                      : Icons.open_in_new_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  _workerActionLabel(contract.status),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2438,7 +2589,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                   if (file.fileSizeFormatted.isNotEmpty)
                     Text(
-                      '${file.fileType.toUpperCase()} · ${file.fileSizeFormatted}',
+                      '${file.fileType.toUpperCase()} Â· ${file.fileSizeFormatted}',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: const Color(0xFF7D7D7D),
@@ -2483,7 +2634,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Widget _skillChip(String name, bool isRequired, String? importance) {
     final color = isRequired ? _primary : const Color(0xFF7D7D7D);
     final importanceLabel = importance != null && importance.isNotEmpty
-        ? ' · ${importance[0].toUpperCase()}${importance.substring(1)}'
+        ? ' Â· ${importance[0].toUpperCase()}${importance.substring(1)}'
         : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -2576,9 +2727,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         'Nov',
         'Dec',
       ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year} '
-          '${dt.hour.toString().padLeft(2, '0')}:'
-          '${dt.minute.toString().padLeft(2, '0')}';
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
     } catch (_) {
       return raw;
     }
@@ -2601,612 +2750,5 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}',
             )
             .join(' ');
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Edit Job Sheet
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _EditJobSheet extends StatefulWidget {
-  final JobPostModel job;
-  final void Function(JobPostModel updated) onSaved;
-
-  const _EditJobSheet({required this.job, required this.onSaved});
-
-  @override
-  State<_EditJobSheet> createState() => _EditJobSheetState();
-}
-
-class _EditJobSheetState extends State<_EditJobSheet> {
-  static const Color _primary = AppColors.primary;
-
-  final _formKey = GlobalKey<FormState>();
-  bool _saving = false;
-
-  // ── Controlled fields ──────────────────────────────────────────────────────
-  late final TextEditingController _titleCtrl;
-  late final TextEditingController _descCtrl;
-  late final TextEditingController _deadlineCtrl;
-  late final TextEditingController _durationCtrl;
-  late final TextEditingController _workingDaysCtrl;
-
-  String? _projectType;
-  String? _projectScope;
-  String? _experienceLevel;
-
-  // Dropdown options mirroring backend enums
-  static const _projectTypes = ['individual', 'team'];
-  static const _projectScopes = ['small', 'medium', 'large'];
-  static const _experienceLevels = ['entry', 'intermediate', 'expert'];
-
-  @override
-  void initState() {
-    super.initState();
-    final j = widget.job;
-    _titleCtrl = TextEditingController(text: j.jobTitle);
-    _descCtrl = TextEditingController(text: j.jobDescription);
-    _deadlineCtrl = TextEditingController(text: j.deadline ?? '');
-    _durationCtrl = TextEditingController(text: j.estimatedDuration ?? '');
-    _workingDaysCtrl = TextEditingController(
-      text: j.workingDays != null ? j.workingDays.toString() : '',
-    );
-    _projectType = j.projectType;
-    _projectScope = j.projectScope;
-    _experienceLevel = j.experienceLevel;
-  }
-
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    _descCtrl.dispose();
-    _deadlineCtrl.dispose();
-    _durationCtrl.dispose();
-    _workingDaysCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() => _saving = true);
-
-    final token = context.read<AuthProvider>().token!;
-    final provider = context.read<JobPostProvider>();
-
-    // Build update payload — only include fields that changed so the backend's
-    // exclude_unset logic keeps untouched fields intact.
-    final Map<String, dynamic> data = {};
-
-    final newTitle = _titleCtrl.text.trim();
-    final newDesc = _descCtrl.text.trim();
-    final newDeadline = _deadlineCtrl.text.trim();
-    final newDuration = _durationCtrl.text.trim();
-    final newWorkingDays = int.tryParse(_workingDaysCtrl.text.trim());
-
-    if (newTitle != widget.job.jobTitle) data['job_title'] = newTitle;
-    if (newDesc != widget.job.jobDescription) data['job_description'] = newDesc;
-    if (_projectType != widget.job.projectType) {
-      data['project_type'] = _projectType;
-    }
-    if (_projectScope != widget.job.projectScope) {
-      data['project_scope'] = _projectScope;
-    }
-    if (_experienceLevel != widget.job.experienceLevel) {
-      data['experience_level'] = _experienceLevel;
-    }
-    if (newDeadline != (widget.job.deadline ?? '')) {
-      data['deadline'] = newDeadline.isEmpty ? null : newDeadline;
-    }
-    if (newDuration != (widget.job.estimatedDuration ?? '')) {
-      data['estimated_duration'] = newDuration.isEmpty ? null : newDuration;
-    }
-    if (newWorkingDays != widget.job.workingDays) {
-      data['working_days'] = newWorkingDays;
-    }
-
-    if (data.isEmpty) {
-      // Nothing changed
-      if (mounted) Navigator.pop(context);
-      return;
-    }
-
-    final updated = await provider.updateJobPost(
-      token: token,
-      jobPostId: widget.job.jobPostId,
-      data: data,
-    );
-
-    if (!mounted) return;
-    setState(() => _saving = false);
-
-    if (updated != null) {
-      widget.onSaved(updated);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Job updated successfully.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: _primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to save changes. Please try again.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.92,
-      minChildSize: 0.5,
-      maxChildSize: 0.97,
-      expand: false,
-      builder: (_, scrollCtrl) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            children: [
-              // ── Handle + header ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: Column(
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0E0E0),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Edit Job Post',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1A1A2E),
-                                ),
-                              ),
-                              Text(
-                                'Changes auto-save; category is inferred from your title and description.',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: const Color(0xFF9E9E9E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F7),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 18,
-                              color: Color(0xFF7D7D7D),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(height: 1, color: Color(0xFFF0F0F1)),
-                  ],
-                ),
-              ),
-
-              // ── Scrollable form ──
-              Expanded(
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    controller: scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                    children: [
-                      _fieldLabel('Job Title'),
-                      const SizedBox(height: 6),
-                      _textField(
-                        controller: _titleCtrl,
-                        hint: 'e.g. Flutter Developer for E-commerce App',
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Title is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-
-                      _fieldLabel('Description'),
-                      const SizedBox(height: 6),
-                      _textField(
-                        controller: _descCtrl,
-                        hint:
-                            'Describe the project scope, deliverables, and expectations...',
-                        maxLines: 6,
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Description is required'
-                            : null,
-                      ),
-                      const SizedBox(height: 20),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _fieldLabel('Project Type'),
-                                const SizedBox(height: 6),
-                                _dropdownField<String>(
-                                  value: _projectType,
-                                  items: _projectTypes,
-                                  labelBuilder: (v) =>
-                                      v[0].toUpperCase() + v.substring(1),
-                                  onChanged: (v) =>
-                                      setState(() => _projectType = v),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _fieldLabel('Project Scope'),
-                                const SizedBox(height: 6),
-                                _dropdownField<String>(
-                                  value: _projectScope,
-                                  items: _projectScopes,
-                                  labelBuilder: (v) =>
-                                      v[0].toUpperCase() + v.substring(1),
-                                  onChanged: (v) =>
-                                      setState(() => _projectScope = v),
-                                  hint: 'Auto',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      _fieldLabel('Experience Level'),
-                      const SizedBox(height: 6),
-                      _dropdownField<String>(
-                        value: _experienceLevel,
-                        items: _experienceLevels,
-                        labelBuilder: (v) =>
-                            v[0].toUpperCase() + v.substring(1),
-                        onChanged: (v) => setState(() => _experienceLevel = v),
-                        hint: 'Any level',
-                      ),
-                      const SizedBox(height: 20),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _fieldLabel('Deadline'),
-                                const SizedBox(height: 6),
-                                _textField(
-                                  controller: _deadlineCtrl,
-                                  hint: 'e.g. 2025-12-31',
-                                  keyboardType: TextInputType.datetime,
-                                  suffixIcon: Icons.calendar_today_rounded,
-                                  onSuffixTap: () async {
-                                    final picked = await showDatePicker(
-                                      context: context,
-                                      initialDate: DateTime.now().add(
-                                        const Duration(days: 14),
-                                      ),
-                                      firstDate: DateTime.now(),
-                                      lastDate: DateTime.now().add(
-                                        const Duration(days: 730),
-                                      ),
-                                      builder: (ctx, child) => Theme(
-                                        data: Theme.of(ctx).copyWith(
-                                          colorScheme: const ColorScheme.light(
-                                            primary: AppColors.primary,
-                                          ),
-                                        ),
-                                        child: child!,
-                                      ),
-                                    );
-                                    if (picked != null) {
-                                      _deadlineCtrl.text = picked
-                                          .toIso8601String()
-                                          .substring(0, 10);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _fieldLabel('Working Days'),
-                                const SizedBox(height: 6),
-                                _textField(
-                                  controller: _workingDaysCtrl,
-                                  hint: 'e.g. 30',
-                                  keyboardType: TextInputType.number,
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return null;
-                                    }
-                                    if (int.tryParse(v.trim()) == null) {
-                                      return 'Numbers only';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      _fieldLabel('Estimated Duration'),
-                      const SizedBox(height: 6),
-                      _textField(
-                        controller: _durationCtrl,
-                        hint: 'e.g. 2 months, 3 weeks',
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Category auto-infer note
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0EEFF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'The project category is automatically detected from your title and description — no need to set it manually.',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: AppColors.primary,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── Save bar ──
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFF0F0F1))),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      disabledBackgroundColor: _primary.withValues(alpha: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Save changes',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ── Form widgets ───────────────────────────────────────────────────────────
-
-  Widget _fieldLabel(String label) => Text(
-    label,
-    style: GoogleFonts.poppins(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: const Color(0xFF374151),
-    ),
-  );
-
-  Widget _textField({
-    required TextEditingController controller,
-    String? hint,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    IconData? suffixIcon,
-    VoidCallback? onSuffixTap,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF1A1A2E)),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 13,
-          color: const Color(0xFFB5B4B4),
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF8F9FB),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        suffixIcon: suffixIcon != null
-            ? GestureDetector(
-                onTap: onSuffixTap,
-                child: Icon(
-                  suffixIcon,
-                  size: 18,
-                  color: const Color(0xFF9E9E9E),
-                ),
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE9ECF2)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE9ECF2)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _dropdownField<T>({
-    required T? value,
-    required List<T> items,
-    required String Function(T) labelBuilder,
-    required void Function(T?) onChanged,
-    String hint = 'Select',
-  }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      onChanged: onChanged,
-      hint: Text(
-        hint,
-        style: GoogleFonts.poppins(
-          fontSize: 13,
-          color: const Color(0xFFB5B4B4),
-        ),
-      ),
-      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF1A1A2E)),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFFF8F9FB),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE9ECF2)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE9ECF2)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-      ),
-      dropdownColor: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      items: items
-          .map(
-            (item) => DropdownMenuItem<T>(
-              value: item,
-              child: Text(labelBuilder(item)),
-            ),
-          )
-          .toList(),
-    );
   }
 }

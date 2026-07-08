@@ -1,0 +1,545 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:workbyte_app/providers/profile_provider.dart';
+import '../../core/constants/colors.dart';
+import '../../../../providers/auth_provider.dart';
+import '../../../../providers/job_post_provider.dart';
+import '../dashboard/dashboard.dart';
+import 'job_detail.dart';
+
+class JobDraftsScreen extends StatefulWidget {
+  const JobDraftsScreen({super.key});
+
+  @override
+  State<JobDraftsScreen> createState() => _JobDraftsScreenState();
+}
+
+class _JobDraftsScreenState extends State<JobDraftsScreen> {
+  static const Color _primary = AppColors.primary;
+  static const Color _textDark = Color(0xFF1F2937);
+  static const Color _textMuted = Color(0xFF6B7280);
+  static const Color _border = Color(0xFFE5E7EB);
+  static const Color _success = Color(0xFF16A34A);
+  static const Color _warning = Color(0xFFF59E0B);
+
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDrafts();
+    });
+  }
+
+  Future<void> _loadDrafts() async {
+    setState(() => _loading = true);
+
+    final token = context.read<AuthProvider>().token;
+    final clientId = context.read<ProfileProvider>().clientProfile?.clientId;
+
+    if (token != null &&
+        token.isNotEmpty &&
+        clientId != null &&
+        clientId.isNotEmpty) {
+      await context.read<JobPostProvider>().loadDraftJobs(token, clientId);
+    }
+
+    if (mounted) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openDraft(String draftId) async {
+    final token = context.read<AuthProvider>().token;
+    final clientId = context.read<ProfileProvider>().clientProfile?.clientId;
+
+    if (token != null &&
+        token.isNotEmpty &&
+        clientId != null &&
+        clientId.isNotEmpty) {
+      await context.read<JobPostProvider>().loadDraftJobById(
+        token,
+        clientId,
+        draftId,
+      );
+    }
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            const PostNewJobJobDetail(restoreFromExistingDraft: true),
+      ),
+    );
+  }
+
+  Future<void> _createNewDraft() async {
+    context.read<JobPostProvider>().clearDraft();
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            const PostNewJobJobDetail(restoreFromExistingDraft: false),
+      ),
+    );
+  }
+
+  Future<void> _deleteDraft(String draftId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete draft?'),
+        content: const Text(
+          'This removes the selected draft only. Other drafts will remain available.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE11D48),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final token = context.read<AuthProvider>().token;
+    if (token != null && token.isNotEmpty) {
+      await context.read<JobPostProvider>().deleteDraftJob(token, draftId);
+    }
+    await _loadDrafts();
+  }
+
+  String _formatRelative(DateTime? date) {
+    if (date == null) return 'Recently edited';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes} min ago';
+    if (diff.inDays < 1) return '${diff.inHours} hr ago';
+    if (diff.inDays < 7)
+      return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  int _completionScore(dynamic draft) {
+    int score = 0;
+    if ((draft.jobTitle ?? '').toString().trim().isNotEmpty) score += 20;
+    if ((draft.jobDescription ?? '').toString().trim().isNotEmpty) score += 25;
+    if ((draft.projectType ?? '').toString().trim().isNotEmpty) score += 15;
+    if ((draft.estimatedDuration ?? '').toString().trim().isNotEmpty)
+      score += 15;
+    if (draft.deadline != null) score += 15;
+    return score.clamp(10, 100);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final drafts = context.watch<JobPostProvider>().draftJobPosts;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createNewDraft,
+        backgroundColor: _primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New draft'),
+      ),
+      body: Column(
+        children: [
+          _buildHeader(drafts.length),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadDrafts,
+              color: _primary,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : drafts.isEmpty
+                  ? _buildEmptyState()
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                      children: [
+                        _buildSummaryCard(drafts.length),
+                        const SizedBox(height: 14),
+                        ...drafts
+                            .map((draft) => _buildDraftCard(draft))
+                            .toList(),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(int count) {
+    return Container(
+      color: _primary,
+      width: double.infinity,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(left: 20),
+                child: Text(
+                  'Your drafts',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 20, top: 4),
+                child: Text(
+                  '$count unfinished job post${count == 1 ? '' : 's'}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(int count) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: _primary.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.folder_copy_outlined, color: _primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$count saved draft${count == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    color: _textDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Continue any unfinished post or start a new one without losing the others.',
+                  style: TextStyle(
+                    color: _textMuted,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDraftCard(dynamic draft) {
+    final draftId = (draft.jobPostId ?? '').toString();
+    final title = (draft.jobTitle ?? 'Untitled job post').toString();
+    final projectType = (draft.projectType ?? 'individual').toString();
+    DateTime? updatedAt;
+
+    if (draft.updatedAt != null && draft.updatedAt.toString().isNotEmpty) {
+      updatedAt = DateTime.tryParse(draft.updatedAt.toString());
+    } else if (draft.createdAt != null &&
+        draft.createdAt.toString().isNotEmpty) {
+      updatedAt = DateTime.tryParse(draft.createdAt.toString());
+    }
+    final completion = _completionScore(draft);
+    final accent = completion >= 80
+        ? _success
+        : completion >= 45
+        ? _warning
+        : _primary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withOpacity(0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.description_outlined, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _textDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Last edited ${_formatRelative(updatedAt)}',
+                      style: const TextStyle(color: _textMuted, fontSize: 12.5),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'open') {
+                    _openDraft(draftId);
+                  } else if (value == 'delete') {
+                    _deleteDraft(draftId);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'open', child: Text('Continue draft')),
+                  PopupMenuItem(value: 'delete', child: Text('Delete draft')),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.more_vert_rounded, color: _textMuted),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _chip(
+                icon: Icons.layers_outlined,
+                label: 'Step 1 of 3 · Job detail',
+              ),
+              _chip(
+                icon: Icons.people_outline_rounded,
+                label: projectType == 'team'
+                    ? 'Team project'
+                    : 'Individual project',
+              ),
+              if (draftId.isNotEmpty)
+                _chip(icon: Icons.tag_rounded, label: 'Draft #$draftId'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: completion / 100,
+                    minHeight: 8,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '$completion%',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _deleteDraft(draftId),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFE11D48),
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _openDraft(draftId),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: const Text('Continue'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(48),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: _primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _textDark,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 48, 20, 120),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _border),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: _primary,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'No drafts yet',
+                style: TextStyle(
+                  color: _textDark,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Start a new job post and we will save your progress here automatically across Job Detail, Role, and Attachment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _textMuted,
+                  fontSize: 13.5,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _createNewDraft,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create new draft'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

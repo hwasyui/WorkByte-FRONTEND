@@ -61,8 +61,7 @@ class _JobListScreenState extends State<JobListScreen> {
   bool get _showingApplied => _isFreelancer && _selectedTabIndex == 1;
 
   bool get _isFreelancer {
-    final profileProvider = context.read<ProfileProvider>();
-    return profileProvider.freelancerProfile != null;
+    return context.read<ProfileProvider>().isFreelancer;
   }
 
   int get _totalPages {

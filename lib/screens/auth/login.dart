@@ -21,12 +21,17 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+enum _AlertType { success, error, info }
+
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   String? _emailError;
   String? _passwordError;
+
+  String? _alertMessage;
+  _AlertType? _alertType;
 
   @override
   void dispose() {
@@ -64,6 +69,32 @@ class _LoginScreenState extends State<LoginScreen> {
     return _emailError == null && _passwordError == null;
   }
 
+  void _showAlert(String message, {required _AlertType type}) {
+    setState(() {
+      _alertMessage = message;
+      _alertType = type;
+    });
+  }
+
+  void _clearAlert() {
+    if (!mounted) return;
+    setState(() {
+      _alertMessage = null;
+      _alertType = null;
+    });
+  }
+
+  Future<void> _showTemporaryAlert(
+    String message, {
+    required _AlertType type,
+    Duration duration = const Duration(seconds: 2),
+  }) async {
+    _showAlert(message, type: type);
+    await Future.delayed(duration);
+    if (!mounted) return;
+    _clearAlert();
+  }
+
   void _routeAfterAuth() {
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
@@ -92,6 +123,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
+    _clearAlert();
+
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
@@ -104,15 +137,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result == null) {
       final err = authProvider.error ?? 'Google login failed';
       if (err != 'Google login cancelled') {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(err)));
+        _showAlert(err, type: _AlertType.error);
       }
       return;
     }
 
     final isNewUser = result['is_new_user'] as bool;
     final user = authProvider.currentUser;
+
     if (isNewUser || user?.hasRole != true) {
       Navigator.pushReplacement(
         context,
@@ -120,6 +152,14 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
+
+    await _showTemporaryAlert(
+      'Google login successful',
+      type: _AlertType.success,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    if (!mounted) return;
 
     if (user?.isAdmin == true) {
       context.read<AdminProvider>().initWithToken(authProvider.token!);
@@ -141,7 +181,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_validate()) return;
+    _clearAlert();
+
+    if (!_validate()) {
+      _showAlert(
+        'Please fix the highlighted fields and try again.',
+        type: _AlertType.error,
+      );
+      return;
+    }
 
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
@@ -154,32 +202,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      final user = authProvider.currentUser;
-      if (user?.hasRole != true) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
-        );
-      } else if (user?.isAdmin == true) {
-        context.read<AdminProvider>().initWithToken(authProvider.token!);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminShell()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Login failed')),
+    if (!success) {
+      _showAlert(authProvider.error ?? 'Login failed', type: _AlertType.error);
+      return;
+    }
+
+    final user = authProvider.currentUser;
+    if (user?.hasRole != true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OAuthRoleSelectScreen()),
+      );
+      return;
+    } else if (user?.isAdmin == true) {
+      await _showTemporaryAlert(
+        'Welcome back, admin.',
+        type: _AlertType.success,
+        duration: const Duration(milliseconds: 600),
+      );
+
+      if (!mounted) return;
+      context.read<AdminProvider>().initWithToken(authProvider.token!);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminShell()),
       );
       return;
     }
 
+    await _showTemporaryAlert(
+      'Login successful. Welcome back!',
+      type: _AlertType.success,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    if (!mounted) return;
     _routeAfterAuth();
   }
 
@@ -196,9 +253,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 builder: (context, constraints) {
                   return SingleChildScrollView(
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 30,
+                        ),
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 400),
@@ -207,8 +269,45 @@ class _LoginScreenState extends State<LoginScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.max,
                               children: [
-                                Image.asset('assets/workbyte-purple.png', height: 90),
-                                const SizedBox(height: 32),
+                                Image.asset(
+                                  'assets/workbyte-purple.png',
+                                  height: 90,
+                                ),
+                                const SizedBox(height: 24),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 280),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) {
+                                    final offsetAnimation = Tween<Offset>(
+                                      begin: const Offset(0, -0.12),
+                                      end: Offset.zero,
+                                    ).animate(animation);
+
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: offsetAnimation,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: _alertMessage == null
+                                      ? const SizedBox.shrink(
+                                          key: ValueKey('empty_alert'),
+                                        )
+                                      : Padding(
+                                          key: ValueKey(_alertMessage!),
+                                          padding: const EdgeInsets.only(
+                                            bottom: 18,
+                                          ),
+                                          child: _LoginAlertCard(
+                                            message: _alertMessage!,
+                                            type: _alertType ?? _AlertType.info,
+                                            onClose: _clearAlert,
+                                          ),
+                                        ),
+                                ),
                                 RichText(
                                   textAlign: TextAlign.center,
                                   text: TextSpan(
@@ -249,7 +348,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     controller: _emailController,
                                     errorText: _emailError,
                                     keyboardType: TextInputType.emailAddress,
-                                    prefixIcon: const Icon(Icons.mail_outline, size: 24),
+                                    prefixIcon: const Icon(
+                                      Icons.mail_outline,
+                                      size: 24,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 14),
@@ -260,7 +362,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     controller: _passwordController,
                                     isPassword: true,
                                     errorText: _passwordError,
-                                    prefixIcon: const Icon(Icons.lock_outline, size: 24),
+                                    prefixIcon: const Icon(
+                                      Icons.lock_outline,
+                                      size: 24,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -269,7 +374,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: GestureDetector(
                                     onTap: () => Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
                                     ),
                                     child: Text(
                                       'Forgot password?',
@@ -285,29 +393,72 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Consumer<AuthProvider>(
                                   builder: (context, authProvider, child) {
                                     return GestureDetector(
-                                      onTap: authProvider.isLoading ? null : _handleLogin,
-                                      child: Container(
-                                        width: double.infinity,
-                                        height: 55,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          borderRadius: BorderRadius.circular(30),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 5),
-                                            ),
-                                          ],
+                                      onTap: authProvider.isLoading
+                                          ? null
+                                          : _handleLogin,
+                                      child: AnimatedOpacity(
+                                        duration: const Duration(
+                                          milliseconds: 180,
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            authProvider.isLoading ? 'Logging in...' : 'Login',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                        opacity: authProvider.isLoading
+                                            ? 0.8
+                                            : 1,
+                                        child: Container(
+                                          width: double.infinity,
+                                          height: 55,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary,
+                                            borderRadius: BorderRadius.circular(
+                                              30,
                                             ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.3),
+                                                blurRadius: 12,
+                                                offset: const Offset(0, 5),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Center(
+                                            child: authProvider.isLoading
+                                                ? Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: const [
+                                                      SizedBox(
+                                                        width: 18,
+                                                        height: 18,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2.2,
+                                                          valueColor:
+                                                              AlwaysStoppedAnimation<
+                                                                Color
+                                                              >(Colors.white),
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: 12),
+                                                      Text(
+                                                        'Logging in...',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : const Text(
+                                                    'Login',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
                                           ),
                                         ),
                                       ),
@@ -317,9 +468,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(height: 24),
                                 Row(
                                   children: [
-                                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                    const Expanded(
+                                      child: Divider(color: Color(0xFFE5E7EB)),
+                                    ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
                                       child: Text(
                                         'Or continue with',
                                         style: AppText.caption.copyWith(
@@ -328,7 +483,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       ),
                                     ),
-                                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                                    const Expanded(
+                                      child: Divider(color: Color(0xFFE5E7EB)),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),
@@ -339,7 +496,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       SocialButton(
                                         assetPath: 'assets/google.png',
                                         iconSize: 34,
-                                        onPressed: context.read<AuthProvider>().isLoading
+                                        onPressed:
+                                            context
+                                                .read<AuthProvider>()
+                                                .isLoading
                                             ? null
                                             : _handleGoogleLogin,
                                       ),
@@ -380,7 +540,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextButton(
                           onPressed: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const SignUpScreen(),
+                            ),
                           ),
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.zero,
@@ -407,6 +569,157 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+class _LoginAlertCard extends StatelessWidget {
+  final String message;
+  final _AlertType type;
+  final VoidCallback onClose;
+
+  const _LoginAlertCard({
+    required this.message,
+    required this.type,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final _AlertStyle style = _styleFor(type);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: style.backgroundColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: style.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: style.shadowColor,
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: style.iconBackgroundColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(style.icon, color: style.iconColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      style.title,
+                      style: AppText.captionSemiBold.copyWith(
+                        color: const Color(0xFF111827),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: AppText.caption.copyWith(
+                        color: const Color(0xFF4B5563),
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: onClose,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: style.iconBackgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  color: style.iconColor,
+                  size: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _AlertStyle _styleFor(_AlertType type) {
+    switch (type) {
+      case _AlertType.success:
+        return const _AlertStyle(
+          title: 'Success',
+          icon: Icons.check_circle_rounded,
+          backgroundColor: Color(0xFFF0FDF4),
+          borderColor: Color(0xFFBBF7D0),
+          iconBackgroundColor: Color(0xFFDCFCE7),
+          iconColor: Color(0xFF15803D),
+          shadowColor: Color(0x1A16A34A),
+        );
+      case _AlertType.error:
+        return const _AlertStyle(
+          title: 'Login failed',
+          icon: Icons.error_rounded,
+          backgroundColor: Color(0xFFFEF2F2),
+          borderColor: Color(0xFFFECACA),
+          iconBackgroundColor: Color(0xFFFEE2E2),
+          iconColor: Color(0xFFDC2626),
+          shadowColor: Color(0x1ADC2626),
+        );
+      case _AlertType.info:
+        return const _AlertStyle(
+          title: 'Notice',
+          icon: Icons.info_rounded,
+          backgroundColor: Color(0xFFEFF6FF),
+          borderColor: Color(0xFFBFDBFE),
+          iconBackgroundColor: Color(0xFFDBEAFE),
+          iconColor: Color(0xFF2563EB),
+          shadowColor: Color(0x1A2563EB),
+        );
+    }
+  }
+}
+
+class _AlertStyle {
+  final String title;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color iconBackgroundColor;
+  final Color iconColor;
+  final Color shadowColor;
+
+  const _AlertStyle({
+    required this.title,
+    required this.icon,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.iconBackgroundColor,
+    required this.iconColor,
+    required this.shadowColor,
+  });
 }
 
 class _WaveClipper extends CustomClipper<Path> {
