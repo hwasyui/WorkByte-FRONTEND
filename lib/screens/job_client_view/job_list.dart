@@ -188,70 +188,8 @@ class JobListScreenState extends State<JobListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFF1A1A2E),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'My Jobs',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _showSortSheet,
-                    child: Row(
-                      children: [
-                        Text(
-                          _sortOption,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                          color: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.tune_rounded,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(),
             const SizedBox(height: 12),
-
             // ── Search bar ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -396,6 +334,52 @@ class JobListScreenState extends State<JobListScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 16,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          Text(
+            'My Jobs',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A1A2E),
+            ),
+          ),
+
+          const Spacer(),
+        ],
       ),
     );
   }
@@ -780,7 +764,10 @@ class JobListScreenState extends State<JobListScreen> {
                     _onSortChanged(option);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected ? _primary : Colors.white,
                       border: Border.all(
@@ -793,7 +780,9 @@ class JobListScreenState extends State<JobListScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : const Color(0xFF555555),
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF555555),
                       ),
                     ),
                   ),

@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:workbyte_app/models/job_file_model.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +25,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
   Future<void> _onPostJob() async {
     setState(() {
       _isSubmitting = true;
-      _submitStatus = 'Creating job...';
+      _submitStatus = 'Publishing job...';
     });
 
     final provider = context.read<JobPostProvider>();
@@ -37,91 +40,44 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       return;
     }
 
-    // ── 1. Create job post ──────────────────────────────────────────
-    final created = await provider.createJobPost(token, {
-      ...draft,
-      'status': 'active',
-    });
+    final jobPostId = provider.currentDraftJobPostId;
+
+    if (jobPostId == null || jobPostId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Draft job not found.')));
+      setState(() => _isSubmitting = false);
+      return;
+    }
+
+    // Final save + publish the existing draft
+    final updated = await provider.updateJobPost(
+      token: token,
+      jobPostId: jobPostId,
+      data: {...draft, 'status': 'active'},
+    );
 
     if (!mounted) return;
-    if (created == null) {
+
+    if (updated == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.error ?? 'Failed to create job post')),
+        SnackBar(content: Text(provider.error ?? 'Failed to publish job.')),
       );
       setState(() => _isSubmitting = false);
       return;
     }
 
-    // ── 2. Create roles + their skills ─────────────────────────────
-    setState(() => _submitStatus = 'Saving roles...');
-    for (int i = 0; i < provider.draftRoles.length; i++) {
-      final payload = Map<String, dynamic>.from(provider.draftRoles[i]);
-      payload['job_post_id'] = created.jobPostId;
-
-      final roleCreated = await provider.createJobRole(token, payload);
-      if (!mounted) return;
-      if (roleCreated == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.error ?? 'Failed to create role')),
-        );
-        setState(() => _isSubmitting = false);
-        return;
-      }
-
-      final skillMeta = provider.draftRoleSkillMeta[i] ?? {};
-      for (final entry in skillMeta.entries) {
-        await provider.createRoleSkill(token, {
-          'job_role_id': roleCreated.jobRoleId,
-          'skill_id': entry.key,
-          'importance_level': entry.value['importance_level'] ?? 'required',
-          'is_required': entry.value['importance_level'] == 'required',
-        });
-        if (!mounted) return;
-      }
-    }
-
-    // ── 3. Upload files ─────────────────────────────────────────
-    final draftFiles = provider.draftFiles;
-
-    if (draftFiles.isNotEmpty) {
-      setState(() => _submitStatus = 'Uploading files...');
-
-      try {
-        final filesToUpload = draftFiles
-            .map((f) => f['local_path'] as String?)
-            .where((path) => path != null)
-            .map((path) => File(path!))
-            .toList();
-
-        final success = await provider.uploadJobFiles(
-          token,
-          created.jobPostId,
-          filesToUpload,
-        );
-
-        if (!success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Some files failed to upload'),
-              backgroundColor: Color(0xFFFF9800),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Upload error: $e'),
-              backgroundColor: const Color(0xFFFF9800),
-            ),
-          );
-        }
-      }
-    }
+    setState(() {
+      _submitStatus = 'Finalizing...';
+    });
 
     provider.clearDraft();
-    setState(() => _isSubmitting = false);
+
     if (!mounted) return;
+
+    setState(() {
+      _isSubmitting = false;
+    });
 
     Navigator.pushReplacement(
       context,
@@ -129,13 +85,77 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     );
   }
 
-  Future<void> _openDraftFile(String localPath) async {
-    if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => FileViewerScreen(filePath: localPath),
-      ),
-    );
+  Future<void> _openFile({
+    String? localPath,
+    String? url,
+    required String fileName,
+  }) async {
+    try {
+      String filePath;
+
+      // Local draft file
+      if (localPath != null && localPath.isNotEmpty) {
+        filePath = localPath;
+      }
+      // Uploaded file
+      else if (url != null && url.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloading file...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+
+        final response = await http.get(Uri.parse(url));
+
+        if (response.statusCode != 200) {
+          throw Exception('Failed to download file');
+        }
+
+        final dir = await getTemporaryDirectory();
+
+        final file = File('${dir.path}/$fileName');
+
+        await file.writeAsBytes(response.bodyBytes);
+
+        filePath = file.path;
+      } else {
+        throw Exception('No file available');
+      }
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              FileViewerScreen(filePath: filePath, fileName: fileName),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to open file.\n$e')));
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<JobPostProvider>();
+
+      final token = context.read<AuthProvider>().token!;
+
+      final jobPostId = provider.currentDraftJobPostId;
+
+      if (jobPostId != null && jobPostId.isNotEmpty) {
+        await provider.fetchJobFiles(token, jobPostId);
+      }
+    });
   }
 
   @override
@@ -144,7 +164,12 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     final draft = provider.draftJobData ?? {};
     final roles = provider.draftRoles;
     final skillNamesMap = provider.draftRoleSkillNames;
-    final files = provider.draftFiles;
+    final jobPostId =
+        provider.currentDraftJobPostId ?? provider.draftJobData?['job_post_id'];
+
+    final List<JobFileModel> files = provider.currentDraftJobPostId == null
+        ? []
+        : provider.filesForJob(provider.currentDraftJobPostId!);
 
     return Scaffold(
       backgroundColor: _primary,
@@ -183,10 +208,10 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       _capitalize(draft['project_type'] ?? ''),
                       Icons.person_outline,
                     ),
-                    if (draft['working_days'] != null)
+                    if (draft['estimated_duration'] != null)
                       _buildRow(
-                        'Working Days',
-                        '${draft['working_days']} days',
+                        'Estimated Duration',
+                        '${draft['estimated_duration']}',
                         Icons.calendar_today_outlined,
                       ),
                     if (draft['deadline'] != null)
@@ -294,7 +319,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '${role['budget_currency'] ?? 'IDR'} ${(role['role_budget'] as double).toStringAsFixed(0)}',
+                                      '${role['budget_currency'] ?? 'IDR'} ${((role['role_budget'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
                                       style: const TextStyle(
                                         fontSize: 11,
                                         color: AppColors.primary,
@@ -315,93 +340,123 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       Padding(
                         padding: const EdgeInsets.only(
                           left: 20,
+                          right: 20,
                           top: 20,
-                          bottom: 10,
+                          bottom: 12,
                         ),
-                        child: Text(
-                          'Attachments (${files.length} file${files.length == 1 ? '' : 's'})',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.attach_file,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Attachments (${files.length})",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      ...files.map(
-                        (f) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: 8,
-                            left: 20,
-                            right: 20,
+
+                      ...files.map((file) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 6,
                           ),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: AppColors.secondary,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.attach_file,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    f['file_name'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black87,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(.08),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ),
-                                Text(
-                                  (f['file_type'] as String).toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  child: Icon(
+                                    _iconForType(file.resolvedFileType),
                                     color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                TextButton(
-                                  onPressed: () {
-                                    final path = f['local_path'] as String?;
-                                    if (path != null) {
-                                      _openDraftFile(path);
-                                    }
-                                  },
-                                  style: TextButton.styleFrom(
-                                    minimumSize: const Size(0, 32),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+
+                                const SizedBox(width: 12),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        file.fileName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      Text(
+                                        file.fileSizeFormatted,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    file.resolvedFileType.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                InkWell(
+                                  onTap: () => _openFile(
+                                    url: file.fileUrl,
+                                    fileName: file.fileName,
                                   ),
                                   child: const Text(
-                                    'View',
+                                    "View",
                                     style: TextStyle(
-                                      fontSize: 12,
                                       color: AppColors.primary,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-
-                    // ── Submit status ───────────────────────────────
+                        );
+                      }),
+                    ], // ── Submit status ───────────────────────────────
                     if (_isSubmitting && _submitStatus.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 16, bottom: 4),
@@ -605,6 +660,47 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
         ),
       ],
     );
+  }
+
+  IconData _iconForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'pdf':
+        return Icons.picture_as_pdf_outlined;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+        return Icons.image_outlined;
+      case 'doc':
+      case 'docx':
+        return Icons.description_outlined;
+      case 'zip':
+      case 'rar':
+        return Icons.folder_zip_outlined;
+      default:
+        return Icons.attach_file;
+    }
+  }
+
+  String _formatSize(int? bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'uploaded':
+        return const Color(0xFF16A34A);
+      case 'uploading':
+        return const Color(0xFFF59E0B);
+      case 'error':
+        return const Color(0xFFE11D48);
+      default:
+        return Colors.grey;
+    }
   }
 
   String _capitalize(String s) =>

@@ -25,10 +25,12 @@ import '../../providers/contract_provider.dart';
 import '../../providers/skill_provider.dart';
 import '../../services/proposal_service.dart';
 import '../../models/freelancer_model.dart';
+import '../../models/contract_model.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
 import '../people_list/people_list_screen.dart';
+import '../workspace/workspace_detail.dart';
 import '../../core/utils/helpers.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
@@ -56,26 +58,33 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   List<ProposalModel> _proposals = [];
   bool _proposalsLoading = true;
 
+  List<ContractModel> _workers = [];
+  bool _workersLoading = true;
+  final Map<String, FreelancerModel?> _workerProfiles = {};
+
   Map<String, List<JobRoleSkillModel>> _roleSkillsMap = {};
   List<SkillModel> _allSkills = [];
   List<JobFileModel> _jobFiles = [];
   bool _filesLoading = true;
 
+  // â”€â”€ Live job state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  late JobPostModel _job;
+
   List<String> get _tabs => [
-    'Bidding (${widget.job.proposalCount})',
-    'Workers (0)',
+    'Bidding (${_job.proposalCount})',
+    'Workers (${_workers.length})',
     'Details',
   ];
 
   List<String> get _tags {
     final tags = <String>[];
-    if (widget.job.deadline != null) tags.add(widget.job.deadline!);
-    tags.add(_capitalize(widget.job.projectType));
-    if (widget.job.experienceLevel != null) {
-      tags.add(_capitalize(widget.job.experienceLevel!));
+    if (_job.deadline != null) tags.add(_job.deadline!);
+    tags.add(_capitalize(_job.projectType));
+    if (_job.experienceLevel != null) {
+      tags.add(_capitalize(_job.experienceLevel!));
     }
-    if (widget.job.projectScope != null) {
-      tags.add(_capitalize(widget.job.projectScope!));
+    if (_job.projectScope != null) {
+      tags.add(_capitalize(_job.projectScope!));
     }
     return tags;
   }
@@ -92,10 +101,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _job = widget.job;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchClient();
       _fetchRoles();
       _fetchProposals();
+      _fetchWorkers();
       _fetchAllSkills();
       _fetchJobFiles();
     });
@@ -105,7 +116,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final token = context.read<AuthProvider>().token!;
     final client = await context.read<ProfileProvider>().fetchClientById(
       token: token,
-      clientId: widget.job.clientId,
+      clientId: _job.clientId,
     );
     if (mounted) {
       setState(() {
@@ -117,10 +128,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   Future<void> _fetchRoles() async {
     final token = context.read<AuthProvider>().token!;
-    await context.read<JobPostProvider>().fetchJobRoles(
-      token,
-      widget.job.jobPostId,
-    );
+    await context.read<JobPostProvider>().fetchJobRoles(token, _job.jobPostId);
     if (!mounted) return;
     setState(() {
       _roles = context.read<JobPostProvider>().jobRoles;
@@ -154,15 +162,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   Future<void> _fetchJobFiles() async {
     final token = context.read<AuthProvider>().token!;
-    await context.read<JobPostProvider>().fetchJobFiles(
-      token,
-      widget.job.jobPostId,
-    );
+    await context.read<JobPostProvider>().fetchJobFiles(token, _job.jobPostId);
     if (!mounted) return;
     setState(() {
-      _jobFiles = context.read<JobPostProvider>().filesForJob(
-        widget.job.jobPostId,
-      );
+      _jobFiles = context.read<JobPostProvider>().filesForJob(_job.jobPostId);
       _filesLoading = false;
     });
   }
@@ -186,7 +189,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     await context.read<ProposalProvider>().fetchProposalsByJob(
       token: token,
-      jobPostId: widget.job.jobPostId,
+      jobPostId: _job.jobPostId,
     );
 
     if (!mounted) return;
@@ -220,6 +223,265 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       enriched.map((p) => p.proposalId).toList(),
     );
   }
+
+  Future<void> _fetchWorkers() async {
+    final token = context.read<AuthProvider>().token!;
+    final contractProvider = context.read<ContractProvider>();
+
+    await contractProvider.fetchContractsByClient(token, _job.clientId);
+
+    if (!mounted) return;
+
+    final filtered = contractProvider.contracts
+        .where((contract) => contract.jobPostId == _job.jobPostId)
+        .toList();
+
+    setState(() {
+      _workers = filtered;
+      _workersLoading = false;
+    });
+
+    await _prefetchWorkerProfiles(filtered, token);
+  }
+
+  Future<void> _prefetchWorkerProfiles(
+    List<ContractModel> contracts,
+    String token,
+  ) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final ids = contracts.map((c) => c.freelancerId).toSet();
+
+    for (final freelancerId in ids) {
+      if (_workerProfiles.containsKey(freelancerId)) continue;
+
+      final freelancer = await profileProvider.fetchFreelancerById(
+        token: token,
+        freelancerId: freelancerId,
+      );
+
+      if (!mounted) return;
+      _workerProfiles[freelancerId] = freelancer;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  FreelancerModel? _workerProfile(String freelancerId) =>
+      _workerProfiles[freelancerId];
+
+  Future<void> _openWorkerContract(ContractModel contract) async {
+    final token = context.read<AuthProvider>().token;
+    final contractProvider = context.read<ContractProvider>();
+
+    try {
+      final pdfUrl = await contractProvider.fetchPdfUrl(
+        token!,
+        contract.contractId,
+      );
+      if (!mounted) return;
+      await openDocumentFromUrl(
+        context,
+        pdfUrl,
+        token: token,
+        fileName: 'contract_${contract.contractId}.pdf',
+        onRefreshToken: () async {
+          final ok = await context.read<AuthProvider>().tryRefresh();
+          return ok ? context.read<AuthProvider>().token : null;
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not open contract.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _openWorkspace(ContractModel contract) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            WorkspaceDetailScreen(contract: contract, viewerRole: 'client'),
+      ),
+    );
+  }
+
+  String _workerName(FreelancerModel? freelancer, ContractModel contract) {
+    final fullName = freelancer?.fullName.trim();
+    if (fullName != null && fullName.isNotEmpty) return fullName;
+
+    final displayName = freelancer?.displayName.trim();
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+
+    final contractName = contract.freelancerName?.trim();
+    if (contractName != null && contractName.isNotEmpty) return contractName;
+
+    return 'Freelancer';
+  }
+
+  String _workerTitle(FreelancerModel? freelancer, ContractModel contract) {
+    final title = freelancer?.jobTitle.trim();
+    if (title != null && title.isNotEmpty && title != '-') return title;
+
+    if (contract.roleTitle.trim().isNotEmpty) return contract.roleTitle;
+
+    return 'Freelancer';
+  }
+
+  String _workerDateLabel(ContractModel contract) {
+    if (contract.startDate != null && contract.startDate!.trim().isNotEmpty) {
+      return 'Started ${_formatDate(contract.startDate!)}';
+    }
+
+    if (contract.createdAt != null && contract.createdAt!.trim().isNotEmpty) {
+      return 'Created ${_formatDate(contract.createdAt!)}';
+    }
+
+    return 'Date unavailable';
+  }
+
+  String _workerActionLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'Open Contract';
+      case 'active':
+      case 'under_review':
+      case 'revision_requested':
+        return 'Open Workspace';
+      case 'completed':
+      case 'cancelled':
+        return 'View Workspace';
+      default:
+        return 'Open Workspace';
+    }
+  }
+
+  Future<void> _handleWorkerAction(ContractModel contract) async {
+    switch (contract.status.toLowerCase()) {
+      case 'draft':
+        await _openWorkerContract(contract);
+        return;
+      case 'active':
+      case 'under_review':
+      case 'revision_requested':
+      case 'completed':
+      case 'cancelled':
+      default:
+        _openWorkspace(contract);
+    }
+  }
+
+  Widget _workerStatusBadge(String status) {
+    late final String label;
+    late final Color textColor;
+    late final Color bgColor;
+
+    switch (status.toLowerCase()) {
+      case 'draft':
+        label = 'Draft';
+        textColor = const Color(0xFF8E6C00);
+        bgColor = const Color(0xFFFFF4CC);
+        break;
+      case 'active':
+        label = 'Active';
+        textColor = AppColors.primary;
+        bgColor = AppColors.primary.withValues(alpha: 0.10);
+        break;
+      case 'under_review':
+        label = 'Under Review';
+        textColor = const Color(0xFF2196F3);
+        bgColor = const Color(0xFFE3F2FD);
+        break;
+      case 'revision_requested':
+        label = 'Revision Requested';
+        textColor = const Color(0xFFFF9800);
+        bgColor = const Color(0xFFFFF3E0);
+        break;
+      case 'completed':
+        label = 'Completed';
+        textColor = const Color(0xFF4CAF50);
+        bgColor = const Color(0xFFE8F5E9);
+        break;
+      case 'cancelled':
+        label = 'Cancelled';
+        textColor = const Color(0xFF757575);
+        bgColor = const Color(0xFFF5F5F5);
+        break;
+      default:
+        label = _capitalize(status.replaceAll('_', ' '));
+        textColor = const Color(0xFF667085);
+        bgColor = const Color(0xFFF2F4F7);
+        break;
+    }
+
+    return _modernStatusBadge(
+      label: label,
+      textColor: textColor,
+      bgColor: bgColor,
+    );
+  }
+
+  Future<void> _closeJob() async {
+    if (_job.status == 'closed') return;
+    final confirmed = await _showActionDialog(
+      title: 'Close Job',
+      message:
+          'Closing this job will stop accepting new bids. Existing proposals will remain. This cannot be undone.',
+      primaryLabel: 'Close job',
+      secondaryLabel: 'Cancel',
+      icon: Icons.lock_rounded,
+      accent: Colors.redAccent,
+    );
+    if (confirmed != true || !mounted) return;
+
+    final token = context.read<AuthProvider>().token!;
+    final provider = context.read<JobPostProvider>();
+    final updated = await provider.updateJobPost(
+      token: token,
+      jobPostId: _job.jobPostId,
+      data: {'status': 'closed', 'closure_reason': 'other'},
+    );
+    if (!mounted) return;
+    if (updated != null) {
+      setState(() => _job = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Job closed.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to close job.',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  // â”€â”€ Proposal actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _acceptBid(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
@@ -358,12 +620,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     try {
       final contractData = {
-        'job_post_id': widget.job.jobPostId,
+        'job_post_id': _job.jobPostId,
         'job_role_id': proposal.jobRoleId,
         'proposal_id': proposal.proposalId,
         'freelancer_id': proposal.freelancerId,
-        'client_id': widget.job.clientId,
-        'contract_title': 'Contract for ${widget.job.jobTitle}',
+        'client_id': _job.clientId,
+        'contract_title': 'Contract for ${_job.jobTitle}',
         'role_title': _roleTitle(proposal.jobRoleId),
         'agreed_budget': proposal.proposedBudget,
         'budget_currency': 'IDR',
@@ -501,7 +763,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Close button
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
@@ -514,7 +775,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Icon + Title + Subtitle
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -558,7 +818,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Textarea
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0EEFF),
@@ -622,7 +881,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Professional note
                   Row(
                     children: [
                       const Icon(
@@ -645,7 +903,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   const SizedBox(height: 16),
                   const Divider(height: 1, color: Color(0xFFE5E7EB)),
                   const SizedBox(height: 16),
-                  // Action buttons
                   Row(
                     children: [
                       Expanded(
@@ -792,15 +1049,31 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
+  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final avatarUrl = _client?.profilePictureUrl;
 
-    // 👇 NEW: closed status flags
-    final isClosed = widget.job.status.toLowerCase() == 'closed';
-    final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
-    final isScamClosure = isClosed && widget.job.closureReason == 'scam';
+    final isClosed = _job.status.toLowerCase() == 'closed';
+    final isOwnJob = auth.currentUser?.clientId == _job.clientId;
+    final closureReason = _job.closureReason?.trim().toLowerCase();
+    final closureNote = _job.closureNote?.trim();
+    final isScamClosure = isClosed && closureReason == 'scam';
+    final hasClosureDetails =
+        (closureReason?.isNotEmpty ?? false) ||
+        (closureNote?.isNotEmpty ?? false);
+    const ownerClosureReasons = {
+      'owner_closed',
+      'manual_close',
+      'job_filled',
+      'hiring_paused',
+    };
+    final canSubmitAppeal =
+        isClosed &&
+        hasClosureDetails &&
+        !ownerClosureReasons.contains(closureReason);
 
     final companyLogo = _clientLoading
         ? const SizedBox(
@@ -825,6 +1098,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      // â”€â”€ Floating action bar for owners â”€â”€
+      bottomNavigationBar: isOwnJob
+          ? _buildOwnerActionBar(isClosed: isClosed)
+          : null,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,19 +1116,18 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   : (_client?.websiteUrl?.isNotEmpty == true
                         ? _client!.websiteUrl!
                         : '-'),
-              jobTitle: widget.job.jobTitle,
-              category: categoryLabel(widget.job.projectCategory),
+              jobTitle: _job.jobTitle,
+              category: categoryLabel(_job.projectCategory),
               tags: _tags,
               onShare: () => Share.share(
-                jobShareUrl(widget.job.jobPostId),
-                subject: widget.job.jobTitle,
+                jobShareUrl(_job.jobPostId),
+                subject: _job.jobTitle,
               ),
-              // 👇 NEW: no report button on own job post
               onReport: null,
             ),
 
-            // ── Closed job banner — only for the owner ──
-            if (isClosed && isOwnJob)
+            // â”€â”€ Closed job banner â”€â”€
+            if (isClosed && isOwnJob && hasClosureDetails)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: Container(
@@ -894,7 +1170,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ── Title row with closed-at date ──
                             Row(
                               children: [
                                 Expanded(
@@ -911,9 +1186,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                     ),
                                   ),
                                 ),
-                                if (widget.job.closedAt != null)
+                                if (_job.closedAt != null)
                                   Text(
-                                    _formatDate(widget.job.closedAt!),
+                                    _formatDate(_job.closedAt!),
                                     style: GoogleFonts.poppins(
                                       fontSize: 10,
                                       color: const Color(0xFF9E9E9E),
@@ -921,8 +1196,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   ),
                               ],
                             ),
-
-                            // ── Scam-specific explanation ──
                             if (isScamClosure) ...[
                               const SizedBox(height: 6),
                               Text(
@@ -933,11 +1206,19 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   height: 1.45,
                                 ),
                               ),
+                            ] else if (canSubmitAppeal) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'This closure was applied by platform review. If you believe it was incorrect, you can submit an appeal for admin review.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF7D7D7D),
+                                  height: 1.45,
+                                ),
+                              ),
                             ],
-
-                            // ── Closure reason badge ──
-                            if (widget.job.closureReason != null &&
-                                widget.job.closureReason!.isNotEmpty) ...[
+                            if (_job.closureReason != null &&
+                                _job.closureReason!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -951,9 +1232,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  _formatClosureReason(
-                                    widget.job.closureReason!,
-                                  ),
+                                  _formatClosureReason(_job.closureReason!),
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -964,13 +1243,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 ),
                               ),
                             ],
-
-                            // ── Closure note ──
-                            if (widget.job.closureNote != null &&
-                                widget.job.closureNote!.isNotEmpty) ...[
+                            if (_job.closureNote != null &&
+                                _job.closureNote!.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Text(
-                                widget.job.closureNote!,
+                                _job.closureNote!,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: const Color(0xFF7D7D7D),
@@ -978,41 +1255,37 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 ),
                               ),
                             ],
-
-                            const SizedBox(height: 10),
-
-                            // ── Appeal CTA ──
-                            GestureDetector(
-                              onTap: () => AppealDialog.show(
-                                context,
-                                targetType: 'job_post',
-                                targetId: widget.job.jobPostId,
-                                targetLabel: widget.job.jobTitle,
-                                closureNote:
-                                    widget.job.closureNote ??
-                                    widget.job.closureReason,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 7,
+                            if (canSubmitAppeal) ...[
+                              const SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () => AppealDialog.show(
+                                  context,
+                                  targetType: 'job_post',
+                                  targetId: _job.jobPostId,
+                                  targetLabel: _job.jobTitle,
+                                  closureNote:
+                                      _job.closureNote ?? _job.closureReason,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: isScamClosure
-                                      ? const Color(0xFFDC2626)
-                                      : const Color(0xFFF57F17),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Submit an Appeal',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDC2626),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Submit an Appeal',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -1021,7 +1294,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
               ),
 
-            // ── Tab bar — unchanged ──
             Padding(
               padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
               child: JobDetailTabBar(
@@ -1033,6 +1305,84 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             if (_selectedTab == 0) _buildBiddingTab(),
             if (_selectedTab == 1) _buildWorkersTab(),
             if (_selectedTab == 2) _buildDetailsTab(),
+
+            // Extra bottom padding so FAB doesn't cover last content
+            if (isOwnJob) const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // â”€â”€ Owner action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  Widget _buildOwnerActionBar({required bool isClosed}) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: Color(0xFFEEEFF3))),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            if (!isClosed)
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextButton.icon(
+                    onPressed: _closeJob,
+                    icon: const Icon(
+                      Icons.lock_rounded,
+                      size: 18,
+                      color: Colors.redAccent,
+                    ),
+                    label: Text(
+                      'Close job',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: Colors.redAccent.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (isClosed)
+              Expanded(
+                child: Container(
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE0E0E0)),
+                  ),
+                  child: Text(
+                    'This job is closed',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF9E9E9E),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1048,6 +1398,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     ),
     child: const Icon(Icons.business, size: 32, color: AppColors.primary),
   );
+
+  // â”€â”€ Bidding tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildBiddingTab() {
     if (_proposalsLoading) {
@@ -1145,9 +1497,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 Container(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFF3F4F6),
+                    color: Color(0xFFF3F4F6),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child:
@@ -1218,9 +1570,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
               ],
             ),
-
             const SizedBox(height: 14),
-
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1233,9 +1583,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -1290,7 +1638,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ],
               ),
             ),
-
             if (files.isNotEmpty) ...[
               const SizedBox(height: 12),
               ...files.map(
@@ -1300,9 +1647,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
               ),
             ],
-
             const SizedBox(height: 14),
-
             Row(
               children: [
                 Expanded(
@@ -1322,11 +1667,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
             const Divider(height: 1, color: Color(0xFFEEF0F4)),
             const SizedBox(height: 14),
-
             if (canDecide)
               Row(
                 children: [
@@ -1741,20 +2084,72 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: const Icon(Icons.person, color: Color(0xFF7D7D7D), size: 24),
   );
 
+  // â”€â”€ Workers tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
   Widget _buildWorkersTab() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Center(
-        child: Text(
-          'No workers yet.',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: const Color(0xFF7D7D7D),
+    if (_workersLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_workers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 48, 24, 48),
+        child: Center(
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.group_off_outlined,
+                  size: 34,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No workers yet',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Workers will appear here after you've hired freelancers.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF7D7D7D),
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      child: Column(
+        children: _workers
+            .map((contract) => _buildWorkerCard(contract))
+            .toList(),
       ),
     );
   }
+  // â”€â”€ Details tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildDetailsTab() {
     return Padding(
@@ -1765,7 +2160,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           _sectionTitle('Description'),
           const SizedBox(height: 12),
           Text(
-            widget.job.jobDescription,
+            _job.jobDescription,
             style: GoogleFonts.poppins(
               fontSize: 13,
               color: const Color(0xFF333333),
@@ -1775,20 +2170,16 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           const SizedBox(height: 28),
           _sectionTitle('Terms'),
           const SizedBox(height: 12),
-          _termRow('Project Type', _capitalize(widget.job.projectType)),
-          if (widget.job.workingDays != null)
-            _termRow('Working Days', '${widget.job.workingDays} days'),
-          if (widget.job.deadline != null)
-            _termRow('Deadline', widget.job.deadline!),
-          if (widget.job.estimatedDuration != null)
-            _termRow('Estimated Duration', widget.job.estimatedDuration!),
-          if (widget.job.experienceLevel != null)
-            _termRow(
-              'Experience Level',
-              _capitalize(widget.job.experienceLevel!),
-            ),
-          if (widget.job.postedAt != null)
-            _termRow('Posted At', _formatDate(widget.job.postedAt!)),
+          _termRow('Project Type', _capitalize(_job.projectType)),
+          if (_job.workingDays != null)
+            _termRow('Working Days', '${_job.workingDays} days'),
+          if (_job.deadline != null) _termRow('Deadline', _job.deadline!),
+          if (_job.estimatedDuration != null)
+            _termRow('Estimated Duration', _job.estimatedDuration!),
+          if (_job.experienceLevel != null)
+            _termRow('Experience Level', _capitalize(_job.experienceLevel!)),
+          if (_job.postedAt != null)
+            _termRow('Posted At', _formatDate(_job.postedAt!)),
           if (_client?.bio != null) ...[
             const SizedBox(height: 28),
             _sectionTitle('About the Client'),
@@ -1821,8 +2212,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   Widget _buildRolesSection() {
     if (_rolesLoading) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -1983,7 +2374,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 if (role.positionsFilled > 0) ...[
                   const SizedBox(width: 4),
                   Text(
-                    '· ${role.positionsFilled} filled',
+                    'Â· ${role.positionsFilled} filled',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: _primary,
@@ -2024,6 +2415,130 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   return _skillChip(name, isRequired, importance);
                 }).toList(),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkerCard(ContractModel contract) {
+    final freelancer = _workerProfile(contract.freelancerId);
+    final avatarUrl = freelancer?.profilePictureUrl?.trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEDEEF2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _avatarFallback(),
+                        )
+                      : _avatarFallback(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _workerName(freelancer, contract),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _workerTitle(freelancer, contract),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: const Color(0xFF8A8F98),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _workerStatusBadge(contract.status),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _softChip(
+                  '${contract.budgetCurrency} ${contract.agreedBudget.toStringAsFixed(0)}',
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+                _softChip(
+                  _workerDateLabel(contract),
+                  icon: Icons.calendar_today_outlined,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => _handleWorkerAction(contract),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: Icon(
+                  contract.status.toLowerCase() == 'draft'
+                      ? Icons.description_outlined
+                      : Icons.open_in_new_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  _workerActionLabel(contract.status),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2074,7 +2589,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                   if (file.fileSizeFormatted.isNotEmpty)
                     Text(
-                      '${file.fileType.toUpperCase()} · ${file.fileSizeFormatted}',
+                      '${file.fileType.toUpperCase()} Â· ${file.fileSizeFormatted}',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: const Color(0xFF7D7D7D),
@@ -2119,7 +2634,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Widget _skillChip(String name, bool isRequired, String? importance) {
     final color = isRequired ? _primary : const Color(0xFF7D7D7D);
     final importanceLabel = importance != null && importance.isNotEmpty
-        ? ' · ${importance[0].toUpperCase()}${importance.substring(1)}'
+        ? ' Â· ${importance[0].toUpperCase()}${importance.substring(1)}'
         : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -2212,9 +2727,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         'Nov',
         'Dec',
       ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year} '
-          '${dt.hour.toString().padLeft(2, '0')}:'
-          '${dt.minute.toString().padLeft(2, '0')}';
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
     } catch (_) {
       return raw;
     }

@@ -196,7 +196,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _relevantJobs = [];
     });
     try {
-      final jobs = await JobPostService().getRelevantJobs(auth.token!, limit: 10);
+      final jobs = await JobPostService().getRelevantJobs(
+        auth.token!,
+        limit: 10,
+      );
       if (!mounted) return;
       if (jobs.isEmpty) {
         setState(() {
@@ -232,7 +235,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _popularJobs = [];
     });
     try {
-      final jobs = await JobPostService().getPopularJobs(auth.token!, pageSize: 10);
+      final jobs = await JobPostService().getPopularJobs(
+        auth.token!,
+        pageSize: 10,
+      );
       if (!mounted) return;
       setState(() {
         _popularJobs = jobs;
@@ -320,10 +326,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildHorizontalJobList(List<JobPostModel> jobs, bool isLoading, VoidCallback onRefresh, {String emptyMessage = 'No jobs found'}) {
+  Widget _buildHorizontalJobList(
+    List<JobPostModel> jobs,
+    bool isLoading,
+    VoidCallback onRefresh, {
+    String emptyMessage = 'No jobs found',
+  }) {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+          strokeWidth: 2,
+        ),
       );
     }
     if (jobs.isEmpty) {
@@ -347,11 +361,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.business, color: AppColors.primary, size: 20),
+                  child: const Icon(
+                    Icons.business,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
                 title: job.jobTitle,
                 category: job.projectType.toUpperCase(),
-                biddings: '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                biddings:
+                    '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
                 salary: job.projectScope.toUpperCase(),
                 jobType: job.projectType == 'team' ? 'Team' : 'Individual',
               ),
@@ -588,7 +607,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -918,9 +936,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => profile.isClient
-                                      ? const client_job_list.JobListScreen()
-                                      : const JobListScreen(),
+                                  builder: (_) => const JobListScreen(),
                                 ),
                               ),
                             ),
@@ -986,7 +1002,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const RecommendedJobsScreen(),
+                                    builder: (_) =>
+                                        const RecommendedJobsScreen(),
                                   ),
                                 ),
                                 child: Text(
@@ -1646,10 +1663,11 @@ class _BannedAccountGate extends StatelessWidget {
                     final profile = context.read<ProfileProvider>();
                     await auth.logout(profileProvider: profile);
                     if (context.mounted) {
-                      Navigator.of(context, rootNavigator: true)
-                          .pushAndRemoveUntil(
-                        MaterialPageRoute(
-                            builder: (_) => const LoginScreen()),
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                         (route) => false,
                       );
                     }
