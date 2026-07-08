@@ -63,11 +63,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   bool get isTeam => widget.job.projectType.toLowerCase() == 'team';
 
-  List<String> get tabs => [
-    'Details',
-    'Terms',
-    'Bidding (${widget.job.proposalCount})',
-  ];
+  List<String> get tabs => ['Details', 'Terms'];
 
   List<String> get tags {
     final tags = <String>[];
@@ -763,7 +759,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               posterName: clientLoading
                   ? '...'
                   : client?.displayName ?? 'Client',
-              username: clientLoading ? '' : (client?.websiteUrl?.isNotEmpty == true ? client!.websiteUrl! : '-'),
+              username: clientLoading
+                  ? ''
+                  : (client?.websiteUrl?.isNotEmpty == true
+                        ? client!.websiteUrl!
+                        : '-'),
               jobTitle: widget.job.jobTitle,
               category: categoryLabel(widget.job.projectCategory),
               tags: tags,
@@ -938,7 +938,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             // ── Tab content ──────────────────────────────────────────
             if (selectedTab == 0) buildDetailsTab(),
             if (selectedTab == 1) buildTermsTab(),
-            if (selectedTab == 2) buildBiddingTab(),
           ],
         ),
       ),
@@ -1071,36 +1070,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  // ── Tab: Bidding ───────────────────────────────────────────────────────────
-  Widget buildBiddingTab() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          sectionTitle('Bidding'),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFEEEEF5)),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              'Bidding content coming soon',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: const Color(0xFF7D7D7D),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1805,21 +1774,22 @@ class _AnalysisLoadingDialogState extends State<_AnalysisLoadingDialog>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _cycleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed && mounted) {
-          _cycleController.reset();
-          _cycleController.forward();
-          setState(() {
-            _dotCount = (_dotCount + 1) % 4;
-            if (_dotCount == 0) {
-              _msgIndex = (_msgIndex + 1) % _messages.length;
-            }
-          });
-        }
-      });
+    _cycleController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 500),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed && mounted) {
+            _cycleController.reset();
+            _cycleController.forward();
+            setState(() {
+              _dotCount = (_dotCount + 1) % 4;
+              if (_dotCount == 0) {
+                _msgIndex = (_msgIndex + 1) % _messages.length;
+              }
+            });
+          }
+        });
     _cycleController.forward();
   }
 
