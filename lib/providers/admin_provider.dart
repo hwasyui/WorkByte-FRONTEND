@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
 
-enum AdminPage { overview, users, jobs, reports, ai, closed, appeals }
+enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes }
 
 class AdminProvider extends ChangeNotifier {
   String? _token;
@@ -52,6 +52,10 @@ class AdminProvider extends ChangeNotifier {
   bool _isAppealsLoading = false;
   String _appealsStatusFilter = 'all';
   Map<String, dynamic> _appealsPagination = {};
+
+  List<Map<String, dynamic>> _disputedContracts = [];
+  bool _isDisputesLoading = false;
+  Map<String, dynamic> _disputesPagination = {};
 
   // Getters
   String? get token => _token;
@@ -104,6 +108,13 @@ class AdminProvider extends ChangeNotifier {
   bool get isAppealsLoading => _isAppealsLoading;
   String get appealsStatusFilter => _appealsStatusFilter;
   Map<String, dynamic> get appealsPagination => _appealsPagination;
+
+  List<Map<String, dynamic>> get disputedContracts => _disputedContracts;
+  bool get isDisputesLoading => _isDisputesLoading;
+  Map<String, dynamic> get disputesPagination => _disputesPagination;
+  int get pendingDisputesCount =>
+      (_disputesPagination['total'] as num?)?.toInt() ??
+      _disputedContracts.length;
   int get pendingAppeals =>
       (_appealsPagination['pending_count'] as num?)?.toInt() ??
       _appeals.where((a) => a['status'] == 'pending').length;
@@ -229,12 +240,14 @@ class AdminProvider extends ChangeNotifier {
         AdminService.getClients(_token!, page: 1, pageSize: 5),
         AdminService.getJobPosts(_token!, page: 1, pageSize: 5),
         AdminService.getAppeals(_token!, status: 'pending', pageSize: 50),
+        AdminService.getDisputedContracts(_token!, page: 1, pageSize: 30),
       ]);
 
       final freelancerResult = results[0];
       final clientResult = results[1];
       final jobResult = results[2];
       final appealsResult = results[3];
+      final disputesResult = results[4];
 
       _recentFreelancers = List<Map<String, dynamic>>.from(
         freelancerResult['items'] ?? [],
@@ -268,6 +281,16 @@ class AdminProvider extends ChangeNotifier {
       if (pendingItems.isNotEmpty) {
         // Merge into _appeals without overwriting if appeals page already loaded
         if (_appeals.isEmpty) _appeals = pendingItems;
+      }
+
+      // Pre-populate disputed contracts for the sidebar badge
+      if (_disputedContracts.isEmpty) {
+        _disputedContracts = List<Map<String, dynamic>>.from(
+          disputesResult['items'] ?? [],
+        );
+        _disputesPagination = Map<String, dynamic>.from(
+          disputesResult['pagination'] ?? {},
+        );
       }
     } catch (e) {
       debugPrint('AdminProvider.loadOverviewData error: $e');
@@ -611,6 +634,57 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadDisputedContracts({String? search, int page = 1}) async {
+    if (_token == null) return;
+    _isDisputesLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getDisputedContracts(
+        _token!,
+        search: search,
+        page: page,
+        pageSize: 30,
+      );
+      _disputedContracts = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _disputesPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+    } catch (e) {
+      debugPrint('AdminProvider.loadDisputedContracts error: $e');
+    }
+    _isDisputesLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> arbitrateDispute(
+    String contractId, {
+    required String outcome,
+    String? note,
+    String? newDeadline,
+  }) async {
+    if (_token == null) return false;
+    try {
+      final updated = await AdminService.arbitrateDispute(
+        _token!,
+        contractId: contractId,
+        outcome: outcome,
+        note: note,
+        newDeadline: newDeadline,
+      );
+      if (updated != null) {
+        await Future.wait([loadDisputedContracts(), loadDashboardStats()]);
+      }
+      return updated != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getClientAutoapproveHistory(
+    String clientId,
+  ) async {
+    if (_token == null) return null;
+    return AdminService.getClientAutoapproveHistory(_token!, clientId);
+  }
+
   void initWithToken(String token) {
     _token = token;
     _currentPage = AdminPage.overview;
@@ -655,6 +729,9 @@ class AdminProvider extends ChangeNotifier {
     _isAppealsLoading = false;
     _appealsStatusFilter = 'all';
     _appealsPagination = {};
+    _disputedContracts = [];
+    _isDisputesLoading = false;
+    _disputesPagination = {};
     _isAiLoading = false;
     _isClosedLoading = false;
     _error = null;

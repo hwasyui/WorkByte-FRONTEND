@@ -194,6 +194,48 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to update contract');
   }
 
+  /// PUT /contracts/:contractId/report-payment - Client reports a manual payment
+  Future<ContractModel> reportPayment(
+    String token,
+    String contractId,
+    double amount, {
+    String? note,
+  }) async {
+    final res = await http.put(
+      Uri.parse('$_baseUrl/contracts/$contractId/report-payment'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'amount': amount,
+        if (note != null && note.isNotEmpty) 'note': note,
+      }),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('PUT /contracts/$contractId/report-payment → ${res.statusCode}');
+    if (res.statusCode == 200) {
+      return ContractModel.fromJson(body['details'] ?? body['data'] ?? body);
+    }
+    throw Exception(body['details'] ?? 'Failed to report payment');
+  }
+
+  /// PUT /contracts/:contractId/dispute - Raise a dispute on the contract
+  Future<ContractModel> raiseDispute(
+    String token,
+    String contractId,
+    String reason,
+  ) async {
+    final res = await http.put(
+      Uri.parse('$_baseUrl/contracts/$contractId/dispute'),
+      headers: _headers(token),
+      body: jsonEncode({'reason': reason}),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('PUT /contracts/$contractId/dispute → ${res.statusCode}');
+    if (res.statusCode == 200) {
+      return ContractModel.fromJson(body['details'] ?? body['data'] ?? body);
+    }
+    throw Exception(body['details'] ?? 'Failed to raise dispute');
+  }
+
   Future<ContractModel> cancelContract(String token, String contractId) async {
     final res = await http.put(
       Uri.parse('$_baseUrl/contracts/$contractId/cancel'),

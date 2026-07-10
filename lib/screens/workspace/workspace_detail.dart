@@ -21,6 +21,7 @@ import '../../providers/contract_provider.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
 import '../dm/dm_chat_screen.dart';
+import '../contract/generate_contract_screen.dart';
 import '../../core/utils/helpers.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
@@ -63,6 +64,25 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   bool get _isClient => widget.viewerRole == 'client';
   bool get _isFreelancer => widget.viewerRole == 'freelancer';
+
+  static const int _autoApproveDays = 7;
+
+  bool get _isOverdue {
+    const activeStatuses = {'active', 'under_review', 'revision_requested'};
+    if (!activeStatuses.contains(_contract.status)) return false;
+    final endDate = _contract.endDate;
+    if (endDate == null) return false;
+    final parsed = DateTime.tryParse(endDate);
+    if (parsed == null) return false;
+    final today = DateTime.now();
+    final endDay = DateTime(parsed.year, parsed.month, parsed.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+    return endDay.isBefore(todayDay);
+  }
+
+  bool get _canRaiseDispute =>
+      _contract.status == 'under_review' ||
+      _contract.status == 'revision_requested';
 
   Future<void> _fetchProposalDetail() async {
     if (_contract.proposalId == null) return;
@@ -294,6 +314,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         children: [
           _buildStatusBanner(),
           const SizedBox(height: 16),
+          if (_isOverdue) ...[_buildOverdueBanner(), const SizedBox(height: 16)],
+          if (_isFreelancer && _contract.status == 'under_review')
+            _buildAutoApproveCountdown(submissionProvider),
           _buildContractInfo(),
           const SizedBox(height: 16),
           _buildPartiesCard(),
@@ -303,6 +326,10 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           _buildSubmittedWorkSection(submissionProvider),
           const SizedBox(height: 16),
           _buildMessagesButton(),
+          if (_canRaiseDispute) ...[
+            const SizedBox(height: 16),
+            _buildDisputeSection(),
+          ],
           const SizedBox(height: 16),
           if (_isFreelancer && _contract.status == 'revision_requested')
             _buildRevisionNote(),
@@ -374,6 +401,102 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
+  Widget _buildOverdueBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEF9A9A)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.event_busy_rounded,
+            color: Color(0xFFC62828),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Past Deadline',
+                  style: AppText.captionSemiBold.copyWith(
+                    color: const Color(0xFFC62828),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'This contract passed its end date (${_formatDate(_contract.endDate)}) '
+                  'and the work isn\'t marked complete yet. Coordinate with the other '
+                  'party or raise a dispute if you can\'t agree.',
+                  style: AppText.caption.copyWith(
+                    color: const Color(0xFFC62828).withOpacity(0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
+    final latest = provider.latestSubmission;
+    if (latest == null || latest.status != 'submitted' || latest.submittedAt == null) {
+      return const SizedBox.shrink();
+    }
+    final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
+    final daysRemaining = _autoApproveDays - daysElapsed;
+    if (daysRemaining > 3) {
+      // Not close enough to auto-approve yet - no need to nag the freelancer.
+      return const SizedBox.shrink();
+    }
+    final isUrgent = daysRemaining <= 1;
+    final color = isUrgent ? const Color(0xFFC62828) : const Color(0xFFEF6C00);
+    final bg = isUrgent ? const Color(0xFFFFEBEE) : const Color(0xFFFFF3E0);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.timer_outlined, color: color, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    daysRemaining <= 0
+                        ? 'Auto-Approving Soon'
+                        : 'Auto-Approves in $daysRemaining day${daysRemaining == 1 ? '' : 's'}',
+                    style: AppText.captionSemiBold.copyWith(color: color),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'The client hasn\'t reviewed your submission yet. If they stay silent, '
+                    'this contract will be automatically approved and marked complete.',
+                    style: AppText.caption.copyWith(color: color.withOpacity(0.85)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContractInfo() {
     return _buildCard(
       child: Column(
@@ -420,6 +543,40 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 ? 'Milestone Based'
                 : 'Full Payment',
           ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            Icons.account_balance_wallet_outlined,
+            'Total Paid',
+            '${_contract.budgetCurrency} ${(_contract.totalPaid ?? 0).toStringAsFixed(0)} '
+                'of ${_contract.agreedBudget.toStringAsFixed(0)}',
+          ),
+          if (_isClient && _contract.status != 'cancelled') ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: OutlinedButton.icon(
+                onPressed: _showRecordPaymentDialog,
+                icon: const Icon(
+                  Icons.add_card_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                label: Text(
+                  'Record a Payment',
+                  style: AppText.captionSemiBold.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -517,96 +674,99 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(height: 12),
               const Divider(height: 1),
               const SizedBox(height: 14),
-              GestureDetector(
-                onTap: () async {
-                  try {
-                    final auth = context.read<AuthProvider>();
-                    final contractProvider = context.read<ContractProvider>();
-                    final token = auth.token;
+              if (_contract.contractPdfUrl == null)
+                _buildRegeneratePdfPrompt()
+              else
+                GestureDetector(
+                  onTap: () async {
+                    try {
+                      final auth = context.read<AuthProvider>();
+                      final contractProvider = context.read<ContractProvider>();
+                      final token = auth.token;
 
-                    if (token == null || token.isEmpty) {
-                      _showSnack('Missing auth token.', isError: true);
-                      return;
+                      if (token == null || token.isEmpty) {
+                        _showSnack('Missing auth token.', isError: true);
+                        return;
+                      }
+
+                      final pdfUrl = await contractProvider.fetchPdfUrl(
+                        token,
+                        _contract.contractId,
+                      );
+
+                      debugPrint('signedPdfUrl = $pdfUrl');
+
+                      final uri = Uri.tryParse(pdfUrl);
+                      if (uri == null ||
+                          !(uri.scheme == 'http' || uri.scheme == 'https')) {
+                        _showSnack('Invalid contract URL.', isError: true);
+                        return;
+                      }
+
+                      if (!mounted) return;
+                      await openDocumentFromUrl(
+                        context,
+                        pdfUrl,
+                        token: token,
+                        fileName: 'contract_${_contract.contractId}.pdf',
+                        onRefreshToken: () async {
+                          final ok = await context.read<AuthProvider>().tryRefresh();
+                          return ok ? context.read<AuthProvider>().token : null;
+                        },
+                      );
+                    } catch (e) {
+                      debugPrint('open contract pdf error: $e');
+                      _showSnack('Could not open contract file.', isError: true);
                     }
-
-                    final pdfUrl = await contractProvider.fetchPdfUrl(
-                      token,
-                      _contract.contractId,
-                    );
-
-                    debugPrint('signedPdfUrl = $pdfUrl');
-
-                    final uri = Uri.tryParse(pdfUrl);
-                    if (uri == null ||
-                        !(uri.scheme == 'http' || uri.scheme == 'https')) {
-                      _showSnack('Invalid contract URL.', isError: true);
-                      return;
-                    }
-
-                    if (!mounted) return;
-                    await openDocumentFromUrl(
-                      context,
-                      pdfUrl,
-                      token: token,
-                      fileName: 'contract_${_contract.contractId}.pdf',
-                      onRefreshToken: () async {
-                        final ok = await context.read<AuthProvider>().tryRefresh();
-                        return ok ? context.read<AuthProvider>().token : null;
-                      },
-                    );
-                  } catch (e) {
-                    debugPrint('open contract pdf error: $e');
-                    _showSnack('Could not open contract file.', isError: true);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.picture_as_pdf_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'View Contract PDF',
+                                style: AppText.bodySemiBold.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              Text(
+                                'Tap to open in document viewer',
+                                style: AppText.caption.copyWith(
+                                  color: AppColors.primary.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.open_in_new_rounded,
+                          color: AppColors.primary.withOpacity(0.7),
+                          size: 16,
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.picture_as_pdf_rounded,
-                        color: AppColors.primary,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'View Contract PDF',
-                              style: AppText.bodySemiBold.copyWith(
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Text(
-                              'Tap to open in document viewer',
-                              style: AppText.caption.copyWith(
-                                color: AppColors.primary.withOpacity(0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.open_in_new_rounded,
-                        color: AppColors.primary.withOpacity(0.7),
-                        size: 16,
-                      ),
-                    ],
-                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -714,6 +874,74 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRegeneratePdfPrompt() {
+    return GestureDetector(
+      onTap: () async {
+        final updated = await Navigator.push<ContractModel>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GenerateContractScreen(
+              contractId: _contract.contractId,
+              initialContract: _contract,
+            ),
+          ),
+        );
+        if (updated != null && mounted) {
+          setState(() => _contract = updated);
+        } else if (mounted) {
+          // Screen may have generated without returning the model directly;
+          // pull the latest from the provider just in case.
+          final latest = context.read<ContractProvider>().currentContract;
+          if (latest != null && latest.contractId == _contract.contractId) {
+            setState(() => _contract = latest);
+          }
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFEF6C00),
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contract Document Needs to Be Generated',
+                    style: AppText.bodySemiBold.copyWith(
+                      color: const Color(0xFFEF6C00),
+                    ),
+                  ),
+                  Text(
+                    'Terms changed since the last PDF (or none exists yet) — tap to generate it',
+                    style: AppText.caption.copyWith(
+                      color: const Color(0xFFEF6C00).withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFFEF6C00),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -974,6 +1202,160 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               ),
             ),
             Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisputeSection() {
+    return GestureDetector(
+      onTap: _showRaiseDisputeDialog,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.gavel_rounded,
+                color: Colors.redAccent,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Raise a Dispute',
+                    style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
+                  ),
+                  Text(
+                    'Can\'t resolve this with the other party? Ask an admin to step in.',
+                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRaiseDisputeDialog() {
+    final reasonCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Raise a Dispute', style: AppText.h2),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'An admin will review this contract and decide the outcome. '
+                  'Explain what went wrong.',
+                  style: AppText.caption.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: reasonCtrl,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: InputDecoration(
+                    labelText: 'Reason',
+                    hintText: 'Describe the issue in detail...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().length < 20) {
+                      return 'Please provide at least 20 characters';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: AppText.bodySemiBold.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSubmitting = true);
+                      final token = context.read<AuthProvider>().token!;
+                      final success = await context
+                          .read<ContractProvider>()
+                          .raiseDispute(
+                            token,
+                            _contract.contractId,
+                            reasonCtrl.text.trim(),
+                          );
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        setState(() => _contract = _contract.copyWith(status: 'disputed'));
+                        _showSnack(
+                          'Dispute raised. An admin will review it.',
+                          isError: false,
+                        );
+                      } else {
+                        _showSnack('Failed to raise dispute.', isError: true);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Submit',
+                      style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                    ),
+            ),
           ],
         ),
       ),
@@ -1822,6 +2204,133 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           ),
         ),
       );
+  }
+
+  void _showRecordPaymentDialog() {
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Record a Payment', style: AppText.h2),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Log a payment you made to the freelancer outside the app '
+                  '(e.g. bank transfer). This updates the total paid on this contract.',
+                  style: AppText.caption.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Amount (${_contract.budgetCurrency})',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (v) {
+                    final val = double.tryParse(v?.trim() ?? '');
+                    if (val == null || val <= 0) {
+                      return 'Enter a valid amount';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: noteCtrl,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Note (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: AppText.bodySemiBold.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSubmitting = true);
+                      final token = context.read<AuthProvider>().token!;
+                      final amount = double.parse(amountCtrl.text.trim());
+                      final success = await context
+                          .read<ContractProvider>()
+                          .reportPayment(
+                            token,
+                            _contract.contractId,
+                            amount,
+                            note: noteCtrl.text.trim().isEmpty
+                                ? null
+                                : noteCtrl.text.trim(),
+                          );
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        final updated = context
+                            .read<ContractProvider>()
+                            .currentContract;
+                        if (updated != null &&
+                            updated.contractId == _contract.contractId) {
+                          setState(() => _contract = updated);
+                        }
+                        _showSnack('Payment recorded.', isError: false);
+                      } else {
+                        _showSnack('Failed to record payment.', isError: true);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Save',
+                      style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showCancelDialog() {

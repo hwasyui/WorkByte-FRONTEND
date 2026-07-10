@@ -14,6 +14,7 @@ import 'pages/admin_reports_page.dart';
 import 'pages/admin_ai_page.dart';
 import 'pages/admin_closed_page.dart';
 import 'pages/admin_appeals_page.dart';
+import 'pages/admin_disputes_page.dart';
 import '../auth/login.dart';
 
 class AdminShell extends StatelessWidget {
@@ -27,6 +28,7 @@ class AdminShell extends StatelessWidget {
     AdminAiPage(),
     AdminClosedPage(),
     AdminAppealsPage(),
+    AdminDisputesPage(),
   ];
 
   static const List<String> _titles = [
@@ -37,6 +39,7 @@ class AdminShell extends StatelessWidget {
     'AI Analysis',
     'Closed Items',
     'Appeals',
+    'Disputes',
   ];
 
   @override
@@ -285,6 +288,19 @@ class _MobileDrawer extends StatelessWidget {
                 onTap: () {
                   onSelect(6);
                   context.read<AdminProvider>().loadAppeals(status: 'all');
+                  Navigator.pop(context);
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.balance_rounded,
+                label: 'Disputes',
+                isSelected: selectedIndex == 7,
+                badge: context.read<AdminProvider>().pendingDisputesCount > 0
+                    ? context.read<AdminProvider>().pendingDisputesCount
+                    : null,
+                onTap: () {
+                  onSelect(7);
+                  context.read<AdminProvider>().loadDisputedContracts();
                   Navigator.pop(context);
                 },
               ),

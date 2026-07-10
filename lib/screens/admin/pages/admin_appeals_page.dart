@@ -330,6 +330,36 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
+          // ── auto-approve history link (account appeals only) ──
+          if (isAccount) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              child: GestureDetector(
+                onTap: () => _showAutoapproveHistoryDialog(
+                  context,
+                  targetId: appeal['target_id']?.toString() ?? '',
+                  userName: userName,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.history_rounded,
+                        size: 13, color: Color(0xFF4F46E5)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'View auto-approve strike history',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF4F46E5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           // ── admin note (resolved) ──
           if (adminNote != null && adminNote.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -553,6 +583,122 @@ class _AppealCard extends StatelessWidget {
     }
   }
 
+  Future<void> _showAutoapproveHistoryDialog(
+    BuildContext context, {
+    required String targetId,
+    required String userName,
+  }) async {
+    if (targetId.isEmpty) return;
+    final adminProvider = context.read<AdminProvider>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => FutureBuilder<Map<String, dynamic>?>(
+        future: adminProvider.getClientAutoapproveHistory(targetId),
+        builder: (ctx, snapshot) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Auto-Approve History',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+            content: SizedBox(
+              width: 360,
+              child: snapshot.connectionState == ConnectionState.waiting
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
+                      ),
+                    )
+                  : _buildAutoapproveHistoryBody(snapshot.data, userName),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Close',
+                    style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAutoapproveHistoryBody(Map<String, dynamic>? data, String userName) {
+    if (data == null) {
+      return Text(
+        '$userName isn\'t a client account, so there\'s no auto-approve strike '
+        'history to review.',
+        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+      );
+    }
+
+    final strikeCount = (data['strike_count'] as num?)?.toInt() ?? 0;
+    final reliabilityLabel = data['reliability_label'] as String? ?? '-';
+    final history = (data['history'] as List<dynamic>? ?? []);
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              _MiniStat(label: 'Strikes', value: '$strikeCount / 3'),
+              const SizedBox(width: 10),
+              _MiniStat(label: 'Label', value: reliabilityLabel),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'HISTORY',
+            style: GoogleFonts.poppins(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (history.isEmpty)
+            Text(
+              'No auto-approve strikes on record.',
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+            )
+          else
+            ...history.map((h) {
+              final row = h as Map<String, dynamic>;
+              final title = row['contract_title'] as String? ?? 'Untitled Contract';
+              final when = row['notified_at']?.toString() ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    Text(
+                      _fmtDate(when),
+                      style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF9CA3AF)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
   String _fmtDate(String? d) {
     if (d == null || d.isEmpty) return '-';
     try {
@@ -565,6 +711,49 @@ class _AppealCard extends StatelessWidget {
     } catch (_) {
       return '-';
     }
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MiniStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.poppins(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

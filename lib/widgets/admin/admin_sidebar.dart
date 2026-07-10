@@ -160,6 +160,19 @@ class AdminSidebar extends StatelessWidget {
                     admin.loadAppeals(status: 'all');
                   },
                 ),
+                _NavItem(
+                  icon: Icons.balance_rounded,
+                  label: 'Disputes',
+                  page: AdminPage.disputes,
+                  current: admin.currentPage,
+                  badge: admin.pendingDisputesCount > 0
+                      ? admin.pendingDisputesCount
+                      : null,
+                  onTap: () {
+                    admin.setPage(AdminPage.disputes);
+                    admin.loadDisputedContracts();
+                  },
+                ),
 
                 const Spacer(),
 

@@ -19,8 +19,10 @@ import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../services/api_service.dart';
+import '../../services/client_service.dart';
 import '../../services/portfolio_service.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/client_reliability_badge.dart';
 import '../../widgets/pagination_bar.dart';
 
 class PeopleListScreen extends StatefulWidget {
@@ -811,6 +813,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
   List<ExperienceModel> _experiences = [];
   List<PortfolioModel> _portfolios = [];
   bool _loadingDetails = false;
+  String? _clientReliability;
 
   @override
   void initState() {
@@ -818,6 +821,19 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     if (!widget.isClient && widget.freelancer != null) {
       _fetchFreelancerDetails();
     }
+    if (widget.isClient && widget.client != null) {
+      _fetchClientReliability();
+    }
+  }
+
+  Future<void> _fetchClientReliability() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    final label = await ClientService().getClientReliability(
+      token,
+      widget.client!.clientId,
+    );
+    if (mounted) setState(() => _clientReliability = label);
   }
 
   Future<void> _fetchFreelancerDetails() async {
@@ -996,6 +1012,10 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (widget.isClient && _clientReliability != null) ...[
+                    ClientReliabilityBadge(label: _clientReliability),
+                    const SizedBox(height: 12),
+                  ],
                   // Stats row — unchanged
                   Row(
                     children: [

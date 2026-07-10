@@ -476,6 +476,72 @@ class AdminService {
     }
   }
 
+  static Future<Map<String, dynamic>> getDisputedContracts(
+    String token, {
+    String? search,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/contracts/disputed').replace(
+        queryParameters: {
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<Map<String, dynamic>?> arbitrateDispute(
+    String token, {
+    required String contractId,
+    required String outcome, // 'approve' | 'cancel' | 'revise'
+    String? note,
+    String? newDeadline, // ISO date string, required if outcome == 'revise'
+  }) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$_baseUrl/admin/contracts/$contractId/arbitrate'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'outcome': outcome,
+          if (note != null && note.isNotEmpty) 'note': note,
+          if (newDeadline != null) 'new_deadline': newDeadline,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) return Map<String, dynamic>.from(details);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getClientAutoapproveHistory(
+    String token,
+    String clientId,
+  ) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/admin/clients/$clientId/autoapprove-history'),
+        headers: _headers(token),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) return Map<String, dynamic>.from(details);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> getJobDetail(
     String token,
     String jobPostId,

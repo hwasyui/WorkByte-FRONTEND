@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/contract_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../models/notification_model.dart';
 import '../../widgets/notification_item.dart';
 import '../../widgets/load_more_button.dart';
+import '../workspace/workspace_detail.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -70,9 +74,67 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.upload_file_outlined;
       case 'revision_requested':
         return Icons.edit_outlined;
+      case 'payment_reported':
+        return Icons.account_balance_wallet_outlined;
+      case 'contract_disputed':
+        return Icons.gavel_outlined;
+      case 'dispute_resolved':
+        return Icons.balance_outlined;
+      case 'contract_overdue':
+        return Icons.event_busy_outlined;
+      case 'contract_autoapprove_reminder':
+      case 'contract_autoapprove_final_warning':
+        return Icons.timer_outlined;
+      case 'contract_auto_approved':
+        return Icons.auto_mode_outlined;
       default:
         return Icons.notifications_outlined;
     }
+  }
+
+  bool _isUrgent(String type) {
+    const urgentTypes = {
+      'contract_disputed',
+      'dispute_resolved',
+      'contract_overdue',
+      'contract_autoapprove_final_warning',
+      'contract_auto_approved',
+    };
+    return urgentTypes.contains(type);
+  }
+
+  Future<void> _openNotification(NotificationModel notif) async {
+    context.read<NotificationProvider>().markAsRead(notif.id);
+
+    final contractId = notif.data['contract_id']?.toString();
+    if (contractId == null || contractId.isEmpty) return;
+
+    final auth = context.read<AuthProvider>();
+    final token = auth.token;
+    if (token == null) return;
+
+    final contractProvider = context.read<ContractProvider>();
+    await contractProvider.fetchContractById(token, contractId);
+    if (!mounted) return;
+
+    final contract = contractProvider.currentContract;
+    if (contract == null || contract.contractId != contractId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open this contract.')),
+      );
+      return;
+    }
+
+    final isFreelancer = context.read<ProfileProvider>().isFreelancer;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkspaceDetailScreen(
+          contract: contract,
+          viewerRole: isFreelancer ? 'freelancer' : 'client',
+        ),
+      ),
+    );
   }
 
   @override
@@ -224,7 +286,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         final NotificationModel notif =
                             provider.notifications[index];
                         return GestureDetector(
-                          onTap: () => provider.markAsRead(notif.id),
+                          onTap: () => _openNotification(notif),
                           child: NotificationItem(
                             boldPrefix: notif.title,
                             message: notif.body,
@@ -233,7 +295,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             avatar: Icon(
                               _iconForType(notif.type),
                               size: 22,
-                              color: const Color(0xFF6E6BF8),
+                              color: _isUrgent(notif.type)
+                                  ? const Color(0xFFE53935)
+                                  : const Color(0xFF6E6BF8),
                             ),
                           ),
                         );

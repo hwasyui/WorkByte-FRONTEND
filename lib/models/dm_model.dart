@@ -151,6 +151,9 @@ class DMMessageModel {
       'request_declined',
       'job_context',
       'status_change',
+      'payment_reported',
+      'dispute_raised',
+      'dispute_resolved',
     };
     return type != null && systemTypes.contains(type);
   }

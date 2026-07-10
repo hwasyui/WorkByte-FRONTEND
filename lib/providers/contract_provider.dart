@@ -226,6 +226,56 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> reportPayment(
+    String token,
+    String contractId,
+    double amount, {
+    String? note,
+  }) async {
+    try {
+      final updated = await _service.reportPayment(
+        token,
+        contractId,
+        amount,
+        note: note,
+      );
+      if (_currentContract?.contractId == contractId) {
+        _currentContract = updated;
+      }
+      _contracts = _contracts
+          .map((c) => c.contractId == contractId ? updated : c)
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> raiseDispute(
+    String token,
+    String contractId,
+    String reason,
+  ) async {
+    try {
+      final updated = await _service.raiseDispute(token, contractId, reason);
+      if (_currentContract?.contractId == contractId) {
+        _currentContract = updated;
+      }
+      _contracts = _contracts
+          .map((c) => c.contractId == contractId ? updated : c)
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   int get totalContractsCount => _contracts.length;
 
   int completedContractsCountForFreelancer(String freelancerId) {

@@ -760,12 +760,15 @@ class _DMChatScreenState extends State<DMChatScreen>
                     color: const Color(0xFF6C757D),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    _systemMessageLabel(message.metadata?['type']),
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6C757D),
+                  Flexible(
+                    child: Text(
+                      _systemMessageLabel(message),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF6C757D),
+                      ),
                     ),
                   ),
                 ],
@@ -1390,7 +1393,8 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
   }
 
-  String _systemMessageLabel(String? type) {
+  String _systemMessageLabel(DMMessageModel message) {
+    final type = message.metadata?['type']?.toString();
     switch (type) {
       case 'contract_accepted':
         return 'Contract accepted';
@@ -1400,6 +1404,16 @@ class _DMChatScreenState extends State<DMChatScreen>
         return 'Milestone approved';
       case 'revision_requested':
         return 'Revision requested';
+      // These are already full, human-readable sentences written server-side
+      // (see DMFunctions.send_system_event callers in contract_functions.py) -
+      // showing the raw text avoids a generic label that hides the actual
+      // amount/reason/outcome from both parties.
+      case 'payment_reported':
+      case 'dispute_raised':
+      case 'dispute_resolved':
+        return message.messageText.isNotEmpty
+            ? message.messageText
+            : 'System message';
       default:
         return 'System message';
     }
