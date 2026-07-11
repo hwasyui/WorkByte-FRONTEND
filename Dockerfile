@@ -12,7 +12,10 @@ RUN mkdir -p $ANDROID_SDK_ROOT/cmdline-tools \
     && rm /tmp/tools.zip
 
 ENV FLUTTER_HOME /opt/flutter
-RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME
+# Pinned to a specific tag (not the floating "stable" branch) so every rebuild -
+# yours, a teammate's, or CI - produces the exact same Flutter SDK instead of
+# whatever the tip of stable happens to be on build day.
+RUN git clone --branch 3.44.4 --depth 1 https://github.com/flutter/flutter.git $FLUTTER_HOME
 
 ENV PATH "$PATH:$FLUTTER_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools"
 

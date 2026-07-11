@@ -7,8 +7,9 @@ import '../models/dm_model.dart';
 
 class DMFailureException implements Exception {
   final String message;
+  final List<String> detectedLabels;
 
-  const DMFailureException(this.message);
+  const DMFailureException(this.message, {this.detectedLabels = const []});
 
   @override
   String toString() => message;
@@ -37,6 +38,21 @@ class DMService {
     } catch (_) {
       return res.body;
     }
+  }
+
+  /// `detected_labels` rides at the top level of the error body, alongside
+  /// `details` (see ResponseSchema.error's `extra` param) - `_unwrap()` only
+  /// ever returns `details`, so this reads the raw body separately rather
+  /// than losing the labels the same way.
+  List<String> _extractLabels(http.Response res) {
+    try {
+      final body = jsonDecode(res.body);
+      final labels = body is Map ? body['detected_labels'] : null;
+      if (labels is List) return labels.map((e) => e.toString()).toList();
+    } catch (_) {
+      // no-op - falls through to no labels
+    }
+    return const [];
   }
 
   Future<DMThreadStartResult> startThread({
@@ -69,7 +85,10 @@ class DMService {
       );
     }
 
-    throw Exception(body is String ? body : 'Failed to start thread');
+    throw DMFailureException(
+      body is String ? body : 'Failed to start thread',
+      detectedLabels: _extractLabels(res),
+    );
   }
 
   Future<DMThreadListResult> getThreads(String token, {String? status}) async {
@@ -213,7 +232,10 @@ class DMService {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw DMFailureException(body is String ? body : 'Failed to send message');
+    throw DMFailureException(
+      body is String ? body : 'Failed to send message',
+      detectedLabels: _extractLabels(res),
+    );
   }
 
   Future<DMMessageModel> sendFileMessage({
@@ -250,7 +272,10 @@ class DMService {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw DMFailureException(body is String ? body : 'Failed to send file');
+    throw DMFailureException(
+      body is String ? body : 'Failed to send file',
+      detectedLabels: _extractLabels(res),
+    );
   }
 
   Future<void> markThreadAsRead({

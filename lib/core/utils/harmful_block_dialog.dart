@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Human-readable names for the backend's raw label keys (result of
+/// scan_harmful_text / scan_harmful_text_with_ml_fallback) - mirrors the
+/// server-side _LABEL_DISPLAY_NAMES mapping used for notification text, so
+/// the wording matches what a blocked user already sees in their
+/// notifications. Shared across every screen that needs to render
+/// detected_labels, since the backend doesn't send a formatted sentence for
+/// every rejection (e.g. DM keeps its message neutral and relies on the
+/// caller to build one from detected_labels).
+const Map<String, String> harmfulLabelDisplayNames = {
+  'toxic': 'toxicity',
+  'toxicity': 'toxicity',
+  'obscene': 'obscenity',
+  'threat': 'threats',
+  'insult': 'insults',
+  'identity_hate': 'identity-based hate speech',
+};
+
+String describeLabels(List<String> labels) =>
+    labels.map((l) => harmfulLabelDisplayNames[l] ?? l).join(', ');
+
 /// True if [message] is a harmful-text-block rejection from the backend.
 /// Every synchronous harmful-text rejection (profile name/title/bio via
 /// PUT /freelancers/{id}, new skill names via POST /skills) always contains
@@ -77,13 +97,28 @@ Future<void> showHarmfulBlockDialog(
 /// harmful-text rejection) or a plain SnackBar with [message] as the reason.
 /// Use this instead of a hardcoded generic "Failed" string so the real
 /// backend error always reaches the user.
+///
+/// [detectedLabels] covers callers (currently only DM) whose backend message
+/// is deliberately kept neutral ("Message couldn't be sent.") instead of
+/// naming the category inline - if [message] doesn't already read as a
+/// block but labels are present, a label sentence is built client-side from
+/// [harmfulLabelDisplayNames] so the user still sees why it was blocked.
 void showErrorFeedback(
   BuildContext context, {
   required String message,
+  List<String> detectedLabels = const [],
   String blockedTitle = 'Content Blocked',
 }) {
   if (isHarmfulBlockMessage(message)) {
     showHarmfulBlockDialog(context, message: message, title: blockedTitle);
+    return;
+  }
+  if (detectedLabels.isNotEmpty) {
+    showHarmfulBlockDialog(
+      context,
+      message: '$message It was flagged for ${describeLabels(detectedLabels)}.',
+      title: blockedTitle,
+    );
     return;
   }
   ScaffoldMessenger.of(

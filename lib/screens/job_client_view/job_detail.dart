@@ -1073,15 +1073,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       if (!mounted) return;
 
       final message = e.toString().replaceFirst('Exception: ', '');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message.isNotEmpty ? message : 'Failed to send message.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showErrorFeedback(
+        context,
+        message: message.isNotEmpty ? message : 'Failed to send message.',
+        detectedLabels: e is DMFailureException ? e.detectedLabels : const [],
       );
     }
   }
