@@ -8,6 +8,18 @@ import '../models/job_role_model.dart';
 import '../models/job_role_skill_model.dart';
 import '../models/job_file_model.dart';
 
+/// Thrown when GET /job-posts/{id} returns 202 - the post exists but is still
+/// being scanned for harmful content (moderation_status: 'scanning'). This is
+/// distinct from a real failure (404/500): the post will very likely become
+/// available within seconds, so callers should show a "still reviewing"
+/// message rather than a generic error. See DOCS/test-frontend.md section 3.
+class JobPostScanningException implements Exception {
+  final String message;
+  JobPostScanningException([this.message = 'This job post is still being reviewed. Check back shortly.']);
+  @override
+  String toString() => message;
+}
+
 class JobPostService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
@@ -113,6 +125,14 @@ class JobPostService {
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       return JobPostModel.fromJson(_extractBody(body));
+    }
+    if (res.statusCode == 202) {
+      final message = (body is Map<String, dynamic>)
+          ? body['message'] as String?
+          : null;
+      throw JobPostScanningException(
+        message ?? 'This job post is still being reviewed. Check back shortly.',
+      );
     }
     throw Exception(_extractError(body, 'Failed to load job post'));
   }

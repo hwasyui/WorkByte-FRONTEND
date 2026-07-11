@@ -14,6 +14,7 @@ class JobDetailHeader extends StatelessWidget {
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
   final VoidCallback? onReport; // 👈 NEW
+  final VoidCallback? onRefresh;
   final Widget? titleTrailing;
 
   const JobDetailHeader({
@@ -29,6 +30,7 @@ class JobDetailHeader extends StatelessWidget {
     this.onShare,
     this.onBookmark,
     this.onReport, // 👈 NEW
+    this.onRefresh,
     this.titleTrailing,
   });
 
@@ -92,6 +94,17 @@ class JobDetailHeader extends StatelessWidget {
                         Icons.flag_rounded,
                         color: Colors.white,
                         size: 22,
+                      ),
+                    ),
+                  ],
+                  if (onRefresh != null) ...[
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: onRefresh,
+                      child: const Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
                   ],

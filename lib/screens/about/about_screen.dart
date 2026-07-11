@@ -266,16 +266,17 @@ class AboutScreen extends StatelessWidget {
                     title: 'Deep Job Fit Analysis',
                     description:
                         'When a freelancer wants a detailed view of how well they fit a '
-                        'specific job, WorkByte runs a RAG + LLM analysis. It retrieves '
-                        'the job\'s requirements, the freelancer\'s full profile, and '
-                        'relevant past contracts from the database, then asks a local '
-                        'language model for a structured assessment — covering matched '
+                        'specific role, WorkByte runs a RAG + LLM analysis for that role. '
+                        'It retrieves the role\'s requirements, the freelancer\'s full '
+                        'profile, and relevant past contracts from the database, then asks '
+                        'a language model for a structured assessment — covering matched '
                         'skills, skill gaps, strengths, and practical improvement tips. '
-                        'This is a deeper, advisory complement to the quick feed ranking.',
+                        'It runs on demand per role, with a daily limit per freelancer '
+                        'since each analysis is a real LLM call.',
                     highlights: const [
                       'Retrieval-Augmented Generation (RAG) over profile & contracts',
-                      'Per-role breakdown: matched skills, gaps & strengths',
-                      'Actionable skill improvement tips from the LLM',
+                      'Per-role analysis: matched skills, gaps, strengths & fit score',
+                      'On demand with a daily usage limit shown before you run it',
                     ],
                   ),
 
@@ -290,16 +291,17 @@ class AboutScreen extends StatelessWidget {
                     title: 'Harmful Text Detection',
                     description:
                         'Every job posting, profile bio, and user-submitted text is '
-                        'automatically scanned by a fine-tuned RoBERTa classifier '
-                        'before it reaches the community. The model scores '
-                        'content across five harm labels and routes likely violations '
-                        'to admin review. Low-risk content is auto-approved; high-risk '
-                        'content can be auto-rejected using stricter thresholds for '
-                        'jobs and profiles. Pending items expire after 30 days.',
+                        'automatically scanned by a fine-tuned RoBERTa classifier as it '
+                        'is submitted. The model scores content across five harm labels, '
+                        'and anything above the threshold is blocked at the source — the '
+                        'author is told their content violated the policy and it is never '
+                        'saved or shown to anyone. Blocking is automatic, so there is no '
+                        'review queue; admins get a read-only audit log of what was '
+                        'flagged and can mark entries as reviewed.',
                     highlights: const [
                       '5 harm labels: Toxicity, Obscene, Threat, Insult, Identity Hate',
                       'RoBERTa classifier fine-tuned for platform moderation',
-                      'Automated triage with human-readable label explanations for reviewers',
+                      'Instant block at submission with a read-only admin audit log',
                     ],
                   ),
 

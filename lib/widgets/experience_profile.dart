@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../models/experience_model.dart';
 
 class ExperienceProfile extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
 
-  const ExperienceProfile({super.key, required this.onSave});
+  /// When set, the form pre-fills from this entry and behaves as an edit
+  /// (different button label) instead of adding a new one.
+  final ExperienceModel? initialData;
+
+  const ExperienceProfile({
+    super.key,
+    required this.onSave,
+    this.initialData,
+  });
 
   @override
   State<ExperienceProfile> createState() => _ExperienceProfileState();
@@ -13,15 +22,29 @@ class ExperienceProfile extends StatefulWidget {
 class _ExperienceProfileState extends State<ExperienceProfile> {
   final _formKey = GlobalKey<FormState>();
 
-  final titleCtrl = TextEditingController();
-  final companyCtrl = TextEditingController();
-  final locationCtrl = TextEditingController();
-  final descCtrl = TextEditingController();
+  late final titleCtrl = TextEditingController(
+    text: widget.initialData?.jobTitle,
+  );
+  late final companyCtrl = TextEditingController(
+    text: widget.initialData?.companyName,
+  );
+  late final locationCtrl = TextEditingController(
+    text: widget.initialData?.location,
+  );
+  late final descCtrl = TextEditingController(
+    text: widget.initialData?.description,
+  );
 
-  DateTime? startDate;
-  DateTime? endDate;
-  bool isPresent = false;
+  late DateTime? startDate = DateTime.tryParse(
+    widget.initialData?.startDate ?? '',
+  );
+  late DateTime? endDate = DateTime.tryParse(
+    widget.initialData?.endDate ?? '',
+  );
+  late bool isPresent = widget.initialData?.isCurrent ?? false;
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.initialData != null;
 
   @override
   void dispose() {
@@ -64,8 +87,8 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
     return '${months[date.month - 1]} ${date.year}';
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
+  void _submit() async {
+    if (_formKey.currentState!.validate() && !_isSubmitting) {
       if (startDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Start date is required')),
@@ -81,16 +104,20 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
         return;
       }
       setState(() => _isSubmitting = true);
-      widget.onSave({
-        "title": titleCtrl.text,
-        "company": companyCtrl.text,
-        "location": locationCtrl.text,
-        "description": descCtrl.text,
-        "startDate": startDate,
-        "endDate": endDate,
-        "isPresent": isPresent,
-      });
-      if (mounted) Navigator.pop(context);
+      try {
+        await widget.onSave({
+          "title": titleCtrl.text,
+          "company": companyCtrl.text,
+          "location": locationCtrl.text,
+          "description": descCtrl.text,
+          "startDate": startDate,
+          "endDate": endDate,
+          "isPresent": isPresent,
+        });
+        if (mounted) Navigator.pop(context);
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -336,9 +363,9 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Save',
-                            style: TextStyle(
+                        : Text(
+                            _isEditing ? 'Save Changes' : 'Save',
+                            style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,

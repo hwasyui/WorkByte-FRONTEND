@@ -12,6 +12,16 @@ class ExperienceModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// 'scanning' | 'visible' | 'blocked' - see work_experience_functions.py's
+  /// run_work_experience_scan(). Defaults to 'visible' when absent so entries
+  /// that predate this field don't get mistaken for pending/blocked.
+  final String moderationStatus;
+
+  /// Raw label keys (e.g. 'toxic', 'insult') from the backend's `detected_labels`
+  /// JSONB column - see harmful_text.md section 17. Empty unless moderationStatus
+  /// is 'blocked'. Not human-readable; map via labelDisplayName() before showing.
+  final List<String> detectedLabels;
+
   const ExperienceModel({
     required this.workExperienceId,
     required this.freelancerId,
@@ -24,6 +34,8 @@ class ExperienceModel {
     this.description,
     this.createdAt,
     this.updatedAt,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
   });
 
   factory ExperienceModel.fromJson(Map<String, dynamic> json) =>
@@ -43,6 +55,11 @@ class ExperienceModel {
         updatedAt: json['updated_at'] != null
             ? DateTime.tryParse(json['updated_at'].toString())
             : null,
+        moderationStatus: json['moderation_status'] as String? ?? 'visible',
+        detectedLabels: (json['detected_labels'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
       );
 
   Map<String, dynamic> toJson() => {

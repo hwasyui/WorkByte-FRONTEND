@@ -64,6 +64,10 @@ class DeepLinkService {
             builder: (_) => freelancer_view.JobDetailScreen(job: job),
           ));
         }
+      } on JobPostScanningException catch (e) {
+        ScaffoldMessenger.of(navigator.context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
       } catch (_) {}
     } else if (type == 'profile') {
       final profileService = ProfileService();

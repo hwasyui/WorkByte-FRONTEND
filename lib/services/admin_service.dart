@@ -318,11 +318,14 @@ class AdminService {
     }
   }
 
+  /// Browse the harmful-text audit trail (read-only history, not an action queue).
+  /// [reviewed] filters by whether an admin has looked at a row yet: null = no
+  /// filter, false = only unreviewed, true = only reviewed.
   static Future<Map<String, dynamic>> getModerationItems(
     String token, {
-    String status = 'pending',
+    bool? reviewed,
     String contentType = 'all',
-    String sortBy = 'total_score',
+    String sortBy = 'created_at',
     String sortDir = 'desc',
     int page = 1,
     int pageSize = 30,
@@ -330,7 +333,7 @@ class AdminService {
     try {
       final uri = Uri.parse('$_baseUrl/admin/moderation').replace(
         queryParameters: {
-          'status': status,
+          if (reviewed != null) 'reviewed': reviewed.toString(),
           'content_type': contentType,
           'sort_by': sortBy,
           'sort_dir': sortDir,
@@ -346,15 +349,16 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
-  static Future<bool> actionModerationItem(
+  /// Mark an audit-trail entry as reviewed (bookkeeping only, no action on the
+  /// underlying content). Optional [adminNote] is stored alongside the row.
+  static Future<bool> reviewModerationItem(
     String token, {
     required String moderationId,
-    required String action,
     String? adminNote,
   }) async {
     try {
       final res = await http.post(
-        Uri.parse('$_baseUrl/admin/moderation/$moderationId/$action'),
+        Uri.parse('$_baseUrl/admin/moderation/$moderationId/review'),
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       );

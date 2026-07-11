@@ -283,13 +283,68 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> analyzeJobMatch(
+  /// Per-role RAG job-fit analysis. Backend endpoint is per job ROLE, not per job.
+  ///
+  /// Returns a status envelope so the caller can tell apart a successful analysis,
+  /// a daily-limit rejection (429), and other errors:
+  ///   { 'ok': true,  'statusCode': 200, 'data': {...analysis + usage fields...} }
+  ///   { 'ok': false, 'statusCode': 429, 'limitReached': true,
+  ///     'usageToday', 'usageLimit', 'remainingToday', 'error' }
+  ///   { 'ok': false, 'statusCode': N, 'error': '...' }
+  static Future<Map<String, dynamic>> analyzeRoleMatch(
     String token,
-    String jobPostId,
+    String jobRoleId,
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/ai/job-engine/analyse/job/$jobPostId'),
+        Uri.parse('$_baseUrl/ai/job-engine/analyse/role/$jobRoleId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      _checkUnauthorized(response);
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {
+          'ok': true,
+          'statusCode': 200,
+          'data': Map<String, dynamic>.from(
+            body['details'] ?? body['data'] ?? {},
+          ),
+        };
+      }
+      if (response.statusCode == 429) {
+        return {
+          'ok': false,
+          'statusCode': 429,
+          'limitReached': true,
+          'usageToday': body is Map ? body['usage_today'] : null,
+          'usageLimit': body is Map ? body['usage_limit'] : null,
+          'remainingToday': (body is Map ? body['remaining_today'] : null) ?? 0,
+          'error': (body is Map ? body['details'] : null) ??
+              'Daily job-fit analysis limit reached',
+        };
+      }
+      print('Role analysis failed (${response.statusCode}): ${response.body}');
+      return {
+        'ok': false,
+        'statusCode': response.statusCode,
+        'error': (body is Map ? (body['details'] ?? body['message']) : null) ??
+            'Analysis failed',
+      };
+    } catch (e) {
+      print('Error calling role analysis: $e');
+      rethrow;
+    }
+  }
+
+  /// Read-only lookup of today's job-fit analysis usage. Does NOT spend a call.
+  /// Returns { usage_today, usage_limit, remaining_today } or null on failure.
+  static Future<Map<String, dynamic>?> getJobFitUsage(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/ai/job-engine/usage'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -298,15 +353,13 @@ class ApiService {
       _checkUnauthorized(response);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
-      } else {
-        print('AI analysis failed (${response.statusCode}): ${response.body}');
-        return null;
+        final d = data['details'] ?? data['data'] ?? {};
+        if (d is Map) return Map<String, dynamic>.from(d);
       }
     } catch (e) {
-      print('Error calling AI analysis: $e');
-      rethrow;
+      print('Error fetching job-fit usage: $e');
     }
+    return null;
   }
 
   /// Get all clients with pagination support

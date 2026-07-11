@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../models/portfolio_model.dart';
 
 class PortfolioProfile extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
 
-  const PortfolioProfile({super.key, required this.onSave});
+  /// When set, the form pre-fills from this entry and behaves as an edit
+  /// (different button label, and saving re-triggers the moderation scan
+  /// server-side) instead of adding a new one.
+  final PortfolioModel? initialData;
+
+  const PortfolioProfile({super.key, required this.onSave, this.initialData});
 
   @override
   State<PortfolioProfile> createState() => _PortfolioProfileState();
@@ -13,13 +19,21 @@ class PortfolioProfile extends StatefulWidget {
 class _PortfolioProfileState extends State<PortfolioProfile> {
   final _formKey = GlobalKey<FormState>();
 
-  final projectTitleCtrl = TextEditingController();
-  final projectDescCtrl = TextEditingController();
+  late final projectTitleCtrl = TextEditingController(
+    text: widget.initialData?.projectTitle,
+  );
+  late final projectDescCtrl = TextEditingController(
+    text: widget.initialData?.projectDescription,
+  );
   final yourRoleCtrl = TextEditingController();
-  final projectUrlCtrl = TextEditingController();
+  late final projectUrlCtrl = TextEditingController(
+    text: widget.initialData?.projectUrl,
+  );
 
-  DateTime? completionDate;
+  late DateTime? completionDate = widget.initialData?.completionDate;
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.initialData != null;
 
   @override
   void dispose() {
@@ -281,9 +295,9 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Save',
-                            style: TextStyle(
+                        : Text(
+                            _isEditing ? 'Save Changes' : 'Save',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,

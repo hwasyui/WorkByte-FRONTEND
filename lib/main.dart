@@ -27,10 +27,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
+import 'core/app_keys.dart';
+import 'core/utils/notification_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +39,10 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (_) {}
-  await NotificationService.initialize(navigatorKey: navigatorKey);
+  await NotificationService.initialize(
+    navigatorKey: navigatorKey,
+    onForegroundMessage: handleForegroundNotification,
+  );
 
   // Register navigator key so DeepLinkService can push routes.
   DeepLinkService.init(navigatorKey);

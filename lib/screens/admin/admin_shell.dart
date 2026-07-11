@@ -255,10 +255,12 @@ class _MobileDrawer extends StatelessWidget {
                     context.read<AdminProvider>().pendingScamFlags +
                             context
                                 .read<AdminProvider>()
-                                .pendingModerationItems >
+                                .unreviewedModerationItems >
                         0
                     ? context.read<AdminProvider>().pendingScamFlags +
-                          context.read<AdminProvider>().pendingModerationItems
+                          context
+                              .read<AdminProvider>()
+                              .unreviewedModerationItems
                     : null,
                 onTap: () {
                   onSelect(4);

@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class EditProfileForm extends StatefulWidget {
   final Map<String, dynamic> initialData;
-  final Function(Map<String, dynamic>) onSave;
+  final Future<bool> Function(Map<String, dynamic>) onSave;
 
   const EditProfileForm({
     super.key,
@@ -27,6 +27,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
   String? imagePath;
   String? imageUrl;
   bool? imageDeleted;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -175,16 +176,23 @@ class _EditProfileFormState extends State<EditProfileForm> {
     );
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      widget.onSave({
-        "name": nameCtrl.text,
-        "job": jobTitleCtrl.text,
-        "image": imagePath,
-        "imageUrl": imageUrl,
-        "imageDeleted": imageDeleted ?? false,
-      });
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSaving) return;
+
+    setState(() => _isSaving = true);
+    final success = await widget.onSave({
+      "name": nameCtrl.text,
+      "job": jobTitleCtrl.text,
+      "image": imagePath,
+      "imageUrl": imageUrl,
+      "imageDeleted": imageDeleted ?? false,
+    });
+    if (!mounted) return;
+
+    if (success) {
       Navigator.pop(context);
+    } else {
+      setState(() => _isSaving = false);
     }
   }
 
@@ -455,23 +463,37 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _submit,
+                    onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.primary.withOpacity(
+                        0.6,
+                      ),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
                       ),
                     ),
-                    child: Text(
-                      'Save',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            'Save',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],

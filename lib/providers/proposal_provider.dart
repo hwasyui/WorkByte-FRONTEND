@@ -123,6 +123,26 @@ class ProposalProvider extends ChangeNotifier {
   }
 
   // ── Delete a proposal ─────────────────────────────────────────────────────
+  // ── Edit a pending proposal (also re-triggers moderation scan server-side) ─
+  Future<bool> updateProposal({
+    required String token,
+    required String proposalId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final updated = await _service.updateProposal(token, proposalId, data);
+      _proposals = _proposals
+          .map((p) => p.proposalId == proposalId ? updated : p)
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> deleteProposal({
     required String token,
     required String proposalId,

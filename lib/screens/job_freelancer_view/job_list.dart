@@ -14,6 +14,8 @@ import '../../models/job_post_model.dart';
 import '../../models/proposal_model.dart';
 import '../../services/job_post_service.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../widgets/proposal_edit_form.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import 'job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
@@ -613,6 +615,38 @@ class _JobListScreenState extends State<JobListScreen> {
               color: const Color(0xFF1A1A2E),
             ),
           ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () async {
+              final auth = context.read<AuthProvider>();
+              if (auth.token == null) return;
+              if (_showingApplied) {
+                await _fetchAppliedJobs(auth.token!);
+              } else {
+                await _fetchJobs();
+              }
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.refresh_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1073,7 +1107,10 @@ class _JobListScreenState extends State<JobListScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _proposalStatusChip(proposal.status),
+                      _proposalStatusChip(
+                        proposal.status,
+                        moderationStatus: proposal.moderationStatus,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -1180,6 +1217,63 @@ class _JobListScreenState extends State<JobListScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  // Backend only allows edit/delete while status is still
+                  // 'pending' (PUT/DELETE /proposals/{id}) - once a client has
+                  // accepted/rejected it, or the freelancer withdrew it, it's
+                  // final. This is independent of moderationStatus: a blocked
+                  // proposal is still 'pending' and editable/resubmittable.
+                  if (proposal.status.toLowerCase() == 'pending') ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _showProposalEditForm(proposal),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.edit_outlined,
+                                size: 15,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Edit',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 18),
+                        GestureDetector(
+                          onTap: () => _confirmDeleteProposal(proposal),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.delete_outline,
+                                size: 15,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Delete',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1187,6 +1281,86 @@ class _JobListScreenState extends State<JobListScreen> {
         ),
       ),
     );
+  }
+
+  void _showProposalEditForm(ProposalModel proposal) {
+    final auth = context.read<AuthProvider>();
+    final proposalProvider = context.read<ProposalProvider>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ProposalEditForm(
+        initialData: proposal,
+        onSave: (data) async {
+          final success = await proposalProvider.updateProposal(
+            token: auth.token!,
+            proposalId: proposal.proposalId,
+            data: data,
+          );
+          if (!mounted) return;
+          if (success) {
+            setState(() => _applySortAndFilter());
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Proposal updated successfully')),
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message: proposalProvider.error ?? 'Failed to update proposal',
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteProposal(ProposalModel proposal) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Proposal'),
+        content: const Text(
+          'Are you sure you want to delete this proposal? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final proposalProvider = context.read<ProposalProvider>();
+    final success = await proposalProvider.deleteProposal(
+      token: auth.token!,
+      proposalId: proposal.proposalId,
+    );
+    if (!mounted) return;
+    if (success) {
+      setState(() {
+        _appliedJobs = _appliedJobs
+            .where((item) => item.proposal.proposalId != proposal.proposalId)
+            .toList();
+        _applySortAndFilter();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Proposal deleted')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(proposalProvider.error ?? 'Failed to delete proposal'),
+        ),
+      );
+    }
   }
 
   Widget _jobCardMainInfo({
@@ -1247,7 +1421,39 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  Widget _proposalStatusChip(String status) {
+  Widget _proposalStatusChip(String status, {String moderationStatus = 'visible'}) {
+    // Moderation status wins over workflow status: a blocked/scanning proposal
+    // is hidden from the client regardless of what its 'pending'/'accepted'/etc.
+    // status says, so showing that workflow status here would be misleading -
+    // the client can't act on something they can't see yet.
+    final moderationConfig = {
+      'blocked': ['Blocked', const Color(0xFFDC2626), const Color(0xFFFDECEC)],
+      'scanning': [
+        'Reviewing',
+        const Color(0xFF6B7280),
+        const Color(0xFFF3F4F6),
+      ],
+    };
+    final normalizedModeration = moderationStatus.toLowerCase();
+    if (moderationConfig.containsKey(normalizedModeration)) {
+      final item = moderationConfig[normalizedModeration]!;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: item[2] as Color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          item[0] as String,
+          style: GoogleFonts.poppins(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: item[1] as Color,
+          ),
+        ),
+      );
+    }
+
     final normalized = status.toLowerCase();
 
     final config = {

@@ -5,13 +5,25 @@ import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/proposal_provider.dart';
 import '../../models/notification_model.dart';
 import '../../widgets/notification_item.dart';
 import '../../widgets/load_more_button.dart';
+import '../../widgets/proposal_edit_form.dart';
+import '../../services/proposal_service.dart';
+import '../../services/job_post_service.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import '../workspace/workspace_detail.dart';
+import '../freelancer_profile/freelancer_profile.dart';
+import '../job_client_view/job_detail.dart' as client_job_view;
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
+
+  /// True while this screen is on-screen. Read by notification_banner.dart
+  /// so a foreground push doesn't pop up a "you got blocked" banner on top
+  /// of the real notification the user is already looking at.
+  static bool isOpen = false;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -21,11 +33,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationScreen.isOpen = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<NotificationProvider>();
       provider.fetchNotifications(refresh: true);
       provider.markAllRead(); // mark all read when screen opens
     });
+  }
+
+  @override
+  void dispose() {
+    NotificationScreen.isOpen = false;
+    super.dispose();
   }
 
   String _formatTime(DateTime dt) {
@@ -87,6 +106,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.timer_outlined;
       case 'contract_auto_approved':
         return Icons.auto_mode_outlined;
+      case 'education_blocked':
+      case 'work_experience_blocked':
+      case 'job_post_blocked':
+      case 'proposal_blocked':
+      case 'portfolio_blocked':
+        return Icons.block_rounded;
+      case 'account_deletion_blocked':
+        return Icons.report_problem_outlined;
       default:
         return Icons.notifications_outlined;
     }
@@ -100,18 +127,62 @@ class _NotificationScreenState extends State<NotificationScreen> {
       'contract_autoapprove_final_warning',
       'contract_auto_approved',
     };
-    return urgentTypes.contains(type);
+    return urgentTypes.contains(type) || _isBlocked(type);
+  }
+
+  /// Content-moderation "your X got blocked, edit and resubmit" family - see
+  /// education_functions.py / work_experience_functions.py / job_post_
+  /// functions.py / proposal_functions.py / portfolio_functions.py's
+  /// run_*_scan(). Rendered in red with a block icon, same as the disappearing
+  /// banner in notification_banner.dart, so the two treatments are consistent
+  /// whether the user sees it live or later in this list.
+  bool _isBlocked(String type) {
+    const blockedTypes = {
+      'education_blocked',
+      'work_experience_blocked',
+      'job_post_blocked',
+      'proposal_blocked',
+      'portfolio_blocked',
+    };
+    return blockedTypes.contains(type);
   }
 
   Future<void> _openNotification(NotificationModel notif) async {
     context.read<NotificationProvider>().markAsRead(notif.id);
 
-    final contractId = notif.data['contract_id']?.toString();
-    if (contractId == null || contractId.isEmpty) return;
-
     final auth = context.read<AuthProvider>();
     final token = auth.token;
     if (token == null) return;
+
+    switch (notif.type) {
+      case 'education_blocked':
+        _openProfileEditEntity(
+          'education',
+          notif.data['education_id']?.toString(),
+        );
+        return;
+      case 'work_experience_blocked':
+        _openProfileEditEntity(
+          'work_experience',
+          notif.data['work_experience_id']?.toString(),
+        );
+        return;
+      case 'portfolio_blocked':
+        _openProfileEditEntity(
+          'portfolio',
+          notif.data['portfolio_id']?.toString(),
+        );
+        return;
+      case 'job_post_blocked':
+        await _openBlockedJobPost(token, notif.data['job_post_id']?.toString());
+        return;
+      case 'proposal_blocked':
+        await _openBlockedProposal(token, notif.data['proposal_id']?.toString());
+        return;
+    }
+
+    final contractId = notif.data['contract_id']?.toString();
+    if (contractId == null || contractId.isEmpty) return;
 
     final contractProvider = context.read<ContractProvider>();
     await contractProvider.fetchContractById(token, contractId);
@@ -135,6 +206,86 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
       ),
     );
+  }
+
+  void _openProfileEditEntity(String type, String? id) {
+    if (id == null || id.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ProfileScreen(initialEditEntityType: type, initialEditEntityId: id),
+      ),
+    );
+  }
+
+  /// Job posts have no dedicated "edit content" screen yet (only status
+  /// actions like closing exist) - this opens the job's detail page, which is
+  /// at least the right destination, until an edit flow is built.
+  Future<void> _openBlockedJobPost(String token, String? jobPostId) async {
+    if (jobPostId == null || jobPostId.isEmpty) return;
+    try {
+      final job = await JobPostService().getJobPost(token, jobPostId);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => client_job_view.ClientJobDetailScreen(
+            job: job,
+            autoOpenEdit: true,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this job post.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openBlockedProposal(String token, String? proposalId) async {
+    if (proposalId == null || proposalId.isEmpty) return;
+    try {
+      final proposal = await ProposalService().getProposalById(
+        token,
+        proposalId,
+      );
+      if (!mounted) return;
+      final proposalProvider = context.read<ProposalProvider>();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => ProposalEditForm(
+          initialData: proposal,
+          onSave: (data) async {
+            final success = await proposalProvider.updateProposal(
+              token: token,
+              proposalId: proposal.proposalId,
+              data: data,
+            );
+            if (!mounted) return;
+            if (success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Proposal updated successfully')),
+              );
+            } else {
+              showErrorFeedback(
+                context,
+                message: proposalProvider.error ?? 'Failed to update proposal',
+              );
+            }
+          },
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this proposal.')),
+        );
+      }
+    }
   }
 
   @override
@@ -292,6 +443,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             message: notif.body,
                             timestamp: _formatTime(notif.createdAt),
                             isUnread: !notif.isRead,
+                            avatarBackgroundColor: _isBlocked(notif.type)
+                                ? const Color(0xFFFEE2E2)
+                                : null,
                             avatar: Icon(
                               _iconForType(notif.type),
                               size: 22,

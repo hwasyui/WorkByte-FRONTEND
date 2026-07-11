@@ -24,10 +24,13 @@ import '../../providers/proposal_file_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/skill_provider.dart';
 import '../../services/proposal_service.dart';
+import '../../services/job_post_service.dart';
 import '../../models/freelancer_model.dart';
 import '../../models/contract_model.dart';
 import '../../widgets/job_detail_header.dart';
 import '../../widgets/job_detail_tab_bar.dart';
+import '../../widgets/job_post_edit_form.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import '../contract/generate_contract_screen.dart';
 import '../people_list/people_list_screen.dart';
 import '../workspace/workspace_detail.dart';
@@ -36,7 +39,16 @@ import '../../core/utils/helpers.dart';
 class ClientJobDetailScreen extends StatefulWidget {
   final JobPostModel job;
 
-  const ClientJobDetailScreen({super.key, required this.job});
+  /// When true, opens the edit-title/description modal right after this
+  /// screen loads - used when navigating here from a job_post_blocked
+  /// notification tap.
+  final bool autoOpenEdit;
+
+  const ClientJobDetailScreen({
+    super.key,
+    required this.job,
+    this.autoOpenEdit = false,
+  });
 
   @override
   State<ClientJobDetailScreen> createState() => _ClientJobDetailScreenState();
@@ -109,7 +121,48 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       _fetchWorkers();
       _fetchAllSkills();
       _fetchJobFiles();
+      if (widget.autoOpenEdit) _showJobPostEditForm();
     });
+  }
+
+  Future<void> _refreshModerationStatus() async {
+    final token = context.read<AuthProvider>().token!;
+    final updated = await JobPostService().getJobPost(token, _job.jobPostId);
+    if (!mounted) return;
+    setState(() => _job = updated);
+  }
+
+  void _showJobPostEditForm() {
+    final auth = context.read<AuthProvider>();
+    final jobPostProvider = context.read<JobPostProvider>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => JobPostEditForm(
+        initialData: _job,
+        onSave: (data) async {
+          final updated = await jobPostProvider.updateJobPost(
+            token: auth.token!,
+            jobPostId: _job.jobPostId,
+            data: data,
+          );
+          if (!mounted) return;
+          if (updated != null) {
+            setState(() => _job = updated);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Job post updated successfully')),
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message: jobPostProvider.error ?? 'Failed to update job post',
+            );
+          }
+        },
+      ),
+    );
   }
 
   Future<void> _fetchClient() async {
@@ -1019,10 +1072,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      final message = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to send message.',
+            message.isNotEmpty ? message : 'Failed to send message.',
             style: GoogleFonts.poppins(fontSize: 12),
           ),
           backgroundColor: Colors.red,
@@ -1124,7 +1178,74 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 subject: _job.jobTitle,
               ),
               onReport: null,
+              onRefresh: () {
+                _fetchClient();
+                _fetchRoles();
+                _fetchProposals();
+                _fetchWorkers();
+                _fetchAllSkills();
+                _fetchJobFiles();
+                _refreshModerationStatus();
+              },
+              titleTrailing: isOwnJob
+                  ? GestureDetector(
+                      onTap: _showJobPostEditForm,
+                      child: const Icon(
+                        Icons.edit_outlined,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    )
+                  : null,
             ),
+
+            if (isOwnJob && _job.moderationStatus != 'visible')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _job.moderationStatus == 'blocked'
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _job.moderationStatus == 'blocked'
+                          ? const Color(0xFFFCA5A5)
+                          : const Color(0xFFD1D5DB),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        _job.moderationStatus == 'blocked'
+                            ? Icons.block_rounded
+                            : Icons.hourglass_top_rounded,
+                        size: 18,
+                        color: _job.moderationStatus == 'blocked'
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF6B7280),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _job.moderationStatus == 'blocked'
+                              ? 'This job post was flagged and is hidden from freelancers. Tap the edit icon above to fix and resubmit.'
+                              : 'This job post is being automatically reviewed and is visible only to you for now.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: _job.moderationStatus == 'blocked'
+                                ? const Color(0xFF991B1B)
+                                : const Color(0xFF374151),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             // â”€â”€ Closed job banner â”€â”€
             if (isClosed && isOwnJob && hasClosureDetails)

@@ -10,6 +10,17 @@ class PortfolioModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// 'scanning' | 'visible' | 'blocked' - see portfolio_functions.py's
+  /// run_portfolio_scan(). Defaults to 'visible' when absent so entries that
+  /// predate this field (or come from a stripped-down response) don't get
+  /// mistaken for pending/blocked.
+  final String moderationStatus;
+
+  /// Raw label keys (e.g. 'toxic', 'insult') from the backend's `detected_labels`
+  /// JSONB column - see harmful_text.md section 17. Empty unless moderationStatus
+  /// is 'blocked'. Not human-readable; map via labelDisplayName() before showing.
+  final List<String> detectedLabels;
+
   const PortfolioModel({
     required this.portfolioId,
     required this.freelancerId,
@@ -21,6 +32,8 @@ class PortfolioModel {
     this.contractId,
     this.createdAt,
     this.updatedAt,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
   });
 
   factory PortfolioModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +54,11 @@ class PortfolioModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
+      moderationStatus: json['moderation_status'] as String? ?? 'visible',
+      detectedLabels: (json['detected_labels'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 

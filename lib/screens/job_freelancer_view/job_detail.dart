@@ -50,8 +50,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final ClientService _clientService = ClientService();
   List<JobRoleModel> roles = [];
   bool rolesLoading = true;
-  bool analyzing = false;
+  // Job-fit analysis is per ROLE now. Track which role is currently analyzing so
+  // only that role's button shows a spinner.
+  String? _analyzingRoleId;
   bool _analysisCancelled = false;
+  // Daily job-fit analysis usage (freelancers only). Null until first loaded.
+  int? _jobFitRemaining;
+  int? _jobFitLimit;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
 
@@ -84,6 +89,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       fetchAllSkills();
       fetchMyProposals();
       fetchJobFiles();
+      loadJobFitUsage();
+    });
+  }
+
+  /// Fetch today's remaining job-fit analyses (freelancers only). Read-only, does
+  /// not spend a call. Silent on failure — the count just stays hidden.
+  Future<void> loadJobFitUsage() async {
+    if (context.read<ProfileProvider>().isClient) return;
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    final usage = await ApiService.getJobFitUsage(token);
+    if (!mounted || usage == null) return;
+    setState(() {
+      _jobFitRemaining = (usage['remaining_today'] as num?)?.toInt();
+      _jobFitLimit = (usage['usage_limit'] as num?)?.toInt();
     });
   }
 
@@ -212,9 +232,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Future<void> analyzeJob() async {
+  Future<void> analyzeRole(JobRoleModel role) async {
     _analysisCancelled = false;
-    setState(() => analyzing = true);
+    setState(() => _analyzingRoleId = role.jobRoleId);
 
     showDialog(
       context: context,
@@ -223,22 +243,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       builder: (_) => _AnalysisLoadingDialog(
         onCancel: () {
           _analysisCancelled = true;
-          setState(() => analyzing = false);
+          setState(() => _analyzingRoleId = null);
           Navigator.of(context, rootNavigator: true).pop();
         },
       ),
     );
 
     final token = context.read<AuthProvider>().token!;
-    Map<String, dynamic>? result;
+    Map<String, dynamic> outcome;
     try {
-      result = await ApiService.analyzeJobMatch(token, widget.job.jobPostId);
+      outcome = await ApiService.analyzeRoleMatch(token, role.jobRoleId);
     } on SessionExpiredException {
       if (!mounted) return;
       if (Navigator.of(context, rootNavigator: true).canPop()) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      setState(() => analyzing = false);
+      setState(() => _analyzingRoleId = null);
       await context.read<AuthProvider>().handleSessionExpired(
         profileProvider: context.read<ProfileProvider>(),
       );
@@ -251,22 +271,53 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (Navigator.of(context, rootNavigator: true).canPop()) {
       Navigator.of(context, rootNavigator: true).pop();
     }
-    setState(() => analyzing = false);
+    setState(() => _analyzingRoleId = null);
 
-    if (result == null) {
+    // Daily limit reached (429): pin remaining to 0 and inform the user.
+    if (outcome['limitReached'] == true) {
+      setState(() {
+        _jobFitRemaining = 0;
+        _jobFitLimit = (outcome['usageLimit'] as num?)?.toInt() ?? _jobFitLimit;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Analysis failed. Please try again.')),
+        SnackBar(
+          content: Text(
+            outcome['error']?.toString() ??
+                "You've reached today's job-fit analysis limit.",
+          ),
+        ),
       );
       return;
     }
-    showAnalysisSheet(result);
+
+    if (outcome['ok'] != true || outcome['data'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            outcome['error']?.toString() ?? 'Analysis failed. Please try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final data = Map<String, dynamic>.from(outcome['data'] as Map);
+    // Refresh remaining-usage from the analysis response.
+    final remaining = (data['remaining_today'] as num?)?.toInt();
+    final limit = (data['usage_limit'] as num?)?.toInt();
+    if (remaining != null || limit != null) {
+      setState(() {
+        if (remaining != null) _jobFitRemaining = remaining;
+        if (limit != null) _jobFitLimit = limit;
+      });
+    }
+    showRoleAnalysisSheet(data);
   }
 
-  void showAnalysisSheet(Map<String, dynamic> result) {
-    final overallScore = (result['overall_match_score'] as num?)?.toInt() ?? 0;
-    final recommendation = result['overall_recommendation'] as String? ?? '';
-    final reason = result['overall_recommendation_reason'] as String? ?? '';
-    final roles = result['roles'] as List? ?? [];
+  void showRoleAnalysisSheet(Map<String, dynamic> data) {
+    final roleTitle = data['role_title'] as String? ?? 'this role';
+    final remaining = (data['remaining_today'] as num?)?.toInt();
+    final limit = (data['usage_limit'] as num?)?.toInt();
 
     showModalBottomSheet(
       context: context,
@@ -307,77 +358,49 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'AI Match Analysis',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF333333),
+                          Expanded(
+                            child: Text(
+                              'AI Job-Fit Analysis',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF333333),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FAFA),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Overall Match',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF7D7D7D),
-                                  ),
-                                ),
-                                const Spacer(),
-                                ScoreBadge(score: overallScore),
-                                const SizedBox(width: 8),
-                                RecommendationChip(
-                                  recommendation: recommendation,
-                                ),
-                              ],
-                            ),
-                            if (reason.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                reason,
+                          if (remaining != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                limit != null
+                                    ? '$remaining/$limit left today'
+                                    : '$remaining left today',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: const Color(0xFF555555),
-                                  height: 1.5,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
                                 ),
                               ),
-                            ],
-                          ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'How well you fit "$roleTitle".',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF7D7D7D),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      if (roles.isNotEmpty) ...[
-                        Text(
-                          'Role Breakdown',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF333333),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...roles.map(
-                          (r) =>
-                              buildRoleAnalysis(Map<String, dynamic>.from(r)),
-                        ),
-                      ],
+                      const SizedBox(height: 16),
+                      buildRoleAnalysis(data),
                     ],
                   ),
                 ),
@@ -547,33 +570,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget buildAnalyzeButton() => GestureDetector(
-    onTap: analyzing ? null : analyzeJob,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: analyzing
-            ? AppColors.primary.withValues(alpha: 0.5)
-            : AppColors.primary,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            'Analyze',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
+  // Per-role "Analyze fit" button shown on each role card for freelancers.
+  // Disabled while any analysis is in flight, or when today's quota is used up.
+  Widget buildRoleAnalyzeButton(JobRoleModel role) {
+    final isThisAnalyzing = _analyzingRoleId == role.jobRoleId;
+    final anyAnalyzing = _analyzingRoleId != null;
+    final outOfQuota = _jobFitRemaining != null && _jobFitRemaining! <= 0;
+    final disabled = anyAnalyzing || outOfQuota;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: disabled ? null : () => analyzeRole(role),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: BorderSide(
+            color: disabled
+                ? const Color(0xFFE0E0E0)
+                : AppColors.primary.withValues(alpha: 0.5),
           ),
-        ],
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        icon: isThisAnalyzing
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              )
+            : const Icon(Icons.auto_awesome, size: 14),
+        label: Text(
+          outOfQuota
+              ? 'No analyses left today'
+              : isThisAnalyzing
+              ? 'Analyzing...'
+              : 'Analyze my fit',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   void onApplyRole(JobRoleModel role) {
     if (hasAppliedToThisJobPost(widget.job.jobPostId)) {
@@ -675,6 +719,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return myProposals.any((p) => p.jobRoleId == jobRoleId);
   }
 
+  /// The freelancer's own proposal for this role, if any - used to show its
+  /// real moderation status (scanning/blocked) instead of a blanket "Applied".
+  ProposalModel? myProposalForRole(String jobRoleId) {
+    for (final p in myProposals) {
+      if (p.jobRoleId == jobRoleId) return p;
+    }
+    return null;
+  }
+
+  ProposalModel? myProposalForJobPost(String jobPostId) {
+    for (final p in myProposals) {
+      if (p.jobPostId == jobPostId) return p;
+    }
+    return null;
+  }
+
   bool isRoleFilled(JobRoleModel role) {
     return role.positionsFilled >= role.positionsAvailable;
   }
@@ -683,7 +743,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
-    final profile = context.watch<ProfileProvider>();
     final auth = context.watch<AuthProvider>();
     final proposalProvider = context.watch<ProposalProvider>();
     // NEW: self-ownership + closed status flags
@@ -750,7 +809,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 jobShareUrl(widget.job.jobPostId),
                 subject: widget.job.jobTitle,
               ),
-              titleTrailing: profile.isClient ? null : buildAnalyzeButton(),
+              // Job-fit analysis moved to a per-role button on each role card.
+              titleTrailing: null,
               // 👇 NEW: pass null for own jobs so flag icon is hidden
               onReport: isOwnJob
                   ? null
@@ -1092,6 +1152,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
     final disableApply = proposalsLoading || alreadyAppliedToJob || roleFilled;
 
+    // Real moderation status of whichever proposal is relevant here, so
+    // "Applied" doesn't lie about a proposal that's actually hidden/blocked.
+    final relevantProposal =
+        myProposalForRole(role.jobRoleId) ?? myProposalForJobPost(widget.job.jobPostId);
+    final proposalModStatus = relevantProposal?.moderationStatus ?? 'visible';
+    final appliedLabel = switch (proposalModStatus) {
+      'blocked' => 'Submitted - Blocked',
+      'scanning' => 'Submitted - Reviewing',
+      _ => 'Applied',
+    };
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -1266,9 +1337,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 }).toList(),
               ),
 
-            // Only freelancers see the apply button
+            // Only freelancers see the analyze-fit and apply buttons
             if (!context.read<ProfileProvider>().isClient) ...[
               const SizedBox(height: 14),
+              buildRoleAnalyzeButton(role),
+              const SizedBox(height: 10),
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (auth.isReportBanned) {
@@ -1359,7 +1432,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 : roleFilled
                                 ? 'Role Filled'
                                 : alreadyAppliedToJob
-                                ? 'Applied'
+                                ? appliedLabel
                                 : 'Apply for Role',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
@@ -1376,6 +1449,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             color: const Color(0xFF7D7D7D),
+                          ),
+                        ),
+                      ] else if (alreadyAppliedToRole &&
+                          proposalModStatus == 'blocked') ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your proposal for this role was flagged during review and is currently hidden from the client. Edit and resubmit.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFFDC2626),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else if (alreadyAppliedToRole &&
+                          proposalModStatus == 'scanning') ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your proposal for this role is being reviewed and is visible only to you for now.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF6B7280),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ] else if (alreadyAppliedToRole) ...[

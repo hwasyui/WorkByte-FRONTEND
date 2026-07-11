@@ -23,6 +23,7 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
 
   late TabController _tabController;
   String _query = '';
+  String? _loadError;
 
   @override
   void initState() {
@@ -42,13 +43,30 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
   Future<void> _loadThreads() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
-    await context.read<DMProvider>().fetchThreads(token);
+
+    try {
+      await context.read<DMProvider>().fetchThreads(token);
+      if (mounted) setState(() => _loadError = null);
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _loadError = e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
   }
 
   Future<void> _loadRequests() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
-    await context.read<DMProvider>().fetchRequests(token);
+
+    try {
+      await context.read<DMProvider>().fetchRequests(token);
+    } catch (_) {
+      // Surfaced via _loadThreads' error state; requests alone failing
+      // silently degrades to an empty Requests tab rather than blocking
+      // the whole screen.
+    }
   }
 
   @override
@@ -241,6 +259,8 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
                             color: AppColors.primary,
                           ),
                         )
+                      : _loadError != null && dm.threads.isEmpty
+                      ? _buildErrorState(_loadError!)
                       : TabBarView(
                           controller: _tabController,
                           children: [
@@ -852,6 +872,82 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+        Center(
+          child: Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFECEC),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              size: 38,
+              color: Color(0xFFB23A3A),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Center(
+          child: Text(
+            "Couldn't load messages",
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A1A2E),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 42),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: const Color(0xFF8D8D98),
+              height: 1.6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Center(
+          child: ElevatedButton(
+            onPressed: () {
+              _loadThreads();
+              _loadRequests();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+            ),
+            child: Text(
+              'Retry',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

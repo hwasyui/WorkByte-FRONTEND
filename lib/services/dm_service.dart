@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -19,6 +20,11 @@ class DMService {
     '',
   );
 
+  // Generous enough to survive a cold-starting backend (models loading
+  // synchronously at startup can block the event loop for a while) without
+  // leaving the UI spinning forever if the request genuinely never resolves.
+  static const Duration _requestTimeout = Duration(seconds: 25);
+
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
@@ -39,16 +45,19 @@ class DMService {
     String? jobPostId,
     String? messageText,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/dm/threads'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'participant_id': participantId, // ✅ Fixed: snake_case
-        if (jobPostId != null) 'job_post_id': jobPostId, // ✅ Fixed: snake_case
-        if (messageText != null && messageText.trim().isNotEmpty)
-          'message_text': messageText.trim(), // ✅ Fixed: snake_case
-      }),
-    );
+    final res = await http
+        .post(
+          Uri.parse('$_baseUrl/dm/threads'),
+          headers: _headers(token),
+          body: jsonEncode({
+            'participant_id': participantId, // ✅ Fixed: snake_case
+            if (jobPostId != null)
+              'job_post_id': jobPostId, // ✅ Fixed: snake_case
+            if (messageText != null && messageText.trim().isNotEmpty)
+              'message_text': messageText.trim(), // ✅ Fixed: snake_case
+          }),
+        )
+        .timeout(_requestTimeout);
 
     debugPrint('POST /dm/threads -> ${res.statusCode}');
     debugPrint('POST /dm/threads body: ${res.body}');
@@ -68,7 +77,9 @@ class DMService {
       '$_baseUrl/dm/threads',
     ).replace(queryParameters: status != null ? {'status': status} : null);
 
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http
+        .get(uri, headers: _headers(token))
+        .timeout(_requestTimeout);
     debugPrint('GET /dm/threads -> ${res.statusCode}');
     final body = _unwrap(res);
 
@@ -82,10 +93,9 @@ class DMService {
   }
 
   Future<List<DMThreadModel>> getRequests(String token) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/dm/threads/requests'),
-      headers: _headers(token),
-    );
+    final res = await http
+        .get(Uri.parse('$_baseUrl/dm/threads/requests'), headers: _headers(token))
+        .timeout(_requestTimeout);
 
     debugPrint('GET /dm/threads/requests -> ${res.statusCode}');
     final body = _unwrap(res);
@@ -104,10 +114,9 @@ class DMService {
   }
 
   Future<DMThreadModel> getThread(String token, String threadId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/dm/threads/$threadId'),
-      headers: _headers(token),
-    );
+    final res = await http
+        .get(Uri.parse('$_baseUrl/dm/threads/$threadId'), headers: _headers(token))
+        .timeout(_requestTimeout);
 
     debugPrint('GET /dm/threads/$threadId -> ${res.statusCode}');
     final body = _unwrap(res);
@@ -120,10 +129,12 @@ class DMService {
   }
 
   Future<DMThreadModel> acceptThread(String token, String threadId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/accept'),
-      headers: _headers(token),
-    );
+    final res = await http
+        .put(
+          Uri.parse('$_baseUrl/dm/threads/$threadId/accept'),
+          headers: _headers(token),
+        )
+        .timeout(_requestTimeout);
 
     debugPrint('PUT /dm/threads/$threadId/accept -> ${res.statusCode}');
     final body = _unwrap(res);
@@ -136,10 +147,12 @@ class DMService {
   }
 
   Future<DMThreadModel> declineThread(String token, String threadId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/decline'),
-      headers: _headers(token),
-    );
+    final res = await http
+        .put(
+          Uri.parse('$_baseUrl/dm/threads/$threadId/decline'),
+          headers: _headers(token),
+        )
+        .timeout(_requestTimeout);
 
     debugPrint('PUT /dm/threads/$threadId/decline -> ${res.statusCode}');
     final body = _unwrap(res);
@@ -164,7 +177,9 @@ class DMService {
       },
     );
 
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http
+        .get(uri, headers: _headers(token))
+        .timeout(_requestTimeout);
     debugPrint('GET /dm/threads/$threadId/messages -> ${res.statusCode}');
     final body = _unwrap(res);
 
@@ -180,13 +195,15 @@ class DMService {
     required String threadId,
     required String messageText,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/messages'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'message_text': messageText.trim(), // ✅ Fixed: snake_case
-      }),
-    );
+    final res = await http
+        .post(
+          Uri.parse('$_baseUrl/dm/threads/$threadId/messages'),
+          headers: _headers(token),
+          body: jsonEncode({
+            'message_text': messageText.trim(), // ✅ Fixed: snake_case
+          }),
+        )
+        .timeout(_requestTimeout);
 
     debugPrint('POST /dm/threads/$threadId/messages -> ${res.statusCode}');
     debugPrint('POST /dm/threads/$threadId/messages body: ${res.body}');
@@ -221,7 +238,7 @@ class DMService {
       request.fields['is_voice_note'] = 'true';
     }
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(_requestTimeout);
     final res = await http.Response.fromStream(streamed);
 
     debugPrint(
@@ -240,10 +257,12 @@ class DMService {
     required String token,
     required String threadId,
   }) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/read'),
-      headers: _headers(token),
-    );
+    final res = await http
+        .put(
+          Uri.parse('$_baseUrl/dm/threads/$threadId/read'),
+          headers: _headers(token),
+        )
+        .timeout(_requestTimeout);
 
     debugPrint('PUT /dm/threads/$threadId/read -> ${res.statusCode}');
     final body = _unwrap(res);

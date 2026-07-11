@@ -47,7 +47,6 @@ class FreelancerSkillModel {
       skillId: skillId,
       skillName: skillName!,
       skillCategory: skillCategory,
-      description: null,
     );
   }
 

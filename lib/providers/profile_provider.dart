@@ -204,23 +204,55 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
+  /// Which of education/experience/skills/portfolio failed to load on the
+  /// most recent [refreshFreelancerDetails] call - empty if all succeeded.
+  /// A failed section keeps its previous data rather than being cleared, so
+  /// a transient network error on one section doesn't wipe out the others.
+  List<String> _detailsLoadFailures = const [];
+  List<String> get detailsLoadFailures => _detailsLoadFailures;
+
   /// Reload education, experience, skills, and portfolios from the services.
-  /// Call after adding/deleting any of these items.
+  /// Call after adding/deleting any of these items. Each section is fetched
+  /// independently: a network error on one (e.g. a dropped connection) does
+  /// not discard data already successfully loaded for the others, and is
+  /// surfaced via [detailsLoadFailures] instead of silently rendering empty.
   Future<void> refreshFreelancerDetails(String token) async {
     final id = _freelancerProfile?.freelancerId;
     if (id == null) return;
 
-    final results = await Future.wait([
-      _service.getEducations(token, id),
-      _service.getWorkExperiences(token, id),
-      _service.getFreelancerSkills(token, id),
-      _portfolioService.getPortfolios(token),
+    final failures = <String>[];
+
+    Future<void> load(String label, Future<void> Function() fetch) async {
+      try {
+        await fetch();
+      } catch (e) {
+        failures.add(label);
+        debugPrint('refreshFreelancerDetails: $label failed: $e');
+      }
+    }
+
+    await Future.wait([
+      load(
+        'education',
+        () async => _educations = await _service.getEducations(token, id),
+      ),
+      load(
+        'work experience',
+        () async =>
+            _experiences = await _service.getWorkExperiences(token, id),
+      ),
+      load(
+        'skills',
+        () async =>
+            _skills = await _service.getFreelancerSkills(token, id),
+      ),
+      load(
+        'portfolio',
+        () async => _portfolios = await _portfolioService.getPortfolios(token),
+      ),
     ]);
 
-    _educations = results[0] as List<EducationModel>;
-    _experiences = results[1] as List<ExperienceModel>;
-    _skills = results[2] as List<FreelancerSkillModel>;
-    _portfolios = results[3] as List<PortfolioModel>;
+    _detailsLoadFailures = failures;
     notifyListeners();
   }
 
@@ -353,25 +385,54 @@ class ProfileProvider extends ChangeNotifier {
     required String token,
     required Map<String, dynamic> data,
   }) async {
-    final ok = await _service.createEducation(token, data);
-    if (ok) {
-      await refreshFreelancerDetails(token);
+    _error = null;
+    try {
+      final ok = await _service.createEducation(token, data);
+      if (ok) await refreshFreelancerDetails(token);
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
     }
-    return ok;
+  }
+
+  Future<bool> updateEducation({
+    required String token,
+    required String educationId,
+    required Map<String, dynamic> data,
+  }) async {
+    _error = null;
+    try {
+      final ok = await _service.updateEducation(token, educationId, data);
+      if (ok) await refreshFreelancerDetails(token);
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> removeEducation({
     required String token,
     required String educationId,
   }) async {
-    final ok = await _service.deleteEducation(token, educationId);
-    if (ok) {
-      _educations = _educations
-          .where((e) => e.educationId != educationId)
-          .toList();
+    _error = null;
+    try {
+      final ok = await _service.deleteEducation(token, educationId);
+      if (ok) {
+        _educations = _educations
+            .where((e) => e.educationId != educationId)
+            .toList();
+        notifyListeners();
+      }
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
+      return false;
     }
-    return ok;
   }
 
   // ─── Work experience ──────────────────────────────────────────────────────
@@ -380,25 +441,58 @@ class ProfileProvider extends ChangeNotifier {
     required String token,
     required Map<String, dynamic> data,
   }) async {
-    final ok = await _service.createWorkExperience(token, data);
-    if (ok) {
-      await refreshFreelancerDetails(token);
+    _error = null;
+    try {
+      final ok = await _service.createWorkExperience(token, data);
+      if (ok) await refreshFreelancerDetails(token);
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
     }
-    return ok;
+  }
+
+  Future<bool> updateWorkExperience({
+    required String token,
+    required String workExperienceId,
+    required Map<String, dynamic> data,
+  }) async {
+    _error = null;
+    try {
+      final ok = await _service.updateWorkExperience(
+        token,
+        workExperienceId,
+        data,
+      );
+      if (ok) await refreshFreelancerDetails(token);
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> removeWorkExperience({
     required String token,
     required String workExperienceId,
   }) async {
-    final ok = await _service.deleteWorkExperience(token, workExperienceId);
-    if (ok) {
-      _experiences = _experiences
-          .where((e) => e.workExperienceId != workExperienceId)
-          .toList();
+    _error = null;
+    try {
+      final ok = await _service.deleteWorkExperience(token, workExperienceId);
+      if (ok) {
+        _experiences = _experiences
+            .where((e) => e.workExperienceId != workExperienceId)
+            .toList();
+        notifyListeners();
+      }
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
+      return false;
     }
-    return ok;
   }
 
   // ─── Skills ───────────────────────────────────────────────────────────────
@@ -407,25 +501,40 @@ class ProfileProvider extends ChangeNotifier {
     required String token,
     required Map<String, dynamic> data,
   }) async {
-    final ok = await _service.addFreelancerSkill(token, data);
-    if (ok) {
-      await refreshFreelancerDetails(token);
+    _error = null;
+    try {
+      final ok = await _service.addFreelancerSkill(token, data);
+      if (ok) await refreshFreelancerDetails(token);
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
     }
-    return ok;
   }
 
   Future<bool> removeFreelancerSkill({
     required String token,
     required String freelancerSkillId,
   }) async {
-    final ok = await _service.deleteFreelancerSkill(token, freelancerSkillId);
-    if (ok) {
-      _skills = _skills
-          .where((s) => s.freelancerSkillId != freelancerSkillId)
-          .toList();
+    _error = null;
+    try {
+      final ok = await _service.deleteFreelancerSkill(
+        token,
+        freelancerSkillId,
+      );
+      if (ok) {
+        _skills = _skills
+            .where((s) => s.freelancerSkillId != freelancerSkillId)
+            .toList();
+        notifyListeners();
+      }
+      return ok;
+    } on Object catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
+      return false;
     }
-    return ok;
   }
 
   // ─── Portfolio ──────────────────────────────────────────────────
@@ -437,6 +546,29 @@ class ProfileProvider extends ChangeNotifier {
     try {
       final item = await _portfolioService.createPortfolio(token, data);
       _portfolios = [item, ..._portfolios];
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updatePortfolio({
+    required String token,
+    required String portfolioId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final updated = await _portfolioService.updatePortfolio(
+        token,
+        portfolioId,
+        data,
+      );
+      _portfolios = _portfolios
+          .map((p) => p.portfolioId == portfolioId ? updated : p)
+          .toList();
       notifyListeners();
       return true;
     } catch (e) {
@@ -505,15 +637,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   // ─── Local state helpers ──────────────────────────────────────────────────
-
-  void updateJobTitle(String jobTitle) {
-    if (isClient) {
-      _clientProfile = _clientProfile?.copyWith(jobTitle: jobTitle);
-    } else {
-      _freelancerProfile = _freelancerProfile?.copyWith(jobTitle: jobTitle);
-    }
-    notifyListeners();
-  }
 
   void updateProfilePictureUrl(String url) {
     _clearImageCache();

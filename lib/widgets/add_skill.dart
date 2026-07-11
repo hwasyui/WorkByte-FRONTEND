@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../core/utils/harmful_block_dialog.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/skill_provider.dart';
@@ -94,6 +95,13 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
         );
         _select(newSkill);
         setState(() => _showCategoryPicker = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        showErrorFeedback(
+          context,
+          message: e.toString().replaceFirst('Exception: ', ''),
+        );
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);

@@ -14,6 +14,17 @@ class ProposalModel {
   final String? freelancerName;
   final String? freelancerAvatarUrl;
 
+  /// 'scanning' | 'visible' | 'blocked' - see proposal_functions.py's
+  /// run_proposal_scan(). Defaults to 'visible' when absent so entries that
+  /// predate this field (or come from a stripped-down response) don't get
+  /// mistaken for pending/blocked.
+  final String moderationStatus;
+
+  /// Raw label keys (e.g. 'toxic', 'insult') from the backend's `detected_labels`
+  /// JSONB column - see harmful_text.md section 17. Empty unless
+  /// moderationStatus is 'blocked'.
+  final List<String> detectedLabels;
+
   const ProposalModel({
     required this.proposalId,
     required this.jobPostId,
@@ -27,6 +38,8 @@ class ProposalModel {
     this.submittedAt,
     this.freelancerName,
     this.freelancerAvatarUrl,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
   });
 
   factory ProposalModel.fromJson(Map<String, dynamic> json) => ProposalModel(
@@ -40,6 +53,11 @@ class ProposalModel {
     status: json['status'] as String? ?? 'pending',
     isAiGenerated: json['is_ai_generated'] as bool? ?? false,
     submittedAt: json['submitted_at']?.toString(),
+    moderationStatus: json['moderation_status'] as String? ?? 'visible',
+    detectedLabels: (json['detected_labels'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [],
   );
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +86,8 @@ class ProposalModel {
     status: status ?? this.status,
     isAiGenerated: isAiGenerated,
     submittedAt: submittedAt,
+    moderationStatus: moderationStatus,
+    detectedLabels: detectedLabels,
     freelancerName: freelancerName ?? this.freelancerName,
     freelancerAvatarUrl: freelancerAvatarUrl ?? this.freelancerAvatarUrl,
   );

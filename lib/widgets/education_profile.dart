@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import '../models/education_model.dart';
 
 class EducationProfile extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
 
-  const EducationProfile({super.key, required this.onSave});
+  /// When set, the form pre-fills from this entry and behaves as an edit
+  /// (different button label) instead of adding a new one.
+  final EducationModel? initialData;
+
+  const EducationProfile({super.key, required this.onSave, this.initialData});
 
   @override
   State<EducationProfile> createState() => _EducationProfileState();
@@ -13,16 +18,32 @@ class EducationProfile extends StatefulWidget {
 class _EducationProfileState extends State<EducationProfile> {
   final _formKey = GlobalKey<FormState>();
 
-  final schoolCtrl = TextEditingController();
-  final degreeCtrl = TextEditingController();
-  final fieldCtrl = TextEditingController();
-  final gradeCtrl = TextEditingController();
-  final descCtrl = TextEditingController();
+  late final schoolCtrl = TextEditingController(
+    text: widget.initialData?.institutionName,
+  );
+  late final degreeCtrl = TextEditingController(
+    text: widget.initialData?.degree,
+  );
+  late final fieldCtrl = TextEditingController(
+    text: widget.initialData?.fieldOfStudy,
+  );
+  late final gradeCtrl = TextEditingController(
+    text: widget.initialData?.grade,
+  );
+  late final descCtrl = TextEditingController(
+    text: widget.initialData?.description,
+  );
 
-  DateTime? startDate;
-  DateTime? endDate;
-  bool isCurrent = false;
+  late DateTime? startDate = DateTime.tryParse(
+    widget.initialData?.startDate ?? '',
+  );
+  late DateTime? endDate = DateTime.tryParse(
+    widget.initialData?.endDate ?? '',
+  );
+  late bool isCurrent = widget.initialData?.isCurrent ?? false;
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.initialData != null;
 
   @override
   void dispose() {
@@ -346,9 +367,9 @@ class _EducationProfileState extends State<EducationProfile> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Save',
-                            style: TextStyle(
+                        : Text(
+                            _isEditing ? 'Save Changes' : 'Save',
+                            style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,

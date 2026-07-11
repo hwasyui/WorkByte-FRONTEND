@@ -11,6 +11,10 @@ class NotificationItem extends StatelessWidget {
   final String timestamp;
   final bool isUnread;
 
+  /// Optional override for the avatar circle's background (e.g. a red tint
+  /// for a blocked-content notification). Defaults to [AppColors.secondary].
+  final Color? avatarBackgroundColor;
+
   const NotificationItem({
     super.key,
     required this.avatar,
@@ -18,6 +22,7 @@ class NotificationItem extends StatelessWidget {
     required this.message,
     required this.timestamp,
     this.isUnread = true,
+    this.avatarBackgroundColor,
   });
 
   @override
@@ -42,7 +47,7 @@ class NotificationItem extends StatelessWidget {
         // Avatar
         CircleAvatar(
           radius: 20,
-          backgroundColor: AppColors.secondary,
+          backgroundColor: avatarBackgroundColor ?? AppColors.secondary,
           child: ClipOval(child: avatar),
         ),
         const SizedBox(width: 14),

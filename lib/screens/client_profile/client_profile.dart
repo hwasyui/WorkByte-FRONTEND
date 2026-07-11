@@ -12,6 +12,7 @@ import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import '../../models/job_post_model.dart';
 import 'dart:io';
 
@@ -592,7 +593,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          if (data['job'] != null) profile.updateJobTitle(data['job']);
           final identifier =
               profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
@@ -623,7 +623,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                 );
               }
-              return;
+              return false;
             }
           }
           // ── Case 2: Image deleted ─────────────────────────────────────────
@@ -641,7 +641,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                 ),
               );
-              return;
+              return false;
             }
           }
 
@@ -660,13 +660,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               fields: fields,
             );
 
-            if (!success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
-              );
-              return;
+            if (!success) {
+              if (mounted) {
+                showErrorFeedback(
+                  context,
+                  message: profile.error ?? 'Failed to update profile',
+                );
+              }
+              return false;
             }
           }
 
@@ -678,8 +679,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Profile updated successfully')),
             );
-            Navigator.pop(context);
           }
+          return true;
         },
       ),
     );

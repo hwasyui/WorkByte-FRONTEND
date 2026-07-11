@@ -44,9 +44,7 @@ class ProfileService {
       final data = body['details'] ?? body['data'] ?? body;
       return ClientModel.fromJson(data as Map<String, dynamic>);
     }
-    throw Exception(
-      body['message'] ?? body['detail'] ?? 'Failed to load client profile',
-    );
+    throw Exception(body['details']?.toString() ?? 'Failed to load client profile');
   }
 
   Future<FreelancerModel?> fetchFreelancerProfile(
@@ -64,9 +62,7 @@ class ProfileService {
       final data = body['details'] ?? body['data'] ?? body;
       return FreelancerModel.fromJson(data as Map<String, dynamic>);
     }
-    throw Exception(
-      body['message'] ?? body['detail'] ?? 'Failed to load freelancer profile',
-    );
+    throw Exception(body['details']?.toString() ?? 'Failed to load freelancer profile');
   }
 
   Future<ClientModel?> fetchClientById(String token, String clientId) async {
@@ -129,9 +125,7 @@ class ProfileService {
       final data = body['details'] ?? body['data'] ?? body;
       return ClientModel.fromJson(data as Map<String, dynamic>);
     }
-    throw Exception(
-      body['message'] ?? body['detail'] ?? 'Failed to update client profile',
-    );
+    throw Exception(body['details']?.toString() ?? 'Failed to update client profile');
   }
 
   Future<FreelancerModel> updateFreelancerProfile(
@@ -155,11 +149,7 @@ class ProfileService {
       final data = body['details'] ?? body['data'] ?? body;
       return FreelancerModel.fromJson(data as Map<String, dynamic>);
     }
-    throw Exception(
-      body['message'] ??
-          body['detail'] ??
-          'Failed to update freelancer profile',
-    );
+    throw Exception(body['details']?.toString() ?? 'Failed to update freelancer profile');
   }
 
   // ─── Profile picture ──────────────────────────────────────────────────────
@@ -290,49 +280,55 @@ class ProfileService {
     String token,
     String freelancerId,
   ) async {
-    try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
-        headers: _headers(token),
-      );
-      if (res.statusCode == 200) {
-        final body = _decodeBody(res);
-        final data = body['details'] ?? body['data'] ?? [];
-        return (data as List)
-            .map((e) => EducationModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('getEducations error: $e');
+    final res = await http.get(
+      Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) {
+      final body = _decodeBody(res);
+      final data = body['details'] ?? body['data'] ?? [];
+      return (data as List)
+          .map((e) => EducationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
-    return [];
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to load education');
   }
 
   Future<bool> createEducation(String token, Map<String, dynamic> data) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/educations'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      );
-      return res.statusCode == 201;
-    } catch (e) {
-      debugPrint('createEducation error: $e');
-      return false;
-    }
+    final res = await http.post(
+      Uri.parse('$_baseUrl/educations'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 201) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to add education');
+  }
+
+  Future<bool> updateEducation(
+    String token,
+    String educationId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await http.put(
+      Uri.parse('$_baseUrl/educations/$educationId'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 200) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to update education');
   }
 
   Future<bool> deleteEducation(String token, String educationId) async {
-    try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/educations/$educationId'),
-        headers: _headers(token),
-      );
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('deleteEducation error: $e');
-      return false;
-    }
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/educations/$educationId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to delete education');
   }
 
   // ─── Work experience ──────────────────────────────────────────────────────
@@ -341,55 +337,63 @@ class ProfileService {
     String token,
     String freelancerId,
   ) async {
-    try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
-        headers: _headers(token),
-      );
-      if (res.statusCode == 200) {
-        final body = _decodeBody(res);
-        final data = body['details'] ?? body['data'] ?? [];
-        return (data as List)
-            .map((e) => ExperienceModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('getWorkExperiences error: $e');
+    final res = await http.get(
+      Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) {
+      final body = _decodeBody(res);
+      final data = body['details'] ?? body['data'] ?? [];
+      return (data as List)
+          .map((e) => ExperienceModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
-    return [];
+    final body = _decodeBody(res);
+    throw Exception(
+      body['details']?.toString() ?? 'Failed to load work experience',
+    );
   }
 
   Future<bool> createWorkExperience(
     String token,
     Map<String, dynamic> data,
   ) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/work-experiences'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      );
-      return res.statusCode == 201;
-    } catch (e) {
-      debugPrint('createWorkExperience error: $e');
-      return false;
-    }
+    final res = await http.post(
+      Uri.parse('$_baseUrl/work-experiences'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 201) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to add experience');
+  }
+
+  Future<bool> updateWorkExperience(
+    String token,
+    String workExperienceId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await http.put(
+      Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 200) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to update experience');
   }
 
   Future<bool> deleteWorkExperience(
     String token,
     String workExperienceId,
   ) async {
-    try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
-        headers: _headers(token),
-      );
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('deleteWorkExperience error: $e');
-      return false;
-    }
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to delete experience');
   }
 
   // ─── Skills ───────────────────────────────────────────────────────────────
@@ -398,24 +402,19 @@ class ProfileService {
     String token,
     String freelancerId,
   ) async {
-    try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
-        headers: _headers(token),
-      );
-      if (res.statusCode == 200) {
-        final body = _decodeBody(res);
-        final data = body['details'] ?? body['data'] ?? [];
-        return (data as List)
-            .map(
-              (e) => FreelancerSkillModel.fromJson(e as Map<String, dynamic>),
-            )
-            .toList();
-      }
-    } catch (e) {
-      debugPrint('getFreelancerSkills error: $e');
+    final res = await http.get(
+      Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) {
+      final body = _decodeBody(res);
+      final data = body['details'] ?? body['data'] ?? [];
+      return (data as List)
+          .map((e) => FreelancerSkillModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
-    return [];
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to load skills');
   }
 
   Future<List<Map<String, dynamic>>> getAllSkills(String token) async {
@@ -462,53 +461,43 @@ class ProfileService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/skills'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      );
-      if (res.statusCode == 201) {
-        final body = _decodeBody(res);
-        return Map<String, dynamic>.from(body['details'] ?? {});
-      }
-    } catch (e) {
-      debugPrint('createSkill error: $e');
+    final res = await http.post(
+      Uri.parse('$_baseUrl/skills'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    final body = _decodeBody(res);
+    if (res.statusCode == 201) {
+      return Map<String, dynamic>.from(body['details'] ?? {});
     }
-    return null;
+    throw Exception(body['details']?.toString() ?? 'Failed to create skill');
   }
 
   Future<bool> addFreelancerSkill(
     String token,
     Map<String, dynamic> data,
   ) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/freelancer-skills'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      );
-      return res.statusCode == 201;
-    } catch (e) {
-      debugPrint('addFreelancerSkill error: $e');
-      return false;
-    }
+    final res = await http.post(
+      Uri.parse('$_baseUrl/freelancer-skills'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    if (res.statusCode == 201) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to add skill');
   }
 
   Future<bool> deleteFreelancerSkill(
     String token,
     String freelancerSkillId,
   ) async {
-    try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
-        headers: _headers(token),
-      );
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('deleteFreelancerSkill error: $e');
-      return false;
-    }
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
+      headers: _headers(token),
+    );
+    if (res.statusCode == 200) return true;
+    final body = _decodeBody(res);
+    throw Exception(body['details']?.toString() ?? 'Failed to remove skill');
   }
 
   Future<Map<String, dynamic>> uploadCV({

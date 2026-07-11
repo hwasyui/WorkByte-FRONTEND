@@ -82,6 +82,26 @@ class PortfolioService {
     throw Exception(body['message'] ?? 'Failed to create portfolio');
   }
 
+  Future<PortfolioModel> updatePortfolio(
+    String token,
+    String portfolioId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await http.put(
+      Uri.parse('$_baseUrl/portfolios/$portfolioId'),
+      headers: _headers(token),
+      body: jsonEncode(data),
+    );
+    final body = _decodeBody(res);
+    debugPrint('PUT /portfolios/$portfolioId: ${res.statusCode}');
+
+    if (res.statusCode == 200) {
+      final raw = body['details'] ?? body['data'] ?? body;
+      return PortfolioModel.fromJson(raw as Map<String, dynamic>);
+    }
+    throw Exception(body['message'] ?? 'Failed to update portfolio');
+  }
+
   Future<void> deletePortfolio(String token, String portfolioId) async {
     final res = await http.delete(
       Uri.parse('$_baseUrl/portfolios/$portfolioId'),

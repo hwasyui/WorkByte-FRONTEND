@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import '../../models/education_model.dart';
 import '../../models/experience_model.dart';
 import '../../models/freelancer_skill_model.dart';
@@ -36,7 +37,18 @@ import '../../widgets/portfolio_profile.dart';
 import 'upload_cv.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  /// Set together to auto-open the edit modal for one entry right after the
+  /// profile loads - used when navigating here from a
+  /// education_blocked/work_experience_blocked/portfolio_blocked
+  /// notification tap. One of 'education' | 'work_experience' | 'portfolio'.
+  final String? initialEditEntityType;
+  final String? initialEditEntityId;
+
+  const ProfileScreen({
+    Key? key,
+    this.initialEditEntityType,
+    this.initialEditEntityId,
+  }) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -142,8 +154,40 @@ class _ProfileScreenState extends State<ProfileScreen>
         await profile.refreshFreelancerDetails(auth.token!);
       }
 
+      if (mounted) _openInitialEditIfRequested(profile);
+
       await _loadReviews();
     });
+  }
+
+  /// Opens the edit modal for widget.initialEditEntityId, if set - see the
+  /// field doc on ProfileScreen. Silently does nothing if the entity can't be
+  /// found (e.g. deleted between the notification firing and being tapped).
+  void _openInitialEditIfRequested(ProfileProvider profile) {
+    final type = widget.initialEditEntityType;
+    final id = widget.initialEditEntityId;
+    if (type == null || id == null) return;
+
+    switch (type) {
+      case 'education':
+        final match = profile.educations
+            .where((e) => e.educationId == id)
+            .toList();
+        if (match.isNotEmpty) _showEducationForm(existing: match.first);
+        break;
+      case 'work_experience':
+        final match = profile.experiences
+            .where((e) => e.workExperienceId == id)
+            .toList();
+        if (match.isNotEmpty) _showExperienceForm(existing: match.first);
+        break;
+      case 'portfolio':
+        final match = profile.portfolios
+            .where((p) => p.portfolioId == id)
+            .toList();
+        if (match.isNotEmpty) _showPortfolioForm(existing: match.first);
+        break;
+    }
   }
 
   Future<void> _refreshProfile() async {
@@ -281,32 +325,58 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  void _showPortfolioForm() {
+  void _showPortfolioForm({PortfolioModel? existing}) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
     final freelancerId = profile.freelancerProfile?.freelancerId;
     if (freelancerId == null) return;
+    final isEditing = existing != null;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PortfolioProfile(
+        initialData: existing,
         onSave: (data) async {
           final completionDate = data['completionDate'] as DateTime?;
-          await profile.addPortfolio(
-            token: auth.token!,
-            data: {
-              'freelancer_id': freelancerId,
-              'project_title': data['projectTitle'] as String,
-              'project_description': data['projectDescription'] as String?,
-              'project_url': data['projectUrl'] as String?,
-              'completion_date': completionDate?.toIso8601String(),
-            },
-          );
-          if (mounted) {
+          final fields = {
+            'project_title': data['projectTitle'] as String,
+            'project_description': data['projectDescription'] as String?,
+            'project_url': data['projectUrl'] as String?,
+            'completion_date': completionDate?.toIso8601String(),
+          };
+
+          final success = isEditing
+              ? await profile.updatePortfolio(
+                  token: auth.token!,
+                  portfolioId: existing.portfolioId,
+                  data: fields,
+                )
+              : await profile.addPortfolio(
+                  token: auth.token!,
+                  data: {'freelancer_id': freelancerId, ...fields},
+                );
+
+          if (!mounted) return;
+          if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Portfolio added successfully')),
+              SnackBar(
+                content: Text(
+                  isEditing
+                      ? 'Portfolio updated successfully'
+                      : 'Portfolio added successfully',
+                ),
+              ),
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message:
+                  profile.error ??
+                  (isEditing
+                      ? 'Failed to update portfolio'
+                      : 'Failed to add portfolio'),
             );
           }
         },
@@ -518,8 +588,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          profile.updateJobTitle(data['job']);
-
           final identifier =
               profile.freelancerProfile?.freelancerId ??
               auth.currentUser!.userId;
@@ -551,7 +619,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 );
               }
-              return;
+              return false;
             }
           }
           // Case 2: Image deleted
@@ -587,92 +655,140 @@ class _ProfileScreenState extends State<ProfileScreen>
             }
           } else {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
+              showErrorFeedback(
+                context,
+                message: profile.error ?? 'Failed to update profile',
               );
             }
+          }
+          return success;
+        },
+      ),
+    );
+  }
+
+  void _showEducationForm({EducationModel? existing}) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final isEditing = existing != null;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => EducationProfile(
+        initialData: existing,
+        onSave: (data) async {
+          final fields = {
+            "institution_name": data["school"],
+            "degree": data["degree"],
+            "field_of_study": data["field"],
+            "start_date": data["startDate"]?.toIso8601String().split('T')[0],
+            "end_date": data["endDate"]?.toIso8601String().split('T')[0],
+            "is_current": data["isCurrent"],
+            "grade": data["grade"],
+            "description": data["description"],
+          };
+
+          final success = isEditing
+              ? await profile.updateEducation(
+                  token: auth.token!,
+                  educationId: existing.educationId,
+                  data: fields,
+                )
+              : await profile.addEducation(
+                  token: auth.token!,
+                  data: {
+                    "freelancer_id": profile.freelancerProfile?.freelancerId,
+                    ...fields,
+                  },
+                );
+
+          if (!mounted) return;
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isEditing
+                      ? 'Education updated successfully'
+                      : 'Education added successfully',
+                ),
+              ),
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message:
+                  profile.error ??
+                  (isEditing
+                      ? 'Failed to update education'
+                      : 'Failed to add education'),
+            );
           }
         },
       ),
     );
   }
 
-  void _showEducationForm() {
+  void _showExperienceForm({ExperienceModel? existing}) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => EducationProfile(
-        onSave: (data) async {
-          final success = await profile.addEducation(
-            token: auth.token!,
-            data: {
-              "freelancer_id": profile.freelancerProfile?.freelancerId,
-              "institution_name": data["school"],
-              "degree": data["degree"],
-              "field_of_study": data["field"],
-              "start_date": data["startDate"]?.toIso8601String().split('T')[0],
-              "end_date": data["endDate"]?.toIso8601String().split('T')[0],
-              "is_current": data["isCurrent"],
-              "grade": data["grade"],
-              "description": data["description"],
-            },
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Education added successfully'
-                    : 'Failed to add education',
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showExperienceForm() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final isEditing = existing != null;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => ExperienceProfile(
+        initialData: existing,
         onSave: (data) async {
-          final success = await profile.addWorkExperience(
-            token: auth.token!,
-            data: {
-              "freelancer_id": profile.freelancerProfile?.freelancerId,
-              "job_title": data["title"],
-              "company_name": data["company"],
-              "location": data["location"],
-              "start_date": data["startDate"] != null
-                  ? data["startDate"].toIso8601String().split('T')[0]
-                  : null,
-              "end_date": data["endDate"] != null
-                  ? data["endDate"].toIso8601String().split('T')[0]
-                  : null,
-              "is_current": data["isPresent"],
-              "description": data["description"],
-            },
-          );
+          final fields = {
+            "job_title": data["title"],
+            "company_name": data["company"],
+            "location": data["location"],
+            "start_date": data["startDate"] != null
+                ? data["startDate"].toIso8601String().split('T')[0]
+                : null,
+            "end_date": data["endDate"] != null
+                ? data["endDate"].toIso8601String().split('T')[0]
+                : null,
+            "is_current": data["isPresent"],
+            "description": data["description"],
+          };
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Experience added successfully'
-                    : 'Failed to add experience',
+          final success = isEditing
+              ? await profile.updateWorkExperience(
+                  token: auth.token!,
+                  workExperienceId: existing.workExperienceId,
+                  data: fields,
+                )
+              : await profile.addWorkExperience(
+                  token: auth.token!,
+                  data: {
+                    "freelancer_id": profile.freelancerProfile?.freelancerId,
+                    ...fields,
+                  },
+                );
+
+          if (!mounted) return;
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isEditing
+                      ? 'Experience updated successfully'
+                      : 'Experience added successfully',
+                ),
               ),
-            ),
-          );
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message:
+                  profile.error ??
+                  (isEditing
+                      ? 'Failed to update experience'
+                      : 'Failed to add experience'),
+            );
+          }
         },
       ),
     );
@@ -822,15 +938,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                           setState(() => aboutText = newBio);
                           await _refreshProfile();
                         }
-                        if (mounted) {
+                        if (!mounted) return;
+                        if (success) {
                           messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
+                            const SnackBar(
+                              content: Text('About saved successfully'),
                             ),
+                          );
+                        } else {
+                          showErrorFeedback(
+                            context,
+                            message: profile.error ?? 'Failed to save About',
                           );
                         }
                       },
@@ -1296,13 +1414,17 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success ? 'Skill added successfully' : 'Failed to add skill',
-              ),
-            ),
-          );
+          if (!mounted) return;
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Skill added successfully')),
+            );
+          } else {
+            showErrorFeedback(
+              context,
+              message: profile.error ?? 'Failed to add skill',
+            );
+          }
         },
       ),
     );
@@ -1537,19 +1659,38 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            _buildStickyHeader(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildAboutTab(), _buildReviewsTab(), _buildSavedTab()],
-              ),
+      body: Consumer<ProfileProvider>(
+        builder: (context, profile, child) {
+          if (!profile.isFreelancer) {
+            return const Center(
+              child: Text('Freelancer profile not available'),
+            );
+          }
+          if (profile.freelancerProfile == null) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
+          }
+
+          return SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                _buildStickyHeader(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildAboutTab(),
+                      _buildReviewsTab(),
+                      _buildSavedTab(),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1603,6 +1744,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 color: AppColors.primary,
                               ),
                               onPressed: () => _tabController.animateTo(2),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                color: AppColors.primary,
+                              ),
+                              tooltip: 'Refresh',
+                              onPressed: () async {
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                final profile = Provider.of<ProfileProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                if (auth.token == null) return;
+                                await profile.refreshFreelancerDetails(
+                                  auth.token!,
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -1938,6 +2100,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             children: [
+              if (profile.detailsLoadFailures.isNotEmpty) ...[
+                _buildLoadFailureBanner(profile.detailsLoadFailures),
+                const SizedBox(height: 16),
+              ],
               if (!profile.isProfileComplete && profile.isFreelancer) ...[
                 _buildProfileCompletionBanner(profile.missingProfileFields),
                 const SizedBox(height: 16),
@@ -2198,6 +2364,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                               endDate: e.endDate,
                               isCurrent: e.isCurrent,
                             ),
+                            moderationStatus: e.moderationStatus,
+                            detectedLabels: e.detectedLabels,
+                            onEdit: () => _showExperienceForm(existing: e),
                             onDelete: () =>
                                 _deleteExperience(e.workExperienceId),
                           );
@@ -2231,6 +2400,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                               isCurrent: e.isCurrent,
                             ),
                             color: primaryColor,
+                            moderationStatus: e.moderationStatus,
+                            detectedLabels: e.detectedLabels,
+                            onEdit: () => _showEducationForm(existing: e),
                             onDelete: () => _deleteEducation(e.educationId),
                           );
                         }).toList(),
@@ -2256,6 +2428,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         children: portfolios.map<Widget>((p) {
                           return _PortfolioItem(
                             item: p,
+                            onEdit: p.isAutoGenerated
+                                ? null
+                                : () => _showPortfolioForm(existing: p),
                             onDelete: p.isAutoGenerated
                                 ? null
                                 : () => _deletePortfolio(p.portfolioId),
@@ -2268,6 +2443,84 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLoadFailureBanner(List<String> failedSections) {
+    final label = failedSections.join(', ');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFECEC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFB23A3A).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD9D9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              color: Color(0xFFB23A3A),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Couldn't load $label",
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF7A1F1F),
+                  ),
+                ),
+                Text(
+                  'A connection issue stopped this from loading. Tap retry.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF9A4A4A),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () async {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final profile = Provider.of<ProfileProvider>(
+                context,
+                listen: false,
+              );
+              if (auth.token == null) return;
+              await profile.refreshFreelancerDetails(auth.token!);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB23A3A),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            child: Text(
+              'Retry',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3010,54 +3263,94 @@ class _ExperienceItem extends StatelessWidget {
   final String title;
   final String company;
   final String period;
+  final String moderationStatus;
+  final List<String> detectedLabels;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const _ExperienceItem({
     required this.title,
     required this.company,
     required this.period,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
+    this.onEdit,
     this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8FC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEAEAF0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        company,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  company,
+                  period,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
+                if (onEdit != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                ],
+                if (onDelete != null) ...[
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ],
             ),
-          ),
-          Text(
-            period,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          if (onDelete != null) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: onDelete,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
+            if (moderationStatus != 'visible') ...[
+              const SizedBox(height: 8),
+              _ModerationBadge(status: moderationStatus, labels: detectedLabels),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -3068,6 +3361,9 @@ class _EducationItem extends StatelessWidget {
   final String school;
   final String period;
   final Color color;
+  final String moderationStatus;
+  final List<String> detectedLabels;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const _EducationItem({
@@ -3075,48 +3371,208 @@ class _EducationItem extends StatelessWidget {
     required this.school,
     required this.period,
     required this.color,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
+    this.onEdit,
     this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F8FC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEAEAF0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  degree,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        degree,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        school,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  school,
+                  period,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
+                if (onEdit != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                ],
+                if (onDelete != null) ...[
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ],
             ),
-          ),
-          Text(
-            period,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          if (onDelete != null) ...[
+            if (moderationStatus != 'visible') ...[
+              const SizedBox(height: 8),
+              _ModerationBadge(status: moderationStatus, labels: detectedLabels),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Human-readable names for the backend's raw label keys (result of
+/// scan_harmful_text / scan_harmful_text_with_ml_fallback) - mirrors the
+/// server-side _LABEL_DISPLAY_NAMES mapping used for notification text, so the
+/// wording matches what a blocked user already sees in their notifications.
+const Map<String, String> _labelDisplayNames = {
+  'toxic': 'toxicity',
+  'toxicity': 'toxicity',
+  'obscene': 'obscenity',
+  'threat': 'threats',
+  'insult': 'insults',
+  'identity_hate': 'identity-based hate speech',
+};
+
+/// Small pill shown on a freelancer's own education/work-experience/portfolio
+/// entries while a background harmful-text scan is pending ('scanning') or
+/// after it flagged the entry ('blocked') - see education_functions.py /
+/// work_experience_functions.py / portfolio_functions.py's run_*_scan().
+/// Only ever shown to the owner; other visitors never see non-'visible' rows
+/// at all (backend's visible_only filter), so there's no case for this badge
+/// outside here.
+class _ModerationBadge extends StatelessWidget {
+  final String status;
+  final List<String> labels;
+  const _ModerationBadge({required this.status, this.labels = const []});
+
+  void _showExplanation(BuildContext context, bool isBlocked) {
+    final reason = labels.isNotEmpty
+        ? labels.map((l) => _labelDisplayNames[l] ?? l).join(', ')
+        : null;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isBlocked ? Icons.block_rounded : Icons.hourglass_top_rounded,
+              color: isBlocked
+                  ? const Color(0xFFDC2626)
+                  : const Color(0xFF6B7280),
+              size: 20,
+            ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: onDelete,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+            Expanded(
+              child: Text(
+                isBlocked ? 'Entry Blocked' : 'Under Review',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
+        ),
+        content: Text(
+          isBlocked
+              ? (reason != null
+                  ? 'This entry was flagged for $reason and is currently hidden from other users. Edit it and save again to resubmit it for review.'
+                  : 'This entry was flagged by our automated content review and is currently hidden from other users. Edit it and save again to resubmit it for review.')
+              : 'This entry is being automatically reviewed and is visible only to you until the review finishes, which usually takes a few seconds.',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: const Color(0xFF374151),
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isBlocked = status == 'blocked';
+    final color = isBlocked
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF6B7280);
+    final bg = isBlocked ? const Color(0xFFFEE2E2) : const Color(0xFFF3F4F6);
+    final border = isBlocked ? const Color(0xFFFCA5A5) : const Color(0xFFD1D5DB);
+    final label = status.toUpperCase();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showExplanation(context, isBlocked),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info_outline_rounded, size: 13, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -3124,9 +3580,10 @@ class _EducationItem extends StatelessWidget {
 
 class _PortfolioItem extends StatelessWidget {
   final PortfolioModel item;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const _PortfolioItem({required this.item, this.onDelete});
+  const _PortfolioItem({required this.item, this.onEdit, this.onDelete});
 
   String _formatDate(DateTime date) {
     const months = [
@@ -3192,8 +3649,19 @@ class _PortfolioItem extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (onEdit != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                ],
                 if (onDelete != null) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 10),
                   GestureDetector(
                     onTap: onDelete,
                     child: const Icon(
@@ -3249,6 +3717,13 @@ class _PortfolioItem extends StatelessWidget {
                     ),
                   ],
                 ],
+              ),
+            ],
+            if (item.moderationStatus != 'visible') ...[
+              const SizedBox(height: 8),
+              _ModerationBadge(
+                status: item.moderationStatus,
+                labels: item.detectedLabels,
               ),
             ],
           ],

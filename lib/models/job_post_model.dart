@@ -25,6 +25,17 @@ class JobPostModel {
   final String? closureReason;
   final String? closureNote;
 
+  /// 'scanning' | 'visible' | 'blocked' - see job_post_functions.py's
+  /// run_job_post_scan(). Defaults to 'visible' when absent so entries that
+  /// predate this field (or come from a stripped-down response) don't get
+  /// mistaken for pending/blocked.
+  final String moderationStatus;
+
+  /// Raw label keys (e.g. 'toxic', 'insult') from the backend's
+  /// `detected_labels` column - see harmful_text.md section 17. Empty unless
+  /// moderationStatus is 'blocked'.
+  final List<String> detectedLabels;
+
   const JobPostModel({
     required this.jobPostId,
     required this.clientId,
@@ -51,6 +62,8 @@ class JobPostModel {
     this.closedAt,
     this.closureReason,
     this.closureNote,
+    this.moderationStatus = 'visible',
+    this.detectedLabels = const [],
   });
 
   factory JobPostModel.fromJson(Map<String, dynamic> json) => JobPostModel(
@@ -79,6 +92,11 @@ class JobPostModel {
     closedAt: json['closed_at'] as String?,
     closureReason: json['closure_reason'] as String?, // 👈 NEW
     closureNote: json['closure_note'] as String?, // 👈 NEW
+    moderationStatus: json['moderation_status'] as String? ?? 'visible',
+    detectedLabels: (json['detected_labels'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [],
   );
 
   Map<String, dynamic> toJson() => {

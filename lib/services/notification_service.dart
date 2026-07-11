@@ -40,6 +40,8 @@ class NotificationService {
 
   static Future<void> initialize({
     required GlobalKey<NavigatorState> navigatorKey,
+    void Function({required String? type, required String? title, required String? body})?
+    onForegroundMessage,
   }) async {
     // Register background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -71,25 +73,33 @@ class NotificationService {
       },
     );
 
-    // Foreground messages — show local notification
+    // Foreground messages — show local notification, and let the app react
+    // live (refresh the unread badge, show a blocked-content banner) since
+    // the OS won't show its own heads-up notification while the app is open.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
-      if (notification == null) return;
-      _localNotifications.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channel.id,
-            _channel.name,
-            channelDescription: _channel.description,
-            importance: Importance.high,
-            priority: Priority.high,
+      if (notification != null) {
+        _localNotifications.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              _channel.id,
+              _channel.name,
+              channelDescription: _channel.description,
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+            iOS: const DarwinNotificationDetails(),
           ),
-          iOS: const DarwinNotificationDetails(),
-        ),
-        payload: jsonEncode(message.data),
+          payload: jsonEncode(message.data),
+        );
+      }
+      onForegroundMessage?.call(
+        type: message.data['type'] as String?,
+        title: notification?.title,
+        body: notification?.body,
       );
     });
 
@@ -207,7 +217,7 @@ class NotificationService {
           .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
           .toList();
     }
-    throw Exception(body['message'] ?? 'Failed to fetch notifications');
+    throw Exception(body['details']?.toString() ?? 'Failed to fetch notifications');
   }
 
   Future<int> getUnreadCount() async {

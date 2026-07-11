@@ -35,6 +35,7 @@ class _RoleDraft {
   Map<String, Map<String, dynamic>> skills;
   bool isSaving;
   DateTime? lastSavedAt;
+  String? saveError;
 
   _RoleDraft({
     this.jobRoleId,
@@ -49,6 +50,7 @@ class _RoleDraft {
     Map<String, Map<String, dynamic>>? skills,
     this.isSaving = false,
     this.lastSavedAt,
+    this.saveError,
   }) : skills = skills ?? {};
 
   bool get hasDraftTriggerFields => roleTitle.trim().isNotEmpty;
@@ -373,10 +375,18 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
 
       role.jobRoleId = savedRole.jobRoleId?.toString();
       role.lastSavedAt = DateTime.now();
+      role.saveError = null;
       await _syncRoleSkills(index);
       _syncProjectTypeToProvider();
       _syncRolesToProvider();
-    } catch (_) {
+    } catch (e) {
+      // Debounced autosave fires on every keystroke pause, so a disruptive
+      // dialog/snackbar per failed attempt would interrupt typing - but silently
+      // swallowing it entirely (as this used to) means a moderation block (or any
+      // other persistent error) never surfaces at all: the role just never saves,
+      // with no visible signal, until the user notices "Not saved yet" never
+      // changes. Surfaced inline via _roleStatusText instead.
+      role.saveError = e.toString().replaceFirst('Exception: ', '');
     } finally {
       if (mounted && index < _roles.length) {
         setState(() => _roles[index].isSaving = false);
@@ -499,6 +509,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
 
   String _roleStatusText(_RoleDraft role) {
     if (role.isSaving) return 'Saving role...';
+    if (role.saveError != null) return role.saveError!;
     if (role.lastSavedAt != null) return 'Role draft saved';
     if (role.hasAnyContent && !role.hasDraftTriggerFields)
       return 'Add a role title to start autosave';
@@ -507,6 +518,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
 
   Color _roleStatusAccent(_RoleDraft role) {
     if (role.isSaving) return _warning;
+    if (role.saveError != null) return Colors.red;
     if (role.lastSavedAt != null) return _success;
     return _textMuted;
   }

@@ -40,7 +40,9 @@ class AdminProvider extends ChangeNotifier {
   bool _isAiLoading = false;
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
-  String _moderationStatusFilter = 'all';
+  // Harmful-text audit trail is read-only history. Filter by whether an admin has
+  // reviewed a row yet: 'all' | 'unreviewed' | 'reviewed'.
+  String _moderationReviewedFilter = 'all';
   String _moderationTypeFilter = 'all';
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
@@ -96,7 +98,7 @@ class AdminProvider extends ChangeNotifier {
   bool get isAiLoading => _isAiLoading;
   bool get isClosedLoading => _isClosedLoading;
   String get scamStatusFilter => _scamStatusFilter;
-  String get moderationStatusFilter => _moderationStatusFilter;
+  String get moderationReviewedFilter => _moderationReviewedFilter;
   String get moderationTypeFilter => _moderationTypeFilter;
   String get closedJobReasonFilter => _closedJobReasonFilter;
   String get closedAccountRoleFilter => _closedAccountRoleFilter;
@@ -120,8 +122,9 @@ class AdminProvider extends ChangeNotifier {
       _appeals.where((a) => a['status'] == 'pending').length;
   int get pendingScamFlags =>
       (_dashboardStats['pending_scam_flags'] as num?)?.toInt() ?? 0;
-  int get pendingModerationItems =>
-      (_dashboardStats['pending_moderation_items'] as num?)?.toInt() ?? 0;
+  // Harmful-text audit trail rows an admin hasn't looked at yet (not an action queue).
+  int get unreviewedModerationItems =>
+      (_dashboardStats['unreviewed_moderation_items'] as num?)?.toInt() ?? 0;
 
   void setPage(AdminPage page) {
     _currentPage = page;
@@ -529,18 +532,20 @@ class AdminProvider extends ChangeNotifier {
   }
 
   Future<void> loadModerationItems({
-    String? status,
+    String? reviewed,
     String? contentType,
   }) async {
     if (_token == null) return;
-    if (status != null) _moderationStatusFilter = status;
+    if (reviewed != null) _moderationReviewedFilter = reviewed;
     if (contentType != null) _moderationTypeFilter = contentType;
     _isAiLoading = true;
     notifyListeners();
     try {
       final data = await AdminService.getModerationItems(
         _token!,
-        status: _moderationStatusFilter,
+        reviewed: _moderationReviewedFilter == 'all'
+            ? null
+            : _moderationReviewedFilter == 'reviewed',
         contentType: _moderationTypeFilter,
       );
       _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
@@ -551,13 +556,15 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> actionModerationItem(String moderationId, String action) async {
+  /// Mark an audit-trail entry as reviewed (bookkeeping only, no side effects on
+  /// the underlying content). Optional [note] is stored with the row.
+  Future<bool> reviewModerationItem(String moderationId, {String? note}) async {
     if (_token == null) return false;
     try {
-      final ok = await AdminService.actionModerationItem(
+      final ok = await AdminService.reviewModerationItem(
         _token!,
         moderationId: moderationId,
-        action: action,
+        adminNote: note,
       );
       if (ok) await Future.wait([loadModerationItems(), loadDashboardStats()]);
       return ok;
@@ -718,7 +725,7 @@ class AdminProvider extends ChangeNotifier {
     _closedJobs = [];
     _closedAccounts = [];
     _scamStatusFilter = 'all';
-    _moderationStatusFilter = 'all';
+    _moderationReviewedFilter = 'all';
     _moderationTypeFilter = 'all';
     _closedJobReasonFilter = 'all';
     _closedAccountRoleFilter = 'all';

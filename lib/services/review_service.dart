@@ -32,7 +32,13 @@ class ReviewService {
     String message;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
+      // ResponseSchema.error() puts the human-readable message under 'details'
+      // (see functions/response_utils.py) - 'message'/'detail' never existed on
+      // an error response, so every failure here silently fell through to
+      // 'Unknown error' regardless of the real reason (moderation block,
+      // validation error, anything).
       message =
+          body['details'] as String? ??
           body['message'] as String? ??
           body['detail'] as String? ??
           'Unknown error';
@@ -52,7 +58,10 @@ class ReviewService {
     String message;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      message = body['message'] as String? ?? 'Unknown error';
+      message =
+          body['details'] as String? ??
+          body['message'] as String? ??
+          'Unknown error';
     } catch (_) {
       message = res.body;
     }

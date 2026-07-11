@@ -86,7 +86,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                   Consumer<AdminProvider>(
                     builder: (_, admin, __) {
                       final scam = admin.pendingScamFlags;
-                      final mod = admin.pendingModerationItems;
+                      final mod = admin.unreviewedModerationItems;
                       if (scam == 0 && mod == 0) return const SizedBox.shrink();
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -98,7 +98,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${scam + mod} pending review',
+                          '${scam + mod} need attention',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -124,7 +124,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                 indicatorWeight: 2.5,
                 tabs: const [
                   Tab(text: 'Scam Detection'),
-                  Tab(text: 'Harmful Text Detection'),
+                  Tab(text: 'Harmful Text Audit'),
                 ],
               ),
             ],
@@ -892,18 +892,33 @@ class _ScamCardState extends State<_ScamCard> {
 class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
-  static const _statuses = ['all', 'pending', 'approved', 'rejected'];
+  // Audit trail is read-only history; filter by whether an admin has looked at a
+  // row yet, not by an action status (there is no approve/reject step anymore).
+  static const _reviewedFilters = ['all', 'unreviewed', 'reviewed'];
+  static const _reviewedLabels = {
+    'all': 'All',
+    'unreviewed': 'Unreviewed',
+    'reviewed': 'Reviewed',
+  };
   static const _types = [
     'all',
     'job_post',
     'freelancer_profile',
     'client_profile',
+    'portfolio',
+    'education',
+    'work_experience',
+    'proposal',
   ];
   static const _typeLabels = {
     'all': 'All',
     'job_post': 'Job Post',
     'freelancer_profile': 'Freelancer',
     'client_profile': 'Client',
+    'portfolio': 'Portfolio',
+    'education': 'Education',
+    'work_experience': 'Work Exp.',
+    'proposal': 'Proposal',
   };
 
   void _showAiInfo(BuildContext context) {
@@ -1001,13 +1016,13 @@ class _ModerationTab extends StatelessWidget {
                       _ModalSection(
                         title: 'How it works',
                         content:
-                            'Each submission is cleaned and tokenized before scoring. Every label gets a score between 0.0 and 1.0. If any label crosses the moderation threshold, the content is flagged. Reviewers also see a plain-language reason for each triggered label so they can judge the case quickly.',
+                            'Every submission is cleaned and tokenized before scoring, and each label gets a score between 0.0 and 1.0. If any label crosses the threshold, the content is blocked at submission — the author is told their content violated the policy and it is never saved. Nothing waits in a queue for a decision.',
                       ),
                       const SizedBox(height: 14),
                       _ModalSection(
-                        title: 'Auto-actions',
+                        title: 'This screen is an audit log',
                         content:
-                            'Pending items expire after 30 days. High-risk submissions have their flag auto-confirmed and the content is removed. Low-risk submissions have their flag auto-dismissed and the content stays live. Stricter score thresholds apply to job posts compared to profile bios.',
+                            'Blocking happens automatically at the source, so this list is a read-only history of what was flagged — not an action queue. You can mark a row as reviewed (bookkeeping only) and browse by content type. If you decide real action is warranted, use the dedicated Close Job or Restrict Account override on the row.',
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -1123,18 +1138,18 @@ class _ModerationTab extends StatelessWidget {
             ),
 
             FilterDropdownBar(
-              summaryText: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all'
+              summaryText: admin.moderationReviewedFilter != 'all' || admin.moderationTypeFilter != 'all'
                   ? 'Filters active'
-                  : 'All content',
-              hasActiveFilter: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all',
+                  : 'All entries',
+              hasActiveFilter: admin.moderationReviewedFilter != 'all' || admin.moderationTypeFilter != 'all',
               accentColor: const Color(0xFF4F46E5),
               groups: [
                 FilterGroupData(
-                  label: 'STATUS',
-                  options: _statuses,
-                  labelFor: (s) => '${s[0].toUpperCase()}${s.substring(1)}',
-                  selected: admin.moderationStatusFilter,
-                  onSelect: (s) => admin.loadModerationItems(status: s),
+                  label: 'REVIEW STATE',
+                  options: _reviewedFilters,
+                  labelFor: (s) => _reviewedLabels[s] ?? s,
+                  selected: admin.moderationReviewedFilter,
+                  onSelect: (s) => admin.loadModerationItems(reviewed: s),
                 ),
                 FilterGroupData(
                   label: 'CONTENT TYPE',
@@ -1156,13 +1171,13 @@ class _ModerationTab extends StatelessWidget {
                   : admin.moderationItems.isEmpty
                   ? _Empty(
                       icon: Icons.shield_rounded,
-                      message: 'No flagged content found',
-                      sub: 'All content is within guidelines',
+                      message: 'No audit entries found',
+                      sub: 'Nothing has been flagged for this filter',
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF7C3AED),
                       onRefresh: () => admin.loadModerationItems(
-                        status: admin.moderationStatusFilter,
+                        reviewed: admin.moderationReviewedFilter,
                         contentType: admin.moderationTypeFilter,
                       ),
                       child: ListView.separated(
@@ -1196,22 +1211,85 @@ class _ModerationCardState extends State<_ModerationCard> {
   bool _labelsExpanded = false;
   bool _closing = false;
 
-  Future<void> _act(String action) async {
+  // Bookkeeping only: mark this audit-trail row as reviewed, with an optional note.
+  // Does not take any action on the underlying content.
+  Future<void> _markReviewed() async {
+    final note = await _promptReviewNote(context);
+    if (note == null || !mounted) return; // dialog cancelled
     setState(() => _loading = true);
     final admin = context.read<AdminProvider>();
     final id = _id(widget.item);
-    final ok = await admin.actionModerationItem(id, action);
+    final ok = await admin.reviewModerationItem(
+      id,
+      note: note.trim().isEmpty ? null : note.trim(),
+    );
     if (mounted) {
       setState(() => _loading = false);
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Action failed', style: GoogleFonts.poppins()),
+            content: Text('Failed to mark reviewed', style: GoogleFonts.poppins()),
             backgroundColor: const Color(0xFFDC2626),
           ),
         );
       }
     }
+  }
+
+  /// Optional-note dialog. Returns the entered text (possibly empty) on confirm,
+  /// or null if the admin cancelled.
+  Future<String?> _promptReviewNote(BuildContext ctx) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          'Mark as reviewed',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This is bookkeeping only — it records that you looked at this entry. '
+              'It does not remove content or restrict anyone.',
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              minLines: 1,
+              style: GoogleFonts.poppins(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Optional note',
+                hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF)),
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx, controller.text),
+            child: Text(
+              'Mark reviewed',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF4F46E5),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmOverride(BuildContext ctx) async {
@@ -1501,24 +1579,14 @@ class _ModerationCardState extends State<_ModerationCard> {
     },
   ];
 
-  static const _defaultBlockedMessages = {
-    'job_post':
-        'This job post was removed due to a content policy violation. '
-        'Submit an appeal if you believe this was a mistake.',
-    'freelancer_profile':
-        'Your profile content was flagged for violating our community guidelines. '
-        'Please review our content policy and update your profile accordingly.',
-    'client_profile':
-        'Your profile content was flagged for violating our community guidelines. '
-        'Please review our content policy and update your profile accordingly.',
-  };
-
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final totalScore = (item['total_score'] as num?)?.toDouble() ?? 0.0;
     final contentType = item['content_type'] as String? ?? '';
-    final status = item['status'] as String? ?? 'pending';
+    final reviewedAt = item['reviewed_at']?.toString() ?? '';
+    final reviewed = reviewedAt.isNotEmpty;
+    final adminNote = item['admin_note']?.toString() ?? '';
     final flaggedText =
         item['flagged_text_excerpt'] as String? ??
         item['flagged_text'] as String? ??
@@ -1551,11 +1619,6 @@ class _ModerationCardState extends State<_ModerationCard> {
       0.0,
       (sum, e) => sum + (e['score'] as double),
     );
-
-    final defaultMsg =
-        _defaultBlockedMessages[contentType] ??
-        'This content was removed due to a policy violation. '
-            'Submit an appeal if you believe this was a mistake.';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1708,16 +1771,16 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ],
 
-          // ── Default blocked message (shown when flag confirmed) ──────
-          if (status == 'approved') ...[
+          // ── Reviewed note (bookkeeping) ──────────────────────────────
+          if (reviewed && adminNote.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
+                color: const Color(0xFFF9FAFB),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFED7AA)),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1725,27 +1788,27 @@ class _ModerationCardState extends State<_ModerationCard> {
                   Row(
                     children: [
                       const Icon(
-                        Icons.message_outlined,
+                        Icons.sticky_note_2_outlined,
                         size: 13,
-                        color: Color(0xFFD97706),
+                        color: Color(0xFF6B7280),
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Message shown to user',
+                        'Reviewer note',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFFD97706),
+                          color: const Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    defaultMsg,
+                    adminNote,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: const Color(0xFF92400E),
+                      color: const Color(0xFF374151),
                     ),
                   ),
                 ],
@@ -1777,39 +1840,32 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ),
           const SizedBox(height: 10),
-          if (status == 'pending')
-            _loading
-                ? const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF7C3AED),
-                      ),
+          // Review state: unreviewed rows get a "Mark reviewed" action (bookkeeping
+          // only); reviewed rows show a passive "Reviewed" pill with the date.
+          _loading
+              ? const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF7C3AED),
                     ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _ActionButton(
-                        label: 'Dismiss',
-                        icon: Icons.check_circle_outline_rounded,
-                        color: const Color(0xFF059669),
-                        onTap: () => _act('reject'),
-                      ),
-                      const SizedBox(width: 8),
-                      _ActionButton(
-                        label: 'Confirm Flag',
-                        icon: Icons.flag_rounded,
-                        color: const Color(0xFFDC2626),
-                        filled: true,
-                        onTap: () => _act('approve'),
-                      ),
-                    ],
-                  )
-          else
-            _ModerationStatusPill(status: status),
+                  ),
+                )
+              : reviewed
+                  ? _ReviewedPill(reviewedAt: reviewedAt)
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _ActionButton(
+                          label: 'Mark reviewed',
+                          icon: Icons.done_all_rounded,
+                          color: const Color(0xFF4F46E5),
+                          onTap: _markReviewed,
+                        ),
+                      ],
+                    ),
           const SizedBox(height: 8),
           _closing
               ? const Center(
@@ -2334,36 +2390,25 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _ModerationStatusPill extends StatelessWidget {
-  final String status;
-  const _ModerationStatusPill({required this.status});
+/// Passive "Reviewed" indicator for an audit-trail row an admin has already
+/// looked at. Shows the review date when available. No action, no side effect.
+class _ReviewedPill extends StatelessWidget {
+  final String reviewedAt;
+  const _ReviewedPill({required this.reviewedAt});
 
   @override
   Widget build(BuildContext context) {
-    // approved = flag confirmed → content removed (red)
-    // rejected = flag dismissed → content stays (green)
-    final color = switch (status) {
-      'approved' => const Color(0xFFDC2626),
-      'rejected' => const Color(0xFF059669),
-      _ => const Color(0xFF6B7280),
-    };
-    final icon = switch (status) {
-      'approved' => Icons.flag_rounded,
-      'rejected' => Icons.check_circle_rounded,
-      _ => Icons.hourglass_empty_rounded,
-    };
-    final label = switch (status) {
-      'approved' => 'Confirmed',
-      'rejected' => 'Dismissed',
-      _ => status[0].toUpperCase() + status.substring(1),
-    };
+    final date = reviewedAt.contains('T')
+        ? reviewedAt.split('T').first
+        : (reviewedAt.length >= 10 ? reviewedAt.substring(0, 10) : reviewedAt);
+    const color = Color(0xFF059669);
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Icon(icon, size: 14, color: color),
+        const Icon(Icons.done_all_rounded, size: 14, color: color),
         const SizedBox(width: 5),
         Text(
-          label,
+          date.isNotEmpty ? 'Reviewed · $date' : 'Reviewed',
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,

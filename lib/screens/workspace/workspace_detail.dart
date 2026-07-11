@@ -117,6 +117,26 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
+  /// Manual refresh - the day-3/6/7 reminder/auto-approve sweep
+  /// (contract_autoapprove_worker.py) can change contract/submission status
+  /// in the background at any time with no live push to this screen, so
+  /// there's no other way to see that update without navigating away and back.
+  Future<void> _refreshWorkspace() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    await context.read<ContractProvider>().fetchContractById(
+      token,
+      _contract.contractId,
+    );
+    if (mounted) {
+      final latest = context.read<ContractProvider>().currentContract;
+      if (latest != null && latest.contractId == _contract.contractId) {
+        setState(() => _contract = latest);
+      }
+    }
+    await _fetchSubmissions();
+  }
+
   Future<bool> _updateStatus(String status, {String? note}) async {
     try {
       final token = context.read<AuthProvider>().token!;
@@ -353,6 +373,17 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       ),
       title: Text('Working Space', style: AppText.h3),
       centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(
+            Icons.refresh_rounded,
+            size: 22,
+            color: Color(0xFF333333),
+          ),
+          tooltip: 'Refresh',
+          onPressed: _refreshWorkspace,
+        ),
+      ],
     );
   }
 
@@ -1332,7 +1363,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                           isError: false,
                         );
                       } else {
-                        _showSnack('Failed to raise dispute.', isError: true);
+                        _showSnack(
+                          context.read<ContractProvider>().error ??
+                              'Failed to raise dispute.',
+                          isError: true,
+                        );
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -2303,7 +2338,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                         }
                         _showSnack('Payment recorded.', isError: false);
                       } else {
-                        _showSnack('Failed to record payment.', isError: true);
+                        _showSnack(
+                          context.read<ContractProvider>().error ??
+                              'Failed to record payment.',
+                          isError: true,
+                        );
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -2371,7 +2410,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     Navigator.popUntil(context, (route) => route.isFirst);
                   }
                 } else {
-                  _showSnack('Failed to cancel contract.', isError: true);
+                  _showSnack(
+                    context.read<ContractProvider>().error ??
+                        'Failed to cancel contract.',
+                    isError: true,
+                  );
                 }
               }
             },

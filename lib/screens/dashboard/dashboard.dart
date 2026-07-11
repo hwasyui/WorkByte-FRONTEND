@@ -181,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _loadRelevantJobs();
       _loadPopularJobs();
+      context.read<NotificationProvider>().fetchUnreadCount();
     }
   }
 
