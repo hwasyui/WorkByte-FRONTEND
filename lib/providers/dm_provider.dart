@@ -163,10 +163,12 @@ class DMProvider extends ChangeNotifier {
 
       return realMessage;
     } catch (e) {
+      final labels = e is DMFailureException ? e.detectedLabels : const <String>[];
       final failedMessage = tempMessage.copyWith(
         status: 'failed',
         metadata: {
           'failure_reason': e.toString().replaceFirst('Exception: ', ''),
+          if (labels.isNotEmpty) 'detected_labels': labels,
         },
       );
 
@@ -297,10 +299,12 @@ class DMProvider extends ChangeNotifier {
 
       return realMessage;
     } catch (e) {
+      final labels = e is DMFailureException ? e.detectedLabels : const <String>[];
       final failedMessage = tempMessage.copyWith(
         status: 'failed',
         metadata: {
           'failure_reason': e.toString().replaceFirst('Exception: ', ''),
+          if (labels.isNotEmpty) 'detected_labels': labels,
         },
       );
 

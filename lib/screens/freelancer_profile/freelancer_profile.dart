@@ -3455,19 +3455,6 @@ class _EducationItem extends StatelessWidget {
   }
 }
 
-/// Human-readable names for the backend's raw label keys (result of
-/// scan_harmful_text / scan_harmful_text_with_ml_fallback) - mirrors the
-/// server-side _LABEL_DISPLAY_NAMES mapping used for notification text, so the
-/// wording matches what a blocked user already sees in their notifications.
-const Map<String, String> _labelDisplayNames = {
-  'toxic': 'toxicity',
-  'toxicity': 'toxicity',
-  'obscene': 'obscenity',
-  'threat': 'threats',
-  'insult': 'insults',
-  'identity_hate': 'identity-based hate speech',
-};
-
 /// Small pill shown on a freelancer's own education/work-experience/portfolio
 /// entries while a background harmful-text scan is pending ('scanning') or
 /// after it flagged the entry ('blocked') - see education_functions.py /
@@ -3481,9 +3468,7 @@ class _ModerationBadge extends StatelessWidget {
   const _ModerationBadge({required this.status, this.labels = const []});
 
   void _showExplanation(BuildContext context, bool isBlocked) {
-    final reason = labels.isNotEmpty
-        ? labels.map((l) => _labelDisplayNames[l] ?? l).join(', ')
-        : null;
+    final reason = labels.isNotEmpty ? describeLabels(labels) : null;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(

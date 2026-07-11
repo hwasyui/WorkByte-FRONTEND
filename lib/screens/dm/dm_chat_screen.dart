@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import 'dm_thread_list.dart';
 
 class DMChatScreen extends StatefulWidget {
@@ -234,30 +235,12 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
   }
 
-  static const _harmfulLabelNames = {
-    'identity_hate': 'Identity Hate',
-    'toxic': 'Toxicity',
-    'toxicity': 'Toxicity',
-    'severe_toxic': 'Severe Toxicity',
-    'obscene': 'Obscene',
-    'threat': 'Threat',
-    'insult': 'Insult',
-  };
-
-  static String _formatHarmfulLabel(String raw) =>
-      _harmfulLabelNames[raw.trim().toLowerCase()] ??
-      raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
-
   void _showFailedMessageReason(DMMessageModel message) {
     final raw = message.failureReason ?? '';
-    final isHarmful = raw.toLowerCase().contains('detected as harmful') ||
-        raw.toLowerCase().contains('harmful content');
+    final failureLabels = message.failureLabels;
 
-    if (isHarmful) {
-      final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(raw);
-      final labels = labelMatch != null
-          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
-          : '';
+    if (failureLabels.isNotEmpty) {
+      final labels = describeLabels(failureLabels);
 
       showDialog(
         context: context,

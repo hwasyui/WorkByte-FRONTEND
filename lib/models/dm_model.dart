@@ -166,6 +166,15 @@ class DMMessageModel {
     return value?.toString();
   }
 
+  /// Raw detected_labels from a harmful-text rejection, if this failure was
+  /// one - see DMFailureException.detectedLabels. Empty for ordinary network
+  /// failures. Map via harmfulLabelDisplayNames before showing.
+  List<String> get failureLabels {
+    final raw = metadata?['detected_labels'];
+    if (raw is List) return raw.map((e) => e.toString()).toList();
+    return const [];
+  }
+
   DMMessageModel copyWith({
     String? dmMessageId,
     String? threadId,
