@@ -165,180 +165,231 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      builder: (dialogContext) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 40,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0E7FF),
-                      shape: BoxShape.circle,
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE0E7FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          color: Color(0xFF4F46E5),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Edit About',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: isSaving
+                            ? null
+                            : () => Navigator.pop(dialogContext),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE0E7FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Color(0xFF4F46E5),
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Tell us about your company',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: bioController,
+                    maxLines: 7,
+                    enabled: !isSaving,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF1A1A2E),
                     ),
-                    child: const Icon(
-                      Icons.edit_outlined,
-                      color: Color(0xFF4F46E5),
-                      size: 20,
+                    decoration: InputDecoration(
+                      hintText: 'Tell us about your company...',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 14,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFEEF0FF),
+                      contentPadding: const EdgeInsets.all(16),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4F46E5),
+                          width: 1.5,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4F46E5),
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Edit About',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(dialogContext),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE0E7FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Color(0xFF4F46E5),
-                        size: 18,
-                      ),
+                  const SizedBox(height: 24),
+                  Container(height: 1, color: const Color(0xFFE5E7EB)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: isSaving
+                              ? null
+                              : () => Navigator.pop(dialogContext),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  final newBio = bioController.text;
+                                  final bioValue = newBio.trim().isEmpty
+                                      ? null
+                                      : newBio;
+
+                                  final auth = Provider.of<AuthProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final profile = Provider.of<ProfileProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final messenger = ScaffoldMessenger.of(
+                                    context,
+                                  );
+                                  final identifier =
+                                      profile.clientProfile?.clientId ??
+                                      auth.currentUser!.userId;
+
+                                  setDialogState(() => isSaving = true);
+
+                                  final success = await profile.updateProfile(
+                                    token: auth.token!,
+                                    identifier: identifier,
+                                    fields: {'bio': bioValue},
+                                  );
+
+                                  if (success) {
+                                    setState(() => bioText = newBio);
+                                    await _refreshProfile();
+                                  }
+
+                                  if (!mounted) return;
+
+                                  if (success) {
+                                    Navigator.pop(dialogContext);
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'About saved successfully',
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    setDialogState(() => isSaving = false);
+                                    showErrorFeedback(
+                                      context,
+                                      message:
+                                          profile.error ??
+                                          'Failed to save About',
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(
+                              0xFF4F46E5,
+                            ).withOpacity(0.6),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Save',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Tell us about your company',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: bioController,
-                maxLines: 7,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
-                decoration: InputDecoration(
-                  hintText: 'Tell us about your company...',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF9CA3AF),
-                    fontSize: 14,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFEEF0FF),
-                  contentPadding: const EdgeInsets.all(16),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF4F46E5),
-                      width: 1.5,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF4F46E5),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(height: 1, color: const Color(0xFFE5E7EB)),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: Color(0xFF4F46E5),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final newBio = bioController.text;
-                        final bioValue = newBio.trim().isEmpty ? null : newBio;
-                        setState(() => bioText = newBio);
-
-                        final auth = Provider.of<AuthProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final profile = Provider.of<ProfileProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final messenger = ScaffoldMessenger.of(context);
-                        final identifier =
-                            profile.clientProfile?.clientId ??
-                            auth.currentUser!.userId;
-
-                        Navigator.pop(dialogContext);
-
-                        final success = await profile.updateProfile(
-                          token: auth.token!,
-                          identifier: identifier,
-                          fields: {'bio': bioValue},
-                        );
-                        if (success) await _refreshProfile();
-                        if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4F46E5),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Save',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -347,261 +398,318 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      builder: (dialogContext) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: Colors.white,
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 40,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0E7FF),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.language_rounded,
-                      color: Color(0xFF4F46E5),
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Edit Website',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE0E7FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.language_rounded,
+                          color: Color(0xFF4F46E5),
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Edit Website',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A1A2E),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Update your portfolio or website link.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: isSaving
+                            ? null
+                            : () => Navigator.pop(dialogContext),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE0E7FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Color(0xFF4F46E5),
+                            size: 16,
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Update your portfolio or website link.',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Website Address',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  StatefulBuilder(
+                    builder: (context, setLocal) => TextField(
+                      controller: websiteController,
+                      enabled: !isSaving,
+                      keyboardType: TextInputType.url,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                      onChanged: (_) => setLocal(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'https://yourwebsite.com',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF9CA3AF),
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.language_rounded,
+                          color: Color(0xFF4F46E5),
+                          size: 20,
+                        ),
+                        suffixIcon: websiteController.text.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  websiteController.clear();
+                                  setLocal(() {});
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.all(8),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE0E7FF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Color(0xFF4F46E5),
+                                    size: 14,
+                                  ),
+                                ),
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: const Color(0xFFEEF0FF),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4F46E5),
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4F46E5),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: const [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 14,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Enter a valid website URL (e.g., https://yourwebsite.com)',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Container(height: 1, color: const Color(0xFFE5E7EB)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () => Navigator.pop(dialogContext),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: Color(0xFF4F46E5),
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: Color(0xFF4F46E5),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final newUrl = websiteController.text;
+                                    final urlValue = newUrl.trim().isEmpty
+                                        ? null
+                                        : newUrl;
+
+                                    final auth = Provider.of<AuthProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    final profile =
+                                        Provider.of<ProfileProvider>(
+                                          context,
+                                          listen: false,
+                                        );
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
+                                    final identifier =
+                                        profile.clientProfile?.clientId ??
+                                        auth.currentUser!.userId;
+
+                                    setDialogState(() => isSaving = true);
+
+                                    final success = await profile
+                                        .updateProfile(
+                                          token: auth.token!,
+                                          identifier: identifier,
+                                          fields: {'website_url': urlValue},
+                                        );
+
+                                    if (success) {
+                                      setState(() => websiteUrl = newUrl);
+                                      await _refreshProfile();
+                                    }
+
+                                    if (!mounted) return;
+
+                                    if (success) {
+                                      Navigator.pop(dialogContext);
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Website saved successfully',
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      setDialogState(
+                                        () => isSaving = false,
+                                      );
+                                      showErrorFeedback(
+                                        context,
+                                        message:
+                                            profile.error ??
+                                            'Failed to save Website',
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4F46E5),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(
+                                0xFF4F46E5,
+                              ).withOpacity(0.6),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                            ),
+                            child: isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(dialogContext),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE0E7FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Color(0xFF4F46E5),
-                        size: 16,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Website Address',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
-                ),
-              ),
-              const SizedBox(height: 8),
-              StatefulBuilder(
-                builder: (context, setLocal) => TextField(
-                  controller: websiteController,
-                  keyboardType: TextInputType.url,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  onChanged: (_) => setLocal(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'https://yourwebsite.com',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 14,
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.language_rounded,
-                      color: Color(0xFF4F46E5),
-                      size: 20,
-                    ),
-                    suffixIcon: websiteController.text.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
-                              websiteController.clear();
-                              setLocal(() {});
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE0E7FF),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Color(0xFF4F46E5),
-                                size: 14,
-                              ),
-                            ),
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: const Color(0xFFEEF0FF),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF4F46E5),
-                        width: 1.5,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF4F46E5),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: const [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 14,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Enter a valid website URL (e.g., https://yourwebsite.com)',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Container(height: 1, color: const Color(0xFFE5E7EB)),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: Color(0xFF4F46E5),
-                            width: 1.5,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Color(0xFF4F46E5),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final newUrl = websiteController.text;
-                          final urlValue = newUrl.trim().isEmpty
-                              ? null
-                              : newUrl;
-                          setState(() => websiteUrl = newUrl);
-
-                          final auth = Provider.of<AuthProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final profile = Provider.of<ProfileProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final messenger = ScaffoldMessenger.of(context);
-                          final identifier =
-                              profile.clientProfile?.clientId ??
-                              auth.currentUser!.userId;
-
-                          Navigator.pop(dialogContext);
-
-                          final success = await profile.updateProfile(
-                            token: auth.token!,
-                            identifier: identifier,
-                            fields: {'website_url': urlValue},
-                          );
-                          if (success) await _refreshProfile();
-                          if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Website saved successfully'
-                                      : profile.error ??
-                                            'Failed to save Website',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                        ),
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

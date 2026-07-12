@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/dm_provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
@@ -286,13 +287,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    showErrorFeedback(context, message: message);
   }
 
   Future<void> _selectDate() async {

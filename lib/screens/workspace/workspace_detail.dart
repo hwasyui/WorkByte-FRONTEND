@@ -24,6 +24,7 @@ import '../reviews/client_review_form.dart';
 import '../dm/dm_chat_screen.dart';
 import '../contract/generate_contract_screen.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/harmful_block_dialog.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
@@ -304,7 +305,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
-  Future<void> _submitWork(List<File> files, String note) async {
+  Future<bool> _submitWork(List<File> files, String note) async {
     setState(() => _isActioning = true);
 
     try {
@@ -318,21 +319,21 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         note: note,
       );
 
-      if (!mounted) return;
+      if (!mounted) return false;
 
       if (!submissionSuccess) {
-        _showSnack(
-          provider.errorMessage ?? 'Failed to submit work.',
-          isError: true,
+        showErrorFeedback(
+          context,
+          message: provider.errorMessage ?? 'Failed to submit work.',
         );
-        return;
+        return false;
       }
 
       final contractSuccess = await _updateStatus('under_review');
 
       await _fetchSubmissions();
 
-      if (!mounted) return;
+      if (!mounted) return true;
 
       if (contractSuccess) {
         _showSnack('Work submitted successfully!', isError: false);
@@ -342,14 +343,16 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           isError: true,
         );
       }
+      return true;
     } catch (e) {
-      _showSnack('Something went wrong.', isError: true);
+      if (mounted) _showSnack('Something went wrong.', isError: true);
+      return false;
     } finally {
       if (mounted) setState(() => _isActioning = false);
     }
   }
 
-  Future<void> _requestRevision(String note) async {
+  Future<bool> _requestRevision(String note) async {
     setState(() => _isActioning = true);
 
     try {
@@ -362,22 +365,24 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         note: note, // ← pass note
       );
 
-      if (!mounted) return;
+      if (!mounted) return false;
 
       if (!success) {
-        _showSnack(
-          provider.errorMessage ?? 'Failed to request revision.',
-          isError: true,
+        showErrorFeedback(
+          context,
+          message: provider.errorMessage ?? 'Failed to request revision.',
         );
-        return;
+        return false;
       }
 
       await _fetchSubmissions();
 
-      if (!mounted) return;
+      if (!mounted) return true;
       _showSnack('Revision request sent to freelancer', isError: false);
+      return true;
     } catch (e) {
-      _showSnack('Something went wrong.', isError: true);
+      if (mounted) _showSnack('Something went wrong.', isError: true);
+      return false;
     } finally {
       if (mounted) setState(() => _isActioning = false);
     }
@@ -1486,8 +1491,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                             reasonCtrl.text.trim(),
                           );
                       if (!mounted) return;
-                      Navigator.pop(ctx);
                       if (success) {
+                        Navigator.pop(ctx);
                         setState(
                           () => _contract = _contract.copyWith(
                             status: 'disputed',
@@ -1498,10 +1503,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                           isError: false,
                         );
                       } else {
-                        _showSnack(
-                          context.read<ContractProvider>().error ??
+                        setDialogState(() => isSubmitting = false);
+                        showErrorFeedback(
+                          context,
+                          message:
+                              context.read<ContractProvider>().error ??
                               'Failed to raise dispute.',
-                          isError: true,
                         );
                       }
                     },
@@ -1935,6 +1942,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   void _showSubmitWorkSheet() {
     final noteController = TextEditingController();
     List<PlatformFile> pickedFiles = [];
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -2055,6 +2063,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: noteController,
+                enabled: !isSubmitting,
                 maxLines: 3,
                 style: AppText.body,
                 decoration: InputDecoration(
@@ -2084,15 +2093,24 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: pickedFiles.isEmpty
+                  onPressed: (pickedFiles.isEmpty || isSubmitting)
                       ? null
-                      : () {
-                          Navigator.pop(ctx);
+                      : () async {
+                          setModal(() => isSubmitting = true);
                           final dartFiles = pickedFiles
                               .where((f) => f.path != null)
                               .map((f) => File(f.path!))
                               .toList();
-                          _submitWork(dartFiles, noteController.text.trim());
+                          final success = await _submitWork(
+                            dartFiles,
+                            noteController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          if (success) {
+                            Navigator.pop(ctx);
+                          } else {
+                            setModal(() => isSubmitting = false);
+                          }
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -2102,10 +2120,23 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    'Submit',
-                    style: AppText.bodySemiBold.copyWith(color: Colors.white),
-                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Submit',
+                          style: AppText.bodySemiBold.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -2117,6 +2148,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   void _showRevisionSheet() {
     final noteController = TextEditingController();
+    bool isSubmitting = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2124,85 +2156,114 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Request Revision', style: AppText.h2),
-            const SizedBox(height: 4),
-            Text(
-              'Describe what changes you need from the freelancer.',
-              style: AppText.caption.copyWith(color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: noteController,
-              maxLines: 4,
-              style: AppText.body,
-              decoration: InputDecoration(
-                hintText: 'e.g. Please update the color scheme and add...',
-                hintStyle: AppText.caption.copyWith(
-                  color: Colors.grey.shade400,
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFFF9800)),
-                ),
-                contentPadding: const EdgeInsets.all(14),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (noteController.text.trim().isEmpty) return;
-                  Navigator.pop(ctx);
-                  _requestRevision(noteController.text.trim());
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF9800),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Send Revision Request',
-                  style: AppText.bodySemiBold.copyWith(color: Colors.white),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Text('Request Revision', style: AppText.h2),
+              const SizedBox(height: 4),
+              Text(
+                'Describe what changes you need from the freelancer.',
+                style: AppText.caption.copyWith(color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: noteController,
+                enabled: !isSubmitting,
+                maxLines: 4,
+                style: AppText.body,
+                decoration: InputDecoration(
+                  hintText: 'e.g. Please update the color scheme and add...',
+                  hintStyle: AppText.caption.copyWith(
+                    color: Colors.grey.shade400,
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFFF9800)),
+                  ),
+                  contentPadding: const EdgeInsets.all(14),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (noteController.text.trim().isEmpty) return;
+                          setModal(() => isSubmitting = true);
+                          final success = await _requestRevision(
+                            noteController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          if (success) {
+                            Navigator.pop(ctx);
+                          } else {
+                            setModal(() => isSubmitting = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9800),
+                    disabledBackgroundColor: const Color(
+                      0xFFFF9800,
+                    ).withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Send Revision Request',
+                          style: AppText.bodySemiBold.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
