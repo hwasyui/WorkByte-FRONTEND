@@ -291,17 +291,19 @@ class AboutScreen extends StatelessWidget {
                     title: 'Harmful Text Detection',
                     description:
                         'Every job posting, profile bio, and user-submitted text is '
-                        'automatically scanned by a fine-tuned RoBERTa classifier as it '
+                        'automatically scanned by a fine-tuned BERT classifier as it '
                         'is submitted. The model scores content across five harm labels, '
-                        'and anything above the threshold is blocked at the source — the '
-                        'author is told their content violated the policy and it is never '
-                        'saved or shown to anyone. Blocking is automatic, so there is no '
-                        'review queue; admins get a read-only audit log of what was '
-                        'flagged and can mark entries as reviewed.',
+                        'and anything above the threshold is blocked — for most fields '
+                        'that means rejected outright before it\'s ever saved; for a few '
+                        '(job posts, proposals, portfolio, education, work experience) it '
+                        'means saved, scanned in the background, and blocked within '
+                        'seconds if flagged. Either way the author is told their content '
+                        'violated the policy, blocking is automatic, and admins only get '
+                        'a read-only audit log of what was flagged.',
                     highlights: const [
                       '5 harm labels: Toxicity, Obscene, Threat, Insult, Identity Hate',
-                      'RoBERTa classifier fine-tuned for platform moderation',
-                      'Instant block at submission with a read-only admin audit log',
+                      'BERT classifier fine-tuned for platform moderation (F1 0.85)',
+                      'Automatic blocking with a read-only admin audit log',
                     ],
                   ),
 
