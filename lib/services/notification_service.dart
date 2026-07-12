@@ -175,7 +175,7 @@ class NotificationService {
           'Authorization': 'Bearer $authToken',
         },
         body: jsonEncode({'token': fcmToken}),
-      );
+      ).timeout(const Duration(seconds: 20));
 
       // Refresh token listener
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
@@ -188,7 +188,7 @@ class NotificationService {
             'Authorization': 'Bearer $token',
           },
           body: jsonEncode({'token': newToken}),
-        );
+        ).timeout(const Duration(seconds: 20));
       });
     } catch (e) {
       debugPrint('Failed to save FCM token (non-fatal): $e');
@@ -208,7 +208,7 @@ class NotificationService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
@@ -228,7 +228,7 @@ class NotificationService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
@@ -246,7 +246,7 @@ class NotificationService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
   }
 
   Future<void> markAllRead() async {
@@ -257,6 +257,6 @@ class NotificationService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
   }
 }

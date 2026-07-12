@@ -71,7 +71,7 @@ class JobPostService {
         },
       ),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('GET /job-posts: $body');
     if (res.statusCode == 200) {
@@ -99,7 +99,7 @@ class JobPostService {
         },
       ),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final details = body['details'];
@@ -121,7 +121,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-posts/$jobPostId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       return JobPostModel.fromJson(_extractBody(body));
@@ -144,7 +144,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-posts/client/$clientId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = _extractBody(body) ?? [];
@@ -159,7 +159,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-posts/category-counts'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = _extractBody(body) ?? [];
@@ -179,7 +179,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-posts'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('POST /job-posts request: $data');
     debugPrint('POST /job-posts response: $body');
@@ -198,7 +198,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-posts/$jobPostId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-posts/$jobPostId request: $data');
     debugPrint('PUT /job-posts/$jobPostId response: $body');
@@ -212,7 +212,7 @@ class JobPostService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/job-posts/$jobPostId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job post'));
@@ -224,7 +224,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('GET /job-roles/job-post/$jobPostId: $body');
     if (res.statusCode == 200) {
@@ -244,7 +244,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-roles'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('POST /job-roles request: $data');
     debugPrint('POST /job-roles response: $body');
@@ -263,7 +263,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-roles/$jobRoleId request: $data');
     debugPrint('PUT /job-roles/$jobRoleId response: $body');
@@ -277,7 +277,7 @@ class JobPostService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job role'));
@@ -292,7 +292,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-role-skills/job-role/$jobRoleId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('GET /job-role-skills/job-role/$jobRoleId: $body');
     if (res.statusCode == 200) {
@@ -312,7 +312,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-role-skills'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('POST /job-role-skills request: $data');
     debugPrint('POST /job-role-skills response: $body');
@@ -331,7 +331,7 @@ class JobPostService {
       Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-role-skills/$jobRoleSkillId request: $data');
     debugPrint('PUT /job-role-skills/$jobRoleSkillId response: $body');
@@ -345,7 +345,7 @@ class JobPostService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job role skill'));
@@ -357,7 +357,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-files/job-post/$jobPostId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = await _decodeResponse(res);
     debugPrint('GET /job-files/job-post/$jobPostId: $body');
@@ -387,7 +387,7 @@ class JobPostService {
       request.files.add(await http.MultipartFile.fromPath('files', file.path));
     }
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
     final body = response.body.isEmpty ? {} : jsonDecode(response.body);
 
@@ -407,7 +407,7 @@ class JobPostService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/job-files/$jobFileId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
@@ -429,7 +429,7 @@ class JobPostService {
         '$_baseUrl/job-posts/relevant',
       ).replace(queryParameters: params),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = body['data'] ?? body['details'] ?? [];
@@ -455,7 +455,7 @@ class JobPostService {
     final res = await http.get(
       Uri.parse('$_baseUrl/job-posts/popular').replace(queryParameters: params),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final details = body['details'];

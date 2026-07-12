@@ -349,7 +349,7 @@ class AboutScreen extends StatelessWidget {
                         'trustworthy scoring system for the entire community.',
                     highlights: const [
                       'Multi-signal rating evaluation',
-                      'Objective & bias-free scoring',
+                      'Consistent, transparent scoring criteria',
                       'Covers communication & delivery quality',
                     ],
                   ),

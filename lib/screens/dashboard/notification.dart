@@ -114,6 +114,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.block_rounded;
       case 'account_deletion_blocked':
         return Icons.report_problem_outlined;
+      case 'review_published':
+        return Icons.star_outline_rounded;
+      case 'review_publish_confirmed':
+        return Icons.rate_review_outlined;
+      case 'review_suppressed':
+        return Icons.visibility_off_outlined;
+      case 'review_flagged':
+        return Icons.hourglass_top_outlined;
       default:
         return Icons.notifications_outlined;
     }
@@ -126,6 +134,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       'contract_overdue',
       'contract_autoapprove_final_warning',
       'contract_auto_approved',
+      'review_suppressed',
     };
     return urgentTypes.contains(type) || _isBlocked(type);
   }

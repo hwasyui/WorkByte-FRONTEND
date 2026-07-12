@@ -32,7 +32,7 @@ class AdminService {
       final res = await http.get(
         Uri.parse('$_baseUrl/auth/me'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode != 200) return false;
       final body = jsonDecode(res.body);
       final data = body['details'] ?? body['data'] ?? body;
@@ -47,7 +47,7 @@ class AdminService {
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 20));
     final loginBody = jsonDecode(loginRes.body);
     if (loginRes.statusCode != 200 && loginRes.statusCode != 201) {
       throw Exception(
@@ -66,7 +66,7 @@ class AdminService {
     final meRes = await http.get(
       Uri.parse('$_baseUrl/auth/me'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (meRes.statusCode != 200) throw Exception('Failed to verify account');
 
     final meBody = jsonDecode(meRes.body);
@@ -93,7 +93,7 @@ class AdminService {
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -113,7 +113,7 @@ class AdminService {
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -131,7 +131,7 @@ class AdminService {
         'page_size': pageSize.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -178,7 +178,7 @@ class AdminService {
     final uri = Uri.parse(
       '$_baseUrl/admin/jobs',
     ).replace(queryParameters: query);
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -212,7 +212,7 @@ class AdminService {
     final uri = Uri.parse(
       '$_baseUrl/admin/users',
     ).replace(queryParameters: query);
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -224,7 +224,7 @@ class AdminService {
       final res = await http.get(
         Uri.parse('$_baseUrl/admin/dashboard'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode != 200) return {};
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final details = body['details'] ?? body['data'] ?? body;
@@ -249,7 +249,7 @@ class AdminService {
         'page_size': pageSize.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token));
+    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -267,7 +267,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/reports/$reportId/$action'),
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
-      );
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -292,7 +292,7 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -311,7 +311,124 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/scam-flags/$flagId/$action'),
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
+      ).timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getReviewRedFlags(
+    String token, {
+    bool? isResolved,
+    String sortBy = 'triggered_at',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/reviews/red-flags').replace(
+        queryParameters: {
+          if (isResolved != null) 'is_resolved': isResolved.toString(),
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
       );
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> resolveReviewRedFlag(String token, String alertId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId/resolve'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getFlaggedReviews(
+    String token, {
+    String status = 'all',
+    String sortBy = 'created_at',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/reviews/flagged').replace(
+        queryParameters: {
+          'status': status,
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> overridePublishReview(String token, String reviewId) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/reviews/$reviewId/override-publish'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getFlaggedClientReviews(
+    String token, {
+    String status = 'all',
+    String sortBy = 'created_at',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/client-reviews/flagged').replace(
+        queryParameters: {
+          'status': status,
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<bool> overridePublishClientReview(
+    String token,
+    String clientReviewId,
+  ) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/admin/client-reviews/$clientReviewId/override-publish'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -341,7 +458,7 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -361,7 +478,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/moderation/$moderationId/review'),
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
-      );
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -378,7 +495,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/jobs/$jobPostId/close'),
         headers: _headers(token),
         body: jsonEncode({'reason': reason}),
-      );
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -391,7 +508,7 @@ class AdminService {
   ) async {
     try {
       final uri = Uri.parse('$_baseUrl/freelancers/$freelancerId/profile');
-      final response = await http.get(uri, headers: _headers(token));
+      final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -411,7 +528,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/accounts/$userId/close'),
         headers: _headers(token),
         body: jsonEncode({'reason': reason}),
-      );
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -432,7 +549,7 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -470,7 +587,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/appeals/$appealId/$action'),
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
-      );
+      ).timeout(const Duration(seconds: 20));
       debugPrint('resolveAppeal status: ${res.statusCode}');
       debugPrint('resolveAppeal body: ${res.body}');
       return res.statusCode == 200 || res.statusCode == 201;
@@ -494,7 +611,7 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -518,7 +635,7 @@ class AdminService {
           if (note != null && note.isNotEmpty) 'note': note,
           if (newDeadline != null) 'new_deadline': newDeadline,
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -536,7 +653,7 @@ class AdminService {
       final res = await http.get(
         Uri.parse('$_baseUrl/admin/clients/$clientId/autoapprove-history'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -554,7 +671,7 @@ class AdminService {
       final res = await http.get(
         Uri.parse('$_baseUrl/job-posts/$jobPostId'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -572,7 +689,7 @@ class AdminService {
       final res = await http.get(
         Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -599,7 +716,7 @@ class AdminService {
           if (customReason != null && customReason.isNotEmpty)
             'custom_reason': customReason,
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (_) {
       return false;

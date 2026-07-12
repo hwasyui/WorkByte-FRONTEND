@@ -18,7 +18,7 @@ class SkillService {
     final uri = Uri.parse(
       '$_baseUrl/skills',
     ).replace(queryParameters: limit != null ? {'limit': '$limit'} : null);
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
@@ -36,7 +36,7 @@ class SkillService {
     final uri = Uri.parse('$_baseUrl/skills/search').replace(
       queryParameters: {'q': term},
     );
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
@@ -56,7 +56,7 @@ class SkillService {
     String category,
   ) async {
     final uri = Uri.parse('$_baseUrl/skills/category/$category');
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {

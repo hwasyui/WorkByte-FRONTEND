@@ -22,7 +22,7 @@ class UploadService {
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = jsonDecode(res.body);
 
@@ -57,7 +57,7 @@ class UploadService {
       ..fields['use_llm'] = useLLM.toString()
       ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = jsonDecode(res.body);
 

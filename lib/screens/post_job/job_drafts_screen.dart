@@ -24,6 +24,12 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
 
   bool _loading = true;
 
+  /// Tracks, per draft job post id, whether that draft already has at least
+  /// one saved role. Populated in `_loadDrafts` since `JobPostProvider` only
+  /// exposes a single shared `jobRoles` list (overwritten per fetch) rather
+  /// than a per-job cache like it has for files.
+  final Map<String, bool> _hasRoleByDraftId = {};
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +48,21 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
         token.isNotEmpty &&
         clientId != null &&
         clientId.isNotEmpty) {
-      await context.read<JobPostProvider>().loadDraftJobs(token, clientId);
+      final provider = context.read<JobPostProvider>();
+      await provider.loadDraftJobs(token, clientId);
+
+      _hasRoleByDraftId.clear();
+      for (final draft in provider.draftJobPosts) {
+        final draftId = (draft.jobPostId ?? '').toString();
+        if (draftId.isEmpty) continue;
+
+        await provider.fetchJobRoles(token, draftId);
+        // Snapshot immediately: the next iteration's fetch will overwrite
+        // provider.jobRoles.
+        _hasRoleByDraftId[draftId] = provider.jobRoles.isNotEmpty;
+
+        await provider.fetchJobFiles(token, draftId);
+      }
     }
 
     if (mounted) {
@@ -119,6 +139,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
     if (token != null && token.isNotEmpty) {
       await context.read<JobPostProvider>().deleteDraftJob(token, draftId);
     }
+    _hasRoleByDraftId.remove(draftId);
     await _loadDrafts();
   }
 
@@ -133,20 +154,26 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  int _completionScore(dynamic draft) {
-    int score = 0;
-    if ((draft.jobTitle ?? '').toString().trim().isNotEmpty) score += 20;
-    if ((draft.jobDescription ?? '').toString().trim().isNotEmpty) score += 25;
-    if ((draft.projectType ?? '').toString().trim().isNotEmpty) score += 15;
-    if ((draft.estimatedDuration ?? '').toString().trim().isNotEmpty)
-      score += 15;
-    if (draft.deadline != null) score += 15;
-    return score.clamp(10, 100);
+  /// Returns (stepNumber, label) for a draft, based on whether it already
+  /// has a saved role and/or uploaded files.
+  ({int number, String label}) _stepForDraft(
+    JobPostProvider provider,
+    String draftId,
+  ) {
+    if (draftId.isNotEmpty) {
+      final hasFiles = provider.filesForJob(draftId).isNotEmpty;
+      if (hasFiles) return (number: 3, label: 'Step 3 of 3 · Attachment');
+
+      final hasRole = _hasRoleByDraftId[draftId] ?? false;
+      if (hasRole) return (number: 2, label: 'Step 2 of 3 · Role');
+    }
+    return (number: 1, label: 'Step 1 of 3 · Job detail');
   }
 
   @override
   Widget build(BuildContext context) {
-    final drafts = context.watch<JobPostProvider>().draftJobPosts;
+    final provider = context.watch<JobPostProvider>();
+    final drafts = provider.draftJobPosts;
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       floatingActionButton: FloatingActionButton.extended(
@@ -173,7 +200,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                         _buildSummaryCard(drafts.length),
                         const SizedBox(height: 14),
                         ...drafts
-                            .map((draft) => _buildDraftCard(draft))
+                            .map((draft) => _buildDraftCard(provider, draft))
                             .toList(),
                       ],
                     ),
@@ -275,7 +302,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
     );
   }
 
-  Widget _buildDraftCard(dynamic draft) {
+  Widget _buildDraftCard(JobPostProvider provider, dynamic draft) {
     final draftId = (draft.jobPostId ?? '').toString();
     final title = (draft.jobTitle ?? 'Untitled job post').toString();
     final projectType = (draft.projectType ?? 'individual').toString();
@@ -287,10 +314,11 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
         draft.createdAt.toString().isNotEmpty) {
       updatedAt = DateTime.tryParse(draft.createdAt.toString());
     }
-    final completion = _completionScore(draft);
-    final accent = completion >= 80
+
+    final step = _stepForDraft(provider, draftId);
+    final accent = step.number == 3
         ? _success
-        : completion >= 45
+        : step.number == 2
         ? _warning
         : _primary;
 
@@ -365,42 +393,12 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _chip(
-                icon: Icons.layers_outlined,
-                label: 'Step 1 of 3 · Job detail',
-              ),
+              _chip(icon: Icons.layers_outlined, label: step.label),
               _chip(
                 icon: Icons.people_outline_rounded,
                 label: projectType == 'team'
                     ? 'Team project'
                     : 'Individual project',
-              ),
-              if (draftId.isNotEmpty)
-                _chip(icon: Icons.tag_rounded, label: 'Draft #$draftId'),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: completion / 100,
-                    minHeight: 8,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    valueColor: AlwaysStoppedAnimation<Color>(accent),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '$completion%',
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ],
           ),

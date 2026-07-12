@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:workbyte_app/providers/notification_provider.dart';
+import 'package:workbyte_app/screens/workspace/workspace_contract.dart';
 import 'package:workbyte_app/services/auth_service.dart';
 import 'package:workbyte_app/screens/category/category_list.dart';
 import 'package:workbyte_app/screens/dashboard/notification.dart';
@@ -420,9 +421,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     } else if (index == 2) {
+      final profile = context.read<ProfileProvider>();
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const WorkspaceScreen()),
+        MaterialPageRoute(
+          builder: (_) => profile.isClient
+              ? const WorkspaceScreen()
+              : const WorkspaceContractScreen(),
+        ),
       );
     } else if (index == 3) {
       Navigator.push(

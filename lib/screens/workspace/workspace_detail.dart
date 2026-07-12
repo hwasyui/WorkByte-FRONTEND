@@ -20,6 +20,7 @@ import '../../providers/contract_submission_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
+import '../reviews/client_review_form.dart';
 import '../dm/dm_chat_screen.dart';
 import '../contract/generate_contract_screen.dart';
 import '../../core/utils/helpers.dart';
@@ -51,6 +52,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   bool _isLoadingProposal = false;
   final ProposalService _proposalService = ProposalService();
 
+  static const int _autoApproveDays = 7;
+
   @override
   void initState() {
     super.initState();
@@ -59,13 +62,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSubmissions();
+      _maybeShowContractIncompletePrompt();
     });
   }
 
   bool get _isClient => widget.viewerRole == 'client';
   bool get _isFreelancer => widget.viewerRole == 'freelancer';
 
-  static const int _autoApproveDays = 7;
+  bool get _hasContractPdf =>
+      (_contract.contractPdfUrl ?? '').trim().isNotEmpty;
 
   bool get _isOverdue {
     const activeStatuses = {'active', 'under_review', 'revision_requested'};
@@ -121,6 +126,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   /// (contract_autoapprove_worker.py) can change contract/submission status
   /// in the background at any time with no live push to this screen, so
   /// there's no other way to see that update without navigating away and back.
+  /// Wired to the app bar's refresh button - the single refresh path for this
+  /// screen (previously duplicated by a pull-to-refresh that called an
+  /// overlapping, since-removed set of helpers).
   Future<void> _refreshWorkspace() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
@@ -134,7 +142,132 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         setState(() => _contract = latest);
       }
     }
-    await _fetchSubmissions();
+    await Future.wait([_fetchProposalDetail(), _fetchSubmissions()]);
+  }
+
+  void _maybeShowContractIncompletePrompt() {
+    if (_hasContractPdf) return;
+    // No point nagging once the contract is done or dead
+    if (_contract.status == 'completed' || _contract.status == 'cancelled') {
+      return;
+    }
+    if (!mounted) return;
+    _showContractIncompleteSheet();
+  }
+
+  void _goToGenerateContract() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GenerateContractScreen(
+          contractId: _contract.contractId,
+          initialContract: _contract,
+        ),
+      ),
+    ).then((_) => _refreshWorkspace());
+  }
+
+  void _showContractIncompleteSheet() {
+    showModalBottomSheet(
+      context: context,
+      // Client should have to make a decision; freelancer can just dismiss.
+      isDismissible: _isFreelancer,
+      enableDrag: _isFreelancer,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _buildContractIncompleteSheetContent(ctx),
+    );
+  }
+
+  Widget _buildContractIncompleteSheetContent(BuildContext ctx) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        28,
+        24,
+        MediaQuery.of(ctx).viewInsets.bottom + 28,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _isClient
+                  ? Icons.description_outlined
+                  : Icons.hourglass_top_rounded,
+              color: AppColors.primary,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isClient
+                ? 'Finish setting up the contract'
+                : 'Contract in progress',
+            style: AppText.h2,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _isClient
+                ? 'You need to generate and send the contract PDF before work can begin on this project.'
+                : 'The client is still finalizing the contract terms. You\'ll be notified as soon as it\'s ready to work on.',
+            style: AppText.body.copyWith(
+              color: Colors.grey.shade600,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 22),
+          if (_isClient)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _goToGenerateContract();
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: Text(
+                  'Complete Contract',
+                  style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text('Got it', style: AppText.bodySemiBold),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _updateStatus(String status, {String? note}) async {
@@ -330,11 +463,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
       body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
           _buildStatusBanner(),
           const SizedBox(height: 16),
-          if (_isOverdue) ...[_buildOverdueBanner(), const SizedBox(height: 16)],
+          if (_isOverdue) ...[
+            _buildOverdueBanner(),
+            const SizedBox(height: 16),
+          ],
           if (_isFreelancer && _contract.status == 'under_review')
             _buildAutoApproveCountdown(submissionProvider),
           _buildContractInfo(),
@@ -477,7 +614,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
     final latest = provider.latestSubmission;
-    if (latest == null || latest.status != 'submitted' || latest.submittedAt == null) {
+    if (latest == null ||
+        latest.status != 'submitted' ||
+        latest.submittedAt == null) {
       return const SizedBox.shrink();
     }
     final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
@@ -517,7 +656,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                   Text(
                     'The client hasn\'t reviewed your submission yet. If they stay silent, '
                     'this contract will be automatically approved and marked complete.',
-                    style: AppText.caption.copyWith(color: color.withOpacity(0.85)),
+                    style: AppText.caption.copyWith(
+                      color: color.withOpacity(0.85),
+                    ),
                   ),
                 ],
               ),
@@ -705,99 +846,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(height: 12),
               const Divider(height: 1),
               const SizedBox(height: 14),
-              if (_contract.contractPdfUrl == null)
-                _buildRegeneratePdfPrompt()
-              else
-                GestureDetector(
-                  onTap: () async {
-                    try {
-                      final auth = context.read<AuthProvider>();
-                      final contractProvider = context.read<ContractProvider>();
-                      final token = auth.token;
-
-                      if (token == null || token.isEmpty) {
-                        _showSnack('Missing auth token.', isError: true);
-                        return;
-                      }
-
-                      final pdfUrl = await contractProvider.fetchPdfUrl(
-                        token,
-                        _contract.contractId,
-                      );
-
-                      debugPrint('signedPdfUrl = $pdfUrl');
-
-                      final uri = Uri.tryParse(pdfUrl);
-                      if (uri == null ||
-                          !(uri.scheme == 'http' || uri.scheme == 'https')) {
-                        _showSnack('Invalid contract URL.', isError: true);
-                        return;
-                      }
-
-                      if (!mounted) return;
-                      await openDocumentFromUrl(
-                        context,
-                        pdfUrl,
-                        token: token,
-                        fileName: 'contract_${_contract.contractId}.pdf',
-                        onRefreshToken: () async {
-                          final ok = await context.read<AuthProvider>().tryRefresh();
-                          return ok ? context.read<AuthProvider>().token : null;
-                        },
-                      );
-                    } catch (e) {
-                      debugPrint('open contract pdf error: $e');
-                      _showSnack('Could not open contract file.', isError: true);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'View Contract PDF',
-                                style: AppText.bodySemiBold.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              Text(
-                                'Tap to open in document viewer',
-                                style: AppText.caption.copyWith(
-                                  color: AppColors.primary.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.open_in_new_rounded,
-                          color: AppColors.primary.withOpacity(0.7),
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _buildContractDocumentTile(),
             ],
           ),
         ),
@@ -908,70 +957,146 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
-  Widget _buildRegeneratePdfPrompt() {
-    return GestureDetector(
-      onTap: () async {
-        final updated = await Navigator.push<ContractModel>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => GenerateContractScreen(
-              contractId: _contract.contractId,
-              initialContract: _contract,
-            ),
-          ),
-        );
-        if (updated != null && mounted) {
-          setState(() => _contract = updated);
-        } else if (mounted) {
-          // Screen may have generated without returning the model directly;
-          // pull the latest from the provider just in case.
-          final latest = context.read<ContractProvider>().currentContract;
-          if (latest != null && latest.contractId == _contract.contractId) {
-            setState(() => _contract = latest);
+  Widget _buildContractDocumentTile() {
+    if (_hasContractPdf) {
+      return GestureDetector(
+        onTap: () async {
+          try {
+            final auth = context.read<AuthProvider>();
+            final contractProvider = context.read<ContractProvider>();
+            final token = auth.token;
+
+            if (token == null || token.isEmpty) {
+              _showSnack('Missing auth token.', isError: true);
+              return;
+            }
+
+            final pdfUrl = await contractProvider.fetchPdfUrl(
+              token,
+              _contract.contractId,
+            );
+
+            debugPrint('signedPdfUrl = $pdfUrl');
+
+            final uri = Uri.tryParse(pdfUrl);
+            if (uri == null ||
+                !(uri.scheme == 'http' || uri.scheme == 'https')) {
+              _showSnack('Invalid contract URL.', isError: true);
+              return;
+            }
+
+            if (!mounted) return;
+            await openDocumentFromUrl(
+              context,
+              pdfUrl,
+              token: token,
+              fileName: 'contract_${_contract.contractId}.pdf',
+              onRefreshToken: () async {
+                final ok = await context.read<AuthProvider>().tryRefresh();
+                return ok ? context.read<AuthProvider>().token : null;
+              },
+            );
+          } catch (e) {
+            debugPrint('open contract pdf error: $e');
+            _showSnack('Could not open contract file.', isError: true);
           }
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFFB74D)),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFEF6C00),
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Contract Document Needs to Be Generated',
-                    style: AppText.bodySemiBold.copyWith(
-                      color: const Color(0xFFEF6C00),
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.secondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.picture_as_pdf_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'View Contract PDF',
+                      style: AppText.bodySemiBold.copyWith(
+                        color: AppColors.primary,
+                      ),
                     ),
+                    Text(
+                      'Tap to open in document viewer',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.primary.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.open_in_new_rounded,
+                color: AppColors.primary.withOpacity(0.7),
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.hourglass_top_rounded,
+            color: Color(0xFFFF9800),
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Contract not finalized',
+                  style: AppText.captionSemiBold.copyWith(
+                    color: const Color(0xFFFF9800),
                   ),
-                  Text(
-                    'Terms changed since the last PDF (or none exists yet) — tap to generate it',
-                    style: AppText.caption.copyWith(
-                      color: const Color(0xFFEF6C00).withOpacity(0.85),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _isClient
+                      ? 'Generate and send the contract PDF to get started.'
+                      : 'Waiting for the client to finalize the contract.',
+                  style: AppText.caption.copyWith(
+                    color: const Color(0xFF795548),
+                  ),
+                ),
+                if (_isClient) ...[
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: _goToGenerateContract,
+                    child: Text(
+                      'Complete Contract →',
+                      style: AppText.captionSemiBold.copyWith(
+                        color: const Color(0xFFFF9800),
+                      ),
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Color(0xFFEF6C00),
-              size: 18,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1270,11 +1395,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 children: [
                   Text(
                     'Raise a Dispute',
-                    style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
+                    style: AppText.bodySemiBold.copyWith(
+                      color: Colors.redAccent,
+                    ),
                   ),
                   Text(
                     'Can\'t resolve this with the other party? Ask an admin to step in.',
-                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                    style: AppText.caption.copyWith(
+                      color: Colors.grey.shade500,
+                    ),
                   ),
                 ],
               ),
@@ -1295,7 +1424,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text('Raise a Dispute', style: AppText.h2),
           content: Form(
             key: formKey,
@@ -1357,7 +1488,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                       if (!mounted) return;
                       Navigator.pop(ctx);
                       if (success) {
-                        setState(() => _contract = _contract.copyWith(status: 'disputed'));
+                        setState(
+                          () => _contract = _contract.copyWith(
+                            status: 'disputed',
+                          ),
+                        );
                         _showSnack(
                           'Dispute raised. An admin will review it.',
                           isError: false,
@@ -1446,29 +1581,109 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       return Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              status == 'completed'
-                  ? Icons.check_circle_rounded
-                  : Icons.cancel_rounded,
-              color: status == 'completed'
-                  ? const Color(0xFF4CAF50)
-                  : Colors.grey,
-              size: 20,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  status == 'completed'
+                      ? Icons.check_circle_rounded
+                      : Icons.cancel_rounded,
+                  color: status == 'completed'
+                      ? const Color(0xFF4CAF50)
+                      : Colors.grey,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  status == 'completed'
+                      ? 'Contract Completed'
+                      : 'Contract Cancelled',
+                  style: AppText.bodySemiBold.copyWith(
+                    color: status == 'completed'
+                        ? const Color(0xFF4CAF50)
+                        : Colors.grey,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              status == 'completed'
-                  ? 'Contract Completed'
-                  : 'Contract Cancelled',
-              style: AppText.bodySemiBold.copyWith(
-                color: status == 'completed'
-                    ? const Color(0xFF4CAF50)
-                    : Colors.grey,
+            // Freelancers don't take the action that completes a contract
+            // (the client approves, or auto-approve/dispute-arbitration does),
+            // so unlike the client's immediate post-approve navigation to
+            // ReviewFormScreen, this button is how a freelancer reaches their
+            // "rate this client" form whenever they next open the workspace.
+            if (_isFreelancer && status == 'completed') ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClientReviewFormScreen(
+                        contractId: _contract.contractId,
+                        clientName: _contract.clientName ?? 'Client',
+                        projectTitle: _contract.contractTitle,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.rate_review_outlined, size: 16),
+                  label: Text(
+                    'Rate This Client',
+                    style: AppText.bodySemiBold.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
+            // Symmetric counterpart for the client: they get auto-navigated to
+            // ReviewFormScreen right after approving (_approveLatestSubmission),
+            // but that's a one-shot push - if they back out without submitting,
+            // this is the only way back into that form.
+            if (_isClient && status == 'completed') ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReviewFormScreen(
+                        contractId: _contract.contractId,
+                        freelancerName: _contract.freelancerName ?? 'Freelancer',
+                        projectTitle: _contract.contractTitle,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.rate_review_outlined, size: 16),
+                  label: Text(
+                    'Rate This Freelancer',
+                    style: AppText.bodySemiBold.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -1489,9 +1704,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
     // client + active needs more height for 2 stacked widgets
     final isClientActive = _isClient && status == 'active';
+    // freelancer sees an extra "contract pending" banner in place of the button
+    final isFreelancerBlockedByContract =
+        _isFreelancer &&
+        !_hasContractPdf &&
+        (status == 'active' || status == 'revision_requested');
 
     return Container(
-      height: isClientActive ? 140 : 80,
+      height: isClientActive || isFreelancerBlockedByContract ? 140 : 80,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1510,6 +1730,42 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   Widget _buildActionButtons(String status) {
     if (_isFreelancer) {
       if (status == 'active' || status == 'revision_requested') {
+        if (!_hasContractPdf) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.hourglass_top_rounded,
+                      color: Color(0xFFFF9800),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Waiting for the client to finalize the contract before you can submit work.',
+                        textAlign: TextAlign.center,
+                        style: AppText.captionSemiBold.copyWith(
+                          color: const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
         return SizedBox(
           width: double.infinity,
           height: 52,
@@ -2251,7 +2507,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text('Record a Payment', style: AppText.h2),
           content: Form(
             key: formKey,

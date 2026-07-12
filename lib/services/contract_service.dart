@@ -20,7 +20,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -43,7 +43,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts/client/$clientId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/client/$clientId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -66,7 +66,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -86,7 +86,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts/$contractId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -103,7 +103,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts/$contractId/generation-data'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint(
       'GET /contracts/$contractId/generation-data → ${res.statusCode}',
@@ -119,7 +119,7 @@ class ContractService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contracts/$contractId/pdf-url'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -145,7 +145,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts → ${res.statusCode}');
     if (res.statusCode == 201) {
@@ -164,7 +164,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId/generate'),
       headers: _headers(token),
       body: jsonEncode(generationData),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts/$contractId/generate → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -185,7 +185,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('PUT /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -208,7 +208,7 @@ class ContractService {
         'amount': amount,
         if (note != null && note.isNotEmpty) 'note': note,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('PUT /contracts/$contractId/report-payment → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -227,7 +227,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId/dispute'),
       headers: _headers(token),
       body: jsonEncode({'reason': reason}),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('PUT /contracts/$contractId/dispute → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -243,7 +243,7 @@ class ContractService {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(res.body);
 

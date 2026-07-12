@@ -20,7 +20,7 @@ class ProposalFileService {
     String proposalId,
   ) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/proposal/$proposalId');
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
@@ -52,7 +52,7 @@ class ProposalFileService {
         'file_name': fileName,
         'file_size': fileSize,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 201) {
       final body = jsonDecode(res.body);
@@ -64,7 +64,7 @@ class ProposalFileService {
   /// Delete a proposal file
   Future<bool> deleteProposalFile(String token, String proposalFileId) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/$proposalFileId');
-    final res = await http.delete(uri, headers: _headers(token));
+    final res = await http.delete(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
     return res.statusCode == 200;
   }
 }

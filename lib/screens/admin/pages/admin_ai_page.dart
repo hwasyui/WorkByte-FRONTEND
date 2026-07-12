@@ -19,11 +19,13 @@ class _AdminAiPageState extends State<AdminAiPage>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final admin = context.read<AdminProvider>();
       admin.loadScamFlags();
       admin.loadModerationItems();
+      admin.loadReviewRedFlags();
+      admin.loadFlaggedReviews();
     });
   }
 
@@ -125,6 +127,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                 tabs: const [
                   Tab(text: 'Scam Detection'),
                   Tab(text: 'Harmful Text Audit'),
+                  Tab(text: 'Review Integrity'),
                 ],
               ),
             ],
@@ -135,7 +138,7 @@ class _AdminAiPageState extends State<AdminAiPage>
         Expanded(
           child: TabBarView(
             controller: _tab,
-            children: const [_ScamTab(), _ModerationTab()],
+            children: const [_ScamTab(), _ModerationTab(), _ReviewIntegrityTab()],
           ),
         ),
       ],
@@ -2448,6 +2451,567 @@ class _Empty extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 13,
               color: const Color(0xFF9CA3AF),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Review Integrity tab ─────────────────────────────────────────────────────
+//
+// Surfaces two things the review/rating AI pipeline already computes but the
+// app never showed anywhere: RedFlagAlert (trust score drops) and reviews
+// held back from publishing (overall_pass=false) because the LLM + the three
+// trained review_ml models (authenticity, sentiment-rating mismatch,
+// sentiment) flagged them.
+
+class _ReviewIntegrityTab extends StatefulWidget {
+  const _ReviewIntegrityTab();
+
+  @override
+  State<_ReviewIntegrityTab> createState() => _ReviewIntegrityTabState();
+}
+
+class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
+  // 0 = red flags (freelancers + clients) | 1 = held-back freelancer reviews
+  // | 2 = held-back client reviews
+  int _tabIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().loadFlaggedClientReviews();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.psychology_alt_outlined,
+                size: 14,
+                color: Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Powered by SBERT + 3 trained models (authenticity, mismatch, sentiment)',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF4F46E5),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Consumer<AdminProvider>(
+            builder: (context, admin, _) => Row(
+              children: [
+                Expanded(
+                  child: _ReviewIntegrityToggle(
+                    label: 'Red Flags (${admin.reviewRedFlags.length})',
+                    selected: _tabIndex == 0,
+                    onTap: () => setState(() => _tabIndex = 0),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _ReviewIntegrityToggle(
+                    label: 'Freelancer (${admin.flaggedReviews.length})',
+                    selected: _tabIndex == 1,
+                    onTap: () => setState(() => _tabIndex = 1),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _ReviewIntegrityToggle(
+                    label: 'Client (${admin.flaggedClientReviews.length})',
+                    selected: _tabIndex == 2,
+                    onTap: () => setState(() => _tabIndex = 2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: switch (_tabIndex) {
+            0 => const _RedFlagsList(),
+            1 => const _FlaggedReviewsList(),
+            _ => const _FlaggedClientReviewsList(),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewIntegrityToggle extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ReviewIntegrityToggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF4F46E5) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF6B7280),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RedFlagsList extends StatelessWidget {
+  const _RedFlagsList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AdminProvider>(
+      builder: (context, admin, _) {
+        if (admin.isReviewIntegrityLoading && admin.reviewRedFlags.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+          );
+        }
+        if (admin.reviewRedFlags.isEmpty) {
+          return const _Empty(
+            icon: Icons.shield_outlined,
+            message: 'No red flags',
+            sub: 'No freelancer trust score drops detected',
+          );
+        }
+        return RefreshIndicator(
+          color: const Color(0xFF7C3AED),
+          onRefresh: () => admin.loadReviewRedFlags(),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: admin.reviewRedFlags.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (ctx, i) =>
+                _RedFlagCard(alert: admin.reviewRedFlags[i]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RedFlagCard extends StatelessWidget {
+  final Map<String, dynamic> alert;
+  const _RedFlagCard({required this.alert});
+
+  Color _severityColor(String severity) {
+    switch (severity) {
+      case 'high':
+        return const Color(0xFFDC2626);
+      case 'medium':
+        return const Color(0xFFD97706);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subjectName =
+        alert['subject_name']?.toString() ?? 'Unknown';
+    final subjectType = alert['subject_type']?.toString() ?? 'freelancer';
+    final message = alert['message']?.toString() ?? '';
+    final severity = alert['severity']?.toString() ?? 'low';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _InfoChip(
+                label: subjectType == 'client' ? 'CLIENT' : 'FREELANCER',
+                color: subjectType == 'client'
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFF2563EB),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  subjectName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ),
+              _ScoreBadge(
+                score: 0,
+                color: _severityColor(severity),
+                label: severity.toUpperCase(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _ActionButton(
+              label: 'Mark Resolved',
+              icon: Icons.check_circle_outline,
+              color: const Color(0xFF059669),
+              onTap: () =>
+                  context.read<AdminProvider>().resolveReviewRedFlag(_id(alert)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlaggedReviewsList extends StatelessWidget {
+  const _FlaggedReviewsList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AdminProvider>(
+      builder: (context, admin, _) {
+        if (admin.isReviewIntegrityLoading && admin.flaggedReviews.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+          );
+        }
+        if (admin.flaggedReviews.isEmpty) {
+          return const _Empty(
+            icon: Icons.rate_review_outlined,
+            message: 'No held-back reviews',
+            sub: 'All submitted reviews passed AI checks',
+          );
+        }
+        return RefreshIndicator(
+          color: const Color(0xFF7C3AED),
+          onRefresh: () => admin.loadFlaggedReviews(),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: admin.flaggedReviews.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (ctx, i) =>
+                _FlaggedReviewCard(review: admin.flaggedReviews[i]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FlaggedReviewCard extends StatelessWidget {
+  final Map<String, dynamic> review;
+  const _FlaggedReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final freelancerName =
+        review['freelancer_name']?.toString() ?? 'Unknown freelancer';
+    final comment = review['overall_comment']?.toString() ?? '';
+    final flagReasonsRaw = review['flag_reasons'];
+    final flagReasons = flagReasonsRaw is List
+        ? flagReasonsRaw.map((e) => e.toString()).toList()
+        : <String>[];
+    final authenticityScore = (review['authenticity_score'] as num?)
+        ?.toDouble();
+    final isFlaggedFake = review['is_flagged_fake'] == true;
+    final isFlaggedCoerced = review['is_flagged_coerced'] == true;
+    final status = review['status']?.toString() ?? 'flagged';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  freelancerName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ),
+              _StatusPill(status: status),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              comment,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF374151),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (authenticityScore != null)
+                _InfoChip(
+                  label: 'Authenticity ${(authenticityScore * 100).round()}%',
+                  color: authenticityScore < 0.5
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFD97706),
+                ),
+              if (isFlaggedFake)
+                const _InfoChip(label: 'FAKE', color: Color(0xFFDC2626)),
+              if (isFlaggedCoerced)
+                const _InfoChip(label: 'COERCED', color: Color(0xFFDC2626)),
+            ],
+          ),
+          if (flagReasons.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...flagReasons.map(
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.flag_outlined,
+                      size: 13,
+                      color: Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        r,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _ActionButton(
+              label: 'Publish Anyway',
+              icon: Icons.check_circle_outline,
+              color: const Color(0xFF059669),
+              onTap: () =>
+                  context.read<AdminProvider>().overridePublishReview(_id(review)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlaggedClientReviewsList extends StatelessWidget {
+  const _FlaggedClientReviewsList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AdminProvider>(
+      builder: (context, admin, _) {
+        if (admin.isReviewIntegrityLoading &&
+            admin.flaggedClientReviews.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+          );
+        }
+        if (admin.flaggedClientReviews.isEmpty) {
+          return const _Empty(
+            icon: Icons.rate_review_outlined,
+            message: 'No held-back client reviews',
+            sub: 'All submitted client reviews passed AI checks',
+          );
+        }
+        return RefreshIndicator(
+          color: const Color(0xFF7C3AED),
+          onRefresh: () => admin.loadFlaggedClientReviews(),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: admin.flaggedClientReviews.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (ctx, i) =>
+                _FlaggedClientReviewCard(review: admin.flaggedClientReviews[i]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FlaggedClientReviewCard extends StatelessWidget {
+  final Map<String, dynamic> review;
+  const _FlaggedClientReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final clientName = review['client_name']?.toString() ?? 'Unknown client';
+    final comment = review['overall_comment']?.toString() ?? '';
+    final flagReasonsRaw = review['flag_reasons'];
+    final flagReasons = flagReasonsRaw is List
+        ? flagReasonsRaw.map((e) => e.toString()).toList()
+        : <String>[];
+    final authenticityScore = (review['authenticity_score'] as num?)
+        ?.toDouble();
+    final isFlaggedFake = review['is_flagged_fake'] == true;
+    final isFlaggedCoerced = review['is_flagged_coerced'] == true;
+    final status = review['status']?.toString() ?? 'flagged';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  clientName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+              ),
+              _StatusPill(status: status),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              comment,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF374151),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (authenticityScore != null)
+                _InfoChip(
+                  label: 'Authenticity ${(authenticityScore * 100).round()}%',
+                  color: authenticityScore < 0.5
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFD97706),
+                ),
+              if (isFlaggedFake)
+                const _InfoChip(label: 'FAKE', color: Color(0xFFDC2626)),
+              if (isFlaggedCoerced)
+                const _InfoChip(label: 'COERCED', color: Color(0xFFDC2626)),
+            ],
+          ),
+          if (flagReasons.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...flagReasons.map(
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.flag_outlined,
+                      size: 13,
+                      color: Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        r,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _ActionButton(
+              label: 'Publish Anyway',
+              icon: Icons.check_circle_outline,
+              color: const Color(0xFF059669),
+              onTap: () => context
+                  .read<AdminProvider>()
+                  .overridePublishClientReview(_id(review)),
             ),
           ),
         ],

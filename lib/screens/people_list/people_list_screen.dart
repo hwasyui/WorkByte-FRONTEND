@@ -18,6 +18,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
+import '../../screens/reviews/freelancer_reviews_screen.dart';
+import '../../screens/reviews/client_reviews_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/client_service.dart';
 import '../../services/portfolio_service.dart';
@@ -99,12 +101,26 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           ? rawItems.map((e) => ClientModel.fromJson(e)).toList()
           : rawItems.map((e) => FreelancerModel.fromJson(e)).toList();
 
-      // ── Sort freelancers by weighted review average (descending) ──
+      // ── Sort freelancers by weighted review average (descending), then by
+      // review count (descending) as a tie-breaker - so a 5.0★/1-review
+      // freelancer doesn't rank above a 5.0★/50-review one. ──
       if (!widget.showClients) {
         (mapped as List<FreelancerModel>).sort((a, b) {
           final aScore = a.weightedReviewAvg ?? 0.0;
           final bScore = b.weightedReviewAvg ?? 0.0;
-          return bScore.compareTo(aScore);
+          final scoreCompare = bScore.compareTo(aScore);
+          if (scoreCompare != 0) return scoreCompare;
+          return b.totalReviews.compareTo(a.totalReviews);
+        });
+      } else {
+        // Same idea for clients - highest review-received rating first, with
+        // review count as a tie-breaker.
+        (mapped as List<ClientModel>).sort((a, b) {
+          final aScore = a.weightedReviewAvgReceived ?? 0.0;
+          final bScore = b.weightedReviewAvgReceived ?? 0.0;
+          final scoreCompare = bScore.compareTo(aScore);
+          if (scoreCompare != 0) return scoreCompare;
+          return b.totalReviewsReceived.compareTo(a.totalReviewsReceived);
         });
       }
 
@@ -510,7 +526,7 @@ class _FreelancerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   // ── Star rating row ──
-                  _StarRating(avg: avg),
+                  _StarRating(avg: avg, count: freelancer.totalReviews),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -562,6 +578,9 @@ class _ClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double? avg = client.weightedReviewAvgReceived;
+    final bool isTopRated = avg != null && avg >= 4.5;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -588,13 +607,53 @@ class _ClientCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    client.displayName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
-                    ),
+                  // ── Name row with optional Top Rated badge ──
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          client.displayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A2E),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isTopRated) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3CD),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 10,
+                                color: Color(0xFFD4A017),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Top Rated',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFD4A017),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -603,6 +662,14 @@ class _ClientCard extends StatelessWidget {
                       fontSize: 12,
                       color: const Color(0xFF7D7D7D),
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  // ── Star rating row - rating this client RECEIVED from
+                  // freelancers they've worked with, same treatment as the
+                  // freelancer card's rating. ──
+                  _StarRating(
+                    avg: client.weightedReviewAvgReceived,
+                    count: client.totalReviewsReceived,
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -613,10 +680,12 @@ class _ClientCard extends StatelessWidget {
                       ),
                       if (client.averageRatingGiven != null) ...[
                         const SizedBox(width: 8),
-                        _StatChip(
-                          icon: Icons.star_rounded,
-                          label: client.averageRatingGiven!.toStringAsFixed(1),
-                          isHighlight: true,
+                        Flexible(
+                          child: _StatChip(
+                            icon: Icons.thumb_up_alt_outlined,
+                            label:
+                                'Gives ★${client.averageRatingGiven!.toStringAsFixed(1)}',
+                          ),
                         ),
                       ],
                     ],
@@ -738,8 +807,9 @@ class _StatChip extends StatelessWidget {
 
 class _StarRating extends StatelessWidget {
   final double? avg;
+  final int count;
 
-  const _StarRating({this.avg});
+  const _StarRating({this.avg, this.count = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -785,6 +855,16 @@ class _StarRating extends StatelessWidget {
             color: const Color(0xFF1A1A2E),
           ),
         ),
+        if (count > 0) ...[
+          const SizedBox(width: 3),
+          Text(
+            '($count)',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: const Color(0xFF9CA3AF),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1059,6 +1139,112 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // See Reviews — freelancers only; lets a client read the
+                  // freelancer's reviews/trust score before hiring, which
+                  // previously had no entry point from discovery/browsing.
+                  if (!widget.isClient && widget.freelancer != null)
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FreelancerReviewsScreen(
+                            freelancerId: widget.freelancer!.freelancerId,
+                            freelancerName: name,
+                          ),
+                        ),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.rate_review_outlined,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'See Reviews & Trust Score',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1A1A2E),
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // See Reviews — clients only; symmetric counterpart lets a
+                  // freelancer read what other freelancers said about this
+                  // client before taking on a job from them.
+                  if (widget.isClient && widget.client != null)
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ClientReviewsScreen(
+                            clientId: widget.client!.clientId,
+                            clientName: name,
+                          ),
+                        ),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.rate_review_outlined,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'See Reviews & Trust Score',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1A1A2E),
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
                   // About section — unchanged
                   Text(

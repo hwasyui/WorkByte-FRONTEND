@@ -36,7 +36,7 @@ class ProfileService {
     final res = await http.get(
       Uri.parse('$_baseUrl/clients/$userId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     debugPrint('GET /clients/$userId: $body');
 
@@ -54,7 +54,7 @@ class ProfileService {
     final res = await http.get(
       Uri.parse('$_baseUrl/freelancers/$userId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     debugPrint('GET /freelancers/$userId: $body');
 
@@ -70,7 +70,7 @@ class ProfileService {
       final res = await http.get(
         Uri.parse('$_baseUrl/clients/$clientId'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       final body = _decodeBody(res);
       if (res.statusCode == 200) {
         final data = body['details'] ?? body['data'] ?? body;
@@ -90,7 +90,7 @@ class ProfileService {
       final res = await http.get(
         Uri.parse('$_baseUrl/freelancers/$freelancerId'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       final body = _decodeBody(res);
       if (res.statusCode == 200) {
         final data = body['details'] ?? body['data'] ?? body;
@@ -117,7 +117,7 @@ class ProfileService {
       if (value != null) request.fields[key] = value.toString();
     });
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
@@ -141,7 +141,7 @@ class ProfileService {
       request.fields[key] = value?.toString() ?? '';
     });
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
@@ -179,7 +179,7 @@ class ProfileService {
         ),
       );
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
@@ -219,7 +219,7 @@ class ProfileService {
         ),
       );
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
@@ -239,7 +239,7 @@ class ProfileService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/clients/$clientId/profile-picture'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     if (res.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -260,7 +260,7 @@ class ProfileService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/freelancers/$freelancerId/profile-picture'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     if (res.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -283,7 +283,7 @@ class ProfileService {
     final res = await http.get(
       Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) {
       final body = _decodeBody(res);
       final data = body['details'] ?? body['data'] ?? [];
@@ -300,7 +300,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/educations'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 201) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to add education');
@@ -315,7 +315,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/educations/$educationId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to update education');
@@ -325,7 +325,7 @@ class ProfileService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/educations/$educationId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to delete education');
@@ -340,7 +340,7 @@ class ProfileService {
     final res = await http.get(
       Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) {
       final body = _decodeBody(res);
       final data = body['details'] ?? body['data'] ?? [];
@@ -362,7 +362,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/work-experiences'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 201) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to add experience');
@@ -377,7 +377,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to update experience');
@@ -390,7 +390,7 @@ class ProfileService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to delete experience');
@@ -405,7 +405,7 @@ class ProfileService {
     final res = await http.get(
       Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) {
       final body = _decodeBody(res);
       final data = body['details'] ?? body['data'] ?? [];
@@ -422,7 +422,7 @@ class ProfileService {
       final res = await http.get(
         Uri.parse('$_baseUrl/skills'),
         headers: _headers(token),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -442,7 +442,7 @@ class ProfileService {
       final uri = Uri.parse(
         '$_baseUrl/skills/search',
       ).replace(queryParameters: {'q': searchTerm});
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final details = body['details'] ?? body['data'] ?? {};
@@ -465,7 +465,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/skills'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     if (res.statusCode == 201) {
       return Map<String, dynamic>.from(body['details'] ?? {});
@@ -481,7 +481,7 @@ class ProfileService {
       Uri.parse('$_baseUrl/freelancer-skills'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 201) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to add skill');
@@ -494,7 +494,7 @@ class ProfileService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode == 200) return true;
     final body = _decodeBody(res);
     throw Exception(body['details']?.toString() ?? 'Failed to remove skill');
@@ -529,7 +529,7 @@ class ProfileService {
         ),
       );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
 
     Map<String, dynamic> body = {};

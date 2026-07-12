@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/review_model.dart';
@@ -29,7 +30,24 @@ class ReviewService {
       // Your backend wraps everything in ResponseSchema.success → {data: ...}
       return body['details'] as Map<String, dynamic>? ?? body;
     }
+    throw _buildException(res, context);
+  }
+
+  List<dynamic> _parseList(http.Response res, String context) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['details'] as List<dynamic>? ?? [];
+    }
+    throw _buildException(res, context);
+  }
+
+  // Technical context (endpoint + status code) is logged for debugging but kept
+  // out of `message`, since that string is shown to users as-is (see review_form.dart) -
+  // "submitReview failed (400): ..." reads as a crash log, not a message a client
+  // wrote a bad review would understand.
+  ReviewServiceException _buildException(http.Response res, String context) {
     String message;
+    List<String>? detectedLabels;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       // ResponseSchema.error() puts the human-readable message under 'details'
@@ -42,32 +60,15 @@ class ReviewService {
           body['message'] as String? ??
           body['detail'] as String? ??
           'Unknown error';
+      final labels = body['detected_labels'];
+      if (labels is List) {
+        detectedLabels = labels.map((e) => e.toString()).toList();
+      }
     } catch (_) {
       message = res.body;
     }
-    throw ReviewServiceException(
-      '$context failed (${res.statusCode}): $message',
-    );
-  }
-
-  List<dynamic> _parseList(http.Response res, String context) {
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['details'] as List<dynamic>? ?? [];
-    }
-    String message;
-    try {
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      message =
-          body['details'] as String? ??
-          body['message'] as String? ??
-          'Unknown error';
-    } catch (_) {
-      message = res.body;
-    }
-    throw ReviewServiceException(
-      '$context failed (${res.statusCode}): $message',
-    );
+    debugPrint('$context failed (${res.statusCode}): $message');
+    return ReviewServiceException(message, detectedLabels: detectedLabels);
   }
 
   // ── GET /reviews/contract/{contract_id} ─────────────────────────────────
@@ -81,7 +82,7 @@ class ReviewService {
     final res = await http.get(
       Uri.parse('$_baseUrl/reviews/contract/$contractId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     return Review.fromJson(_parse(res, 'getReviewForContract'));
   }
 
@@ -97,7 +98,7 @@ class ReviewService {
       Uri.parse('$_baseUrl/reviews/$reviewId/submit'),
       headers: _headers(token),
       body: jsonEncode(request.toJson()),
-    );
+    ).timeout(const Duration(seconds: 20));
     final data = _parse(res, 'submitReview');
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
@@ -112,7 +113,7 @@ class ReviewService {
     final res = await http.get(
       Uri.parse('$_baseUrl/reviews/$reviewId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     return Review.fromJson(_parse(res, 'getReview'));
   }
 
@@ -126,7 +127,7 @@ class ReviewService {
     final res = await http.get(
       Uri.parse('$_baseUrl/reviews/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final list = _parseList(res, 'getFreelancerReviews');
     return list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -141,7 +142,7 @@ class ReviewService {
     final res = await http.get(
       Uri.parse('$_baseUrl/reviews/trust-score/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     return TrustScore.fromJson(_parse(res, 'getTrustScore'));
   }
 
@@ -155,7 +156,7 @@ class ReviewService {
     final res = await http.get(
       Uri.parse('$_baseUrl/reviews/red-flags/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final list = _parseList(res, 'getRedFlags');
     return list
         .map((e) => RedFlagAlert.fromJson(e as Map<String, dynamic>))
@@ -167,7 +168,8 @@ class ReviewService {
 
 class ReviewServiceException implements Exception {
   final String message;
-  const ReviewServiceException(this.message);
+  final List<String>? detectedLabels;
+  const ReviewServiceException(this.message, {this.detectedLabels});
 
   @override
   String toString() => message;

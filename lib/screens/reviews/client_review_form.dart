@@ -1,62 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/review_model.dart';
+import '../../models/client_review_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/review_provider.dart';
+import '../../providers/client_review_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/review_rating_helpers.dart';
-import 'review_submitted.dart';
+import 'client_review_submitted.dart';
 
-class ReviewFormScreen extends StatefulWidget {
+/// Freelancer-reviews-client form - mirrors review_form.dart's structure for
+/// the symmetric counterpart. Shown to a freelancer after contract completion.
+class ClientReviewFormScreen extends StatefulWidget {
   final String contractId;
-  final String freelancerName;
+  final String clientName;
   final String projectTitle;
 
-  const ReviewFormScreen({
+  const ClientReviewFormScreen({
     super.key,
     required this.contractId,
-    required this.freelancerName,
+    required this.clientName,
     required this.projectTitle,
   });
 
   @override
-  State<ReviewFormScreen> createState() => _ReviewFormScreenState();
+  State<ClientReviewFormScreen> createState() =>
+      _ClientReviewFormScreenState();
 }
 
-class _ReviewFormScreenState extends State<ReviewFormScreen> {
-  // ── Rating values ─────────────────────────────────────────────────────────
+class _ClientReviewFormScreenState extends State<ClientReviewFormScreen> {
   final Map<String, double> _ratings = {
     'communication': 5.0,
-    'quality': 5.0,
+    'clarity_of_requirements': 5.0,
+    'responsiveness': 5.0,
     'professionalism': 5.0,
-    'value_for_money': 5.0,
   };
 
   static const Map<String, String> _ratingLabels = {
     'communication': 'Communication',
-    'quality': 'Work Quality',
+    'clarity_of_requirements': 'Clarity of Requirements',
+    'responsiveness': 'Responsiveness',
     'professionalism': 'Professionalism',
-    'value_for_money': 'Value for Money',
   };
 
   static const Map<String, IconData> _ratingIcons = {
     'communication': Icons.chat_bubble_outline,
-    'quality': Icons.workspace_premium_outlined,
-    'professionalism': Icons.verified_outlined,
-    'value_for_money': Icons.monetization_on_outlined,
+    'clarity_of_requirements': Icons.fact_check_outlined,
+    'responsiveness': Icons.bolt_outlined,
+    'professionalism': Icons.badge_outlined,
   };
 
-  // ── Controllers ───────────────────────────────────────────────────────────
   final TextEditingController _answerController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
-  final TextEditingController _tagController = TextEditingController();
-
-  // ── Skill tags ────────────────────────────────────────────────────────────
-  // Tracks which AI-suggested tags the client has confirmed (toggled on/off).
-  final Set<String> _confirmedTags = {};
-  // Extra tags manually typed by the client.
-  final List<String> _extraTags = [];
 
   @override
   void initState() {
@@ -68,17 +62,10 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
 
-    await context.read<ReviewProvider>().loadReviewForm(
+    await context.read<ClientReviewProvider>().loadReviewForm(
       token: token,
       contractId: widget.contractId,
     );
-
-    if (!mounted) return;
-    final review = context.read<ReviewProvider>().pendingReview;
-    if (review != null) {
-      // Pre-confirm all AI-suggested tags so client can deselect individually.
-      setState(() => _confirmedTags.addAll(review.suggestedSkillTags));
-    }
   }
 
   Future<void> _submit() async {
@@ -88,7 +75,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
       return;
     }
 
-    final provider = context.read<ReviewProvider>();
+    final provider = context.read<ClientReviewProvider>();
     final reviewId = provider.pendingReview?.id;
     if (reviewId == null) {
       _showSnack('Review not ready yet. Please wait a moment.');
@@ -98,16 +85,12 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
 
-    // Combine confirmed AI tags + extra tags into extraSkillTags.
-    // The backend saves confirmed AI-suggested tags separately via
-    // get_suggested_skill_tags(contract_id) — we only need to send extras.
     final success = await provider.submitReview(
       token: token,
-      reviewId: reviewId,
+      clientReviewId: reviewId,
       ratingsMap: Map.of(_ratings),
-      clientAnswer: _answerController.text.trim(),
+      freelancerAnswer: _answerController.text.trim(),
       overallComment: comment,
-      extraSkillTags: _extraTags,
     );
 
     if (!mounted) return;
@@ -115,8 +98,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              ReviewSubmittedScreen(freelancerName: widget.freelancerName),
+          builder: (_) => ClientReviewSubmittedScreen(clientName: widget.clientName),
         ),
       );
     } else if (provider.flaggedLabels != null) {
@@ -130,26 +112,12 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  void _addExtraTag(String raw) {
-    final tag = raw.trim();
-    if (tag.isEmpty) return;
-    if (_confirmedTags.contains(tag) || _extraTags.contains(tag)) {
-      _tagController.clear();
-      return;
-    }
-    setState(() => _extraTags.add(tag));
-    _tagController.clear();
-  }
-
   @override
   void dispose() {
     _answerController.dispose();
     _commentController.dispose();
-    _tagController.dispose();
     super.dispose();
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -160,20 +128,20 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Leave a Review',
+          'Rate This Client',
           style: AppText.h3.copyWith(color: Colors.white),
         ),
         centerTitle: true,
       ),
-      body: Consumer<ReviewProvider>(
+      body: Consumer<ClientReviewProvider>(
         builder: (context, rp, _) {
           switch (rp.formState) {
-            case ReviewLoadState.loading:
+            case ClientReviewLoadState.loading:
               return _buildWaitingState();
-            case ReviewLoadState.error:
+            case ClientReviewLoadState.error:
               return _buildErrorState(rp.error);
-            case ReviewLoadState.loaded:
-            case ReviewLoadState.idle:
+            case ClientReviewLoadState.loaded:
+            case ClientReviewLoadState.idle:
               final review = rp.pendingReview;
               if (review == null) return _buildWaitingState();
               if (review.status != 'pending') {
@@ -186,10 +154,10 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     );
   }
 
-  Widget _buildForm(Review review, ReviewProvider rp) {
+  Widget _buildForm(ClientReview review, ClientReviewProvider rp) {
     final aiQuestion =
         review.writtenContent?.aiQuestion ??
-        'How satisfied are you with the overall project outcome?';
+        'How clear were the project requirements when you started?';
 
     return Stack(
       children: [
@@ -200,8 +168,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
             children: [
               _buildProjectHeader(),
               const SizedBox(height: 20),
-
-              // ── Star ratings ──────────────────────────────────────────────
               _buildCard(
                 title: 'Rate Your Experience',
                 child: Column(
@@ -209,11 +175,9 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ── AI targeted question ──────────────────────────────────────
               _buildCard(
                 title: 'Quick Question',
-                subtitle: 'AI-generated based on your project type',
+                subtitle: 'AI-generated based on your project',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -256,29 +220,20 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ── Overall comment ───────────────────────────────────────────
               _buildCard(
                 title: 'Overall Review',
                 child: _buildTextField(
                   controller: _commentController,
                   hint:
-                      'Describe your experience working with ${widget.freelancerName}...',
+                      'Describe your experience working with ${widget.clientName}...',
                   maxLines: 5,
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ── Skill tags ────────────────────────────────────────────────
-              _buildSkillTagsCard(review.suggestedSkillTags),
-              const SizedBox(height: 16),
-
               _buildAiNotice(),
             ],
           ),
         ),
-
-        // ── Sticky submit ─────────────────────────────────────────────────
         Positioned(
           bottom: 0,
           left: 0,
@@ -322,8 +277,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     );
   }
 
-  // ── Sub-widgets ───────────────────────────────────────────────────────────
-
   Widget _buildProjectHeader() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -355,7 +308,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Review for ${widget.freelancerName}',
+                  'Review for ${widget.clientName}',
                   style: AppText.caption.copyWith(color: Colors.white70),
                 ),
               ],
@@ -420,115 +373,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSkillTagsCard(List<String> suggestedTags) {
-    return _buildCard(
-      title: 'Confirm Skills',
-      subtitle: 'Tap to confirm or add skills you observed',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (suggestedTags.isNotEmpty) ...[
-            Text(
-              'AI suggested',
-              style: AppText.caption.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: suggestedTags.map((tag) {
-                final selected = _confirmedTags.contains(tag);
-                return FilterChip(
-                  label: Text(tag, style: AppText.caption),
-                  selected: selected,
-                  onSelected: (v) => setState(
-                    () => v
-                        ? _confirmedTags.add(tag)
-                        : _confirmedTags.remove(tag),
-                  ),
-                  selectedColor: AppColors.primary.withOpacity(0.15),
-                  checkmarkColor: AppColors.primary,
-                  labelStyle: AppText.caption.copyWith(
-                    color: selected ? AppColors.primary : Colors.black87,
-                  ),
-                  side: BorderSide(
-                    color: selected ? AppColors.primary : Colors.grey.shade300,
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (_extraTags.isNotEmpty) ...[
-            Text(
-              'Added by you',
-              style: AppText.caption.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _extraTags.map((tag) {
-                return Chip(
-                  label: Text(tag, style: AppText.caption),
-                  deleteIcon: const Icon(Icons.close, size: 14),
-                  onDeleted: () => setState(() => _extraTags.remove(tag)),
-                  backgroundColor: Colors.grey.shade100,
-                  side: BorderSide(color: Colors.grey.shade300),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _tagController,
-                  style: AppText.body,
-                  decoration: InputDecoration(
-                    hintText: 'Add a skill tag...',
-                    hintStyle: AppText.body.copyWith(color: Colors.grey),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.primary),
-                    ),
-                  ),
-                  onSubmitted: _addExtraTag,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _addExtraTag(_tagController.text),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 18),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -646,7 +490,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'You\'ve already submitted a review for this freelancer.',
+              'You\'ve already submitted a review for this client.',
               style: AppText.body.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),

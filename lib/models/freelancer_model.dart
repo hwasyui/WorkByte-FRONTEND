@@ -13,6 +13,7 @@ class FreelancerModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final double? weightedReviewAvg;
+  final int totalReviews;
 
   const FreelancerModel({
     required this.freelancerId,
@@ -29,6 +30,7 @@ class FreelancerModel {
     this.createdAt,
     this.updatedAt,
     this.weightedReviewAvg,
+    this.totalReviews = 0,
   });
 
   factory FreelancerModel.fromJson(Map<String, dynamic> json) =>
@@ -51,6 +53,7 @@ class FreelancerModel {
             ? DateTime.tryParse(json['updated_at'].toString())
             : null,
         weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
+        totalReviews: (json['total_reviews'] as num?)?.toInt() ?? 0,
       );
 
   String get displayName => fullName.isNotEmpty ? fullName : 'Freelancer';
@@ -97,5 +100,6 @@ class FreelancerModel {
     createdAt: createdAt,
     updatedAt: updatedAt,
     weightedReviewAvg: weightedReviewAvg ?? this.weightedReviewAvg,
+    totalReviews: totalReviews,
   );
 }
