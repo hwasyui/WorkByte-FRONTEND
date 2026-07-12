@@ -505,6 +505,18 @@ class ProfileService {
     required File file,
   }) async {
     final uri = Uri.parse('$_baseUrl/cv_upload');
+    final ext = file.path.split('.').last.toLowerCase();
+    final mimeType = switch (ext) {
+      'pdf' => 'application/pdf',
+      'doc' => 'application/msword',
+      'docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'bmp' => 'image/bmp',
+      'tif' || 'tiff' => 'image/tiff',
+      _ => 'application/octet-stream',
+    };
 
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
@@ -513,6 +525,7 @@ class ProfileService {
           'file',
           file.path,
           filename: file.path.split('/').last,
+          contentType: MediaType.parse(mimeType),
         ),
       );
 
