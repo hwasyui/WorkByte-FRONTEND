@@ -146,5 +146,7 @@ class JobPostModel {
     'closed_at': closedAt,
     'closure_reason': closureReason,
     'closure_note': closureNote,
+    'moderation_status': moderationStatus,
+    'detected_labels': detectedLabels,
   };
 }

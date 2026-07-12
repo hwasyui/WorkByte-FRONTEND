@@ -118,32 +118,40 @@ class JobListScreenState extends State<JobListScreen> {
     final profileProvider = context.read<ProfileProvider>();
     final proposalService = ProposalService();
 
-    for (final job in _allJobs) {
-      final jobPostId = job['job_post_id'] as String?;
-      if (jobPostId == null) continue;
-      final proposalCount = (job['proposal_count'] ?? 0) as int;
-      if (proposalCount == 0) continue;
+    // Was a serial for-loop doing 1 + up to 3 awaited requests PER job with
+    // proposals, one after another - with several jobs that's dozens of
+    // sequential round trips, which is what actually made the page feel slow
+    // (not the backend). Fetch every job's avatars concurrently instead,
+    // mirroring _loadTeamPositionCounts above.
+    await Future.wait(
+      _allJobs.map((job) async {
+        final jobPostId = job['job_post_id'] as String?;
+        if (jobPostId == null) return;
+        final proposalCount = (job['proposal_count'] ?? 0) as int;
+        if (proposalCount == 0) return;
 
-      try {
-        final proposals = await proposalService.getProposalsByJobPost(
-          token,
-          jobPostId,
-        );
-        if (!mounted) return;
-
-        final avatars = <String?>[];
-        for (final proposal in proposals.take(3)) {
-          final freelancer = await profileProvider.fetchFreelancerById(
-            token: token,
-            freelancerId: proposal.freelancerId,
+        try {
+          final proposals = await proposalService.getProposalsByJobPost(
+            token,
+            jobPostId,
           );
-          avatars.add(freelancer?.profilePictureUrl);
+          if (!mounted) return;
+
+          final avatars = await Future.wait(
+            proposals.take(3).map((proposal) async {
+              final freelancer = await profileProvider.fetchFreelancerById(
+                token: token,
+                freelancerId: proposal.freelancerId,
+              );
+              return freelancer?.profilePictureUrl;
+            }),
+          );
+          if (mounted) setState(() => _proposalAvatars[jobPostId] = avatars);
+        } catch (e) {
+          debugPrint('Failed to fetch avatars for $jobPostId: $e');
         }
-        if (mounted) setState(() => _proposalAvatars[jobPostId] = avatars);
-      } catch (e) {
-        debugPrint('Failed to fetch avatars for $jobPostId: $e');
-      }
-    }
+      }),
+    );
   }
 
   // 👇 NEW: unified filter — combines search query + status tab
@@ -379,6 +387,41 @@ class JobListScreenState extends State<JobListScreen> {
           ),
 
           const Spacer(),
+
+          // Lets the client manually re-pull moderation_status without
+          // waiting for the background scan + a pull-to-refresh gesture -
+          // 'scanning' only resolves once the harmful-text scan finishes.
+          GestureDetector(
+            onTap: _isLoading ? null : _fetchJobs,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.refresh_rounded,
+                      size: 18,
+                      color: Color(0xFF333333),
+                    ),
+            ),
+          ),
         ],
       ),
     );
@@ -390,6 +433,7 @@ class JobListScreenState extends State<JobListScreen> {
     final isTeam = (job['project_type'] ?? '') == 'team';
     final proposalCount = (job['proposal_count'] ?? 0) as int;
     final status = job['status'] as String? ?? 'draft';
+    final moderationStatus = job['moderation_status'] as String? ?? 'visible';
     final closureReason = job['closure_reason'] as String? ?? '';
     final isScamClosed = status == 'closed' && closureReason == 'scam';
     final positionCount = isTeam
@@ -467,7 +511,16 @@ class JobListScreenState extends State<JobListScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Shown alongside (not instead of) the workflow status:
+                      // a job can be 'active'/'filled' underneath while also
+                      // sitting at 'blocked'/'scanning' moderation - hiding
+                      // the workflow status would desync the badge from what
+                      // the status-tab filter/count above is actually keyed on.
                       _statusBadge(status),
+                      if (moderationStatus != 'visible') ...[
+                        const SizedBox(width: 6),
+                        _moderationChip(moderationStatus),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -627,6 +680,39 @@ class JobListScreenState extends State<JobListScreen> {
       ),
       child: Text(
         _capitalize(status),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: colors.$1,
+        ),
+      ),
+    );
+  }
+
+  /// Rendered next to (not instead of) _statusBadge - a job's workflow status
+  /// ('active'/'filled'/etc, what the status-tab filter above is keyed on)
+  /// and its moderation status are independent, so both need to be visible at
+  /// once. See job_post_functions.py run_job_post_scan: blocking never
+  /// changes `status`, it only hides the post from new/public viewers.
+  Widget _moderationChip(String moderationStatus) {
+    final map = {
+      'blocked': (const Color(0xFFDC2626), const Color(0xFFFDECEC), 'Blocked'),
+      'scanning': (
+        const Color(0xFF6B7280),
+        const Color(0xFFF3F4F6),
+        'Reviewing',
+      ),
+    };
+    final colors = map[moderationStatus.toLowerCase()];
+    if (colors == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.$2,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        colors.$3,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,

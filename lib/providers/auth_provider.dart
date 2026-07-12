@@ -89,6 +89,15 @@ class AuthProvider extends ChangeNotifier {
 
     if (role != 'freelancer') return false;
 
+    // A timed-out/failed profile fetch also leaves freelancerProfile null,
+    // which looks identical to "brand new user, never filled anything in".
+    // Without this check a slow network on login bounces a returning user
+    // with a complete profile straight into the setup wizard.
+    if (profileProvider.freelancerProfile == null &&
+        profileProvider.error != null) {
+      return false;
+    }
+
     return !profileProvider.isOnboardingComplete;
   }
 

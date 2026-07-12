@@ -451,6 +451,36 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
+  /// Polls GET /job-posts/{id} until the background harmful-text scan
+  /// finishes (moderation_status leaves 'scanning'), so callers can react to
+  /// a 'blocked' result right after create/publish instead of only finding
+  /// out when the job is reopened later. Returns null if the scan hasn't
+  /// finished within [maxAttempts] - callers should treat that as "still
+  /// scanning" rather than as an error.
+  Future<JobPostModel?> waitForModerationResult({
+    required String token,
+    required String jobPostId,
+    int maxAttempts = 6,
+    Duration interval = const Duration(seconds: 1),
+  }) async {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final post = await _jobPostService.getJobPost(token, jobPostId);
+        if (post.moderationStatus != 'scanning') {
+          return post;
+        }
+      } on JobPostScanningException {
+        // Expected while the scan is still running; keep polling.
+      } catch (e) {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        notifyListeners();
+        return null;
+      }
+      await Future.delayed(interval);
+    }
+    return null;
+  }
+
   Future<bool> deleteJobPost(String token, String jobPostId) async {
     try {
       await _jobPostService.deleteJobPost(token, jobPostId);

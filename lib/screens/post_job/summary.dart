@@ -68,8 +68,21 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     }
 
     setState(() {
-      _submitStatus = 'Finalizing...';
+      _submitStatus = 'Checking for policy issues...';
     });
+
+    final moderated = await provider.waitForModerationResult(
+      token: token,
+      jobPostId: jobPostId,
+    );
+
+    if (!mounted) return;
+
+    if (moderated != null && moderated.moderationStatus == 'blocked') {
+      setState(() => _isSubmitting = false);
+      await _showBlockedDialog();
+      return;
+    }
 
     provider.clearDraft();
 
@@ -82,6 +95,27 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const Frame1()),
+    );
+  }
+
+  Future<void> _showBlockedDialog() {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Job post flagged'),
+        content: const Text(
+          'Our automated review flagged this job post for potentially harmful '
+          'content. It has been hidden from freelancers. Please edit the '
+          'title/description and resubmit.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 

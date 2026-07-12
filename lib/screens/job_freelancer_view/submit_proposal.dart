@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
+import '../../models/proposal_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/proposal_service.dart';
@@ -115,8 +116,8 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
           : double.parse(_budgetController.text.trim());
 
       final proposedDuration = '$_durationNumber $_durationUnit${_durationNumber != '1' ? 's' : ''}';
-      
-      await ProposalService().submitProposal(
+
+      final proposal = await ProposalService().submitProposal(
         token: token,
         jobPostId: widget.job.jobPostId,
         jobRoleId: widget.role.jobRoleId,
@@ -126,6 +127,19 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         proposedDuration: proposedDuration,
         files: _attachedFiles,
       );
+
+      final moderated = await _waitForModerationResult(
+        token: token,
+        proposalId: proposal.proposalId,
+      );
+
+      if (!mounted) return;
+
+      if (moderated != null && moderated.moderationStatus == 'blocked') {
+        setState(() => _isSubmitting = false);
+        _showBlockedDialog(moderated.detectedLabels);
+        return;
+      }
 
       if (mounted) {
         Navigator.pop(context, true);
@@ -151,6 +165,30 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     }
   }
 
+  /// Polls GET /proposals/{id} until the background harmful-text scan
+  /// finishes (moderation_status leaves 'scanning'), so we can tell the
+  /// freelancer their proposal was blocked instead of just showing success.
+  /// Returns null if the scan hasn't finished within the attempt budget.
+  Future<ProposalModel?> _waitForModerationResult({
+    required String token,
+    required String proposalId,
+    int maxAttempts = 6,
+    Duration interval = const Duration(seconds: 1),
+  }) async {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final proposal = await ProposalService().getProposalById(token, proposalId);
+        if (proposal.moderationStatus != 'scanning') {
+          return proposal;
+        }
+      } catch (_) {
+        return null;
+      }
+      await Future.delayed(interval);
+    }
+    return null;
+  }
+
   static const _harmfulLabelNames = {
     'identity_hate': 'Identity Hate',
     'toxic': 'Toxicity',
@@ -165,57 +203,62 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       _harmfulLabelNames[raw.trim().toLowerCase()] ??
       raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
 
+  void _showBlockedDialog(List<String> rawLabels) {
+    final labels = rawLabels.map(_formatHarmfulLabel).join(', ');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+            const SizedBox(width: 8),
+            Text('Proposal Blocked', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your cover letter contains harmful content and was not submitted.',
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+            ),
+            if (labels.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Detected: $labels',
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              'Please revise your cover letter and try again.',
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) {
     final isHarmful = message.toLowerCase().contains('detected as harmful') ||
         message.toLowerCase().contains('harmful content');
 
     if (isHarmful) {
       final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(message);
-      final labels = labelMatch != null
-          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
-          : '';
-
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Row(
-            children: [
-              const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
-              const SizedBox(width: 8),
-              Text('Proposal Blocked', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your cover letter contains harmful content and was not submitted.',
-                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
-              ),
-              if (labels.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Detected: $labels',
-                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
-                ),
-              ],
-              const SizedBox(height: 10),
-              Text(
-                'Please revise your cover letter and try again.',
-                style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))),
-            ),
-          ],
-        ),
-      );
+      final rawLabels = labelMatch != null
+          ? labelMatch.group(1)!.split(',')
+          : <String>[];
+      _showBlockedDialog(rawLabels);
       return;
     }
 
