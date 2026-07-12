@@ -318,7 +318,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
               ),
 
             // ── Category picker (shown when creating a new skill) ──────────
-            if (_showCategoryPicker && !_isCreating) ...[
+            if (_showCategoryPicker) ...[
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -340,77 +340,111 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => setState(() => _showCategoryPicker = false),
-                    child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                    onTap: _isCreating
+                        ? null
+                        : () => setState(() => _showCategoryPicker = false),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: _isCreating ? Colors.grey.shade300 : Colors.grey,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
-                children: _categories.asMap().entries.map((entry) {
-                  final cat = entry.value.$1;
-                  final label = entry.value.$2;
-                  final isSelected = _newSkillCategory == cat;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _newSkillCategory = cat),
-                      child: Container(
-                        margin: entry.key < _categories.length - 1
-                            ? const EdgeInsets.only(right: 8)
-                            : null,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
+              if (_isCreating)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Checking for policy violations...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                Row(
+                  children: _categories.asMap().entries.map((entry) {
+                    final cat = entry.value.$1;
+                    final label = entry.value.$2;
+                    final isSelected = _newSkillCategory == cat;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _newSkillCategory = cat),
+                        child: Container(
+                          margin: entry.key < _categories.length - 1
+                              ? const EdgeInsets.only(right: 8)
+                              : null,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
                             color: isSelected
                                 ? AppColors.primary
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            label,
-                            style: TextStyle(
+                                : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
                               color: isSelected
-                                  ? Colors.white
-                                  : Colors.grey[700],
-                              fontSize: 11,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+                                  ? AppColors.primary
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
                             ),
                           ),
                         ),
                       ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _newSkillCategory != null
+                        ? _confirmCreateWithCategory
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: Colors.grey[300],
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      elevation: 0,
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _newSkillCategory != null
-                      ? _confirmCreateWithCategory
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: Colors.grey[300],
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                    child: const Text(
+                      'Create Skill',
+                      style: TextStyle(fontSize: 13, color: Colors.white),
                     ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Create Skill',
-                    style: TextStyle(fontSize: 13, color: Colors.white),
                   ),
                 ),
-              ),
+              ],
             ],
 
             // ── Selected indicator ─────────────────────────────────────────

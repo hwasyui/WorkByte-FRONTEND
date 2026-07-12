@@ -2646,8 +2646,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                                 : noteCtrl.text.trim(),
                           );
                       if (!mounted) return;
-                      Navigator.pop(ctx);
                       if (success) {
+                        Navigator.pop(ctx);
                         final updated = context
                             .read<ContractProvider>()
                             .currentContract;
@@ -2657,10 +2657,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                         }
                         _showSnack('Payment recorded.', isError: false);
                       } else {
-                        _showSnack(
-                          context.read<ContractProvider>().error ??
+                        setDialogState(() => isSubmitting = false);
+                        showErrorFeedback(
+                          context,
+                          message:
+                              context.read<ContractProvider>().error ??
                               'Failed to record payment.',
-                          isError: true,
                         );
                       }
                     },
@@ -2692,64 +2694,111 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   void _showCancelDialog() {
+    final reasonCtrl = TextEditingController();
+    bool isSubmitting = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Cancel Contract', style: AppText.h2),
-        content: Text(
-          'Are you sure you want to cancel this contract? This action cannot be undone.',
-          style: AppText.body.copyWith(color: Colors.grey.shade600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Keep Contract',
-              style: AppText.bodySemiBold.copyWith(color: Colors.grey.shade600),
-            ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isActioning = true);
-              final token = context.read<AuthProvider>().token!;
-              final success = await context
-                  .read<ContractProvider>()
-                  .cancelContract(token, _contract.contractId);
-              if (mounted) {
-                setState(() => _isActioning = false);
-                if (success) {
-                  setState(
-                    () => _contract = _contract.copyWith(status: 'cancelled'),
-                  );
-                  _showSnack('Contract cancelled.', isError: false);
-                  await Future.delayed(const Duration(milliseconds: 800));
-                  if (mounted) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                } else {
-                  _showSnack(
-                    context.read<ContractProvider>().error ??
-                        'Failed to cancel contract.',
-                    isError: true,
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          title: Text('Cancel Contract', style: AppText.h2),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to cancel this contract? This action cannot be undone.',
+                style: AppText.body.copyWith(color: Colors.grey.shade600),
               ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Cancel Contract',
-              style: AppText.bodySemiBold.copyWith(color: Colors.white),
-            ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: reasonCtrl,
+                enabled: !isSubmitting,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Reason (optional)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text(
+                'Keep Contract',
+                style: AppText.bodySemiBold.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setDialogState(() => isSubmitting = true);
+                      final token = context.read<AuthProvider>().token!;
+                      final reason = reasonCtrl.text.trim();
+                      final success = await context
+                          .read<ContractProvider>()
+                          .cancelContract(
+                            token,
+                            _contract.contractId,
+                            reason: reason.isEmpty ? null : reason,
+                          );
+                      if (!mounted) return;
+                      if (success) {
+                        Navigator.pop(ctx);
+                        setState(
+                          () => _contract = _contract.copyWith(
+                            status: 'cancelled',
+                          ),
+                        );
+                        _showSnack('Contract cancelled.', isError: false);
+                        await Future.delayed(const Duration(milliseconds: 800));
+                        if (mounted) {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        }
+                      } else {
+                        setDialogState(() => isSubmitting = false);
+                        showErrorFeedback(
+                          context,
+                          message:
+                              context.read<ContractProvider>().error ??
+                              'Failed to cancel contract.',
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Cancel Contract',
+                      style: AppText.bodySemiBold.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

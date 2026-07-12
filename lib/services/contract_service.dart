@@ -236,13 +236,18 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to raise dispute');
   }
 
-  Future<ContractModel> cancelContract(String token, String contractId) async {
+  Future<ContractModel> cancelContract(
+    String token,
+    String contractId, {
+    String? reason,
+  }) async {
     final res = await http.put(
       Uri.parse('$_baseUrl/contracts/$contractId/cancel'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
+      body: jsonEncode({if (reason != null) 'reason': reason}),
     ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(res.body);

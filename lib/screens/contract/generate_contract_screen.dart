@@ -382,6 +382,12 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       final saveSuccess = await _saveContractDetails();
       if (!saveSuccess) {
         setState(() => _generating = false);
+        if (mounted) {
+          _showError(
+            context.read<ContractProvider>().error ??
+                'Failed to save contract details',
+          );
+        }
         return;
       }
 
@@ -509,6 +515,12 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       final saveSuccess = await _saveContractDetails();
       if (!saveSuccess) {
         setState(() => _sending = false);
+        if (mounted) {
+          _showError(
+            context.read<ContractProvider>().error ??
+                'Failed to save contract details',
+          );
+        }
         return;
       }
 

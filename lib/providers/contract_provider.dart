@@ -208,9 +208,17 @@ class ContractProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> cancelContract(String token, String contractId) async {
+  Future<bool> cancelContract(
+    String token,
+    String contractId, {
+    String? reason,
+  }) async {
     try {
-      final updated = await _service.cancelContract(token, contractId);
+      final updated = await _service.cancelContract(
+        token,
+        contractId,
+        reason: reason,
+      );
       if (_currentContract?.contractId == contractId) {
         _currentContract = updated;
       }

@@ -130,10 +130,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
 
-    aboutController.addListener(() {
-      setState(() => aboutText = aboutController.text);
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 

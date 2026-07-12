@@ -43,12 +43,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    bioController.addListener(() {
-      setState(() => bioText = bioController.text);
-    });
-    websiteController.addListener(() {
-      setState(() => websiteUrl = websiteController.text);
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final profile = Provider.of<ProfileProvider>(context, listen: false);
