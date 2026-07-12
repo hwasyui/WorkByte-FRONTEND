@@ -34,7 +34,7 @@ class PortfolioService {
     final res = await http.get(
       Uri.parse('$_baseUrl/portfolios'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     debugPrint('GET /portfolios: ${res.statusCode}');
 
@@ -52,7 +52,7 @@ class PortfolioService {
     final res = await http.get(
       Uri.parse('$_baseUrl/portfolios/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     debugPrint('GET /portfolios/freelancer/$freelancerId: ${res.statusCode}');
 
@@ -71,7 +71,7 @@ class PortfolioService {
       Uri.parse('$_baseUrl/portfolios'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = _decodeBody(res);
     debugPrint('POST /portfolios: ${res.statusCode}');
 
@@ -86,7 +86,7 @@ class PortfolioService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/portfolios/$portfolioId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     debugPrint('DELETE /portfolios/$portfolioId: ${res.statusCode}');
 
     if (res.statusCode != 200 && res.statusCode != 204) {

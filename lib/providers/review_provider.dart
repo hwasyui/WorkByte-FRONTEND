@@ -53,6 +53,12 @@ class ReviewProvider extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  // Raw moderation labels (e.g. "toxic", "obscene") from the harmful-content
+  // gate on submitReview - null unless the last submit attempt was rejected
+  // for that specific reason, so the UI can special-case that error state.
+  List<String>? _flaggedLabels;
+  List<String>? get flaggedLabels => _flaggedLabels;
+
   // ── Actions ──────────────────────────────────────────────────────────────
 
   /// Called when the review form screen initialises.
@@ -95,6 +101,7 @@ class ReviewProvider extends ChangeNotifier {
   }) async {
     _submitting = true;
     _error = null;
+    _flaggedLabels = null;
     notifyListeners();
 
     try {
@@ -118,6 +125,7 @@ class ReviewProvider extends ChangeNotifier {
       return true;
     } on ReviewServiceException catch (e) {
       _error = e.message;
+      _flaggedLabels = e.detectedLabels;
       _submitting = false;
       notifyListeners();
       return false;

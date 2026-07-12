@@ -74,6 +74,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
       case 'job_closed_scam':
       case 'job_closed_admin':
         return Icons.gpp_bad_rounded;
+      case 'review_published':
+        return Icons.star_outline_rounded;
+      case 'review_publish_confirmed':
+        return Icons.rate_review_outlined;
+      case 'review_suppressed':
+        return Icons.visibility_off_outlined;
+      case 'review_flagged':
+        return Icons.hourglass_top_outlined;
       default:
         return Icons.notifications_outlined;
     }

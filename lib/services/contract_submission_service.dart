@@ -93,7 +93,7 @@ class ContractSubmissionService {
     final res = await http.get(
       Uri.parse('$_baseUrl/contract-submissions/contract/$contractId'),
       headers: _jsonHeaders(token),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 200) {
       return _parseSubmissionList(res.body);
@@ -135,7 +135,7 @@ class ContractSubmissionService {
       );
     }
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
 
     if (res.statusCode == 200 || res.statusCode == 201) {
@@ -161,7 +161,7 @@ class ContractSubmissionService {
       ),
       headers: _jsonHeaders(token),
       body: jsonEncode({'note': note}), // ← add this
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);
@@ -182,7 +182,7 @@ class ContractSubmissionService {
     final res = await http.put(
       Uri.parse('$_baseUrl/contract-submissions/contract/$contractId/approve'),
       headers: _jsonHeaders(token),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);

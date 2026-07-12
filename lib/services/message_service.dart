@@ -30,7 +30,7 @@ class MessageService {
         'message_text': messageText,
         if (contractId != null) 'contract_id': contractId,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(res.body);
     debugPrint('POST /messages → ${res.statusCode}');

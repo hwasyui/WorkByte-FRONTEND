@@ -34,6 +34,12 @@ class AdminProvider extends ChangeNotifier {
   String _reportsTypeFilter = 'all';
 
   List<Map<String, dynamic>> _scamFlags = [];
+  List<Map<String, dynamic>> _reviewRedFlags = [];
+  List<Map<String, dynamic>> _flaggedReviews = [];
+  List<Map<String, dynamic>> _flaggedClientReviews = [];
+  bool _isReviewIntegrityLoading = false;
+  String _flaggedReviewStatusFilter = 'all';
+  String _flaggedClientReviewStatusFilter = 'all';
   List<Map<String, dynamic>> _moderationItems = [];
   List<Map<String, dynamic>> _closedJobs = [];
   List<Map<String, dynamic>> _closedAccounts = [];
@@ -88,6 +94,12 @@ class AdminProvider extends ChangeNotifier {
   String get reportsTypeFilter => _reportsTypeFilter;
 
   List<Map<String, dynamic>> get scamFlags => _scamFlags;
+  List<Map<String, dynamic>> get reviewRedFlags => _reviewRedFlags;
+  List<Map<String, dynamic>> get flaggedReviews => _flaggedReviews;
+  List<Map<String, dynamic>> get flaggedClientReviews => _flaggedClientReviews;
+  bool get isReviewIntegrityLoading => _isReviewIntegrityLoading;
+  String get flaggedReviewStatusFilter => _flaggedReviewStatusFilter;
+  String get flaggedClientReviewStatusFilter => _flaggedClientReviewStatusFilter;
   List<Map<String, dynamic>> get moderationItems => _moderationItems;
   List<Map<String, dynamic>> get closedJobs => _closedJobs;
   List<Map<String, dynamic>> get closedAccounts => _closedAccounts;
@@ -507,6 +519,97 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadReviewRedFlags({bool? isResolved}) async {
+    if (_token == null) return;
+    _isReviewIntegrityLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getReviewRedFlags(
+        _token!,
+        isResolved: isResolved,
+      );
+      _reviewRedFlags = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadReviewRedFlags error: $e');
+    }
+    _isReviewIntegrityLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> resolveReviewRedFlag(String alertId) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.resolveReviewRedFlag(_token!, alertId);
+      if (ok) await loadReviewRedFlags();
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> loadFlaggedReviews({String? status}) async {
+    if (_token == null) return;
+    if (status != null) _flaggedReviewStatusFilter = status;
+    _isReviewIntegrityLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getFlaggedReviews(
+        _token!,
+        status: _flaggedReviewStatusFilter,
+      );
+      _flaggedReviews = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadFlaggedReviews error: $e');
+    }
+    _isReviewIntegrityLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> overridePublishReview(String reviewId) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.overridePublishReview(_token!, reviewId);
+      if (ok) await loadFlaggedReviews();
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> loadFlaggedClientReviews({String? status}) async {
+    if (_token == null) return;
+    if (status != null) _flaggedClientReviewStatusFilter = status;
+    _isReviewIntegrityLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getFlaggedClientReviews(
+        _token!,
+        status: _flaggedClientReviewStatusFilter,
+      );
+      _flaggedClientReviews = List<Map<String, dynamic>>.from(
+        data['items'] ?? [],
+      );
+    } catch (e) {
+      debugPrint('AdminProvider.loadFlaggedClientReviews error: $e');
+    }
+    _isReviewIntegrityLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> overridePublishClientReview(String clientReviewId) async {
+    if (_token == null) return false;
+    try {
+      final ok = await AdminService.overridePublishClientReview(
+        _token!,
+        clientReviewId,
+      );
+      if (ok) await loadFlaggedClientReviews();
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> loadModerationItems({
     String? status,
     String? sortBy,
@@ -644,6 +747,11 @@ class AdminProvider extends ChangeNotifier {
     _reportsStatusFilter = 'all';
     _reportsTypeFilter = 'all';
     _scamFlags = [];
+    _reviewRedFlags = [];
+    _flaggedReviews = [];
+    _flaggedReviewStatusFilter = 'all';
+    _flaggedClientReviews = [];
+    _flaggedClientReviewStatusFilter = 'all';
     _moderationItems = [];
     _closedJobs = [];
     _closedAccounts = [];

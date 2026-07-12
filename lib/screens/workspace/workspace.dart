@@ -1,15 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:workbyte_app/screens/workspace/workspace_contract.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../models/job_post_model.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import 'workspace_detail.dart';
+import '../../providers/contract_provider.dart';
+import '../../providers/job_post_provider.dart';
 
 class WorkspaceScreen extends StatefulWidget {
   const WorkspaceScreen({super.key});
@@ -18,99 +18,79 @@ class WorkspaceScreen extends StatefulWidget {
   State<WorkspaceScreen> createState() => _WorkspaceScreenState();
 }
 
-class _WorkspaceScreenState extends State<WorkspaceScreen>
-    with SingleTickerProviderStateMixin {
-  static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
-    RegExp(r'/$'),
-    '',
-  );
-
-  late TabController _tabController;
+class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  List<ContractModel> _allContracts = [];
   bool _isLoading = true;
   String _searchQuery = '';
   String _sortOption = 'Latest';
+  // add to state fields
+  Map<String, String> _freelancerNames = {};
 
-  static const List<String> _tabs = [
-    'Active',
-    'Under Review',
-    'Revision Requested',
-    'Completed',
-    'Cancelled',
-    'Disputed',
-    'All',
-  ];
-
-  static const Map<String, List<String>?> _tabStatusMap = {
-    'Active': ['active'],
-    'Under Review': ['under_review'],
-    'Revision Requested': ['revision_requested'],
-    'Completed': ['completed'],
-    'Cancelled': ['cancelled'],
-    'Disputed': ['disputed'],
-    'All': null,
-  };
+  List<JobPostModel> _jobsWithContracts = [];
+  Map<String, List<ContractModel>> _contractsByJob = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this)
-      ..addListener(() {
-        if (mounted) setState(() {});
-      });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadContracts());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  String get _viewerRole {
-    final profile = context.read<ProfileProvider>();
-    return profile.freelancerProfile != null ? 'freelancer' : 'client';
-  }
-
-  String get _entityId {
-    final profile = context.read<ProfileProvider>();
-    if (_viewerRole == 'freelancer') {
-      return profile.freelancerProfile?.freelancerId ?? '';
-    }
-    return profile.clientProfile?.clientId ?? '';
-  }
-
-  Future<void> _loadContracts() async {
+  Future<void> _load() async {
     setState(() => _isLoading = true);
     try {
       final token = context.read<AuthProvider>().token!;
-      final role = _viewerRole;
-      final id = _entityId;
+      final profile = context.read<ProfileProvider>();
+      final clientId = profile.clientProfile?.clientId ?? '';
 
-      final endpoint = role == 'freelancer'
-          ? '$_baseUrl/contracts/freelancer/$id'
-          : '$_baseUrl/contracts/client/$id';
+      final contractProvider = context.read<ContractProvider>();
+      final jobPostProvider = context.read<JobPostProvider>();
 
-      final res = await http.get(
-        Uri.parse(endpoint),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      await Future.wait([
+        contractProvider.fetchContractsByClient(token, clientId),
+        jobPostProvider.fetchClientJobPosts(token, clientId),
+      ]);
 
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = body['details'] ?? body['data'] ?? [];
-        setState(() {
-          _allContracts = (list as List)
-              .map((e) => ContractModel.fromJson(e as Map<String, dynamic>))
-              .toList();
-        });
+      final contracts = contractProvider.contracts;
+      final Map<String, List<ContractModel>> grouped = {};
+      for (final c in contracts) {
+        grouped.putIfAbsent(c.jobPostId, () => []).add(c);
       }
+
+      final jobs = jobPostProvider.jobPosts
+          .where((j) => grouped.containsKey(j.jobPostId))
+          .toList();
+
+      // Resolve freelancer names for avatar initials
+      final uniqueFreelancerIds = contracts.map((c) => c.freelancerId).toSet();
+      final missingIds = uniqueFreelancerIds
+          .where((id) => id.isNotEmpty && !_freelancerNames.containsKey(id))
+          .toList();
+
+      if (missingIds.isNotEmpty) {
+        final results = await Future.wait(
+          missingIds.map(
+            (id) => profile.fetchFreelancerById(token: token, freelancerId: id),
+          ),
+        );
+        for (int i = 0; i < missingIds.length; i++) {
+          final f = results[i];
+          if (f != null) {
+            _freelancerNames[missingIds[i]] = f.displayName;
+          }
+        }
+      }
+
+      setState(() {
+        _contractsByJob = grouped;
+        _jobsWithContracts = jobs;
+      });
     } catch (e) {
       debugPrint('WorkspaceScreen load error: $e');
     } finally {
@@ -118,36 +98,37 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     }
   }
 
-  List<ContractModel> get _filtered {
-    final selectedTab = _tabs[_tabController.index];
-    final selectedStatuses = _tabStatusMap[selectedTab];
-
-    List<ContractModel> base = selectedStatuses == null
-        ? List<ContractModel>.from(_allContracts)
-        : _allContracts
-              .where((c) => selectedStatuses.contains(c.status))
-              .toList();
+  List<JobPostModel> get _filtered {
+    List<JobPostModel> base = List<JobPostModel>.from(_jobsWithContracts);
 
     if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      base = base.where((c) {
-        return c.contractTitle.toLowerCase().contains(query) ||
-            c.roleTitle.toLowerCase().contains(query);
-      }).toList();
+      final q = _searchQuery.toLowerCase();
+      base = base.where((j) => j.jobTitle.toLowerCase().contains(q)).toList();
     }
+
+    int workerCount(JobPostModel j) =>
+        _contractsByJob[j.jobPostId]?.length ?? 0;
 
     switch (_sortOption) {
       case 'Oldest':
-        base.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+        base.sort(
+          (a, b) => (a.postedAt ?? a.createdAt ?? '').compareTo(
+            b.postedAt ?? b.createdAt ?? '',
+          ),
+        );
         break;
-      case 'Budget: High to Low':
-        base.sort((a, b) => b.agreedBudget.compareTo(a.agreedBudget));
+      case 'Most Workers':
+        base.sort((a, b) => workerCount(b).compareTo(workerCount(a)));
         break;
-      case 'Budget: Low to High':
-        base.sort((a, b) => a.agreedBudget.compareTo(b.agreedBudget));
+      case 'Fewest Workers':
+        base.sort((a, b) => workerCount(a).compareTo(workerCount(b)));
         break;
-      default:
-        base.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+      default: // Latest
+        base.sort(
+          (a, b) => (b.postedAt ?? b.createdAt ?? '').compareTo(
+            a.postedAt ?? a.createdAt ?? '',
+          ),
+        );
     }
 
     return base;
@@ -163,7 +144,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
           children: [
             _buildHeader(),
             _buildSearchBar(),
-            _buildTabBar(),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -174,7 +154,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                     )
                   : RefreshIndicator(
                       color: AppColors.primary,
-                      onRefresh: _loadContracts,
+                      onRefresh: _load,
                       child: _filtered.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
@@ -186,7 +166,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                               ),
                               itemCount: _filtered.length,
                               itemBuilder: (_, i) =>
-                                  _buildContractCard(_filtered[i]),
+                                  _buildJobCard(_filtered[i]),
                             ),
                     ),
             ),
@@ -217,7 +197,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
             ],
           ),
           GestureDetector(
-            onTap: () => _showSortSheet(),
+            onTap: _showSortSheet,
             child: Row(
               children: [
                 Text(
@@ -243,7 +223,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -279,203 +259,112 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-        ),
-        child: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          onTap: (_) => setState(() {}),
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicator: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          dividerColor: Colors.transparent,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-          padding: EdgeInsets.zero,
-          overlayColor: WidgetStateProperty.all(Colors.transparent),
-          tabs: List.generate(_tabs.length, (i) {
-            final selected = _tabController.index == i;
-
-            return Tab(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: selected
-                      ? null
-                      : Border.all(color: Colors.grey.shade200),
-                  color: selected ? Colors.transparent : Colors.white,
-                ),
-                child: Text(
-                  _tabs[i],
-                  style: AppText.captionSemiBold.copyWith(
-                    color: selected ? Colors.white : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContractCard(ContractModel contract) {
-    final statusColor = _statusColor(contract.status);
-    final statusLabel = _statusLabel(contract.status);
-    final role = _viewerRole;
+  Widget _buildJobCard(JobPostModel job) {
+    final contracts = _contractsByJob[job.jobPostId] ?? [];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Row(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _openWorkspaceContracts(job),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: statusColor.withOpacity(0.4),
-                          ),
-                        ),
-                        child: Text(
-                          statusLabel,
-                          style: AppText.overline.copyWith(
-                            color: statusColor,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        contract.contractTitle,
-                        style: AppText.h3,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      child: Icon(
+                        Icons.work_rounded,
+                        color: AppColors.primary,
+                        size: 22,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    contract.roleTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${contract.budgetCurrency} ${contract.agreedBudget.toStringAsFixed(0)}',
-                    style: AppText.caption.copyWith(
-                      color: Colors.grey.shade700,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            job.jobTitle,
+                            style: AppText.h3,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            job.projectCategory,
+                            style: AppText.caption.copyWith(
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
-                  child: Text(
-                    _otherPartyInitial(contract, role),
-                    style: AppText.captionSemiBold.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  role == 'freelancer' ? '1 client' : '1 worker',
-                  style: AppText.caption.copyWith(color: Colors.grey.shade600),
-                ),
-                const Spacer(),
+                const SizedBox(height: 16),
+                Container(height: 1, color: Colors.grey.shade100),
+                const SizedBox(height: 14),
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 12,
-                      color: Colors.grey.shade400,
+                    _buildAvatarStack(contracts),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${contracts.length} ${contracts.length == 1 ? 'worker' : 'workers'}',
+                        style: AppText.captionSemiBold.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(contract.startDate),
-                      style: AppText.caption.copyWith(
-                        color: Colors.grey.shade400,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Working Space',
+                            style: AppText.captionSemiBold.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -483,43 +372,73 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => WorkspaceDetailScreen(
-                      contract: contract,
-                      viewerRole: role,
-                    ),
-                  ),
-                ).then((_) => _loadContracts()),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarStack(List<ContractModel> contracts) {
+    const maxShown = 3;
+    final shown = contracts.take(maxShown).toList();
+    final overflow = contracts.length - shown.length;
+
+    return SizedBox(
+      height: 32,
+      width: (shown.length * 22.0) + 10 + (overflow > 0 ? 22 : 0),
+      child: Stack(
+        children: [
+          for (int i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * 22.0,
+              child: _initialAvatar(_freelancerNames[shown[i].freelancerId]),
+            ),
+          if (overflow > 0)
+            Positioned(
+              left: shown.length * 22.0,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey.shade200,
+                  border: Border.all(color: Colors.white, width: 2),
                 ),
+                alignment: Alignment.center,
                 child: Text(
-                  'Working Space',
-                  style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                  '+$overflow',
+                  style: AppText.overline.copyWith(
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    final currentTab = _tabs[_tabController.index];
+  Widget _initialAvatar(String? name) {
+    final initial = (name != null && name.trim().isNotEmpty)
+        ? name.trim()[0].toUpperCase()
+        : 'F';
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primary.withOpacity(0.15),
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: AppText.captionSemiBold.copyWith(color: AppColors.primary),
+      ),
+    );
+  }
 
+  Widget _buildEmptyState() {
     return ListView(
       children: [
         const SizedBox(height: 80),
@@ -545,9 +464,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                currentTab == 'All'
-                    ? 'All contracts will appear here'
-                    : '$currentTab contracts will appear here',
+                'Jobs with hired freelancers will appear here',
                 style: AppText.caption.copyWith(color: Colors.grey.shade400),
               ),
             ],
@@ -557,8 +474,20 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     );
   }
 
+  void _openWorkspaceContracts(JobPostModel job) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkspaceContractScreen(
+          jobPostId: job.jobPostId,
+          jobTitle: job.jobTitle,
+        ),
+      ),
+    ).then((_) => _load());
+  }
+
   void _showSortSheet() {
-    const options = ['Latest', 'Oldest', 'Budget: High to Low', 'Budget: Low to High'];
+    const options = ['Latest', 'Oldest', 'Most Workers', 'Fewest Workers'];
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -603,11 +532,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                     Navigator.pop(context);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.primary : Colors.white,
                       border: Border.all(
-                        color: isSelected ? AppColors.primary : const Color(0xFFE0E0E0),
+                        color: isSelected
+                            ? AppColors.primary
+                            : const Color(0xFFE0E0E0),
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -616,7 +550,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : const Color(0xFF555555),
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF555555),
                       ),
                     ),
                   ),
@@ -628,57 +564,5 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         ),
       ),
     );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'active':
-        return AppColors.primary;
-      case 'under_review':
-        return const Color(0xFF2196F3);
-      case 'revision_requested':
-        return const Color(0xFFFF9800);
-      case 'completed':
-        return const Color(0xFF4CAF50);
-      case 'cancelled':
-        return Colors.grey;
-      case 'disputed':
-        return Colors.redAccent;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'Active';
-      case 'under_review':
-        return 'Under Review';
-      case 'revision_requested':
-        return 'Revision Requested';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'disputed':
-        return 'Disputed';
-      default:
-        return status;
-    }
-  }
-
-  String _otherPartyInitial(ContractModel contract, String role) {
-    return role == 'freelancer' ? 'C' : 'F';
-  }
-
-  String _formatDate(String? date) {
-    if (date == null || date.isEmpty) return '—';
-    try {
-      final d = DateTime.parse(date);
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return date;
-    }
   }
 }

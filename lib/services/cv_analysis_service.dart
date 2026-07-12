@@ -18,7 +18,7 @@ class CvAnalysisService {
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('cv_file', cvFile.path));
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamed);
     final body = jsonDecode(response.body);
 
@@ -46,7 +46,7 @@ class CvAnalysisService {
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamed);
     final body = jsonDecode(response.body);
 
@@ -92,7 +92,7 @@ class CvAnalysisService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode(bodyMap),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     debugPrint('POST /cv_upload/apply status=${response.statusCode}');
 

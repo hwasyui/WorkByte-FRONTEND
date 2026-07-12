@@ -29,7 +29,7 @@ class AppealService {
         'target_id': targetId,
         'message': message,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     debugPrint('POST /appeals status: ${response.statusCode}');
     debugPrint('POST /appeals body: ${response.body}');
@@ -75,7 +75,7 @@ class AppealService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     debugPrint('GET /appeals/mine status: ${response.statusCode}');
     debugPrint('GET /appeals/mine body: ${response.body}');
@@ -132,7 +132,7 @@ class AppealService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     debugPrint('GET /appeals/status status: ${response.statusCode}');
     debugPrint('GET /appeals/status body: ${response.body}');

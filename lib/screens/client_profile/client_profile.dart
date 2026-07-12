@@ -8,10 +8,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
+import '../../providers/client_review_provider.dart';
 import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
+import '../../widgets/trust_score_card.dart' show ScoreBar, StarRow;
+import '../../widgets/review_rating_helpers.dart';
 import '../../models/job_post_model.dart';
 import 'dart:io';
 
@@ -38,7 +41,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     bioController.addListener(() {
       setState(() => bioText = bioController.text);
     });
@@ -68,7 +71,31 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         websiteController.text = websiteUrl;
       });
       _loadPostedJobs();
+      _loadReviews();
     });
+  }
+
+  Future<void> _loadReviews() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final clientReviewProvider = Provider.of<ClientReviewProvider>(
+      context,
+      listen: false,
+    );
+
+    final clientId = profile.clientProfile?.clientId;
+    if (auth.token != null && clientId != null) {
+      await Future.wait([
+        clientReviewProvider.loadClientReviews(
+          token: auth.token!,
+          clientId: clientId,
+        ),
+        clientReviewProvider.loadTrustScore(
+          token: auth.token!,
+          clientId: clientId,
+        ),
+      ]);
+    }
   }
 
   Future<void> _loadPostedJobs() async {
@@ -901,6 +928,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     children: [
                       _buildAboutTab(profile),
                       _buildPostedJobsTab(),
+                      _buildReviewsTab(),
                       _buildSavedTab(),
                     ],
                   ),
@@ -1244,9 +1272,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 fontWeight: FontWeight.w500,
                 fontSize: 13,
               ),
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               tabs: const [
                 Tab(text: 'About'),
                 Tab(text: 'Posted Jobs'),
+                Tab(text: 'Reviews'),
                 Tab(text: 'Saved'),
               ],
             ),
@@ -1467,6 +1498,276 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ],
             );
           }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsTab() {
+    return Consumer<ClientReviewProvider>(
+      builder: (context, reviewProvider, _) {
+        final isLoading =
+            reviewProvider.reviewsState == ClientReviewLoadState.loading ||
+            reviewProvider.trustState == ClientReviewLoadState.loading;
+
+        if (isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+          );
+        }
+
+        final reviews = reviewProvider.reviews;
+        final trustScore = reviewProvider.trustScore;
+        final totalReviews =
+            trustScore?.totalReviewsReceived ?? reviews.length;
+
+        if (totalReviews == 0 && reviews.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'No reviews yet',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Freelancers you work with can review you after a contract completes',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          color: primaryColor,
+          onRefresh: _loadReviews,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (trustScore != null) ...[
+                  _buildOwnTrustScoreCard(trustScore, totalReviews),
+                  const SizedBox(height: 16),
+                ],
+                if (reviews.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      '$totalReviews Review${totalReviews == 1 ? '' : 's'} from Freelancers',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...reviews.map(_buildOwnReviewCard),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOwnTrustScoreCard(dynamic trustScore, int totalReviews) {
+    final score = trustScore.trustScore as double;
+    Color scoreColor;
+    String scoreLabel;
+    if (score >= 80) {
+      scoreColor = primaryColor;
+      scoreLabel = 'Excellent';
+    } else if (score >= 60) {
+      scoreColor = Colors.amber.shade700;
+      scoreLabel = 'Good';
+    } else if (score >= 40) {
+      scoreColor = Colors.orange;
+      scoreLabel = 'Fair';
+    } else {
+      scoreColor = Colors.red.shade400;
+      scoreLabel = 'Needs Work';
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: score / 100,
+                      strokeWidth: 6,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation(scoreColor),
+                    ),
+                    Center(
+                      child: Text(
+                        score.toStringAsFixed(0),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: scoreColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$scoreLabel Client',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: scoreColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Based on $totalReviews review${totalReviews == 1 ? '' : 's'} from freelancers',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ScoreBar(
+            label: 'Responsiveness',
+            icon: Icons.bolt_outlined,
+            value: trustScore.responsivenessScore as double?,
+          ),
+          ScoreBar(
+            label: 'Dispute-Free Rate',
+            icon: Icons.gavel_outlined,
+            value: trustScore.disputeFairnessScore as double?,
+          ),
+          ScoreBar(
+            label: 'Communication',
+            icon: Icons.sentiment_satisfied_outlined,
+            value: trustScore.communicationSentiment as double?,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOwnReviewCard(dynamic review) {
+    final ratings = review.ratings as List;
+    final avg = ratings.isEmpty
+        ? 0.0
+        : ratings.map((r) => r.score as double).reduce((a, b) => a + b) /
+              ratings.length;
+    final comment = review.writtenContent?.overallComment as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: primaryColor.withOpacity(0.1),
+                child: const Icon(Icons.person_outline, color: primaryColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  review.isAnonymous == true ? 'Anonymous Freelancer' : 'Freelancer',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+              StarRow(rating: avg),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              comment,
+              style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.45),
+            ),
+          ],
+          if (ratings.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ratings.map<Widget>((rating) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(ratingIcon(rating.category as String), size: 13, color: primaryColor),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${ratingLabel(rating.category as String)} ${(rating.score as double).toStringAsFixed(1)}',
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );

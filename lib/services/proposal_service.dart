@@ -29,7 +29,7 @@ class ProposalService {
     final res = await http.get(
       Uri.parse('$_baseUrl/proposals/job-post/$jobPostId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/job-post/$jobPostId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -48,7 +48,7 @@ class ProposalService {
     final res = await http.get(
       Uri.parse('$_baseUrl/proposals/freelancer/$freelancerId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -64,7 +64,7 @@ class ProposalService {
     final res = await http.get(
       Uri.parse('$_baseUrl/proposals/$proposalId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
@@ -80,7 +80,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('POST /proposals → ${res.statusCode}');
     if (res.statusCode == 200 || res.statusCode == 201) {
@@ -153,7 +153,7 @@ class ProposalService {
     }
 
     debugPrint('Uploading ${files.length} file(s) to /proposal-files');
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
     debugPrint('POST /proposal-files → ${res.statusCode}: ${res.body}');
 
@@ -191,7 +191,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals/$proposalId'),
       headers: _headers(token),
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('PUT /proposals/$proposalId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -208,7 +208,7 @@ class ProposalService {
     final res = await http.patch(
       Uri.parse('$_baseUrl/proposals/$proposalId/status?status=$status'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     final body = jsonDecode(res.body);
     debugPrint('PATCH /proposals/$proposalId/status → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -221,7 +221,7 @@ class ProposalService {
     final res = await http.delete(
       Uri.parse('$_baseUrl/proposals/$proposalId'),
       headers: _headers(token),
-    );
+    ).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to delete proposal');
@@ -244,7 +244,7 @@ class ProposalService {
         'message_text': messageText,
         if (contractId != null) 'contract_id': contractId,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
     debugPrint('POST /messages → ${res.statusCode}');
     if (res.statusCode != 200 && res.statusCode != 201) {
       final body = jsonDecode(res.body);

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 
-class ReviewSubmittedScreen extends StatelessWidget {
-  final String freelancerName;
+/// Mirrors review_submitted.dart for the freelancer-reviews-client counterpart.
+class ClientReviewSubmittedScreen extends StatelessWidget {
+  final String clientName;
 
-  const ReviewSubmittedScreen({Key? key, required this.freelancerName})
+  const ClientReviewSubmittedScreen({Key? key, required this.clientName})
     : super(key: key);
 
   @override
@@ -51,7 +52,7 @@ class ReviewSubmittedScreen extends StatelessWidget {
               const SizedBox(height: 12),
 
               Text(
-                'Your review for $freelancerName has been received and is now being verified by AI for fairness and authenticity.',
+                'Your review for $clientName has been received and is now being verified by AI for fairness and authenticity.',
                 style: AppText.body.copyWith(
                   color: Colors.grey[600],
                   height: 1.6,
@@ -71,7 +72,7 @@ class ReviewSubmittedScreen extends StatelessWidget {
                 icon: Icons.speed_outlined,
                 title: 'Trust Score Update',
                 body:
-                    "${freelancerName.split(' ').first}'s trust score will be recalculated once the review goes live.",
+                    "${clientName.split(' ').first}'s trust score will be recalculated once the review goes live.",
               ),
 
               const Spacer(flex: 2),

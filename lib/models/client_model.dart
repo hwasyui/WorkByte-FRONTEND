@@ -9,6 +9,12 @@ class ClientModel {
   final int totalJobsPosted;
   final int totalProjectsCompleted;
   final double? averageRatingGiven;
+  // Review-based rating this client RECEIVED from freelancers they've worked
+  // with (client_reviews / client_trust_score.weighted_review_avg_received) -
+  // distinct from averageRatingGiven, which is the rating this client GIVES
+  // to freelancers. This is the signal that matters for browsing/discovery.
+  final double? weightedReviewAvgReceived;
+  final int totalReviewsReceived;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -23,6 +29,8 @@ class ClientModel {
     this.totalJobsPosted = 0,
     this.totalProjectsCompleted = 0,
     this.averageRatingGiven,
+    this.weightedReviewAvgReceived,
+    this.totalReviewsReceived = 0,
     this.createdAt,
     this.updatedAt,
   });
@@ -39,6 +47,9 @@ class ClientModel {
     totalProjectsCompleted:
         (json['total_projects_completed'] as num?)?.toInt() ?? 0,
     averageRatingGiven: (json['average_rating_given'] as num?)?.toDouble(),
+    weightedReviewAvgReceived:
+        (json['weighted_review_avg_received'] as num?)?.toDouble(),
+    totalReviewsReceived: (json['total_reviews_received'] as num?)?.toInt() ?? 0,
     createdAt: json['created_at'] != null
         ? DateTime.tryParse(json['created_at'].toString())
         : null,
@@ -66,6 +77,8 @@ class ClientModel {
     totalJobsPosted: totalJobsPosted,
     totalProjectsCompleted: totalProjectsCompleted,
     averageRatingGiven: averageRatingGiven,
+    weightedReviewAvgReceived: weightedReviewAvgReceived,
+    totalReviewsReceived: totalReviewsReceived,
     createdAt: createdAt,
     updatedAt: updatedAt,
   );

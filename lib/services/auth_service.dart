@@ -38,7 +38,7 @@ class AuthService {
         Uri.parse('$_baseUrl/auth/oauth/google/mobile'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'id_token': idToken}),
-      );
+      ).timeout(const Duration(seconds: 20));
 
       debugPrint('Google mobile login status: ${response.statusCode}');
       debugPrint('Google mobile login body: ${response.body}');
@@ -74,7 +74,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     debugPrint('POST /auth/login response: $body');
@@ -126,7 +126,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refresh_token': refreshToken}),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
@@ -149,7 +149,7 @@ class AuthService {
         Uri.parse('$_baseUrl/auth/logout'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': refreshToken}),
-      );
+      ).timeout(const Duration(seconds: 20));
     } catch (_) {}
   }
 
@@ -178,7 +178,7 @@ class AuthService {
         'full_name': fullName ?? email.split('@')[0],
         if (companyName != null) 'company_name': companyName,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final data = jsonDecode(response.body);
 
@@ -199,7 +199,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/verify-email'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'otp': otp}),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final data = jsonDecode(response.body);
 
@@ -220,7 +220,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/resend-verification'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final data = jsonDecode(response.body);
 
@@ -248,7 +248,7 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({'role': role, 'full_name': fullName}),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     debugPrint('POST /auth/add-role response: $body');
@@ -270,7 +270,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
-    );
+    ).timeout(const Duration(seconds: 20));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       if (data['status'] == 'success' || data['data'] != null) return;
@@ -289,7 +289,7 @@ class AuthService {
       Uri.parse('$_baseUrl/auth/reset-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
-    );
+    ).timeout(const Duration(seconds: 20));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       if (data['status'] == 'success' || data['data'] != null) return;
@@ -314,7 +314,7 @@ class AuthService {
         'old_password': oldPassword,
         'new_password': newPassword,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       if (data['status'] == 'success' || data['data'] != null) return;
@@ -335,7 +335,7 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({'new_password': newPassword}),
-    );
+    ).timeout(const Duration(seconds: 20));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
       if (data['status'] == 'success' || data['data'] != null) return;

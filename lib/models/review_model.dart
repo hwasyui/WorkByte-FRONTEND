@@ -81,12 +81,11 @@ class ReviewAiAnalysis {
   final double sentimentScore;
   final String sentimentLabel;
   final bool sentimentMismatch;
+  final double? mismatchSeverity;
   final double authenticityScore;
   final bool isFlaggedFake;
   final bool isFlaggedCoerced;
   final List<String> flagReasons;
-  final double biasScore;
-  final Map<String, dynamic> biasFlags;
   final bool overallPass;
 
   const ReviewAiAnalysis({
@@ -95,15 +94,17 @@ class ReviewAiAnalysis {
     required this.sentimentScore,
     required this.sentimentLabel,
     required this.sentimentMismatch,
+    this.mismatchSeverity,
     required this.authenticityScore,
     required this.isFlaggedFake,
     required this.isFlaggedCoerced,
     required this.flagReasons,
-    required this.biasScore,
-    required this.biasFlags,
     required this.overallPass,
   });
 
+  /// True/positive/negative come from the review_ml sentiment classifier,
+  /// authenticity/mismatch are blended with the trained review_ml models -
+  /// see ai_related/review_analysis/review_ml/ on the backend.
   factory ReviewAiAnalysis.fromJson(Map<String, dynamic> json) =>
       ReviewAiAnalysis(
         id: json['id'] as String? ?? '',
@@ -111,6 +112,7 @@ class ReviewAiAnalysis {
         sentimentScore: (json['sentiment_score'] as num?)?.toDouble() ?? 0.0,
         sentimentLabel: json['sentiment_label'] as String? ?? 'neutral',
         sentimentMismatch: json['sentiment_mismatch'] as bool? ?? false,
+        mismatchSeverity: (json['mismatch_severity'] as num?)?.toDouble(),
         authenticityScore:
             (json['authenticity_score'] as num?)?.toDouble() ?? 1.0,
         isFlaggedFake: json['is_flagged_fake'] as bool? ?? false,
@@ -120,8 +122,6 @@ class ReviewAiAnalysis {
                 ?.map((e) => e as String)
                 .toList() ??
             [],
-        biasScore: (json['bias_score'] as num?)?.toDouble() ?? 0.0,
-        biasFlags: json['bias_flags'] as Map<String, dynamic>? ?? {},
         overallPass: json['overall_pass'] as bool? ?? true,
       );
 }
@@ -214,9 +214,12 @@ class TrustScore {
   final double overallScore;
   final double? weightedReviewAvg;
   final double? displayStarAvg;
+  final double? onTimeScore;
   final double? revisionRateScore;
   final double? responsivenessScore;
   final double? communicationSentiment;
+  final double? authenticityConfidence;
+  final double? consistencyScore;
   final int totalReviews;
   final String? category;
   final double? categoryRankPct;
@@ -227,9 +230,12 @@ class TrustScore {
     required this.overallScore,
     this.weightedReviewAvg,
     this.displayStarAvg,
+    this.onTimeScore,
     this.revisionRateScore,
     this.responsivenessScore,
     this.communicationSentiment,
+    this.authenticityConfidence,
+    this.consistencyScore,
     required this.totalReviews,
     this.category,
     this.categoryRankPct,
@@ -241,10 +247,14 @@ class TrustScore {
     overallScore: (json['overall_score'] as num?)?.toDouble() ?? 0.0,
     weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
     displayStarAvg: (json['display_star_avg'] as num?)?.toDouble(),
+    onTimeScore: (json['on_time_score'] as num?)?.toDouble(),
     revisionRateScore: (json['revision_rate_score'] as num?)?.toDouble(),
     responsivenessScore: (json['responsiveness_score'] as num?)?.toDouble(),
     communicationSentiment: (json['communication_sentiment'] as num?)
         ?.toDouble(),
+    authenticityConfidence: (json['authenticity_confidence'] as num?)
+        ?.toDouble(),
+    consistencyScore: (json['consistency_score'] as num?)?.toDouble(),
     totalReviews: (json['total_reviews'] as num?)?.toInt() ?? 0,
     category: json['category'] as String?,
     categoryRankPct: (json['category_rank_pct'] as num?)?.toDouble(),
@@ -254,9 +264,12 @@ class TrustScore {
   );
 
   /// Converts 0–1 component scores to 0–100 for display.
+  double get onTimeDisplay => (onTimeScore ?? 0) * 100;
   double get revisionRateDisplay => (revisionRateScore ?? 0) * 100;
   double get responsivenessDisplay => (responsivenessScore ?? 0) * 100;
   double get communicationDisplay => (communicationSentiment ?? 0) * 100;
+  double get authenticityDisplay => (authenticityConfidence ?? 0) * 100;
+  double get consistencyDisplay => (consistencyScore ?? 0) * 100;
 
   /// e.g. "Top 6%" string from category_rank_pct (percentile from bottom).
   /// Backend returns what % of freelancers score BELOW this freelancer.

@@ -18,7 +18,7 @@ class ReportService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     debugPrint('GET /reports/reasons response: $body');
@@ -65,7 +65,7 @@ class ReportService {
         if (customReason != null && customReason.isNotEmpty)
           'custom_reason': customReason,
       }),
-    );
+    ).timeout(const Duration(seconds: 20));
 
     final body = jsonDecode(response.body);
     debugPrint('POST /reports response: $body');
