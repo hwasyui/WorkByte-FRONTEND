@@ -437,11 +437,17 @@ class AdminService {
 
   /// Browse the harmful-text audit trail (read-only history, not an action queue).
   /// [reviewed] filters by whether an admin has looked at a row yet: null = no
-  /// filter, false = only unreviewed, true = only reviewed.
+  /// filter, false = only unreviewed, true = only reviewed. [minScore]/[maxScore]
+  /// filter on total_score (sum of the 5 label scores, 0-5) - a "high severity"
+  /// quick filter is just minScore on its own. [userId] narrows to one flagged
+  /// user - the drill-down from [getModerationItemsByUser]'s grouped view.
   static Future<Map<String, dynamic>> getModerationItems(
     String token, {
     bool? reviewed,
     String contentType = 'all',
+    double? minScore,
+    double? maxScore,
+    String? userId,
     String sortBy = 'created_at',
     String sortDir = 'desc',
     int page = 1,
@@ -451,6 +457,38 @@ class AdminService {
       final uri = Uri.parse('$_baseUrl/admin/moderation').replace(
         queryParameters: {
           if (reviewed != null) 'reviewed': reviewed.toString(),
+          'content_type': contentType,
+          if (minScore != null) 'min_score': minScore.toString(),
+          if (maxScore != null) 'max_score': maxScore.toString(),
+          if (userId != null) 'user_id': userId,
+          'sort_by': sortBy,
+          'sort_dir': sortDir,
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      final res = await http.get(uri, headers: _headers(token));
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  /// Same audit trail as [getModerationItems], grouped by user (one row per
+  /// flagged user_id/email with flagged_count/unreviewed_count/max_score/
+  /// last_flagged_at) so repeat offenders are easy to spot.
+  static Future<Map<String, dynamic>> getModerationItemsByUser(
+    String token, {
+    String contentType = 'all',
+    String sortBy = 'flagged_count',
+    String sortDir = 'desc',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/moderation/by-user').replace(
+        queryParameters: {
           'content_type': contentType,
           'sort_by': sortBy,
           'sort_dir': sortDir,
@@ -482,6 +520,70 @@ class AdminService {
       return res.statusCode == 200;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Mark every currently-unreviewed row matching [contentType]/[minScore] as
+  /// reviewed in one call - the "mark all reviewed" button for whatever
+  /// filtered view is on screen. Bookkeeping only, same as the single-item
+  /// endpoint. Returns the number of rows marked, or null on failure.
+  static Future<int?> bulkReviewModerationItems(
+    String token, {
+    String contentType = 'all',
+    double? minScore,
+    String? adminNote,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/moderation/review-all').replace(
+        queryParameters: {
+          'content_type': contentType,
+          if (minScore != null) 'min_score': minScore.toString(),
+        },
+      );
+      final res = await http.post(
+        uri,
+        headers: _headers(token),
+        body: jsonEncode({'admin_note': adminNote}),
+      );
+      if (res.statusCode == 200) {
+        // Not _extract() - that helper only pulls out items/pagination and
+        // would silently drop reviewed_count, since {"reviewed_count": N} has
+        // none of the keys it looks for.
+        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = decoded['details'] ?? decoded['data'] ?? decoded;
+        if (details is Map) {
+          return (details['reviewed_count'] as num?)?.toInt() ?? 0;
+        }
+        return 0;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Run the harmful-text model directly against arbitrary text (admin
+  /// scratch-pad, e.g. to test whether a phrase would be flagged). Doesn't
+  /// write anything anywhere - POST /harmful-text/detect is a pure utility
+  /// call over the model, not tied to any content row. Returns
+  /// `{"is_harmful": bool, "labels": [...], "scores": {...}}` or
+  /// `{"error": "..."}` on failure.
+  static Future<Map<String, dynamic>?> detectHarmfulText(
+    String token,
+    String text,
+  ) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/harmful-text/detect'),
+        headers: _headers(token),
+        body: jsonEncode({'text': text}),
+      );
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200) {
+        final details = decoded['details'] ?? decoded['data'] ?? decoded;
+        return details is Map ? Map<String, dynamic>.from(details) : null;
+      }
+      return {'error': decoded['detail']?.toString() ?? decoded['details']?.toString() ?? 'Scan failed'};
+    } catch (e) {
+      return {'error': e.toString()};
     }
   }
 

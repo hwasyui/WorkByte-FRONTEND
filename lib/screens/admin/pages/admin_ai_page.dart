@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/harmful_block_dialog.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
 
@@ -924,6 +925,13 @@ class _ModerationTab extends StatelessWidget {
     'proposal': 'Proposal',
   };
 
+  void _showManualScan(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const _ManualScanDialog(),
+    );
+  }
+
   void _showAiInfo(BuildContext context) {
     showDialog(
       context: context,
@@ -1013,13 +1021,13 @@ class _ModerationTab extends StatelessWidget {
                       _ModalSection(
                         title: 'Model',
                         content:
-                            'A RoBERTa toxicity classifier fine-tuned for platform moderation. It achieves an F1 macro score of 0.72 and runs inference in about 55 ms. The model scores each submission across five harm categories: Toxicity, Obscene, Threat, Insult, and Identity Hate, then routes anything above the threshold to admin review.',
+                            'A fine-tuned BERT toxicity classifier, selected over RoBERTa and DistilBERT alternatives on macro F1 (0.85) plus a tiebreak on false-positive behaviour. Each of the five harm labels has its own tuned threshold rather than one global cutoff. Short fields (names, titles, skill names) are checked against a deterministic keyword list instead — a 1-4 word field gives the model nothing to condition on, so it matches vocabulary rather than meaning.',
                       ),
                       const SizedBox(height: 14),
                       _ModalSection(
                         title: 'How it works',
                         content:
-                            'Every submission is cleaned and tokenized before scoring, and each label gets a score between 0.0 and 1.0. If any label crosses the threshold, the content is blocked at submission — the author is told their content violated the policy and it is never saved. Nothing waits in a queue for a decision.',
+                            'Every submission is cleaned and scored, and each label gets a probability between 0.0 and 1.0. Most fields (profile bio, DM messages, contract text, reviews) are checked before anything is written — a flagged submission is rejected outright and never saved. A few fields (job posts, proposals, portfolio, education, work experience) save immediately and get scanned in the background within seconds, flipping to blocked if flagged. Either way, nothing waits in a queue for a human decision.',
                       ),
                       const SizedBox(height: 14),
                       _ModalSection(
@@ -1077,6 +1085,67 @@ class _ModerationTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
+        // Same filter bar, same slot, regardless of view - only the groups
+        // (and what "active"/"summary" means) change, since By-user is a
+        // grouped aggregate (flagged_count/max_score per user) with no single
+        // reviewed-status or severity score per row the way List has.
+        final byUserView = admin.moderationByUserView;
+        final hasActiveFilter = byUserView
+            ? admin.moderationTypeFilter != 'all' || admin.moderationByUserSort != 'most_flagged'
+            : admin.moderationReviewedFilter != 'all' ||
+                admin.moderationTypeFilter != 'all' ||
+                admin.moderationSeverityFilter != 'all' ||
+                admin.moderationSort != 'recent';
+        final filterSummaryText = hasActiveFilter
+            ? 'Filters active'
+            : (byUserView ? 'All users' : 'All entries');
+        final filterGroups = byUserView
+            ? [
+                FilterGroupData(
+                  label: 'CONTENT TYPE',
+                  options: _types,
+                  labelFor: (t) => _typeLabels[t] ?? t,
+                  selected: admin.moderationTypeFilter,
+                  onSelect: (t) => admin.loadModerationByUser(contentType: t),
+                ),
+                FilterGroupData(
+                  label: 'SORT BY',
+                  options: moderationByUserSortOptions.keys.toList(),
+                  labelFor: (s) => moderationByUserSortLabels[s] ?? s,
+                  selected: admin.moderationByUserSort,
+                  onSelect: (s) => admin.loadModerationByUser(sort: s),
+                ),
+              ]
+            : [
+                FilterGroupData(
+                  label: 'REVIEW STATE',
+                  options: _reviewedFilters,
+                  labelFor: (s) => _reviewedLabels[s] ?? s,
+                  selected: admin.moderationReviewedFilter,
+                  onSelect: (s) => admin.loadModerationItems(reviewed: s),
+                ),
+                FilterGroupData(
+                  label: 'CONTENT TYPE',
+                  options: _types,
+                  labelFor: (t) => _typeLabels[t] ?? t,
+                  selected: admin.moderationTypeFilter,
+                  onSelect: (t) => admin.loadModerationItems(contentType: t),
+                ),
+                FilterGroupData(
+                  label: 'SEVERITY',
+                  options: moderationSeverityRanges.keys.toList(),
+                  labelFor: (s) => moderationSeverityLabels[s] ?? s,
+                  selected: admin.moderationSeverityFilter,
+                  onSelect: (s) => admin.loadModerationItems(severity: s),
+                ),
+                FilterGroupData(
+                  label: 'SORT BY',
+                  options: moderationSortOptions.keys.toList(),
+                  labelFor: (s) => moderationSortLabels[s] ?? s,
+                  selected: admin.moderationSort,
+                  onSelect: (s) => admin.loadModerationItems(sort: s),
+                ),
+              ];
         return Column(
           children: [
             // ── Harmful text detection sub-header with info button ──────
@@ -1095,7 +1164,7 @@ class _ModerationTab extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Powered by RoBERTa - F1 0.72',
+                    'Powered by BERT - F1 0.85',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: const Color(0xFF4F46E5),
@@ -1103,6 +1172,40 @@ class _ModerationTab extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  GestureDetector(
+                    onTap: () => _showManualScan(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.search_rounded,
+                            size: 13,
+                            color: Color(0xFF6B7280),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Manual scan',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => _showAiInfo(context),
                     child: Container(
@@ -1140,61 +1243,760 @@ class _ModerationTab extends StatelessWidget {
               ),
             ),
 
+            // Single shared filter bar for both List and By-user views - the
+            // groups (and what "active"/"summary" means) are computed above
+            // since By-user is a grouped aggregate (flagged_count/max_score
+            // per user) with no single reviewed-status or severity score per
+            // row the way List has.
             FilterDropdownBar(
-              summaryText: admin.moderationReviewedFilter != 'all' || admin.moderationTypeFilter != 'all'
-                  ? 'Filters active'
-                  : 'All entries',
-              hasActiveFilter: admin.moderationReviewedFilter != 'all' || admin.moderationTypeFilter != 'all',
+              summaryText: filterSummaryText,
+              hasActiveFilter: hasActiveFilter,
               accentColor: const Color(0xFF4F46E5),
-              groups: [
-                FilterGroupData(
-                  label: 'REVIEW STATE',
-                  options: _reviewedFilters,
-                  labelFor: (s) => _reviewedLabels[s] ?? s,
-                  selected: admin.moderationReviewedFilter,
-                  onSelect: (s) => admin.loadModerationItems(reviewed: s),
-                ),
-                FilterGroupData(
-                  label: 'CONTENT TYPE',
-                  options: _types,
-                  labelFor: (t) => _typeLabels[t] ?? t,
-                  selected: admin.moderationTypeFilter,
-                  onSelect: (t) => admin.loadModerationItems(contentType: t),
-                ),
-              ],
+              groups: filterGroups,
+            ),
+
+            // ── View toggle (flat list / grouped by repeat offender) + bulk
+            // "mark all reviewed" for whatever filtered view is on screen ──
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  _ViewToggle(
+                    byUser: admin.moderationByUserView,
+                    onChanged: admin.setModerationByUserView,
+                  ),
+                  const Spacer(),
+                  if (!admin.moderationByUserView)
+                    _BulkReviewButton(
+                      contentType: admin.moderationTypeFilter,
+                    ),
+                ],
+              ),
             ),
 
             Expanded(
-              child: admin.isAiLoading && admin.moderationItems.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF7C3AED),
-                      ),
-                    )
-                  : admin.moderationItems.isEmpty
-                  ? _Empty(
-                      icon: Icons.shield_rounded,
-                      message: 'No audit entries found',
-                      sub: 'Nothing has been flagged for this filter',
-                    )
-                  : RefreshIndicator(
-                      color: const Color(0xFF7C3AED),
-                      onRefresh: () => admin.loadModerationItems(
-                        reviewed: admin.moderationReviewedFilter,
-                        contentType: admin.moderationTypeFilter,
-                      ),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: admin.moderationItems.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (ctx, i) =>
-                            _ModerationCard(item: admin.moderationItems[i]),
-                      ),
-                    ),
+              child: admin.moderationByUserView
+                  ? _ModerationByUserList(admin: admin)
+                  : (admin.isAiLoading && admin.moderationItems.isEmpty
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF7C3AED),
+                          ),
+                        )
+                      : admin.moderationItems.isEmpty
+                      ? _Empty(
+                          icon: Icons.shield_rounded,
+                          message: 'No audit entries found',
+                          sub: 'Nothing has been flagged for this filter',
+                        )
+                      : RefreshIndicator(
+                          color: const Color(0xFF7C3AED),
+                          onRefresh: () => admin.loadModerationItems(
+                            reviewed: admin.moderationReviewedFilter,
+                            contentType: admin.moderationTypeFilter,
+                            severity: admin.moderationSeverityFilter,
+                          ),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: admin.moderationItems.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (ctx, i) =>
+                                _ModerationCard(item: admin.moderationItems[i]),
+                          ),
+                        )),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+/// Segmented toggle between the flat audit-trail list and the by-user grouped
+/// view (GET /admin/moderation vs GET /admin/moderation/by-user).
+class _ViewToggle extends StatelessWidget {
+  final bool byUser;
+  final ValueChanged<bool> onChanged;
+  const _ViewToggle({required this.byUser, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ViewToggleOption(
+            label: 'List',
+            icon: Icons.list_alt_rounded,
+            selected: !byUser,
+            onTap: () => onChanged(false),
+          ),
+          _ViewToggleOption(
+            label: 'By user',
+            icon: Icons.groups_rounded,
+            selected: byUser,
+            onTap: () => onChanged(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ViewToggleOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ViewToggleOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: selected
+                  ? const Color(0xFF4F46E5)
+                  : const Color(0xFF6B7280),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selected
+                    ? const Color(0xFF4F46E5)
+                    : const Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Calls POST /admin/moderation/review-all for whatever content-type/severity
+/// filter is currently active. Bookkeeping only, same as marking one row.
+class _BulkReviewButton extends StatefulWidget {
+  final String contentType;
+  const _BulkReviewButton({required this.contentType});
+
+  @override
+  State<_BulkReviewButton> createState() => _BulkReviewButtonState();
+}
+
+class _BulkReviewButtonState extends State<_BulkReviewButton> {
+  bool _loading = false;
+
+  Future<void> _run() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          'Mark all reviewed',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'This marks every currently-unreviewed row matching the active filters '
+          'as reviewed. Bookkeeping only — it does not remove content or '
+          'restrict anyone.',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Mark all reviewed',
+              style: GoogleFonts.poppins(color: const Color(0xFF4F46E5), fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _loading = true);
+    final count = await context.read<AdminProvider>().bulkReviewModeration();
+    if (!mounted) return;
+    setState(() => _loading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count != null ? 'Marked $count row${count == 1 ? '' : 's'} reviewed' : 'Bulk review failed',
+          style: GoogleFonts.poppins(),
+        ),
+        backgroundColor: count != null ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4F46E5)),
+      );
+    }
+    return _ActionButton(
+      label: 'Mark all reviewed',
+      icon: Icons.done_all_rounded,
+      color: const Color(0xFF4F46E5),
+      onTap: _run,
+    );
+  }
+}
+
+/// GET /admin/moderation/by-user - one card per flagged user, sorted by
+/// flagged_count, so repeat offenders surface without scrolling the flat list.
+class _ModerationByUserList extends StatelessWidget {
+  final AdminProvider admin;
+  const _ModerationByUserList({required this.admin});
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildBody();
+  }
+
+  Widget _buildBody() {
+    if (admin.isModerationByUserLoading && admin.moderationByUser.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+      );
+    }
+    if (admin.moderationByUser.isEmpty) {
+      return _Empty(
+        icon: Icons.groups_rounded,
+        message: 'No flagged users found',
+        sub: 'Nothing has been flagged for this filter',
+      );
+    }
+    return RefreshIndicator(
+      color: const Color(0xFF7C3AED),
+      onRefresh: () => admin.loadModerationByUser(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: admin.moderationByUser.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (ctx, i) =>
+            _ModerationByUserCard(item: admin.moderationByUser[i]),
+      ),
+    );
+  }
+}
+
+class _ModerationByUserCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  const _ModerationByUserCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = item['user_id']?.toString() ?? '';
+    final email = item['user_email']?.toString() ?? (userId.isNotEmpty ? userId : 'Unknown user');
+    final flaggedCount = (item['flagged_count'] as num?)?.toInt() ?? 0;
+    final unreviewedCount = (item['unreviewed_count'] as num?)?.toInt() ?? 0;
+    final maxScore = (item['max_score'] as num?)?.toDouble() ?? 0.0;
+    final lastFlaggedAt = item['last_flagged_at']?.toString() ?? '';
+    final scoreColor = maxScore >= 3.0
+        ? const Color(0xFFDC2626)
+        : maxScore >= 1.5
+        ? const Color(0xFFD97706)
+        : const Color(0xFF6B7280);
+
+    return GestureDetector(
+      onTap: userId.isEmpty
+          ? null
+          : () => showDialog(
+                context: context,
+                builder: (_) => _UserModerationDetailDialog(userId: userId, email: email),
+              ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: scoreColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.person_outline_rounded, color: scoreColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    email,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF111827),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _InfoChip(label: '$flaggedCount flagged', color: const Color(0xFF6B7280)),
+                      const SizedBox(width: 6),
+                      if (unreviewedCount > 0)
+                        _InfoChip(label: '$unreviewedCount unreviewed', color: const Color(0xFFD97706)),
+                    ],
+                  ),
+                  if (lastFlaggedAt.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Last flagged: ${lastFlaggedAt.split('T').first}',
+                      style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF9CA3AF)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            _ScoreBadge(
+              score: (maxScore / 5.0).clamp(0.0, 1.0),
+              color: scoreColor,
+              label: 'Max ${maxScore.toStringAsFixed(2)}/5.0',
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF9CA3AF)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Opened by tapping a By-user card: that one user's own flagged entries,
+/// filterable independently (REVIEW STATE / CONTENT TYPE / SEVERITY) of the
+/// flat list view underneath - the drill-down GET /admin/moderation?user_id=
+/// makes possible.
+class _UserModerationDetailDialog extends StatefulWidget {
+  final String userId;
+  final String email;
+  const _UserModerationDetailDialog({required this.userId, required this.email});
+
+  @override
+  State<_UserModerationDetailDialog> createState() => _UserModerationDetailDialogState();
+}
+
+class _UserModerationDetailDialogState extends State<_UserModerationDetailDialog> {
+  static const _reviewedFilters = ['all', 'unreviewed', 'reviewed'];
+  static const _reviewedLabels = {'all': 'All', 'unreviewed': 'Unreviewed', 'reviewed': 'Reviewed'};
+  static const _types = [
+    'all', 'job_post', 'freelancer_profile', 'client_profile',
+    'portfolio', 'education', 'work_experience', 'proposal',
+  ];
+  static const _typeLabels = {
+    'all': 'All', 'job_post': 'Job Post', 'freelancer_profile': 'Freelancer',
+    'client_profile': 'Client', 'portfolio': 'Portfolio', 'education': 'Education',
+    'work_experience': 'Work Exp.', 'proposal': 'Proposal',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().loadModerationForUser(widget.userId);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Don't clear on every rebuild - only once this dialog is actually gone,
+    // so the next frame's Consumer isn't racing an empty list mid-close.
+    context.read<AdminProvider>().closeUserModerationDetail();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.of(context).size.height * 0.82,
+        ),
+        child: Consumer<AdminProvider>(
+          builder: (context, admin, _) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.email,
+                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Flagged entries for this user',
+                              style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        splashRadius: 16,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: FilterDropdownBar(
+                    summaryText: admin.userDetailReviewedFilter != 'all' ||
+                            admin.userDetailTypeFilter != 'all' ||
+                            admin.userDetailSeverityFilter != 'all' ||
+                            admin.userDetailSort != 'recent'
+                        ? 'Filters active'
+                        : 'All entries',
+                    hasActiveFilter: admin.userDetailReviewedFilter != 'all' ||
+                        admin.userDetailTypeFilter != 'all' ||
+                        admin.userDetailSeverityFilter != 'all' ||
+                        admin.userDetailSort != 'recent',
+                    accentColor: const Color(0xFF4F46E5),
+                    groups: [
+                      FilterGroupData(
+                        label: 'REVIEW STATE',
+                        options: _reviewedFilters,
+                        labelFor: (s) => _reviewedLabels[s] ?? s,
+                        selected: admin.userDetailReviewedFilter,
+                        onSelect: (s) => admin.loadModerationForUser(widget.userId, reviewed: s),
+                      ),
+                      FilterGroupData(
+                        label: 'CONTENT TYPE',
+                        options: _types,
+                        labelFor: (t) => _typeLabels[t] ?? t,
+                        selected: admin.userDetailTypeFilter,
+                        onSelect: (t) => admin.loadModerationForUser(widget.userId, contentType: t),
+                      ),
+                      FilterGroupData(
+                        label: 'SEVERITY',
+                        options: moderationSeverityRanges.keys.toList(),
+                        labelFor: (s) => moderationSeverityLabels[s] ?? s,
+                        selected: admin.userDetailSeverityFilter,
+                        onSelect: (s) => admin.loadModerationForUser(widget.userId, severity: s),
+                      ),
+                      FilterGroupData(
+                        label: 'SORT BY',
+                        options: moderationSortOptions.keys.toList(),
+                        labelFor: (s) => moderationSortLabels[s] ?? s,
+                        selected: admin.userDetailSort,
+                        onSelect: (s) => admin.loadModerationForUser(widget.userId, sort: s),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: admin.isUserDetailLoading && admin.userDetailItems.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(
+                            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+                          ),
+                        )
+                      : admin.userDetailItems.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: _Empty(
+                                icon: Icons.shield_rounded,
+                                message: 'No entries for this filter',
+                                sub: 'Try a different content type or severity',
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                              itemCount: admin.userDetailItems.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemBuilder: (ctx, i) =>
+                                  _ModerationCard(item: admin.userDetailItems[i]),
+                            ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// POST /admin/moderation/scan - manually run the scanner against arbitrary
+/// text, e.g. to test whether a phrase would be flagged, or to backfill a
+/// scan for content that predates moderation. content_type is restricted to
+/// job_post/freelancer_profile/client_profile by the backend.
+class _ManualScanDialog extends StatefulWidget {
+  const _ManualScanDialog();
+
+  @override
+  State<_ManualScanDialog> createState() => _ManualScanDialogState();
+}
+
+class _ManualScanDialogState extends State<_ManualScanDialog> {
+  final _textController = TextEditingController();
+  bool _loading = false;
+  Map<String, dynamic>? _result;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run() async {
+    if (_textController.text.trim().isEmpty) return;
+    setState(() {
+      _loading = true;
+      _result = null;
+    });
+    final result = await context
+        .read<AdminProvider>()
+        .detectHarmfulText(_textController.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _result = result ?? {'error': 'Scan failed'};
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Manual Scan',
+                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      splashRadius: 16,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Runs the model directly against any text - useful to test whether a '
+                  'phrase would be flagged. Nothing is saved anywhere.',
+                  style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 16),
+                _ScanTextField(controller: _textController, hint: 'Text to scan', maxLines: 4),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _run,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text('Run scan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                if (_result != null) ...[
+                  const SizedBox(height: 14),
+                  _ScanResultCard(result: _result!),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final int maxLines;
+  const _ScanTextField({required this.controller, required this.hint, this.maxLines = 1});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: GoogleFonts.poppins(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        isDense: true,
+      ),
+    );
+  }
+}
+
+class _ScanResultCard extends StatelessWidget {
+  final Map<String, dynamic> result;
+  const _ScanResultCard({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    if (result['error'] != null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFECACA)),
+        ),
+        child: Text(
+          result['error'].toString(),
+          style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF991B1B)),
+        ),
+      );
+    }
+
+    final isHarmful = result['is_harmful'] == true;
+    final labels = (result['labels'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
+    final scores = result['scores'] is Map
+        ? Map<String, dynamic>.from(result['scores'] as Map)
+        : const <String, dynamic>{};
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isHarmful ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isHarmful ? const Color(0xFFFECACA) : const Color(0xFFBBF7D0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isHarmful ? Icons.flag_rounded : Icons.check_circle_outline_rounded,
+                size: 16,
+                color: isHarmful ? const Color(0xFFDC2626) : const Color(0xFF059669),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isHarmful
+                    ? 'Flagged for ${describeLabels(labels)}'
+                    : 'Clean - no label crossed its threshold',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isHarmful ? const Color(0xFF991B1B) : const Color(0xFF166534),
+                ),
+              ),
+            ],
+          ),
+          if (scores.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: scores.entries.map((e) {
+                final v = (e.value as num?)?.toDouble() ?? 0.0;
+                return _KeywordChip(text: '${harmfulLabelDisplayNames[e.key] ?? e.key}: ${v.toStringAsFixed(2)}');
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

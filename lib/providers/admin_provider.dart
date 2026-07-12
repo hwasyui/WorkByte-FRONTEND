@@ -3,6 +3,69 @@ import '../services/admin_service.dart';
 
 enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes }
 
+/// Sort tokens for GET /admin/moderation (the flat audit-trail list and the
+/// per-user drill-down both use this endpoint) - maps a human-facing token
+/// to the [sort_by, sort_dir] pair the backend actually accepts
+/// (sort_by: created_at | total_score | content_type | reviewed_at).
+const Map<String, List<String>> moderationSortOptions = {
+  'recent': ['created_at', 'desc'],
+  'oldest': ['created_at', 'asc'],
+  'score_high': ['total_score', 'desc'],
+  'score_low': ['total_score', 'asc'],
+  'reviewed_recent': ['reviewed_at', 'desc'],
+  'reviewed_oldest': ['reviewed_at', 'asc'],
+  'type': ['content_type', 'asc'],
+};
+
+const Map<String, String> moderationSortLabels = {
+  'recent': 'Most recent',
+  'oldest': 'Oldest first',
+  'score_high': 'Highest severity',
+  'score_low': 'Lowest severity',
+  'reviewed_recent': 'Recently reviewed',
+  'reviewed_oldest': 'Reviewed longest ago',
+  'type': 'Content type (A-Z)',
+};
+
+/// Sort tokens for GET /admin/moderation/by-user (sort_by: flagged_count |
+/// unreviewed_count | max_score | last_flagged_at).
+const Map<String, List<String>> moderationByUserSortOptions = {
+  'most_flagged': ['flagged_count', 'desc'],
+  'least_flagged': ['flagged_count', 'asc'],
+  'most_unreviewed': ['unreviewed_count', 'desc'],
+  'highest_severity': ['max_score', 'desc'],
+  'lowest_severity': ['max_score', 'asc'],
+  'most_recent': ['last_flagged_at', 'desc'],
+  'oldest_flag': ['last_flagged_at', 'asc'],
+};
+
+const Map<String, String> moderationByUserSortLabels = {
+  'most_flagged': 'Most flagged',
+  'least_flagged': 'Least flagged',
+  'most_unreviewed': 'Most unreviewed',
+  'highest_severity': 'Highest severity',
+  'lowest_severity': 'Lowest severity',
+  'most_recent': 'Most recently flagged',
+  'oldest_flag': 'Oldest flag',
+};
+
+/// Severity bands over total_score (0-5, sum of the 5 label scores) - the
+/// >=3.0 / >=1.5 breakpoints mirror the score coloring already used on every
+/// card in this page, so "High" here means the same thing "red" means there.
+const Map<String, List<double?>> moderationSeverityRanges = {
+  'all': [null, null],
+  'low': [null, 1.49],
+  'medium': [1.5, 2.99],
+  'high': [3.0, null],
+};
+
+const Map<String, String> moderationSeverityLabels = {
+  'all': 'All',
+  'low': 'Low (<1.5)',
+  'medium': 'Medium (1.5-3.0)',
+  'high': 'High (≥3.0)',
+};
+
 class AdminProvider extends ChangeNotifier {
   String? _token;
   bool _isLoading = false;
@@ -41,15 +104,35 @@ class AdminProvider extends ChangeNotifier {
   String _flaggedReviewStatusFilter = 'all';
   String _flaggedClientReviewStatusFilter = 'all';
   List<Map<String, dynamic>> _moderationItems = [];
+  List<Map<String, dynamic>> _moderationByUser = [];
   List<Map<String, dynamic>> _closedJobs = [];
   List<Map<String, dynamic>> _closedAccounts = [];
   bool _isAiLoading = false;
+  bool _isModerationByUserLoading = false;
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
   // Harmful-text audit trail is read-only history. Filter by whether an admin has
   // reviewed a row yet: 'all' | 'unreviewed' | 'reviewed'.
   String _moderationReviewedFilter = 'all';
   String _moderationTypeFilter = 'all';
+  // 'all' | 'low' | 'medium' | 'high' - see moderationSeverityRanges.
+  String _moderationSeverityFilter = 'all';
+  // Key into moderationSortOptions.
+  String _moderationSort = 'recent';
+  bool _moderationByUserView = false;
+  // Key into moderationByUserSortOptions.
+  String _moderationByUserSort = 'most_flagged';
+
+  // Drill-down modal opened from a By-user card: that one user's own flagged
+  // entries, with its own independent filters so opening it never disturbs
+  // the flat list view's filter state underneath.
+  List<Map<String, dynamic>> _userDetailItems = [];
+  bool _isUserDetailLoading = false;
+  String? _userDetailUserId;
+  String _userDetailReviewedFilter = 'all';
+  String _userDetailTypeFilter = 'all';
+  String _userDetailSeverityFilter = 'all';
+  String _userDetailSort = 'recent';
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
   String _closedAccountReasonFilter = 'all';
@@ -105,10 +188,23 @@ class AdminProvider extends ChangeNotifier {
   String get flaggedReviewStatusFilter => _flaggedReviewStatusFilter;
   String get flaggedClientReviewStatusFilter => _flaggedClientReviewStatusFilter;
   List<Map<String, dynamic>> get moderationItems => _moderationItems;
+  List<Map<String, dynamic>> get moderationByUser => _moderationByUser;
   List<Map<String, dynamic>> get closedJobs => _closedJobs;
   List<Map<String, dynamic>> get closedAccounts => _closedAccounts;
   bool get isAiLoading => _isAiLoading;
+  bool get isModerationByUserLoading => _isModerationByUserLoading;
   bool get isClosedLoading => _isClosedLoading;
+  String get moderationSeverityFilter => _moderationSeverityFilter;
+  String get moderationSort => _moderationSort;
+  bool get moderationByUserView => _moderationByUserView;
+  String get moderationByUserSort => _moderationByUserSort;
+  List<Map<String, dynamic>> get userDetailItems => _userDetailItems;
+  bool get isUserDetailLoading => _isUserDetailLoading;
+  String? get userDetailUserId => _userDetailUserId;
+  String get userDetailReviewedFilter => _userDetailReviewedFilter;
+  String get userDetailTypeFilter => _userDetailTypeFilter;
+  String get userDetailSeverityFilter => _userDetailSeverityFilter;
+  String get userDetailSort => _userDetailSort;
   String get scamStatusFilter => _scamStatusFilter;
   String get moderationReviewedFilter => _moderationReviewedFilter;
   String get moderationTypeFilter => _moderationTypeFilter;
@@ -633,23 +729,37 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
+  List<double?> get _moderationScoreRange =>
+      moderationSeverityRanges[_moderationSeverityFilter] ?? const [null, null];
+  List<String> get _moderationSortParams =>
+      moderationSortOptions[_moderationSort] ?? const ['created_at', 'desc'];
 
   Future<void> loadModerationItems({
     String? reviewed,
     String? contentType,
+    String? severity,
+    String? sort,
   }) async {
     if (_token == null) return;
     if (reviewed != null) _moderationReviewedFilter = reviewed;
     if (contentType != null) _moderationTypeFilter = contentType;
+    if (severity != null) _moderationSeverityFilter = severity;
+    if (sort != null) _moderationSort = sort;
     _isAiLoading = true;
     notifyListeners();
     try {
+      final range = _moderationScoreRange;
+      final sortParams = _moderationSortParams;
       final data = await AdminService.getModerationItems(
         _token!,
         reviewed: _moderationReviewedFilter == 'all'
             ? null
             : _moderationReviewedFilter == 'reviewed',
         contentType: _moderationTypeFilter,
+        minScore: range[0],
+        maxScore: range[1],
+        sortBy: sortParams[0],
+        sortDir: sortParams[1],
       );
       _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
@@ -657,6 +767,137 @@ class AdminProvider extends ChangeNotifier {
     }
     _isAiLoading = false;
     notifyListeners();
+  }
+
+  List<String> get _moderationByUserSortParams =>
+      moderationByUserSortOptions[_moderationByUserSort] ?? const ['flagged_count', 'desc'];
+
+  /// Same audit trail, grouped by user - toggled via [moderationByUserView] in
+  /// the UI so repeat offenders are easy to spot instead of scrolling a flat list.
+  Future<void> loadModerationByUser({String? contentType, String? sort}) async {
+    if (_token == null) return;
+    if (contentType != null) _moderationTypeFilter = contentType;
+    if (sort != null) _moderationByUserSort = sort;
+    _isModerationByUserLoading = true;
+    notifyListeners();
+    try {
+      final sortParams = _moderationByUserSortParams;
+      final data = await AdminService.getModerationItemsByUser(
+        _token!,
+        contentType: _moderationTypeFilter,
+        sortBy: sortParams[0],
+        sortDir: sortParams[1],
+      );
+      _moderationByUser = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadModerationByUser error: $e');
+    }
+    _isModerationByUserLoading = false;
+    notifyListeners();
+  }
+
+  List<double?> get _userDetailScoreRange =>
+      moderationSeverityRanges[_userDetailSeverityFilter] ?? const [null, null];
+  List<String> get _userDetailSortParams =>
+      moderationSortOptions[_userDetailSort] ?? const ['created_at', 'desc'];
+
+  /// Drill-down opened from a By-user card: [userId]'s own flagged entries,
+  /// filterable independently of the flat list view via the userDetail*
+  /// filters. Pass null filter args on subsequent calls to keep whatever is
+  /// already selected (same pattern as loadModerationItems).
+  Future<void> loadModerationForUser(
+    String userId, {
+    String? reviewed,
+    String? contentType,
+    String? severity,
+    String? sort,
+  }) async {
+    if (_token == null) return;
+    if (_userDetailUserId != userId) {
+      // Opening a different user - start that user's filters fresh.
+      _userDetailUserId = userId;
+      _userDetailReviewedFilter = 'all';
+      _userDetailTypeFilter = 'all';
+      _userDetailSeverityFilter = 'all';
+      _userDetailSort = 'recent';
+    }
+    if (reviewed != null) _userDetailReviewedFilter = reviewed;
+    if (contentType != null) _userDetailTypeFilter = contentType;
+    if (severity != null) _userDetailSeverityFilter = severity;
+    if (sort != null) _userDetailSort = sort;
+    _isUserDetailLoading = true;
+    notifyListeners();
+    try {
+      final range = _userDetailScoreRange;
+      final sortParams = _userDetailSortParams;
+      final data = await AdminService.getModerationItems(
+        _token!,
+        reviewed: _userDetailReviewedFilter == 'all'
+            ? null
+            : _userDetailReviewedFilter == 'reviewed',
+        contentType: _userDetailTypeFilter,
+        minScore: range[0],
+        maxScore: range[1],
+        sortBy: sortParams[0],
+        sortDir: sortParams[1],
+        userId: userId,
+      );
+      _userDetailItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      debugPrint('AdminProvider.loadModerationForUser error: $e');
+    }
+    _isUserDetailLoading = false;
+    notifyListeners();
+  }
+
+  /// Clears the drill-down state when the modal closes, so reopening a
+  /// different user later doesn't briefly flash the previous one's rows.
+  void closeUserModerationDetail() {
+    _userDetailUserId = null;
+    _userDetailItems = [];
+  }
+
+  /// Toggles between the flat audit-trail list and the by-user grouped view,
+  /// loading whichever one isn't already populated.
+  void setModerationByUserView(bool byUser) {
+    if (_moderationByUserView == byUser) return;
+    _moderationByUserView = byUser;
+    notifyListeners();
+    if (byUser && _moderationByUser.isEmpty) {
+      loadModerationByUser();
+    } else if (!byUser && _moderationItems.isEmpty) {
+      loadModerationItems();
+    }
+  }
+
+  /// Mark every currently-unreviewed row matching the active filters as
+  /// reviewed in one call. Bookkeeping only, same as [reviewModerationItem].
+  /// Returns the number of rows marked, or null on failure.
+  ///
+  /// POST /admin/moderation/review-all only accepts a min_score floor, not a
+  /// max_score ceiling, so 'medium' bulk-reviews everything >=1.5 (including
+  /// 'high' rows too) rather than just the 1.5-3.0 band - a real asymmetry
+  /// between this endpoint and GET /admin/moderation, not a bug here.
+  Future<int?> bulkReviewModeration({String? note}) async {
+    if (_token == null) return null;
+    final count = await AdminService.bulkReviewModerationItems(
+      _token!,
+      contentType: _moderationTypeFilter,
+      minScore: _moderationScoreRange[0],
+      adminNote: note,
+    );
+    if (count != null) {
+      await Future.wait([loadModerationItems(), loadDashboardStats()]);
+    }
+    return count;
+  }
+
+  /// Run the harmful-text model directly against arbitrary text (admin
+  /// scratch-pad). Doesn't write anything anywhere - see
+  /// AdminService.detectHarmfulText.
+  Future<Map<String, dynamic>?> detectHarmfulText(String text) async {
+    if (_token == null) return null;
+    return AdminService.detectHarmfulText(_token!, text);
   }
 
   /// Mark an audit-trail entry as reviewed (bookkeeping only, no side effects on
@@ -830,11 +1071,22 @@ class AdminProvider extends ChangeNotifier {
     _flaggedClientReviews = [];
     _flaggedClientReviewStatusFilter = 'all';
     _moderationItems = [];
+    _moderationByUser = [];
     _closedJobs = [];
     _closedAccounts = [];
     _scamStatusFilter = 'all';
     _moderationReviewedFilter = 'all';
     _moderationTypeFilter = 'all';
+    _moderationSeverityFilter = 'all';
+    _moderationSort = 'recent';
+    _moderationByUserView = false;
+    _moderationByUserSort = 'most_flagged';
+    _userDetailItems = [];
+    _userDetailUserId = null;
+    _userDetailReviewedFilter = 'all';
+    _userDetailTypeFilter = 'all';
+    _userDetailSeverityFilter = 'all';
+    _userDetailSort = 'recent';
     _closedJobReasonFilter = 'all';
     _closedAccountRoleFilter = 'all';
     _closedAccountReasonFilter = 'all';
