@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../../models/cv_suggested_profile.dart';
 
@@ -12,11 +13,34 @@ class CvAnalysisService {
     '',
   );
 
+  MediaType _mimeTypeFor(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    return switch (ext) {
+      'pdf' => MediaType('application', 'pdf'),
+      'doc' => MediaType('application', 'msword'),
+      'docx' => MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ),
+      'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+      'png' => MediaType('image', 'png'),
+      'bmp' => MediaType('image', 'bmp'),
+      'tif' || 'tiff' => MediaType('image', 'tiff'),
+      _ => MediaType('application', 'octet-stream'),
+    };
+  }
+
   Future<Map<String, dynamic>> analyzeCV(String token, File cvFile) async {
     final uri = Uri.parse('$_baseUrl/cv_analysis/analyze');
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('cv_file', cvFile.path));
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'cv_file',
+          cvFile.path,
+          contentType: _mimeTypeFor(cvFile.path),
+        ),
+      );
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -44,7 +68,13 @@ class CvAnalysisService {
     final uri = Uri.parse('$_baseUrl/cv_upload');
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          cvFile.path,
+          contentType: _mimeTypeFor(cvFile.path),
+        ),
+      );
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
