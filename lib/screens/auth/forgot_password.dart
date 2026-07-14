@@ -72,26 +72,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         bottom: false,
         child: Column(
           children: [
-            Image.asset(
-              'assets/login-header.png',
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 30,
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 30,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 400),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
                               Container(
                                 width: 72,
                                 height: 72,
@@ -180,62 +179,62 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   );
                                 },
                               ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-
-                    Builder(
-                      builder: (context) {
-                        final bottomInset = MediaQuery.of(context).padding.bottom;
-                        return ClipPath(
-                          clipper: _WaveClipper(),
-                          child: Container(
-                            width: double.infinity,
-                            height: 80 + bottomInset,
-                            padding: EdgeInsets.only(bottom: bottomInset),
-                            color: const Color(0xFFE0E7FF),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Remember it? ',
-                                  style: AppText.caption.copyWith(
-                                    color: AppColors.textDark,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                                    (route) => false,
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: Text(
-                                    'Back to Login',
-                                    style: AppText.captionSemiBold.copyWith(
-                                      color: const Color(0xFF4F46E5),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                  );
+                },
+              ),
+            ),
+            Builder(
+              builder: (context) {
+                final bottomInset = MediaQuery.of(context).padding.bottom;
+                return ClipPath(
+                  clipper: _WaveClipper(),
+                  child: Container(
+                    width: double.infinity,
+                    height: 80 + bottomInset,
+                    padding: EdgeInsets.only(bottom: bottomInset),
+                    color: const Color(0xFFE0E7FF),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Remember it? ',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Back to Login',
+                            style: AppText.captionSemiBold.copyWith(
+                              color: const Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
                             ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ],
         ),
