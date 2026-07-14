@@ -328,15 +328,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'AI Match Analysis',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF333333),
+                          Expanded(
+                            child: Text(
+                              'AI Job-Fit Analysis',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF333333),
+                              ),
                             ),
                           ),
+                          buildUsageBadge(),
                         ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'How well you fit "$roleTitle".',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF6B7280),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       buildRoleAnalysis({
@@ -349,6 +360,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Shown in the result sheet, not on the button: the quota only becomes
+  // relevant once the user has actually spent one.
+  Widget buildUsageBadge() {
+    final remaining = (_jobFitUsage?['remaining_today'] as num?)?.toInt();
+    final limit = (_jobFitUsage?['usage_limit'] as num?)?.toInt();
+    if (remaining == null || limit == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        '$remaining/$limit left today',
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primary,
         ),
       ),
     );
@@ -515,93 +551,50 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   // Analysis is per-role — the backend has no job-level aggregate endpoint —
   // so this card lives on each role card (buildRoleCard) rather than once
   // at the top of the job post.
+  // The remaining daily quota is not shown here — it is surfaced in the result
+  // sheet, where the user has just spent one.
   Widget buildAnalyzeButton(JobRoleModel role) {
     final busy = _analyzingRoleId == role.jobRoleId;
     final disabled = _analyzingRoleId != null;
-    final remaining = (_jobFitUsage?['remaining_today'] as num?)?.toInt();
-    final limit = (_jobFitUsage?['usage_limit'] as num?)?.toInt();
 
     return GestureDetector(
       onTap: disabled ? null : () => analyzeRole(role),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.secondary.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: disabled
-                        ? AppColors.primary.withValues(alpha: 0.5)
-                        : AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: busy
-                      ? const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'AI Job-Fit Analysis',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF333333),
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: busy
+                  ? CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    )
+                  : Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: disabled
+                          ? AppColors.primary.withValues(alpha: 0.5)
+                          : AppColors.primary,
                     ),
-                  ),
-                ),
-                if (remaining != null && limit != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      '$remaining/$limit left today',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-              ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(width: 8),
             Text(
-              busy
-                  ? 'Analyzing your fit...'
-                  : 'How well you fit "${role.roleTitle}".',
+              busy ? 'Analyzing...' : 'Analyze my fit',
               style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: const Color(0xFF6B7280),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: disabled
+                    ? const Color(0xFF9CA3AF)
+                    : const Color(0xFF333333),
               ),
             ),
           ],

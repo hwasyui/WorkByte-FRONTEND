@@ -94,15 +94,16 @@ class _AdminAiPageState extends State<AdminAiPage>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFFCA5A5)),
                         ),
                         child: Text(
                           '${scam + mod} pending review',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFFD97706),
+                            color: const Color(0xFFDC2626),
                           ),
                         ),
                       );
@@ -893,11 +894,16 @@ class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['all', 'pending', 'approved', 'rejected'];
-  // Only job posts get real-time harmful-text scanning today — freelancer/
-  // client profile fields aren't scanned by the backend, so those content
-  // types never produce queue items and aren't offered as filters.
-  static const _types = ['all', 'job_post'];
-  static const _typeLabels = {'all': 'All', 'job_post': 'Job Post'};
+  // No content-type filter: job posts are the only content the backend scans, so
+  // every queue item is a job post and filtering by type would do nothing.
+  // The backend sorts by score or recency; it has no score cut-off filter, so
+  // severity is offered as an ordering rather than a filter.
+  static const _sorts = ['total_score', 'max_score', 'created_at'];
+  static const _sortLabels = {
+    'total_score': 'Severity (total)',
+    'max_score': 'Severity (highest label)',
+    'created_at': 'Newest',
+  };
 
   void _showAiInfo(BuildContext context) {
     showDialog(
@@ -1116,10 +1122,10 @@ class _ModerationTab extends StatelessWidget {
             ),
 
             FilterDropdownBar(
-              summaryText: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all'
+              summaryText: admin.moderationStatusFilter != 'all'
                   ? 'Filters active'
                   : 'All content',
-              hasActiveFilter: admin.moderationStatusFilter != 'all' || admin.moderationTypeFilter != 'all',
+              hasActiveFilter: admin.moderationStatusFilter != 'all',
               accentColor: const Color(0xFF4F46E5),
               groups: [
                 FilterGroupData(
@@ -1130,11 +1136,11 @@ class _ModerationTab extends StatelessWidget {
                   onSelect: (s) => admin.loadModerationItems(status: s),
                 ),
                 FilterGroupData(
-                  label: 'CONTENT TYPE',
-                  options: _types,
-                  labelFor: (t) => _typeLabels[t] ?? t,
-                  selected: admin.moderationTypeFilter,
-                  onSelect: (t) => admin.loadModerationItems(contentType: t),
+                  label: 'SORT BY',
+                  options: _sorts,
+                  labelFor: (s) => _sortLabels[s] ?? s,
+                  selected: admin.moderationSortBy,
+                  onSelect: (s) => admin.loadModerationItems(sortBy: s),
                 ),
               ],
             ),
@@ -1156,7 +1162,6 @@ class _ModerationTab extends StatelessWidget {
                       color: const Color(0xFF7C3AED),
                       onRefresh: () => admin.loadModerationItems(
                         status: admin.moderationStatusFilter,
-                        contentType: admin.moderationTypeFilter,
                       ),
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
@@ -1187,7 +1192,6 @@ class _ModerationCard extends StatefulWidget {
 class _ModerationCardState extends State<_ModerationCard> {
   bool _loading = false;
   bool _labelsExpanded = false;
-  bool _closing = false;
 
   Future<void> _act(String action) async {
     setState(() => _loading = true);
@@ -1207,64 +1211,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     }
   }
 
-  // The moderation queue only ever produces job_post items today (the
-  // backend doesn't scan freelancer/client profile fields), so the only
-  // override action is closing the job.
-  Future<void> _confirmOverride(BuildContext ctx) async {
-    final item = widget.item;
-    const actionLabel = 'Close Job Post';
-    const actionDesc =
-        'This will close the job post as an admin override, bypassing the harmful text detection flow.';
-
-    final confirmed = await showDialog<bool>(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          actionLabel,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        content: Text(
-          actionDesc,
-          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: const Color(0xFF6B7280)),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              actionLabel,
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFDC2626),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _closing = true);
-    final admin = context.read<AdminProvider>();
-    final contentId = item['content_id']?.toString() ?? '';
-    final ok = contentId.isNotEmpty ? await admin.adminCloseJob(contentId) : false;
-    if (mounted) {
-      setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok ? 'Job post closed' : 'Failed to close job post',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-      ));
-    }
-  }
 
   void _showDetail(BuildContext ctx) {
     final item = widget.item;
@@ -1791,24 +1737,9 @@ class _ModerationCardState extends State<_ModerationCard> {
                   )
           else
             _ModerationStatusPill(status: status),
-          const SizedBox(height: 8),
-          _closing
-              ? const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF7C3AED),
-                    ),
-                  ),
-                )
-              : _AdminOverrideBar(
-                  label: 'Close Job',
-                  icon: Icons.block_rounded,
-                  color: const Color(0xFFDC2626),
-                  onTap: () => _confirmOverride(context),
-                ),
+          // No separate "Close Job" override here: confirming the flag already closes the
+          // job post server-side. A redundant button would just be a second path to the
+          // same action.
         ],
       ),
     );

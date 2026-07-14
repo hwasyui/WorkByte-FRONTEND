@@ -919,7 +919,15 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isClosed = _job.status.toLowerCase() == 'closed';
     final isDraft = _job.status.toLowerCase() == 'draft';
     final isOwnJob = auth.currentUser?.clientId == _job.clientId;
-    final isScamClosure = isClosed && _job.closureReason == 'scam';
+
+    // Closure reason drives the banner's title and colour. The backend closes a job
+    // for one of four reasons (scam, content_violation, community_reports,
+    // admin_override) and every one of them is appealable, so the appeal button below
+    // shows for ALL closed states — not only scam, which was the earlier bug.
+    final closureReason = (_job.closureReason ?? '').toLowerCase();
+    final isAiClosure =
+        closureReason == 'scam' || closureReason == 'content_violation';
+    final closureTitle = _closureTitle(closureReason);
 
     final companyLogo = _clientLoading
         ? const SizedBox(
@@ -1002,12 +1010,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: isScamClosure
+                    color: isAiClosure
                         ? const Color(0xFFFEF2F2)
                         : const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isScamClosure
+                      color: isAiClosure
                           ? const Color(0xFFFCA5A5)
                           : const Color(0xFFFFCC02).withValues(alpha: 0.6),
                     ),
@@ -1019,16 +1027,16 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: isScamClosure
+                          color: isAiClosure
                               ? const Color(0xFFFFE4E6)
                               : const Color(0xFFFFF3CD),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          isScamClosure
+                          isAiClosure
                               ? Icons.gpp_bad_rounded
                               : Icons.gavel_rounded,
-                          color: isScamClosure
+                          color: isAiClosure
                               ? const Color(0xFFDC2626)
                               : const Color(0xFFF57F17),
                           size: 18,
@@ -1043,13 +1051,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    isScamClosure
-                                        ? 'Job flagged by AI scam detection'
-                                        : 'This job post has been closed',
+                                    closureTitle,
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: isScamClosure
+                                      color: isAiClosure
                                           ? const Color(0xFF7F1D1D)
                                           : const Color(0xFF5D4037),
                                     ),
@@ -1065,17 +1071,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   ),
                               ],
                             ),
-                            if (isScamClosure) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                'Our AI detected patterns associated with fraudulent job listings and automatically closed this post. If this was a legitimate job, submit an appeal for admin review.',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: const Color(0xFF991B1B),
-                                  height: 1.45,
-                                ),
-                              ),
-                            ],
                             if (_job.closureReason != null &&
                                 _job.closureReason!.isNotEmpty) ...[
                               const SizedBox(height: 6),
@@ -1085,7 +1080,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isScamClosure
+                                  color: isAiClosure
                                       ? const Color(0xFFFEE2E2)
                                       : const Color(0xFFFFE0B2),
                                   borderRadius: BorderRadius.circular(20),
@@ -1095,7 +1090,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: isScamClosure
+                                    color: isAiClosure
                                         ? const Color(0xFFDC2626)
                                         : const Color(0xFFE65100),
                                   ),
@@ -1114,37 +1109,37 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 ),
                               ),
                             ],
-                            if (isScamClosure) ...[
-                              const SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () => AppealDialog.show(
-                                  context,
-                                  targetType: 'job_post',
-                                  targetId: _job.jobPostId,
-                                  targetLabel: _job.jobTitle,
-                                  closureNote:
-                                      _job.closureNote ?? _job.closureReason,
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => AppealDialog.show(
+                                context,
+                                targetType: 'job_post',
+                                targetId: _job.jobPostId,
+                                targetLabel: _job.jobTitle,
+                                closureNote:
+                                    _job.closureNote ?? _job.closureReason,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
                                 ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDC2626),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    'Submit an Appeal',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: isAiClosure
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFF57F17),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Submit an Appeal',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
@@ -2584,10 +2579,31 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
+  /// Banner headline per closure reason. The four values the backend actually
+  /// writes are scam, content_violation, community_reports and admin_override
+  /// (see DEFAULT_CLOSURE_REASON_* in admin_functions.py).
+  String _closureTitle(String reason) {
+    switch (reason) {
+      case 'scam':
+        return 'Auto-closed by AI scam detection';
+      case 'content_violation':
+        return 'Auto-closed by harmful content detection';
+      case 'community_reports':
+        return 'Closed after community reports';
+      case 'admin_override':
+        return 'Closed by an administrator';
+      default:
+        return 'This job post has been closed';
+    }
+  }
+
   String _formatClosureReason(String reason) {
     const labels = {
       'spam': 'Spam',
       'scam': 'Scam / Fraud',
+      'content_violation': 'Harmful Content',
+      'community_reports': 'Community Reports',
+      'admin_override': 'Admin Decision',
       'inappropriate_content': 'Inappropriate Content',
       'duplicate': 'Duplicate Listing',
       'policy_violation': 'Policy Violation',

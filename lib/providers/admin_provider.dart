@@ -41,7 +41,9 @@ class AdminProvider extends ChangeNotifier {
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
   String _moderationStatusFilter = 'all';
-  String _moderationTypeFilter = 'all';
+  // Backend supports sorting by score (severity) or recency — there is no score
+  // *filter*, so severity is surfaced as an ordering, not a cut-off.
+  String _moderationSortBy = 'total_score';
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
   String _closedAccountReasonFilter = 'all';
@@ -93,7 +95,7 @@ class AdminProvider extends ChangeNotifier {
   bool get isClosedLoading => _isClosedLoading;
   String get scamStatusFilter => _scamStatusFilter;
   String get moderationStatusFilter => _moderationStatusFilter;
-  String get moderationTypeFilter => _moderationTypeFilter;
+  String get moderationSortBy => _moderationSortBy;
   String get closedJobReasonFilter => _closedJobReasonFilter;
   String get closedAccountRoleFilter => _closedAccountRoleFilter;
   String get closedAccountReasonFilter => _closedAccountReasonFilter;
@@ -507,18 +509,20 @@ class AdminProvider extends ChangeNotifier {
 
   Future<void> loadModerationItems({
     String? status,
-    String? contentType,
+    String? sortBy,
   }) async {
     if (_token == null) return;
     if (status != null) _moderationStatusFilter = status;
-    if (contentType != null) _moderationTypeFilter = contentType;
+    if (sortBy != null) _moderationSortBy = sortBy;
     _isAiLoading = true;
     notifyListeners();
     try {
+      // Job posts are the only content the backend scans, so the queue is
+      // single-type and no content-type filter is sent.
       final data = await AdminService.getModerationItems(
         _token!,
         status: _moderationStatusFilter,
-        contentType: _moderationTypeFilter,
+        sortBy: _moderationSortBy,
       );
       _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
@@ -645,7 +649,6 @@ class AdminProvider extends ChangeNotifier {
     _closedAccounts = [];
     _scamStatusFilter = 'all';
     _moderationStatusFilter = 'all';
-    _moderationTypeFilter = 'all';
     _closedJobReasonFilter = 'all';
     _closedAccountRoleFilter = 'all';
     _closedAccountReasonFilter = 'all';

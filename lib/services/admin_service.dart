@@ -321,17 +321,17 @@ class AdminService {
   static Future<Map<String, dynamic>> getModerationItems(
     String token, {
     String status = 'pending',
-    String contentType = 'all',
     String sortBy = 'total_score',
     String sortDir = 'desc',
     int page = 1,
     int pageSize = 30,
   }) async {
     try {
+      // No content_type: job posts are the only content the backend scans, so
+      // the queue is single-type and the filter would be a no-op.
       final uri = Uri.parse('$_baseUrl/admin/moderation').replace(
         queryParameters: {
           'status': status,
-          'content_type': contentType,
           'sort_by': sortBy,
           'sort_dir': sortDir,
           'page': page.toString(),
