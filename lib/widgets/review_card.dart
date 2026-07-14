@@ -9,11 +9,21 @@ import 'review_rating_helpers.dart';
 /// ReviewFunctions.get_reviews_by_freelancer_id on the backend).
 class ReviewCard extends StatelessWidget {
   final Review review;
+  final String? reviewerName;
+  final String? reviewerAvatarUrl;
 
-  const ReviewCard({super.key, required this.review});
+  const ReviewCard({
+    super.key,
+    required this.review,
+    this.reviewerName,
+    this.reviewerAvatarUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final displayName = review.isAnonymous
+        ? 'Anonymous Client'
+        : (reviewerName ?? 'Client');
     final avg = review.ratings.isEmpty
         ? 0.0
         : review.ratings.map((r) => r.score).reduce((a, b) => a + b) /
@@ -58,13 +68,26 @@ class ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: Text(
-                  review.isAnonymous ? '?' : 'C',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
+                backgroundImage:
+                    (!review.isAnonymous &&
+                        reviewerAvatarUrl != null &&
+                        reviewerAvatarUrl!.startsWith('http'))
+                    ? NetworkImage(reviewerAvatarUrl!)
+                    : null,
+                child:
+                    (!review.isAnonymous &&
+                        reviewerAvatarUrl != null &&
+                        reviewerAvatarUrl!.startsWith('http'))
+                    ? null
+                    : Text(
+                        review.isAnonymous
+                            ? '?'
+                            : displayName.substring(0, 1).toUpperCase(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -72,7 +95,7 @@ class ReviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.isAnonymous ? 'Anonymous Client' : 'Client',
+                      displayName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,

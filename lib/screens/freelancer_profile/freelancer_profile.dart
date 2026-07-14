@@ -112,6 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   static const Color primaryColor = AppColors.primary;
 
   final List<Map<String, dynamic>> _reviews = [];
+  final Map<String, String> _reviewerNameCache = {};
+  final Map<String, String?> _reviewerAvatarCache = {};
 
   @override
   void initState() {
@@ -200,7 +202,31 @@ class _ProfileScreenState extends State<ProfileScreen>
           freelancerId: freelancerId,
         ),
       ]);
+      await _loadReviewerNames(auth.token!, reviewProvider.reviews);
     }
+  }
+
+  Future<void> _loadReviewerNames(String token, List reviews) async {
+    if (!mounted) return;
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final ids = reviews
+        .map((r) => r.reviewerId as String)
+        .toSet()
+        .where((id) => id.isNotEmpty && !_reviewerNameCache.containsKey(id))
+        .toList();
+    if (ids.isEmpty) return;
+
+    final results = await Future.wait(
+      ids.map((id) => profile.fetchClientById(token: token, clientId: id)),
+    );
+    for (int i = 0; i < ids.length; i++) {
+      final c = results[i];
+      if (c != null) {
+        _reviewerNameCache[ids[i]] = c.displayName;
+        _reviewerAvatarCache[ids[i]] = c.profilePictureUrl;
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _deleteEducation(String educationId) async {
@@ -2417,6 +2443,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (trustScore != null) ...[
                 TrustScoreCard(trustScore: trustScore),
                 const SizedBox(height: 16),
+                AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
+                if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                  const SizedBox(height: 16),
               ],
               if (reviews.isEmpty)
                 Center(
@@ -2466,7 +2495,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...reviews.map((r) => ReviewCard(review: r)).toList(),
+                ...reviews
+                    .map(
+                      (r) => ReviewCard(
+                        review: r,
+                        reviewerName: _reviewerNameCache[r.reviewerId],
+                        reviewerAvatarUrl: _reviewerAvatarCache[r.reviewerId],
+                      ),
+                    )
+                    .toList(),
               ],
             ],
           ),
