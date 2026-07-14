@@ -48,6 +48,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool rolesLoading = true;
   String? _analyzingRoleId;
   bool _analysisCancelled = false;
+  // {usage_today, usage_limit, remaining_today} from GET /ai/job-engine/usage,
+  // refreshed locally from each analyze response so the badge stays live
+  // without an extra round trip.
+  Map<String, dynamic>? _jobFitUsage;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
 
@@ -84,7 +88,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       fetchAllSkills();
       fetchMyProposals();
       fetchJobFiles();
+      if (!context.read<ProfileProvider>().isClient) {
+        fetchJobFitUsage();
+      }
     });
+  }
+
+  Future<void> fetchJobFitUsage() async {
+    final token = context.read<AuthProvider>().token!;
+    final usage = await ApiService.getJobFitUsage(token);
+    if (mounted && usage != null) {
+      setState(() => _jobFitUsage = usage);
+    }
   }
 
   Future<void> fetchJobFiles() async {
@@ -251,6 +266,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         const SnackBar(content: Text('Analysis failed. Please try again.')),
       );
       return;
+    }
+
+    if (result.containsKey('usage_limit')) {
+      setState(() => _jobFitUsage = result);
     }
 
     if (result['rate_limited'] == true) {
@@ -494,32 +513,95 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   );
 
   // Analysis is per-role — the backend has no job-level aggregate endpoint —
-  // so this button lives on each role card (buildRoleCard) rather than once
+  // so this card lives on each role card (buildRoleCard) rather than once
   // at the top of the job post.
   Widget buildAnalyzeButton(JobRoleModel role) {
     final busy = _analyzingRoleId == role.jobRoleId;
     final disabled = _analyzingRoleId != null;
+    final remaining = (_jobFitUsage?['remaining_today'] as num?)?.toInt();
+    final limit = (_jobFitUsage?['usage_limit'] as num?)?.toInt();
+
     return GestureDetector(
       onTap: disabled ? null : () => analyzeRole(role),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: disabled
-              ? AppColors.primary.withValues(alpha: 0.5)
-              : AppColors.primary,
-          borderRadius: BorderRadius.circular(6),
+          color: AppColors.secondary.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
-            const SizedBox(width: 4),
+            Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: disabled
+                        ? AppColors.primary.withValues(alpha: 0.5)
+                        : AppColors.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: busy
+                      ? const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.auto_awesome,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'AI Job-Fit Analysis',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+                if (remaining != null && limit != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      '$remaining/$limit left today',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
             Text(
-              busy ? 'Analyzing...' : 'Analyze My Fit',
+              busy
+                  ? 'Analyzing your fit...'
+                  : 'How well you fit "${role.roleTitle}".',
               style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                fontSize: 11,
+                color: const Color(0xFF6B7280),
               ),
             ),
           ],
@@ -1246,10 +1328,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             // Only freelancers see the apply button
             if (!context.read<ProfileProvider>().isClient) ...[
               const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: buildAnalyzeButton(role),
-              ),
+              buildAnalyzeButton(role),
               const SizedBox(height: 10),
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {

@@ -47,7 +47,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   internet_connection_checker_plus: ^2.5.0
   fl_chart: ^0.69.0
-  record: 5.0.0
+  record: ^6.2.1
   audioplayers: ^6.1.0
   app_links: ^6.3.4
   share_plus: ^10.1.4

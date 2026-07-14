@@ -322,6 +322,30 @@ class ApiService {
     }
   }
 
+  /// Read-only lookup of today's job-fit analysis usage
+  /// (`usage_today`/`usage_limit`/`remaining_today`) — doesn't spend a request
+  /// against the daily cap the way `analyzeRoleMatch` does.
+  static Future<Map<String, dynamic>?> getJobFitUsage(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/ai/job-engine/usage'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      _checkUnauthorized(response);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching job-fit usage: $e');
+      return null;
+    }
+  }
+
   /// Get all clients with pagination support
   /// Returns list of clients
   static Future<List<Map<String, dynamic>>> getAllClients(
