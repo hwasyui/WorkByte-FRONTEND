@@ -174,6 +174,87 @@ class TrustScoreCard extends StatelessWidget {
   }
 }
 
+/// AI-generated blurb summarising a freelancer/client's review history -
+/// backed by ai_review_summary on freelancer_trust_scores / client_trust_score
+/// (see generate_freelancer_review_summary / generate_client_review_summary
+/// on the backend). Styled distinctly (gradient + sparkle) from the plain
+/// white cards around it to read as generated content, not a raw stat.
+class AiReviewSummaryCard extends StatelessWidget {
+  final String? summary;
+
+  const AiReviewSummaryCard({super.key, required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = summary?.trim() ?? '';
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.secondary.withOpacity(0.55),
+            AppColors.primary.withOpacity(0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'AI Summary',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppColors.textDark.withOpacity(0.85),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ScoreBar extends StatelessWidget {
   final String label;
   final IconData icon;

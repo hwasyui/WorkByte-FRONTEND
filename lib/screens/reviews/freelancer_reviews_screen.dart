@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../models/review_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../widgets/review_card.dart';
 import '../../widgets/review_rating_helpers.dart';
@@ -28,6 +30,9 @@ class FreelancerReviewsScreen extends StatefulWidget {
 }
 
 class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
+  final Map<String, String> _reviewerNameCache = {};
+  final Map<String, String?> _reviewerAvatarCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +53,29 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
         freelancerId: widget.freelancerId,
       ),
     ]);
+    await _loadReviewerNames(token, reviewProvider.reviews);
+  }
+
+  Future<void> _loadReviewerNames(String token, List<Review> reviews) async {
+    final profile = context.read<ProfileProvider>();
+    final ids = reviews
+        .map((r) => r.reviewerId)
+        .toSet()
+        .where((id) => id.isNotEmpty && !_reviewerNameCache.containsKey(id))
+        .toList();
+    if (ids.isEmpty) return;
+
+    final results = await Future.wait(
+      ids.map((id) => profile.fetchClientById(token: token, clientId: id)),
+    );
+    for (int i = 0; i < ids.length; i++) {
+      final c = results[i];
+      if (c != null) {
+        _reviewerNameCache[ids[i]] = c.displayName;
+        _reviewerAvatarCache[ids[i]] = c.profilePictureUrl;
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -127,6 +155,9 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
                   if (trustScore != null) ...[
                     TrustScoreCard(trustScore: trustScore),
                     const SizedBox(height: 16),
+                    AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
+                    if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                      const SizedBox(height: 16),
                   ],
                   if (reviews.isNotEmpty) ...[
                     Padding(
@@ -152,7 +183,13 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...reviews.map((r) => ReviewCard(review: r)),
+                    ...reviews.map(
+                      (r) => ReviewCard(
+                        review: r,
+                        reviewerName: _reviewerNameCache[r.reviewerId],
+                        reviewerAvatarUrl: _reviewerAvatarCache[r.reviewerId],
+                      ),
+                    ),
                   ],
                 ],
               ),

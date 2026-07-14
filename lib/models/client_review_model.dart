@@ -180,6 +180,7 @@ class ClientTrustScore {
   final double? consistencyScore;
   final double? disputeFairnessScore;
   final int totalReviewsReceived;
+  final String? aiReviewSummary;
 
   const ClientTrustScore({
     required this.clientId,
@@ -191,6 +192,7 @@ class ClientTrustScore {
     this.consistencyScore,
     this.disputeFairnessScore,
     required this.totalReviewsReceived,
+    this.aiReviewSummary,
   });
 
   factory ClientTrustScore.fromJson(Map<String, dynamic> json) =>
@@ -210,6 +212,7 @@ class ClientTrustScore {
             ?.toDouble(),
         totalReviewsReceived:
             (json['total_reviews_received'] as num?)?.toInt() ?? 0,
+        aiReviewSummary: json['ai_review_summary'] as String?,
       );
 
   double get responsivenessDisplay => (responsivenessScore ?? 0) * 100;

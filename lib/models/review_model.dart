@@ -224,6 +224,7 @@ class TrustScore {
   final String? category;
   final double? categoryRankPct;
   final DateTime? lastUpdated;
+  final String? aiReviewSummary;
 
   const TrustScore({
     required this.freelancerId,
@@ -240,6 +241,7 @@ class TrustScore {
     this.category,
     this.categoryRankPct,
     this.lastUpdated,
+    this.aiReviewSummary,
   });
 
   factory TrustScore.fromJson(Map<String, dynamic> json) => TrustScore(
@@ -261,6 +263,7 @@ class TrustScore {
     lastUpdated: json['last_updated'] != null
         ? DateTime.tryParse(json['last_updated'] as String)
         : null,
+    aiReviewSummary: json['ai_review_summary'] as String?,
   );
 
   /// Converts 0–1 component scores to 0–100 for display.

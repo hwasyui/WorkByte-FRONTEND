@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_review_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../models/client_review_model.dart';
 import '../../widgets/review_rating_helpers.dart';
-import '../../widgets/trust_score_card.dart' show ScoreBar, StarRow;
+import '../../widgets/trust_score_card.dart'
+    show ScoreBar, StarRow, AiReviewSummaryCard;
 
 /// Public reviews + trust score screen for a client, reached from the
 /// discovery/people-list flow. Symmetric counterpart to
@@ -27,6 +29,9 @@ class ClientReviewsScreen extends StatefulWidget {
 }
 
 class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
+  final Map<String, String> _reviewerNameCache = {};
+  final Map<String, String?> _reviewerAvatarCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +46,34 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
       provider.loadClientReviews(token: token, clientId: widget.clientId),
       provider.loadTrustScore(token: token, clientId: widget.clientId),
     ]);
+    await _loadReviewerNames(token, provider.reviews);
+  }
+
+  Future<void> _loadReviewerNames(
+    String token,
+    List<ClientReview> reviews,
+  ) async {
+    final profile = context.read<ProfileProvider>();
+    final ids = reviews
+        .map((r) => r.reviewerId)
+        .toSet()
+        .where((id) => id.isNotEmpty && !_reviewerNameCache.containsKey(id))
+        .toList();
+    if (ids.isEmpty) return;
+
+    final results = await Future.wait(
+      ids.map(
+        (id) => profile.fetchFreelancerById(token: token, freelancerId: id),
+      ),
+    );
+    for (int i = 0; i < ids.length; i++) {
+      final f = results[i];
+      if (f != null) {
+        _reviewerNameCache[ids[i]] = f.displayName;
+        _reviewerAvatarCache[ids[i]] = f.profilePictureUrl;
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -107,6 +140,9 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                     const SizedBox(height: 16),
                     _buildTrustScoreCard(trustScore, totalReviews),
                     const SizedBox(height: 16),
+                    AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
+                    if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                      const SizedBox(height: 16),
                   ],
                   if (reviews.isNotEmpty) ...[
                     Padding(
@@ -336,6 +372,12 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
   }
 
   Widget _buildReviewCard(ClientReview review) {
+    final displayName = review.isAnonymous
+        ? 'Anonymous Freelancer'
+        : (_reviewerNameCache[review.reviewerId] ?? 'Freelancer');
+    final avatarUrl = review.isAnonymous
+        ? null
+        : _reviewerAvatarCache[review.reviewerId];
     final avg = review.ratings.isEmpty
         ? 0.0
         : review.ratings.map((r) => r.score).reduce((a, b) => a + b) /
@@ -379,13 +421,21 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: Text(
-                  review.isAnonymous ? '?' : 'F',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
+                backgroundImage:
+                    (avatarUrl != null && avatarUrl.startsWith('http'))
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl != null && avatarUrl.startsWith('http'))
+                    ? null
+                    : Text(
+                        review.isAnonymous
+                            ? '?'
+                            : displayName.substring(0, 1).toUpperCase(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -393,7 +443,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.isAnonymous ? 'Anonymous Freelancer' : 'Freelancer',
+                      displayName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,

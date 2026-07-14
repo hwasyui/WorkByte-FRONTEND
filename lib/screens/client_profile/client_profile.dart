@@ -14,7 +14,8 @@ import '../../screens/auth/login.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../core/utils/harmful_block_dialog.dart';
-import '../../widgets/trust_score_card.dart' show ScoreBar, StarRow;
+import '../../widgets/trust_score_card.dart'
+    show ScoreBar, StarRow, AiReviewSummaryCard;
 import '../../widgets/review_rating_helpers.dart';
 import '../../models/job_post_model.dart';
 import 'dart:io';
@@ -38,6 +39,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   final TextEditingController bioController = TextEditingController();
   final TextEditingController websiteController = TextEditingController();
+  final Map<String, String> _reviewerNameCache = {};
+  final Map<String, String?> _reviewerAvatarCache = {};
 
   @override
   void initState() {
@@ -96,7 +99,32 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           clientId: clientId,
         ),
       ]);
+      await _loadReviewerNames(auth.token!, clientReviewProvider.reviews);
     }
+  }
+
+  Future<void> _loadReviewerNames(String token, List reviews) async {
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final ids = reviews
+        .map((r) => r.reviewerId as String)
+        .toSet()
+        .where((id) => id.isNotEmpty && !_reviewerNameCache.containsKey(id))
+        .toList();
+    if (ids.isEmpty) return;
+
+    final results = await Future.wait(
+      ids.map(
+        (id) => profile.fetchFreelancerById(token: token, freelancerId: id),
+      ),
+    );
+    for (int i = 0; i < ids.length; i++) {
+      final f = results[i];
+      if (f != null) {
+        _reviewerNameCache[ids[i]] = f.displayName;
+        _reviewerAvatarCache[ids[i]] = f.profilePictureUrl;
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadPostedJobs() async {
@@ -1562,6 +1590,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 if (trustScore != null) ...[
                   _buildOwnTrustScoreCard(trustScore, totalReviews),
                   const SizedBox(height: 16),
+                  AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
+                  if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                    const SizedBox(height: 16),
                 ],
                 if (reviews.isNotEmpty) ...[
                   Padding(
@@ -1693,6 +1724,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   Widget _buildOwnReviewCard(dynamic review) {
+    final displayName = review.isAnonymous == true
+        ? 'Anonymous Freelancer'
+        : (_reviewerNameCache[review.reviewerId as String] ?? 'Freelancer');
+    final avatarUrl = review.isAnonymous == true
+        ? null
+        : _reviewerAvatarCache[review.reviewerId as String];
     final ratings = review.ratings as List;
     final avg = ratings.isEmpty
         ? 0.0
@@ -1722,12 +1759,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               CircleAvatar(
                 radius: 18,
                 backgroundColor: primaryColor.withOpacity(0.1),
-                child: const Icon(Icons.person_outline, color: primaryColor, size: 18),
+                backgroundImage:
+                    (avatarUrl != null && avatarUrl.startsWith('http'))
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl != null && avatarUrl.startsWith('http'))
+                    ? null
+                    : const Icon(Icons.person_outline, color: primaryColor, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  review.isAnonymous == true ? 'Anonymous Freelancer' : 'Freelancer',
+                  displayName,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
