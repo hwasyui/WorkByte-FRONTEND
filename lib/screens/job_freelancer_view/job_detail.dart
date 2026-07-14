@@ -46,7 +46,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool clientLoading = true;
   List<JobRoleModel> roles = [];
   bool rolesLoading = true;
-  bool analyzing = false;
+  String? _analyzingRoleId;
   bool _analysisCancelled = false;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
@@ -205,9 +205,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Future<void> analyzeJob() async {
+  Future<void> analyzeRole(JobRoleModel role) async {
     _analysisCancelled = false;
-    setState(() => analyzing = true);
+    setState(() => _analyzingRoleId = role.jobRoleId);
 
     showDialog(
       context: context,
@@ -216,7 +216,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       builder: (_) => _AnalysisLoadingDialog(
         onCancel: () {
           _analysisCancelled = true;
-          setState(() => analyzing = false);
+          setState(() => _analyzingRoleId = null);
           Navigator.of(context, rootNavigator: true).pop();
         },
       ),
@@ -225,13 +225,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final token = context.read<AuthProvider>().token!;
     Map<String, dynamic>? result;
     try {
-      result = await ApiService.analyzeJobMatch(token, widget.job.jobPostId);
+      result = await ApiService.analyzeRoleMatch(token, role.jobRoleId);
     } on SessionExpiredException {
       if (!mounted) return;
       if (Navigator.of(context, rootNavigator: true).canPop()) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      setState(() => analyzing = false);
+      setState(() => _analyzingRoleId = null);
       await context.read<AuthProvider>().handleSessionExpired(
         profileProvider: context.read<ProfileProvider>(),
       );
@@ -244,7 +244,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (Navigator.of(context, rootNavigator: true).canPop()) {
       Navigator.of(context, rootNavigator: true).pop();
     }
-    setState(() => analyzing = false);
+    setState(() => _analyzingRoleId = null);
 
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -252,15 +252,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       );
       return;
     }
-    showAnalysisSheet(result);
+
+    if (result['rate_limited'] == true) {
+      final usageLimit = (result['usage_limit'] as num?)?.toInt() ?? 0;
+      final usageToday = (result['usage_today'] as num?)?.toInt() ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Daily analysis limit reached ($usageToday/$usageLimit). Try again tomorrow.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    showRoleAnalysisSheet(role.roleTitle, result);
   }
 
-  void showAnalysisSheet(Map<String, dynamic> result) {
-    final overallScore = (result['overall_match_score'] as num?)?.toInt() ?? 0;
-    final recommendation = result['overall_recommendation'] as String? ?? '';
-    final reason = result['overall_recommendation_reason'] as String? ?? '';
-    final roles = result['roles'] as List? ?? [];
-
+  void showRoleAnalysisSheet(String roleTitle, Map<String, dynamic> result) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -311,66 +320,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FAFA),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Overall Match',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF7D7D7D),
-                                  ),
-                                ),
-                                const Spacer(),
-                                ScoreBadge(score: overallScore),
-                                const SizedBox(width: 8),
-                                RecommendationChip(
-                                  recommendation: recommendation,
-                                ),
-                              ],
-                            ),
-                            if (reason.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                reason,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: const Color(0xFF555555),
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      if (roles.isNotEmpty) ...[
-                        Text(
-                          'Role Breakdown',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF333333),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...roles.map(
-                          (r) =>
-                              buildRoleAnalysis(Map<String, dynamic>.from(r)),
-                        ),
-                      ],
+                      buildRoleAnalysis({
+                        'role_title': roleTitle,
+                        ...result,
+                      }),
                     ],
                   ),
                 ),
@@ -540,33 +493,40 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget buildAnalyzeButton() => GestureDetector(
-    onTap: analyzing ? null : analyzeJob,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: analyzing
-            ? AppColors.primary.withValues(alpha: 0.5)
-            : AppColors.primary,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            'Analyze',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+  // Analysis is per-role — the backend has no job-level aggregate endpoint —
+  // so this button lives on each role card (buildRoleCard) rather than once
+  // at the top of the job post.
+  Widget buildAnalyzeButton(JobRoleModel role) {
+    final busy = _analyzingRoleId == role.jobRoleId;
+    final disabled = _analyzingRoleId != null;
+    return GestureDetector(
+      onTap: disabled ? null : () => analyzeRole(role),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: disabled
+              ? AppColors.primary.withValues(alpha: 0.5)
+              : AppColors.primary,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.auto_awesome, size: 11, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              busy ? 'Analyzing...' : 'Analyze My Fit',
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   void onApplyRole(JobRoleModel role) {
     if (hasAppliedToThisJobPost(widget.job.jobPostId)) {
@@ -676,7 +636,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
-    final profile = context.watch<ProfileProvider>();
     final auth = context.watch<AuthProvider>();
     final proposalProvider = context.watch<ProposalProvider>();
     // NEW: self-ownership + closed status flags
@@ -739,7 +698,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 jobShareUrl(widget.job.jobPostId),
                 subject: widget.job.jobTitle,
               ),
-              titleTrailing: profile.isClient ? null : buildAnalyzeButton(),
+              // AI fit analysis is per-role now (no job-level aggregate on the
+              // backend) — the "Analyze My Fit" action lives on each role
+              // card below instead of once here.
               // 👇 NEW: pass null for own jobs so flag icon is hidden
               onReport: isOwnJob
                   ? null
@@ -1285,6 +1246,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             // Only freelancers see the apply button
             if (!context.read<ProfileProvider>().isClient) ...[
               const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: buildAnalyzeButton(role),
+              ),
+              const SizedBox(height: 10),
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (auth.isReportBanned) {

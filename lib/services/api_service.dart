@@ -283,26 +283,39 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> analyzeJobMatch(
+  /// Analyzes one freelancer's fit for a single job role. Backend only
+  /// supports per-role analysis (`GET /ai/job-engine/analyse/role/{job_role_id}`)
+  /// — there is no job-level aggregate endpoint, so this must be called once
+  /// per role rather than once per job post.
+  ///
+  /// Returns the flat per-role result map on success. On a 429 (daily analysis
+  /// limit reached), returns a map with `rate_limited: true` plus
+  /// `message`/`usage_today`/`usage_limit`/`remaining_today` so the caller can
+  /// show a specific message instead of a generic failure. Returns null on
+  /// any other error.
+  static Future<Map<String, dynamic>?> analyzeRoleMatch(
     String token,
-    String jobPostId,
+    String jobRoleId,
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/ai/job-engine/analyse/job/$jobPostId'),
+        Uri.parse('$_baseUrl/ai/job-engine/analyse/role/$jobRoleId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
       _checkUnauthorized(response);
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
-      } else {
-        print('AI analysis failed (${response.statusCode}): ${response.body}');
-        return null;
       }
+      if (response.statusCode == 429) {
+        final details = Map<String, dynamic>.from(data['details'] ?? {});
+        return {'rate_limited': true, ...details};
+      }
+      print('AI analysis failed (${response.statusCode}): ${response.body}');
+      return null;
     } catch (e) {
       print('Error calling AI analysis: $e');
       rethrow;

@@ -893,18 +893,11 @@ class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['all', 'pending', 'approved', 'rejected'];
-  static const _types = [
-    'all',
-    'job_post',
-    'freelancer_profile',
-    'client_profile',
-  ];
-  static const _typeLabels = {
-    'all': 'All',
-    'job_post': 'Job Post',
-    'freelancer_profile': 'Freelancer',
-    'client_profile': 'Client',
-  };
+  // Only job posts get real-time harmful-text scanning today — freelancer/
+  // client profile fields aren't scanned by the backend, so those content
+  // types never produce queue items and aren't offered as filters.
+  static const _types = ['all', 'job_post'];
+  static const _typeLabels = {'all': 'All', 'job_post': 'Job Post'};
 
   void _showAiInfo(BuildContext context) {
     showDialog(
@@ -1214,14 +1207,14 @@ class _ModerationCardState extends State<_ModerationCard> {
     }
   }
 
+  // The moderation queue only ever produces job_post items today (the
+  // backend doesn't scan freelancer/client profile fields), so the only
+  // override action is closing the job.
   Future<void> _confirmOverride(BuildContext ctx) async {
     final item = widget.item;
-    final contentType = item['content_type'] as String? ?? '';
-    final isJob = contentType == 'job_post';
-    final actionLabel = isJob ? 'Close Job Post' : 'Restrict Account';
-    final actionDesc = isJob
-        ? 'This will close the job post as an admin override, bypassing the harmful text detection flow.'
-        : 'This will restrict the user account as an admin override.';
+    const actionLabel = 'Close Job Post';
+    const actionDesc =
+        'This will close the job post as an admin override, bypassing the harmful text detection flow.';
 
     final confirmed = await showDialog<bool>(
       context: ctx,
@@ -1259,21 +1252,15 @@ class _ModerationCardState extends State<_ModerationCard> {
     if (confirmed != true || !mounted) return;
     setState(() => _closing = true);
     final admin = context.read<AdminProvider>();
-    bool ok;
-    if (isJob) {
-      final contentId = item['content_id']?.toString() ?? '';
-      ok = contentId.isNotEmpty ? await admin.adminCloseJob(contentId) : false;
-    } else {
-      final userId = item['user_id']?.toString() ?? '';
-      ok = userId.isNotEmpty ? await admin.adminCloseAccount(userId) : false;
-    }
+    final contentId = item['content_id']?.toString() ?? '';
+    final ok = contentId.isNotEmpty ? await admin.adminCloseJob(contentId) : false;
     if (mounted) {
       setState(() => _closing = false);
-      final msg = isJob
-          ? (ok ? 'Job post closed' : 'Failed to close job post')
-          : (ok ? 'Account restricted' : 'Failed to restrict account');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg, style: GoogleFonts.poppins()),
+        content: Text(
+          ok ? 'Job post closed' : 'Failed to close job post',
+          style: GoogleFonts.poppins(),
+        ),
         backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
       ));
     }
@@ -1505,12 +1492,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     'job_post':
         'This job post was removed due to a content policy violation. '
         'Submit an appeal if you believe this was a mistake.',
-    'freelancer_profile':
-        'Your profile content was flagged for violating our community guidelines. '
-        'Please review our content policy and update your profile accordingly.',
-    'client_profile':
-        'Your profile content was flagged for violating our community guidelines. '
-        'Please review our content policy and update your profile accordingly.',
   };
 
   @override
@@ -1823,7 +1804,7 @@ class _ModerationCardState extends State<_ModerationCard> {
                   ),
                 )
               : _AdminOverrideBar(
-                  label: contentType == 'job_post' ? 'Close Job' : 'Restrict Account',
+                  label: 'Close Job',
                   icon: Icons.block_rounded,
                   color: const Color(0xFFDC2626),
                   onTap: () => _confirmOverride(context),
@@ -1833,14 +1814,12 @@ class _ModerationCardState extends State<_ModerationCard> {
     );
   }
 
+  // Only 'job_post' ever appears — freelancer/client profile fields aren't
+  // scanned by the backend, so those content types never reach this queue.
   String _typeLabel(String type) {
     switch (type) {
       case 'job_post':
         return 'Job Post';
-      case 'freelancer_profile':
-        return 'Freelancer Profile';
-      case 'client_profile':
-        return 'Client Profile';
       default:
         return type.isNotEmpty ? type : 'Content';
     }
@@ -1850,10 +1829,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     switch (type) {
       case 'job_post':
         return Icons.work_outline_rounded;
-      case 'freelancer_profile':
-        return Icons.person_outline_rounded;
-      case 'client_profile':
-        return Icons.business_center_outlined;
       default:
         return Icons.description_outlined;
     }
