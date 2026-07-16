@@ -588,7 +588,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              busy ? 'Analyzing...' : 'Analyze my fit',
+              busy ? 'Analyzing...' : 'Analyze My Fit',
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

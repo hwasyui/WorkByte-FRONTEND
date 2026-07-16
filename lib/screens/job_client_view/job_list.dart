@@ -392,6 +392,8 @@ class JobListScreenState extends State<JobListScreen> {
     final status = job['status'] as String? ?? 'draft';
     final closureReason = job['closure_reason'] as String? ?? '';
     final isScamClosed = status == 'closed' && closureReason == 'scam';
+    final isHarmfulClosed =
+        status == 'closed' && closureReason == 'content_violation';
     final positionCount = isTeam
         ? (job['position_count'] as int?) ??
               ((job['roles'] as List?)?.fold<int>(
@@ -532,7 +534,7 @@ class JobListScreenState extends State<JobListScreen> {
                       ],
                     ],
                   ),
-                  if (isScamClosed) ...[
+                  if (isScamClosed || isHarmfulClosed) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -555,7 +557,9 @@ class JobListScreenState extends State<JobListScreen> {
                           const SizedBox(width: 5),
                           Flexible(
                             child: Text(
-                              'Closed by AI scam detection · Tap to appeal',
+                              isScamClosed
+                                  ? 'Closed by AI scam detection · Tap to appeal'
+                                  : 'Closed by AI content moderation · Tap to appeal',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
