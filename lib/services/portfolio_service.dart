@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/portfolio_model.dart';
+import 'session_guard.dart';
 
 class PortfolioService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -16,6 +17,7 @@ class PortfolioService {
   };
 
   Map<String, dynamic> _decodeBody(http.Response res) {
+    SessionGuard.check(res);
     final decoded = jsonDecode(res.body);
     return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }

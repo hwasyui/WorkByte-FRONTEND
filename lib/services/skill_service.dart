@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/skill_model.dart';
+import 'session_guard.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SkillService {
@@ -19,6 +20,7 @@ class SkillService {
       '$_baseUrl/skills',
     ).replace(queryParameters: limit != null ? {'limit': '$limit'} : null);
     final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
@@ -37,6 +39,7 @@ class SkillService {
       queryParameters: {'q': term},
     );
     final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
@@ -57,6 +60,7 @@ class SkillService {
   ) async {
     final uri = Uri.parse('$_baseUrl/skills/category/$category');
     final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {

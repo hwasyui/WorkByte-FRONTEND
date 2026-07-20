@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../models/contract_submission_model.dart';
+import 'session_guard.dart';
 
 class ContractSubmissionService {
   final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -94,6 +95,7 @@ class ContractSubmissionService {
       Uri.parse('$_baseUrl/contract-submissions/contract/$contractId'),
       headers: _jsonHeaders(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
 
     if (res.statusCode == 200) {
       return _parseSubmissionList(res.body);
@@ -137,6 +139,7 @@ class ContractSubmissionService {
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
+    SessionGuard.check(res);
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return _parseSingleSubmission(res.body);
@@ -162,6 +165,7 @@ class ContractSubmissionService {
       headers: _jsonHeaders(token),
       body: jsonEncode({'note': note}), // ← add this
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);
@@ -183,6 +187,7 @@ class ContractSubmissionService {
       Uri.parse('$_baseUrl/contract-submissions/contract/$contractId/approve'),
       headers: _jsonHeaders(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'session_guard.dart';
 
 class MessageService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -32,6 +33,7 @@ class MessageService {
       }),
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('POST /messages → ${res.statusCode}');
 

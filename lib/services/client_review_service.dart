@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/client_review_model.dart';
 import '../models/review_model.dart' show RedFlagAlert;
+import 'session_guard.dart';
 
 /// Centralises HTTP calls for the freelancer-reviews-client system - mirrors
 /// review_service.dart's structure/conventions for the symmetric counterpart.
@@ -21,6 +22,7 @@ class ClientReviewService {
   };
 
   Map<String, dynamic> _parse(http.Response res, String context) {
+    SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return body['details'] as Map<String, dynamic>? ?? body;
@@ -29,6 +31,7 @@ class ClientReviewService {
   }
 
   List<dynamic> _parseList(http.Response res, String context) {
+    SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return body['details'] as List<dynamic>? ?? [];

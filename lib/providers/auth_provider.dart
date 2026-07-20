@@ -4,11 +4,44 @@ import 'package:flutter/material.dart';
 import 'package:workbyte_app/services/notification_service.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/session_guard.dart';
 import 'profile_provider.dart';
 import 'notification_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
+
+  AuthProvider() {
+    // Any service that detects a 401 via SessionGuard.check() routes here.
+    // The access token is short-lived (7 days) but the refresh token lasts
+    // 30, so try a silent refresh first — only log the user out if the
+    // refresh token itself is gone/invalid too.
+    SessionGuard.register(() {
+      _refreshOrRetryOnce().then((refreshed) {
+        if (!refreshed) handleSessionExpired();
+      });
+    });
+  }
+
+  // Dedupes concurrent 401s (e.g. several parallel requests failing at once)
+  // into a single refresh attempt instead of racing multiple rotations of
+  // the same refresh token.
+  Future<bool>? _refreshInFlight;
+
+  Future<bool> _refreshOrRetryOnce() {
+    return _refreshInFlight ??= _attemptRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  Future<bool> _attemptRefresh() async {
+    try {
+      return await tryRefresh();
+    } catch (e) {
+      debugPrint('Silent token refresh failed: $e');
+      return false;
+    }
+  }
 
   bool _isLoading = false;
   bool _isRestoring = false;
@@ -52,8 +85,16 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
 
-      final user = await _service.getMe(savedToken);
-      _token = savedToken;
+      UserModel user;
+      try {
+        user = await _service.getMe(savedToken);
+        _token = savedToken;
+      } on SessionExpiredException {
+        // Access token expired — try the refresh token before giving up.
+        final refreshed = await _refreshOrRetryOnce();
+        if (!refreshed) rethrow;
+        user = await _service.getMe(_token!);
+      }
       _currentUser = user;
 
       if (_currentUser!.hasRole && profileProvider != null) {
@@ -378,7 +419,15 @@ class AuthProvider extends ChangeNotifier {
     if (_token == null) return;
 
     try {
-      _currentUser = await _service.getMe(_token!);
+      UserModel user;
+      try {
+        user = await _service.getMe(_token!);
+      } on SessionExpiredException {
+        final refreshed = await _refreshOrRetryOnce();
+        if (!refreshed) rethrow;
+        user = await _service.getMe(_token!);
+      }
+      _currentUser = user;
       notifyListeners();
     } on SessionExpiredException {
       await handleSessionExpired(

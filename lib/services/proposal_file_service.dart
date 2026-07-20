@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../models/proposal_file_model.dart';
+import 'session_guard.dart';
 
 class ProposalFileService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -21,6 +22,7 @@ class ProposalFileService {
   ) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/proposal/$proposalId');
     final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
@@ -53,6 +55,7 @@ class ProposalFileService {
         'file_size': fileSize,
       }),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
 
     if (res.statusCode == 201) {
       final body = jsonDecode(res.body);
@@ -65,6 +68,7 @@ class ProposalFileService {
   Future<bool> deleteProposalFile(String token, String proposalFileId) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/$proposalFileId');
     final res = await http.delete(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     return res.statusCode == 200;
   }
 }

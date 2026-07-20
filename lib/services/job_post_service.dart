@@ -7,6 +7,7 @@ import '../models/job_post_model.dart';
 import '../models/job_role_model.dart';
 import '../models/job_role_skill_model.dart';
 import '../models/job_file_model.dart';
+import 'session_guard.dart';
 
 class JobPostService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -39,6 +40,7 @@ class JobPostService {
   }
 
   Future<dynamic> _decodeResponse(http.Response res) async {
+    SessionGuard.check(res);
     if (res.body.isEmpty) return {};
     return jsonDecode(res.body);
   }
@@ -369,6 +371,7 @@ class JobPostService {
 
     final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
+    SessionGuard.check(response);
     final body = response.body.isEmpty ? {} : jsonDecode(response.body);
 
     debugPrint('POST /job-files response: $body');

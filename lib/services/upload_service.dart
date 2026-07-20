@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'session_guard.dart';
 
 class UploadService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -24,6 +25,7 @@ class UploadService {
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     debugPrint('POST /upload?bucket=$bucket → ${res.statusCode}');
@@ -59,6 +61,7 @@ class UploadService {
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     debugPrint('POST /cv_upload → ${res.statusCode}');

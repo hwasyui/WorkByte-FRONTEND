@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/dm_model.dart';
+import 'session_guard.dart';
 
 class DMFailureException implements Exception {
   final String message;
@@ -25,6 +26,7 @@ class DMService {
   };
 
   dynamic _unwrap(http.Response res) {
+    SessionGuard.check(res);
     try {
       final body = jsonDecode(res.body);
       return body['details'] ?? body['data'] ?? body['message'] ?? body;

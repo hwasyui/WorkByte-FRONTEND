@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/proposal_model.dart';
+import 'session_guard.dart';
 
 class ProposalService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -30,6 +31,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals/job-post/$jobPostId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/job-post/$jobPostId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -49,6 +51,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals/freelancer/$freelancerId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -65,6 +68,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals/$proposalId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
@@ -81,6 +85,7 @@ class ProposalService {
       headers: _headers(token),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('POST /proposals → ${res.statusCode}');
     if (res.statusCode == 200 || res.statusCode == 201) {
@@ -158,6 +163,7 @@ class ProposalService {
     debugPrint('POST /proposal-files → ${res.statusCode}: ${res.body}');
 
     if (res.statusCode != 200 && res.statusCode != 201) {
+      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to upload proposal files');
     }
@@ -192,6 +198,7 @@ class ProposalService {
       headers: _headers(token),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('PUT /proposals/$proposalId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -209,6 +216,7 @@ class ProposalService {
       Uri.parse('$_baseUrl/proposals/$proposalId/status?status=$status'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('PATCH /proposals/$proposalId/status → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -223,6 +231,7 @@ class ProposalService {
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
+      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to delete proposal');
     }
@@ -247,6 +256,7 @@ class ProposalService {
     ).timeout(const Duration(seconds: 20));
     debugPrint('POST /messages → ${res.statusCode}');
     if (res.statusCode != 200 && res.statusCode != 201) {
+      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to send message');
     }

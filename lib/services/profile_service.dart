@@ -9,6 +9,7 @@ import '../models/freelancer_model.dart';
 import '../models/education_model.dart';
 import '../models/experience_model.dart';
 import '../models/freelancer_skill_model.dart';
+import 'session_guard.dart';
 
 class ProfileService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -26,6 +27,7 @@ class ProfileService {
   };
 
   Map<String, dynamic> _decodeBody(http.Response res) {
+    SessionGuard.check(res);
     final decoded = jsonDecode(res.body);
     return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
@@ -295,6 +297,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -315,6 +318,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('createEducation error: $e');
@@ -333,6 +337,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('updateEducation error: $e');
@@ -346,6 +351,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/educations/$educationId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteEducation error: $e');
@@ -364,6 +370,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -387,6 +394,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('createWorkExperience error: $e');
@@ -405,6 +413,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('updateWorkExperience error: $e');
@@ -421,6 +430,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteWorkExperience error: $e');
@@ -439,6 +449,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -460,6 +471,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/skills'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -480,6 +492,7 @@ class ProfileService {
         '$_baseUrl/skills/search',
       ).replace(queryParameters: {'q': searchTerm});
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final details = body['details'] ?? body['data'] ?? {};
@@ -504,6 +517,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 201) {
         final body = _decodeBody(res);
         return Map<String, dynamic>.from(body['details'] ?? {});
@@ -524,6 +538,7 @@ class ProfileService {
         headers: _headers(token),
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('addFreelancerSkill error: $e');
@@ -540,6 +555,7 @@ class ProfileService {
         Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteFreelancerSkill error: $e');
@@ -565,6 +581,7 @@ class ProfileService {
 
     final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
+    SessionGuard.check(response);
 
     Map<String, dynamic> body = {};
     try {

@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
+import '../services/admin_session_guard.dart';
 
 enum AdminPage { overview, users, jobs, reports, ai, closed, appeals }
 
 class AdminProvider extends ChangeNotifier {
+  AdminProvider() {
+    // Any AdminService call that hits a 401 routes here, so an expired admin
+    // token drops back to AdminLoginScreen (via AdminGate's isAuthenticated
+    // check) no matter which admin page triggered it.
+    AdminSessionGuard.register(() {
+      logout();
+    });
+  }
+
   String? _token;
   bool _isLoading = false;
   bool _isRestoring = false;

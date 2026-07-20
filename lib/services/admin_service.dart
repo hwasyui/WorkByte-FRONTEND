@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'admin_session_guard.dart';
 
 class AdminService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -94,6 +95,7 @@ class AdminService {
       },
     );
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -114,6 +116,7 @@ class AdminService {
       },
     );
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -132,6 +135,7 @@ class AdminService {
       },
     );
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -179,6 +183,7 @@ class AdminService {
       '$_baseUrl/admin/jobs',
     ).replace(queryParameters: query);
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -213,6 +218,7 @@ class AdminService {
       '$_baseUrl/admin/users',
     ).replace(queryParameters: query);
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -225,6 +231,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/dashboard'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode != 200) return {};
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final details = body['details'] ?? body['data'] ?? body;
@@ -250,6 +257,7 @@ class AdminService {
       },
     );
     final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+    AdminSessionGuard.check(response);
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -268,6 +276,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -293,6 +302,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -312,6 +322,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -337,6 +348,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -350,6 +362,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId/resolve'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -375,6 +388,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -388,6 +402,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/reviews/$reviewId/override-publish'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -413,6 +428,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -429,6 +445,7 @@ class AdminService {
         Uri.parse('$_baseUrl/admin/client-reviews/$clientReviewId/override-publish'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -456,6 +473,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -475,6 +493,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -492,6 +511,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'reason': reason}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -505,6 +525,7 @@ class AdminService {
     try {
       final uri = Uri.parse('$_baseUrl/freelancers/$freelancerId/profile');
       final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(response);
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -525,6 +546,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'reason': reason}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -546,6 +568,7 @@ class AdminService {
         },
       );
       final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -584,6 +607,7 @@ class AdminService {
         headers: _headers(token),
         body: jsonEncode({'admin_note': adminNote}),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       debugPrint('resolveAppeal status: ${res.statusCode}');
       debugPrint('resolveAppeal body: ${res.body}');
       return res.statusCode == 200 || res.statusCode == 201;
@@ -602,6 +626,7 @@ class AdminService {
         Uri.parse('$_baseUrl/job-posts/$jobPostId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -620,6 +645,7 @@ class AdminService {
         Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -647,6 +673,7 @@ class AdminService {
             'custom_reason': customReason,
         }),
       ).timeout(const Duration(seconds: 20));
+      AdminSessionGuard.check(res);
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (_) {
       return false;

@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/notification_model.dart';
+import 'session_guard.dart';
 
 // Top-level background handler — must be outside any class
 @pragma('vm:entry-point')
@@ -200,6 +201,7 @@ class NotificationService {
       },
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
       final list = body['details'] ?? body['data'] ?? [];
@@ -220,6 +222,7 @@ class NotificationService {
       },
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -230,23 +233,25 @@ class NotificationService {
 
   Future<void> markAsRead(String notificationId) async {
     final token = await _storage.read(key: _tokenKey);
-    await http.patch(
+    final res = await http.patch(
       Uri.parse('$_baseUrl/notifications/$notificationId/read'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
   }
 
   Future<void> markAllRead() async {
     final token = await _storage.read(key: _tokenKey);
-    await http.patch(
+    final res = await http.patch(
       Uri.parse('$_baseUrl/notifications/read-all'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
   }
 }

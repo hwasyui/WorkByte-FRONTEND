@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'session_guard.dart';
 
 class ClientService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -22,6 +23,7 @@ class ClientService {
           'Content-Type': 'application/json',
         },
       ).timeout(const Duration(seconds: 20));
+      SessionGuard.check(res);
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final data = body['details'] ?? body['data'] ?? body;

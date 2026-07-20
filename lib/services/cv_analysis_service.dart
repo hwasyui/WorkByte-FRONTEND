@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../../models/cv_suggested_profile.dart';
+import 'session_guard.dart';
 
 class CvAnalysisService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -20,6 +21,7 @@ class CvAnalysisService {
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamed);
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
 
     debugPrint(
@@ -48,6 +50,7 @@ class CvAnalysisService {
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamed);
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
 
     debugPrint('POST /cv_upload status=${response.statusCode}');
@@ -95,6 +98,7 @@ class CvAnalysisService {
     ).timeout(const Duration(seconds: 20));
 
     debugPrint('POST /cv_upload/apply status=${response.statusCode}');
+    SessionGuard.check(response);
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {

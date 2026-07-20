@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/report_model.dart';
+import 'session_guard.dart';
 
 class ReportService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -20,6 +21,7 @@ class ReportService {
       },
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
     debugPrint('GET /reports/reasons response: $body');
 
@@ -67,6 +69,7 @@ class ReportService {
       }),
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(response);
     final body = jsonDecode(response.body);
     debugPrint('POST /reports response: $body');
 

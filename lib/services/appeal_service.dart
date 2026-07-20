@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/appeal_model.dart';
+import 'session_guard.dart';
 
 class AppealService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -33,6 +34,7 @@ class AppealService {
 
     debugPrint('POST /appeals status: ${response.statusCode}');
     debugPrint('POST /appeals body: ${response.body}');
+    SessionGuard.check(response);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       try {
@@ -79,6 +81,7 @@ class AppealService {
 
     debugPrint('GET /appeals/mine status: ${response.statusCode}');
     debugPrint('GET /appeals/mine body: ${response.body}');
+    SessionGuard.check(response);
 
     if (response.statusCode == 200) {
       try {
@@ -136,6 +139,7 @@ class AppealService {
 
     debugPrint('GET /appeals/status status: ${response.statusCode}');
     debugPrint('GET /appeals/status body: ${response.body}');
+    SessionGuard.check(response);
 
     if (response.statusCode == 200) {
       try {

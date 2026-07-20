@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/review_model.dart';
+import 'session_guard.dart';
 
 /// Centralises all HTTP calls for the review system.
 /// Throws [ReviewServiceException] on any non-2xx response so the
@@ -25,6 +26,7 @@ class ReviewService {
   // ── Response parser ─────────────────────────────────────────────────────
 
   Map<String, dynamic> _parse(http.Response res, String context) {
+    SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       // Your backend wraps everything in ResponseSchema.success → {data: ...}
@@ -34,6 +36,7 @@ class ReviewService {
   }
 
   List<dynamic> _parseList(http.Response res, String context) {
+    SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return body['details'] as List<dynamic>? ?? [];

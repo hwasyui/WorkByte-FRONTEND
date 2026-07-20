@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/contract_model.dart';
+import 'session_guard.dart';
 
 class ContractService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -21,6 +22,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -44,6 +46,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/client/$clientId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/client/$clientId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -67,6 +70,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/freelancer/$freelancerId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -87,6 +91,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -104,6 +109,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId/generation-data'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint(
       'GET /contracts/$contractId/generation-data → ${res.statusCode}',
@@ -120,6 +126,7 @@ class ContractService {
       Uri.parse('$_baseUrl/contracts/$contractId/pdf-url'),
       headers: _headers(token),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -146,6 +153,7 @@ class ContractService {
       headers: _headers(token),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts → ${res.statusCode}');
     if (res.statusCode == 201) {
@@ -165,6 +173,7 @@ class ContractService {
       headers: _headers(token),
       body: jsonEncode(generationData),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts/$contractId/generate → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -186,6 +195,7 @@ class ContractService {
       headers: _headers(token),
       body: jsonEncode(data),
     ).timeout(const Duration(seconds: 20));
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
     debugPrint('PUT /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -203,6 +213,7 @@ class ContractService {
       },
     ).timeout(const Duration(seconds: 20));
 
+    SessionGuard.check(res);
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {

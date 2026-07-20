@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:workbyte_app/widgets/file_viewer.dart';
+import 'package:workbyte_app/services/session_guard.dart';
 
 String get _backendBase =>
     (dotenv.env['BACKEND'] ?? '').replaceAll(RegExp(r'/$'), '');
@@ -20,6 +21,7 @@ Future<File?> downloadToTempFile(String url, {String? token}) async {
       ? {'Authorization': 'Bearer $token'}
       : <String, String>{};
   final response = await http.get(uri, headers: headers);
+  if (isOurBackendUrl(url)) SessionGuard.check(response);
   if (response.statusCode != 200) return null;
   final tempDir = await getTemporaryDirectory();
   final fileName = uri.pathSegments.lastOrNull ?? 'audio';
@@ -67,6 +69,8 @@ Future<void> openDocumentFromUrl(
         response = await http.get(uri, headers: headers);
       }
     }
+
+    if (isBackend) SessionGuard.check(response);
 
     if (response.statusCode != 200) {
       throw Exception('Server returned ${response.statusCode}');
