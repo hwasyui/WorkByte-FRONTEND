@@ -32,6 +32,7 @@ import '../../widgets/job_detail_tab_bar.dart';
 import '../contract/generate_contract_screen.dart';
 import '../people_list/people_list_screen.dart';
 import '../workspace/workspace_detail.dart';
+import '../post_job/job_detail.dart' show PostNewJobJobDetail;
 import '../../core/utils/helpers.dart';
 
 class ClientJobDetailScreen extends StatefulWidget {
@@ -450,6 +451,27 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     } else {
       AppToast.error('Failed to close job.');
     }
+  }
+
+  Future<void> _continueDraft() async {
+    final token = context.read<AuthProvider>().token;
+    final clientId = _job.clientId;
+
+    if (token != null && token.isNotEmpty && clientId.isNotEmpty) {
+      await context.read<JobPostProvider>().loadDraftJobById(
+        token,
+        clientId,
+        _job.jobPostId,
+      );
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PostNewJobJobDetail(restoreFromExistingDraft: true),
+      ),
+    );
   }
 
   // â”€â”€ Proposal actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -921,6 +943,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final avatarUrl = _client?.profilePictureUrl;
 
     final isClosed = _job.status.toLowerCase() == 'closed';
+    final isDraft = _job.status.toLowerCase() == 'draft';
     final isOwnJob = auth.currentUser?.clientId == _job.clientId;
     // Closure reason drives the banner's title and colour. The backend closes a job
     // for one of four reasons (scam, content_violation, community_reports,
@@ -970,7 +993,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       backgroundColor: AppColors.background,
       // â”€â”€ Floating action bar for owners â”€â”€
       bottomNavigationBar: isOwnJob
-          ? _buildOwnerActionBar(isClosed: isClosed)
+          ? _buildOwnerActionBar(isClosed: isClosed, isDraft: isDraft)
           : null,
       body: SingleChildScrollView(
         child: Column(
@@ -1186,7 +1209,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   // â”€â”€ Owner action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  Widget _buildOwnerActionBar({required bool isClosed}) {
+  Widget _buildOwnerActionBar({required bool isClosed, required bool isDraft}) {
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -1203,7 +1226,36 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ),
         child: Row(
           children: [
-            if (!isClosed)
+            if (isDraft)
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _continueDraft,
+                    icon: const Icon(
+                      Icons.edit_note_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      'Continue draft',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else if (!isClosed)
               Expanded(
                 child: SizedBox(
                   height: 48,
@@ -1232,8 +1284,8 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ),
                   ),
                 ),
-              ),
-            if (isClosed)
+              )
+            else
               Expanded(
                 child: Container(
                   height: 48,

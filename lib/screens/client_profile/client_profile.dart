@@ -18,6 +18,7 @@ import '../../widgets/trust_score_card.dart'
 import '../../widgets/review_rating_helpers.dart';
 import '../../models/job_post_model.dart';
 import '../job_client_view/job_detail.dart';
+import '../people_list/people_list_screen.dart' show PeopleProfileScreen;
 import 'dart:io';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -329,7 +330,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           if (success) {
                             AppToast.success('About saved successfully');
                           } else {
-                            AppToast.error(profile.error ?? 'Failed to save About');
+                            AppToast.error(
+                              profile.error ?? 'Failed to save About',
+                            );
                           }
                         }
                       },
@@ -588,7 +591,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             if (success) {
                               AppToast.success('Website saved successfully');
                             } else {
-                              AppToast.error(profile.error ?? 'Failed to save Website');
+                              AppToast.error(
+                                profile.error ?? 'Failed to save Website',
+                              );
                             }
                           }
                         },
@@ -655,7 +660,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
             if (!success) {
               if (mounted) {
-                AppToast.error(profile.error ?? 'Failed to upload profile picture');
+                AppToast.error(
+                  profile.error ?? 'Failed to upload profile picture',
+                );
               }
               return;
             }
@@ -668,7 +675,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
 
             if (!success && mounted) {
-              AppToast.error(profile.error ?? 'Failed to delete profile picture');
+              AppToast.error(
+                profile.error ?? 'Failed to delete profile picture',
+              );
               return;
             }
           }
@@ -1727,15 +1736,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
         final reviews = reviewProvider.reviews;
         final trustScore = reviewProvider.trustScore;
-        final totalReviews =
-            trustScore?.totalReviewsReceived ?? reviews.length;
+        final totalReviews = trustScore?.totalReviewsReceived ?? reviews.length;
 
         if (totalReviews == 0 && reviews.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[300]),
+                Icon(
+                  Icons.rate_review_outlined,
+                  size: 64,
+                  color: Colors.grey[300],
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'No reviews yet',
@@ -1749,7 +1761,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 Text(
                   'Freelancers you work with can review you after a contract completes',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.grey[500],
+                  ),
                 ),
               ],
             ),
@@ -1947,13 +1962,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     : null,
                 child: (avatarUrl != null && avatarUrl.startsWith('http'))
                     ? null
-                    : const Icon(Icons.person_outline, color: primaryColor, size: 18),
+                    : const Icon(
+                        Icons.person_outline,
+                        color: primaryColor,
+                        size: 18,
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   displayName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               StarRow(rating: avg),
@@ -1963,7 +1985,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             const SizedBox(height: 10),
             Text(
               comment,
-              style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.45),
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 13,
+                height: 1.45,
+              ),
             ),
           ],
           if (ratings.isNotEmpty) ...[
@@ -1973,7 +1999,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               runSpacing: 8,
               children: ratings.map<Widget>((rating) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(10),
@@ -1982,11 +2011,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(ratingIcon(rating.category as String), size: 13, color: primaryColor),
+                      Icon(
+                        ratingIcon(rating.category as String),
+                        size: 13,
+                        color: primaryColor,
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         '${ratingLabel(rating.category as String)} ${(rating.score as double).toStringAsFixed(1)}',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -2067,71 +2103,82 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ...freelancers.map(
                   (f) => Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PeopleProfileScreen(
+                            isClient: false,
+                            freelancer: f,
                           ),
-                        ],
+                        ),
                       ),
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.secondary,
-                            backgroundImage:
-                                f.profilePictureUrl != null &&
-                                    f.profilePictureUrl!.startsWith('http')
-                                ? NetworkImage(f.profilePictureUrl!)
-                                : null,
-                            onBackgroundImageError:
-                                f.profilePictureUrl != null &&
-                                    f.profilePictureUrl!.startsWith('http')
-                                ? (_, _) {}
-                                : null,
-                            child:
-                                f.profilePictureUrl == null ||
-                                    !f.profilePictureUrl!.startsWith('http')
-                                ? const Icon(
-                                    Icons.person,
-                                    color: AppColors.primary,
-                                    size: 22,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  f.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: AppColors.secondary,
+                              backgroundImage:
+                                  f.profilePictureUrl != null &&
+                                      f.profilePictureUrl!.startsWith('http')
+                                  ? NetworkImage(f.profilePictureUrl!)
+                                  : null,
+                              onBackgroundImageError:
+                                  f.profilePictureUrl != null &&
+                                      f.profilePictureUrl!.startsWith('http')
+                                  ? (_, _) {}
+                                  : null,
+                              child:
+                                  f.profilePictureUrl == null ||
+                                      !f.profilePictureUrl!.startsWith('http')
+                                  ? const Icon(
+                                      Icons.person,
+                                      color: AppColors.primary,
+                                      size: 22,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    f.displayName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 3),
-                              ],
+                                  const SizedBox(height: 3),
+                                ],
+                              ),
                             ),
-                          ),
-                          GestureDetector(
-                            onTap: () => saved.toggleSaveFreelancer(f),
-                            child: const Icon(
-                              Icons.bookmark_rounded,
-                              color: AppColors.primary,
-                              size: 22,
+                            GestureDetector(
+                              onTap: () => saved.toggleSaveFreelancer(f),
+                              child: const Icon(
+                                Icons.bookmark_rounded,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2292,4 +2339,3 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 }
-

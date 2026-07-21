@@ -45,7 +45,7 @@ class ClientModel {
     jobTitle: json['job_title'] as String? ?? '-',
     totalJobsPosted: (json['total_jobs_posted'] as num?)?.toInt() ?? 0,
     totalProjectsCompleted:
-        (json['total_projects_completed'] as num?)?.toInt() ?? 0,
+        (json['total_jobs_completed'] as num?)?.toInt() ?? 0,
     averageRatingGiven: (json['average_rating_given'] as num?)?.toDouble(),
     weightedReviewAvgReceived:
         (json['weighted_review_avg_received'] as num?)?.toDouble(),

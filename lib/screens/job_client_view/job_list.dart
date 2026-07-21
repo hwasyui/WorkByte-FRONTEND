@@ -10,6 +10,8 @@ import '../../services/proposal_service.dart';
 import '../dashboard/dashboard.dart';
 import '../../models/job_post_model.dart';
 import '../job_client_view/job_detail.dart';
+import '../post_job/job_detail.dart' show PostNewJobJobDetail;
+import '../../widgets/confirm_action_dialog.dart';
 
 class JobListScreen extends StatefulWidget {
   final String? initialQuery;
@@ -144,6 +146,41 @@ class JobListScreenState extends State<JobListScreen> {
         debugPrint('Failed to fetch avatars for $jobPostId: $e');
       }
     }
+  }
+
+  // 👇 NEW: drafts have nothing to view yet — prompt to resume editing instead
+  // of opening the read-only job detail screen.
+  Future<void> _promptContinueDraft(String draftId) async {
+    if (draftId.isEmpty) return;
+
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      icon: Icons.edit_note_rounded,
+      title: 'Continue this draft?',
+      message:
+          'This job hasn\'t been posted yet. Continue editing it to finish and publish.',
+      confirmLabel: 'Continue draft',
+      tone: ConfirmDialogTone.primary,
+    );
+    if (!confirmed || !mounted) return;
+
+    final token = context.read<AuthProvider>().token;
+    final clientId = context.read<ProfileProvider>().clientProfile?.clientId;
+    if (token != null && token.isNotEmpty && clientId != null && clientId.isNotEmpty) {
+      await context.read<JobPostProvider>().loadDraftJobById(
+        token,
+        clientId,
+        draftId,
+      );
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PostNewJobJobDetail(restoreFromExistingDraft: true),
+      ),
+    );
   }
 
   // 👇 NEW: unified filter — combines search query + status tab
@@ -414,6 +451,10 @@ class JobListScreenState extends State<JobListScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (status == 'draft') {
+          _promptContinueDraft(jobPostId);
+          return;
+        }
         final jobModel = JobPostModel.fromJson(job);
         Navigator.push(
           context,
