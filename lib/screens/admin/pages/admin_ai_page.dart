@@ -1197,6 +1197,17 @@ class _ModerationCardState extends State<_ModerationCard> {
   bool _labelsExpanded = false;
 
   Future<void> _act(String action) async {
+    // Confirming a flag ('approve') closes the job post server-side. If that job
+    // already has a live contract / engaged freelancer (backend exposes this as
+    // `is_engaged`), make the admin acknowledge they're closing it out from under
+    // active work before it happens.
+    final isEngagedJob = action == 'approve'
+        && (widget.item['content_type'] as String? ?? '') == 'job_post'
+        && widget.item['is_engaged'] == true;
+    if (isEngagedJob) {
+      final confirmed = await _confirmCloseEngaged(context);
+      if (confirmed != true || !mounted) return;
+    }
     setState(() => _loading = true);
     final admin = context.read<AdminProvider>();
     final id = _id(widget.item);
@@ -1212,6 +1223,40 @@ class _ModerationCardState extends State<_ModerationCard> {
         );
       }
     }
+  }
+
+  Future<bool?> _confirmCloseEngaged(BuildContext ctx) {
+    return showDialog<bool>(
+      context: ctx,
+      builder: (dctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Job Has an Active Contract',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        content: Text(
+          'This job already has an active contract or an engaged freelancer — '
+          'there is an ongoing commitment on it. Confirming this flag will close '
+          'the job and end that live work. Are you sure you want to close it?',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            onPressed: () => Navigator.pop(dctx, true),
+            child: Text('Close Job', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
 
