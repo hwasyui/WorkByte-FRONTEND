@@ -11,6 +11,7 @@ import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../../../../providers/skill_provider.dart';
 import '../../../../models/skill_model.dart';
+import '../../../../widgets/app_toast.dart';
 import 'job_files.dart';
 
 const List<String> _supportedCurrencies = [
@@ -441,7 +442,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
   Future<void> _onNext() async {
     final err = _validate();
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      AppToast.error(err);
       return;
     }
 

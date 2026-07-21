@@ -6,6 +6,7 @@ import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../widgets/file_viewer.dart';
+import '../../../widgets/app_toast.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import 'success.dart';
@@ -33,9 +34,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     final draft = provider.draftJobData;
 
     if (draft == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft data missing. Please start over.')),
-      );
+      AppToast.error('Draft data missing. Please start over.');
       setState(() => _isSubmitting = false);
       return;
     }
@@ -43,9 +42,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     final jobPostId = provider.currentDraftJobPostId;
 
     if (jobPostId == null || jobPostId.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Draft job not found.')));
+      AppToast.error('Draft job not found.');
       setState(() => _isSubmitting = false);
       return;
     }
@@ -60,9 +57,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     if (!mounted) return;
 
     if (updated == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.error ?? 'Failed to publish job.')),
-      );
+      AppToast.error(provider.error ?? 'Failed to publish job.');
       setState(() => _isSubmitting = false);
       return;
     }
@@ -99,12 +94,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       }
       // Uploaded file
       else if (url != null && url.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Downloading file...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        AppToast.info('Downloading file...', duration: const Duration(seconds: 1));
 
         final response = await http.get(Uri.parse(url));
 
@@ -135,9 +125,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Unable to open file.\n$e')));
+      AppToast.error('Unable to open file.\n$e');
     }
   }
 

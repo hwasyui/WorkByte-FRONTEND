@@ -13,6 +13,7 @@ import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
+import '../../widgets/app_toast.dart';
 import '../../widgets/trust_score_card.dart'
     show ScoreBar, StarRow, AiReviewSummaryCard;
 import '../../widgets/review_rating_helpers.dart';
@@ -156,9 +157,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load jobs: ${e.toString()}')),
-        );
+        AppToast.error('Failed to load jobs: ${e.toString()}');
       }
     }
   }
@@ -314,7 +313,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           context,
                           listen: false,
                         );
-                        final messenger = ScaffoldMessenger.of(context);
                         final identifier =
                             profile.clientProfile?.clientId ??
                             auth.currentUser!.userId;
@@ -328,15 +326,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         );
                         if (success) await _refreshProfile();
                         if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
-                            ),
-                          );
+                          if (success) {
+                            AppToast.success('About saved successfully');
+                          } else {
+                            AppToast.error(profile.error ?? 'Failed to save About');
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -578,7 +572,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             context,
                             listen: false,
                           );
-                          final messenger = ScaffoldMessenger.of(context);
                           final identifier =
                               profile.clientProfile?.clientId ??
                               auth.currentUser!.userId;
@@ -592,16 +585,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           );
                           if (success) await _refreshProfile();
                           if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  success
-                                      ? 'Website saved successfully'
-                                      : profile.error ??
-                                            'Failed to save Website',
-                                ),
-                              ),
-                            );
+                            if (success) {
+                              AppToast.success('Website saved successfully');
+                            } else {
+                              AppToast.error(profile.error ?? 'Failed to save Website');
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -657,9 +645,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               data['image'] != profile.profilePictureUrl &&
               !data['image'].toString().startsWith('http')) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Uploading profile picture...')),
-              );
+              AppToast.info('Uploading profile picture...');
             }
 
             final success = await profile.uploadProfilePicture(
@@ -670,13 +656,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
             if (!success) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      profile.error ?? 'Failed to upload profile picture',
-                    ),
-                  ),
-                );
+                AppToast.error(profile.error ?? 'Failed to upload profile picture');
               }
               return;
             }
@@ -689,13 +669,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
 
             if (!success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    profile.error ?? 'Failed to delete profile picture',
-                  ),
-                ),
-              );
+              AppToast.error(profile.error ?? 'Failed to delete profile picture');
               return;
             }
           }
@@ -716,11 +690,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
 
             if (!success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
-              );
+              AppToast.error(profile.error ?? 'Failed to update profile');
               return;
             }
           }
@@ -730,9 +700,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           profile.forceRefreshProfilePicture();
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully')),
-            );
+            AppToast.success('Profile updated successfully');
             Navigator.pop(context);
           }
         },

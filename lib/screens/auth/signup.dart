@@ -11,6 +11,7 @@ import '../../screens/auth/oauth_role_select.dart';
 import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -107,9 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (result == null) {
       final err = authProvider.error ?? 'Google sign-up failed';
       if (err != 'Google login cancelled') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        AppToast.error(err);
       }
       return;
     }
@@ -156,9 +155,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Registration failed')),
-      );
+      AppToast.error(authProvider.error ?? 'Registration failed');
     }
   }
 

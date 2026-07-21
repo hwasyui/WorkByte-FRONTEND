@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
 import '../../core/utils/helpers.dart';
+import '../../widgets/app_toast.dart';
 import 'dm_thread_list.dart';
 
 class DMChatScreen extends StatefulWidget {
@@ -220,15 +221,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isPickingFile = false);
     }
@@ -428,15 +421,7 @@ class _DMChatScreenState extends State<DMChatScreen>
     final hasPermission = await _audioRecorder.hasPermission();
     if (!hasPermission) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Microphone permission denied',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppToast.error('Microphone permission denied');
       return;
     }
 
@@ -491,15 +476,7 @@ class _DMChatScreenState extends State<DMChatScreen>
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       final file = File(path);
       if (await file.exists()) await file.delete();
@@ -566,14 +543,8 @@ class _DMChatScreenState extends State<DMChatScreen>
         _isAudioPlaying = false;
         _playingMessageId = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal memutar audio: ${e.toString().replaceFirst('Exception: ', '')}',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.error(
+        'Gagal memutar audio: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }

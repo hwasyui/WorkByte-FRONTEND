@@ -1,9 +1,9 @@
 import 'dart:io';
 
+import 'package:external_path/external_path.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/dm_provider.dart';
 
@@ -11,6 +11,7 @@ import '../../core/constants/colors.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class GenerateContractScreen extends StatefulWidget {
   final String contractId;
@@ -286,13 +287,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    AppToast.error(message);
   }
 
   Future<void> _selectDate() async {
@@ -404,15 +399,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Contract generated successfully!',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: _primary,
-          ),
-        );
+        AppToast.success('Contract generated successfully!');
 
         await contractProvider.fetchContractById(token, widget.contractId);
         if (mounted) {
@@ -442,12 +429,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   Future<void> _openContractPdf() async {
     if (_contract?.contractPdfUrl == null ||
         _contract!.contractPdfUrl!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No PDF available', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      AppToast.error('No PDF available');
       return;
     }
 
@@ -465,35 +447,23 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
-        final directory = await getApplicationDocumentsDirectory();
+        final downloadsPath =
+            await ExternalPath.getExternalStoragePublicDirectory(
+          ExternalPath.DIRECTORY_DOWNLOAD,
+        );
         final fileName = 'contract_${widget.contractId}.pdf';
-        final filePath = '${directory.path}/$fileName';
+        final filePath = '$downloadsPath/$fileName';
 
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'PDF downloaded successfully to $filePath',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (!mounted) return;
+        AppToast.success('Saved to Downloads/$fileName');
       } else {
         throw Exception('Failed to download PDF');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to download PDF: $e',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error('Failed to download PDF: $e');
     }
   }
 
@@ -529,17 +499,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       setState(() => _sending = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-                ? 'Contract sent to freelancer successfully!'
-                : contractProvider.error ?? 'Failed to send contract',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: success ? AppColors.primary : Colors.red,
-        ),
-      );
+      if (success) {
+        AppToast.success('Contract sent to freelancer successfully!');
+      } else {
+        AppToast.error(contractProvider.error ?? 'Failed to send contract');
+      }
 
       if (success) {
         await contractProvider.fetchContractById(token, widget.contractId);

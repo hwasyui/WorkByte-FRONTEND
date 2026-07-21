@@ -7,6 +7,7 @@ import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
 import 'job_roles.dart';
 import 'job_drafts_screen.dart';
+import '../../widgets/app_toast.dart';
 
 class PostNewJobJobDetail extends StatefulWidget {
   const PostNewJobJobDetail({super.key, this.restoreFromExistingDraft = true});
@@ -336,14 +337,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
 
     _resetForm(notifyProvider: false);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Draft deleted successfully'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _textDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-    );
+    AppToast.success('Draft deleted successfully');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const JobDraftsScreen()),
@@ -354,9 +348,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     setState(() => _submitted = true);
     final error = _validate();
     if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      AppToast.error(error);
       return;
     }
 
@@ -379,9 +371,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save draft: $e')));
+      AppToast.error('Failed to save draft: $e');
     } finally {
       if (mounted) setState(() => _savingDraft = false);
     }

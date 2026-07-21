@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/app_toast.dart';
 
 class AdminJobsPage extends StatefulWidget {
   const AdminJobsPage({super.key});
@@ -423,15 +424,11 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
     );
     if (mounted) {
       setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok ? 'Job closed successfully' : 'Failed to close job',
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      if (ok) {
+        AppToast.success('Job closed successfully');
+      } else {
+        AppToast.error('Failed to close job');
+      }
       if (ok) Navigator.pop(context);
     }
   }

@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../screens/dashboard/dashboard.dart';
 import '../../services/cv_analysis_service.dart';
+import '../../widgets/app_toast.dart';
 
 class CvUploadEntryScreen extends StatefulWidget {
   const CvUploadEntryScreen({super.key});
@@ -83,20 +84,7 @@ class _CvUploadEntryScreenState extends State<CvUploadEntryScreen> {
           return;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'CV uploaded successfully',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppToast.success('CV uploaded successfully');
         return;
       }
 
@@ -131,38 +119,12 @@ class _CvUploadEntryScreenState extends State<CvUploadEntryScreen> {
       }
 
       if (applied == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Profile updated from CV! Complete the remaining fields to continue.',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppToast.success('Profile updated from CV! Complete the remaining fields to continue.');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: const Color(0xFFC62828),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isUploadingCV = false);
     }

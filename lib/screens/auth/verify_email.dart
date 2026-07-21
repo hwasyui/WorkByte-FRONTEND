@@ -7,6 +7,7 @@ import '../../core/constants/text_styles.dart';
 import '../../widgets/primary_button.dart';
 import '../../screens/auth/login.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -79,9 +80,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   Future<void> _handleVerify() async {
     if (_otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the complete 6-digit code')),
-      );
+      AppToast.error('Please enter the complete 6-digit code');
       return;
     }
 
@@ -94,12 +93,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email verified! You can now log in.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppToast.success('Email verified! You can now log in.');
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -111,12 +105,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Invalid code. Try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(authProvider.error ?? 'Invalid code. Try again.');
     }
   }
 
@@ -132,16 +121,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         c.clear();
       }
       _focusNodes[0].requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A new verification code has been sent.')),
-      );
+      AppToast.success('A new verification code has been sent.');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Failed to resend code.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(authProvider.error ?? 'Failed to resend code.');
     }
   }
 

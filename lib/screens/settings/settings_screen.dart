@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -254,26 +255,10 @@ class SettingsScreen extends StatelessWidget {
                                             Navigator.pop(sheetContext);
                                           }
                                           if (context.mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  isSetPassword
-                                                      ? 'Password login enabled successfully'
-                                                      : 'Password changed successfully',
-                                                  style: GoogleFonts.poppins(
-                                                      fontSize: 13),
-                                                ),
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                backgroundColor:
-                                                    AppColors.primary,
-                                              ),
+                                            AppToast.success(
+                                              isSetPassword
+                                                  ? 'Password login enabled successfully'
+                                                  : 'Password changed successfully',
                                             );
                                           }
                                         } else {
@@ -538,32 +523,10 @@ class SettingsScreen extends StatelessWidget {
                                           if (sheetContext.mounted) {
                                             Navigator.pop(sheetContext);
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    targetRole == 'client'
-                                                        ? 'Client account created successfully.'
-                                                        : 'Freelancer account created successfully.',
-                                                    style:
-                                                        GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                  behavior:
-                                                      SnackBarBehavior
-                                                          .floating,
-                                                  shape:
-                                                      RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          10,
-                                                        ),
-                                                  ),
-                                                  backgroundColor:
-                                                      AppColors.primary,
-                                                ),
+                                              AppToast.success(
+                                                targetRole == 'client'
+                                                    ? 'Client account created successfully.'
+                                                    : 'Freelancer account created successfully.',
                                               );
                                             }
                                           }

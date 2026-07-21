@@ -28,6 +28,7 @@ import '../../providers/review_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/add_skill.dart';
+import '../../widgets/app_toast.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
@@ -238,15 +239,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       educationId: educationId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Education deleted successfully'
-              : 'Failed to delete education',
-        ),
-      ),
-    );
+    if (success) {
+      AppToast.success('Education deleted successfully');
+    } else {
+      AppToast.error('Failed to delete education');
+    }
   }
 
   Future<void> _deleteExperience(String workExperienceId) async {
@@ -258,15 +255,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       workExperienceId: workExperienceId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Experience deleted successfully'
-              : 'Failed to delete experience',
-        ),
-      ),
-    );
+    if (success) {
+      AppToast.success('Experience deleted successfully');
+    } else {
+      AppToast.error('Failed to delete experience');
+    }
   }
 
   Future<void> _deleteSkill(String freelancerSkillId) async {
@@ -278,13 +271,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       freelancerSkillId: freelancerSkillId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? 'Skill deleted successfully' : 'Failed to delete skill',
-        ),
-      ),
-    );
+    if (success) {
+      AppToast.success('Skill deleted successfully');
+    } else {
+      AppToast.error('Failed to delete skill');
+    }
   }
 
   Future<void> _deletePortfolio(String portfolioId) async {
@@ -297,15 +288,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-                ? 'Portfolio deleted successfully'
-                : 'Failed to delete portfolio',
-          ),
-        ),
-      );
+      if (success) {
+        AppToast.success('Portfolio deleted successfully');
+      } else {
+        AppToast.error('Failed to delete portfolio');
+      }
     }
   }
 
@@ -333,9 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Portfolio added successfully')),
-            );
+            AppToast.success('Portfolio added successfully');
           }
         },
       ),
@@ -558,9 +543,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               data['image'] != profile.profilePictureUrl &&
               !data['image'].toString().startsWith('http')) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Uploading profile picture...')),
-              );
+              AppToast.info('Uploading profile picture...');
             }
 
             final picSuccess = await profile.uploadProfilePicture(
@@ -571,13 +554,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             if (!picSuccess) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      profile.error ?? 'Failed to upload profile picture',
-                    ),
-                  ),
-                );
+                AppToast.error(profile.error ?? 'Failed to upload profile picture');
               }
               return;
             }
@@ -609,17 +586,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             profile.forceRefreshProfilePicture();
 
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile updated successfully')),
-              );
+              AppToast.success('Profile updated successfully');
             }
           } else {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(profile.error ?? 'Failed to update profile'),
-                ),
-              );
+              AppToast.error(profile.error ?? 'Failed to update profile');
             }
           }
         },
@@ -651,15 +622,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Education added successfully'
-                    : 'Failed to add education',
-              ),
-            ),
-          );
+          if (success) {
+            AppToast.success('Education added successfully');
+          } else {
+            AppToast.error('Failed to add education');
+          }
         },
       ),
     );
@@ -692,15 +659,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Experience added successfully'
-                    : 'Failed to add experience',
-              ),
-            ),
-          );
+          if (success) {
+            AppToast.success('Experience added successfully');
+          } else {
+            AppToast.error('Failed to add experience');
+          }
         },
       ),
     );
@@ -833,7 +796,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           context,
                           listen: false,
                         );
-                        final messenger = ScaffoldMessenger.of(context);
                         final identifier =
                             profile.freelancerProfile?.freelancerId ??
                             auth.currentUser!.userId;
@@ -851,15 +813,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           await _refreshProfile();
                         }
                         if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? 'About saved successfully'
-                                    : profile.error ?? 'Failed to save About',
-                              ),
-                            ),
-                          );
+                          if (success) {
+                            AppToast.success('About saved successfully');
+                          } else {
+                            AppToast.error(profile.error ?? 'Failed to save About');
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -1221,7 +1179,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   context,
                                   listen: false,
                                 );
-                                final messenger = ScaffoldMessenger.of(context);
                                 final identifier =
                                     profile.freelancerProfile?.freelancerId ??
                                     auth.currentUser!.userId;
@@ -1248,19 +1205,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     _selectedCurrency = localCurrency;
                                   });
                                   await _refreshProfile();
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Rate saved successfully'),
-                                    ),
-                                  );
+                                  AppToast.success('Rate saved successfully');
                                 } else {
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        profile.error ?? 'Failed to save rate',
-                                      ),
-                                    ),
-                                  );
+                                  AppToast.error(profile.error ?? 'Failed to save rate');
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -1309,9 +1256,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final proficiency = skillData["proficiency_level"] as String;
 
           if (skillId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please select a skill')),
-            );
+            AppToast.error('Please select a skill');
             return;
           }
 
@@ -1324,13 +1269,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success ? 'Skill added successfully' : 'Failed to add skill',
-              ),
-            ),
-          );
+          if (success) {
+            AppToast.success('Skill added successfully');
+          } else {
+            AppToast.error('Failed to add skill');
+          }
         },
       ),
     );
@@ -1371,52 +1314,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (!mounted) return;
 
       if (fileUrl != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'CV uploaded successfully',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFF4F46E5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppToast.success('CV uploaded successfully');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'CV upload failed. Please try again.',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: const Color(0xFFC62828),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        AppToast.error('CV upload failed. Please try again.');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: const Color(0xFFC62828),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isUploadingCV = false);
     }
@@ -1442,21 +1346,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         uploadedCVPath = null;
         _cvRemoved = true;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CV removed successfully')));
+      AppToast.success('CV removed successfully');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(profile.error ?? 'Failed to remove CV')),
-      );
+      AppToast.error(profile.error ?? 'Failed to remove CV');
     }
   }
 
   Future<void> _previewCV(String? cvUrl) async {
     if (cvUrl == null || cvUrl.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No CV available to preview')),
-      );
+      AppToast.error('No CV available to preview');
       return;
     }
 

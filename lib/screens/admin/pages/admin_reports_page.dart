@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/app_toast.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -139,17 +140,11 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     if (confirmed == true && context.mounted) {
       final success = await admin.actionReport(reportId, action);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success ? 'Report ${action == 'accept' ? 'accepted' : 'dismissed'} successfully.' : 'Failed to action report.',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: success ? const Color(0xFF059669) : const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        if (success) {
+          AppToast.success('Report ${action == 'accept' ? 'accepted' : 'dismissed'} successfully.');
+        } else {
+          AppToast.error('Failed to action report.');
+        }
       }
     }
   }

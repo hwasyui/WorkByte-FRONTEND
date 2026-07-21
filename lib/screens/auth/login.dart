@@ -13,6 +13,7 @@ import '../../screens/dashboard/dashboard.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,17 +22,12 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-enum _AlertType { success, error, info }
-
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   String? _emailError;
   String? _passwordError;
-
-  String? _alertMessage;
-  _AlertType? _alertType;
 
   @override
   void dispose() {
@@ -69,32 +65,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return _emailError == null && _passwordError == null;
   }
 
-  void _showAlert(String message, {required _AlertType type}) {
-    setState(() {
-      _alertMessage = message;
-      _alertType = type;
-    });
-  }
-
-  void _clearAlert() {
-    if (!mounted) return;
-    setState(() {
-      _alertMessage = null;
-      _alertType = null;
-    });
-  }
-
-  Future<void> _showTemporaryAlert(
-    String message, {
-    required _AlertType type,
-    Duration duration = const Duration(seconds: 2),
-  }) async {
-    _showAlert(message, type: type);
-    await Future.delayed(duration);
-    if (!mounted) return;
-    _clearAlert();
-  }
-
   void _routeAfterAuth() {
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
@@ -123,8 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
-    _clearAlert();
-
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
@@ -137,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result == null) {
       final err = authProvider.error ?? 'Google login failed';
       if (err != 'Google login cancelled') {
-        _showAlert(err, type: _AlertType.error);
+        AppToast.error(err);
       }
       return;
     }
@@ -153,11 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _showTemporaryAlert(
-      'Google login successful',
-      type: _AlertType.success,
-      duration: const Duration(milliseconds: 600),
-    );
+    AppToast.success('Google login successful');
 
     if (!mounted) return;
 
@@ -181,13 +145,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    _clearAlert();
-
     if (!_validate()) {
-      _showAlert(
-        'Please fix the highlighted fields and try again.',
-        type: _AlertType.error,
-      );
+      AppToast.error('Please fix the highlighted fields and try again.');
       return;
     }
 
@@ -203,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (!success) {
-      _showAlert(authProvider.error ?? 'Login failed', type: _AlertType.error);
+      AppToast.error(authProvider.error ?? 'Login failed');
       return;
     }
 
@@ -215,13 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     } else if (user?.isAdmin == true) {
-      await _showTemporaryAlert(
-        'Welcome back, admin.',
-        type: _AlertType.success,
-        duration: const Duration(milliseconds: 600),
-      );
+      AppToast.success('Welcome back, admin.');
 
-      if (!mounted) return;
       context.read<AdminProvider>().initWithToken(authProvider.token!);
       Navigator.pushReplacement(
         context,
@@ -230,13 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _showTemporaryAlert(
-      'Login successful. Welcome back!',
-      type: _AlertType.success,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    if (!mounted) return;
+    AppToast.success('Login successful. Welcome back!');
     _routeAfterAuth();
   }
 
@@ -274,40 +222,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   height: 90,
                                 ),
                                 const SizedBox(height: 24),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 280),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeInCubic,
-                                  transitionBuilder: (child, animation) {
-                                    final offsetAnimation = Tween<Offset>(
-                                      begin: const Offset(0, -0.12),
-                                      end: Offset.zero,
-                                    ).animate(animation);
-
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: SlideTransition(
-                                        position: offsetAnimation,
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: _alertMessage == null
-                                      ? const SizedBox.shrink(
-                                          key: ValueKey('empty_alert'),
-                                        )
-                                      : Padding(
-                                          key: ValueKey(_alertMessage!),
-                                          padding: const EdgeInsets.only(
-                                            bottom: 18,
-                                          ),
-                                          child: _LoginAlertCard(
-                                            message: _alertMessage!,
-                                            type: _alertType ?? _AlertType.info,
-                                            onClose: _clearAlert,
-                                          ),
-                                        ),
-                                ),
                                 RichText(
                                   textAlign: TextAlign.center,
                                   text: TextSpan(
@@ -569,157 +483,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
-
-class _LoginAlertCard extends StatelessWidget {
-  final String message;
-  final _AlertType type;
-  final VoidCallback onClose;
-
-  const _LoginAlertCard({
-    required this.message,
-    required this.type,
-    required this.onClose,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final _AlertStyle style = _styleFor(type);
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: style.backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: style.borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: style.shadowColor,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: style.iconBackgroundColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(style.icon, color: style.iconColor, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      style.title,
-                      style: AppText.captionSemiBold.copyWith(
-                        color: const Color(0xFF111827),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: AppText.caption.copyWith(
-                        color: const Color(0xFF4B5563),
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: onClose,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: style.iconBackgroundColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.close_rounded,
-                  color: style.iconColor,
-                  size: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  _AlertStyle _styleFor(_AlertType type) {
-    switch (type) {
-      case _AlertType.success:
-        return const _AlertStyle(
-          title: 'Success',
-          icon: Icons.check_circle_rounded,
-          backgroundColor: Color(0xFFF0FDF4),
-          borderColor: Color(0xFFBBF7D0),
-          iconBackgroundColor: Color(0xFFDCFCE7),
-          iconColor: Color(0xFF15803D),
-          shadowColor: Color(0x1A16A34A),
-        );
-      case _AlertType.error:
-        return const _AlertStyle(
-          title: 'Login failed',
-          icon: Icons.error_rounded,
-          backgroundColor: Color(0xFFFEF2F2),
-          borderColor: Color(0xFFFECACA),
-          iconBackgroundColor: Color(0xFFFEE2E2),
-          iconColor: Color(0xFFDC2626),
-          shadowColor: Color(0x1ADC2626),
-        );
-      case _AlertType.info:
-        return const _AlertStyle(
-          title: 'Notice',
-          icon: Icons.info_rounded,
-          backgroundColor: Color(0xFFEFF6FF),
-          borderColor: Color(0xFFBFDBFE),
-          iconBackgroundColor: Color(0xFFDBEAFE),
-          iconColor: Color(0xFF2563EB),
-          shadowColor: Color(0x1A2563EB),
-        );
-    }
-  }
-}
-
-class _AlertStyle {
-  final String title;
-  final IconData icon;
-  final Color backgroundColor;
-  final Color borderColor;
-  final Color iconBackgroundColor;
-  final Color iconColor;
-  final Color shadowColor;
-
-  const _AlertStyle({
-    required this.title,
-    required this.icon,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.iconBackgroundColor,
-    required this.iconColor,
-    required this.shadowColor,
-  });
 }
 
 class _WaveClipper extends CustomClipper<Path> {

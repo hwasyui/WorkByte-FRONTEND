@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import 'app_toast.dart';
 
 class EducationProfile extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
@@ -69,11 +70,7 @@ class _EducationProfileState extends State<EducationProfile> {
   void _submit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       if (!isCurrent && endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End date is required if not currently studying'),
-          ),
-        );
+        AppToast.error('End date is required if not currently studying');
         return;
       }
       setState(() => _isSubmitting = true);

@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:workbyte_app/widgets/file_viewer.dart';
+import 'package:workbyte_app/widgets/app_toast.dart';
 import 'package:workbyte_app/services/session_guard.dart';
 
 String get _backendBase =>
@@ -40,9 +41,7 @@ Future<void> openDocumentFromUrl(
   final uri = Uri.tryParse(url);
   if (uri == null) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid document URL')),
-    );
+    AppToast.error('Invalid document URL');
     return;
   }
 
@@ -93,8 +92,6 @@ Future<void> openDocumentFromUrl(
   } catch (e) {
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Could not open document: $e')),
-    );
+    AppToast.error('Could not open document: $e');
   }
 }

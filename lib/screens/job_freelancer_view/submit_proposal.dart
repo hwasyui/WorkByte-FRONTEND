@@ -10,6 +10,7 @@ import '../../models/job_role_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/proposal_service.dart';
+import '../../widgets/app_toast.dart';
 
 class SubmitProposalScreen extends StatefulWidget {
   final JobPostModel job;
@@ -129,19 +130,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Proposal submitted successfully!',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        AppToast.success('Proposal submitted successfully!');
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -219,14 +208,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins(fontSize: 13)),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppToast.error(message);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────

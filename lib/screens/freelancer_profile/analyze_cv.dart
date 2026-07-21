@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import '../../services/cv_analysis_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/app_toast.dart';
 import 'analyze_cv_result.dart';
 
 class AnalyzingCVScreen extends StatefulWidget {
@@ -60,9 +61,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
     final token = context.read<AuthProvider>().token;
     if (token == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication required to analyze CV')),
-        );
+        AppToast.error('Authentication required to analyze CV');
         Navigator.pop(context);
       }
       return;
@@ -105,9 +104,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('CV analysis failed: ${e.toString()}')),
-      );
+      AppToast.error('CV analysis failed: ${e.toString()}');
       Navigator.pop(context);
     }
   }

@@ -6,6 +6,7 @@ import '../../providers/review_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/review_rating_helpers.dart';
+import '../../widgets/app_toast.dart';
 import 'review_submitted.dart';
 
 class ReviewFormScreen extends StatefulWidget {
@@ -127,7 +128,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    AppToast.error(msg);
   }
 
   void _addExtraTag(String raw) {

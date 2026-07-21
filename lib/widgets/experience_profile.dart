@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
+import 'app_toast.dart';
 
 class ExperienceProfile extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
@@ -67,17 +68,11 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       if (startDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Start date is required')),
-        );
+        AppToast.error('Start date is required');
         return;
       }
       if (!isPresent && endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('End date is required unless currently working here'),
-          ),
-        );
+        AppToast.error('End date is required unless currently working here');
         return;
       }
       setState(() => _isSubmitting = true);

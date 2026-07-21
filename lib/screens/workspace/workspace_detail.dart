@@ -24,6 +24,7 @@ import '../reviews/client_review_form.dart';
 import '../contract/generate_contract_screen.dart';
 import '../dm/dm_chat_screen.dart';
 import '../../core/utils/helpers.dart';
+import '../../widgets/app_toast.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
@@ -2259,22 +2260,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   void _showSnack(String msg, {required bool isError}) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            msg,
-            style: AppText.caption.copyWith(color: Colors.white),
-          ),
-          backgroundColor: isError ? Colors.redAccent : const Color(0xFF4CAF50),
-          behavior: SnackBarBehavior.fixed,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+    if (isError) {
+      AppToast.error(msg);
+    } else {
+      AppToast.success(msg);
+    }
   }
 
   void _showCancelDialog() {

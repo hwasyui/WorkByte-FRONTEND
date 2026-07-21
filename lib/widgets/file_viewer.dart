@@ -6,6 +6,7 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:video_player/video_player.dart';
+import 'app_toast.dart';
 
 class FileViewerScreen extends StatefulWidget {
   final String filePath;
@@ -262,9 +263,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
               onPressed: () async {
                 final result = await OpenFilex.open(widget.filePath);
                 if (result.type != ResultType.done && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(result.message)),
-                  );
+                  AppToast.error(result.message);
                 }
               },
             ),
@@ -326,17 +325,10 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       final dest = '$downloadsPath/$_displayName';
       await File(widget.filePath).copy(dest);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Disimpan ke Downloads/$_displayName', style: GoogleFonts.poppins()),
-          backgroundColor: const Color(0xFF7C3AED),
-        ),
-      );
+      AppToast.success('Disimpan ke Downloads/$_displayName');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan file: $e')),
-      );
+      AppToast.error('Gagal menyimpan file: $e');
     }
   }
 }

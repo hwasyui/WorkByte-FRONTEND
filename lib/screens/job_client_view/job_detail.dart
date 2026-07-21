@@ -1,5 +1,6 @@
 import 'package:workbyte_app/services/dm_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -293,16 +294,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open contract.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Could not open contract.');
     }
   }
 
@@ -454,30 +446,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (!mounted) return;
     if (updated != null) {
       setState(() => _job = updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Job closed.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      AppToast.success('Job closed.');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to close job.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Failed to close job.');
     }
   }
 
@@ -510,16 +481,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (!mounted) return;
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to accept bid.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Failed to accept bid.');
       return;
     }
 
@@ -533,17 +495,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .toList();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bid accepted. Continue with contract setup.',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        backgroundColor: _primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppToast.success('Bid accepted. Continue with contract setup.');
 
     _createAndNavigateToContract(proposal);
   }
@@ -575,19 +527,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     if (!mounted) return;
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to reject bid.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      AppToast.error('Failed to reject bid.');
       return;
     }
 
@@ -601,17 +541,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .toList();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bid rejected.',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    AppToast.success('Bid rejected.');
   }
 
   Future<void> _createAndNavigateToContract(ProposalModel proposal) async {
@@ -652,29 +582,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to create contract: ${contractProvider.error}',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error('Failed to create contract: ${contractProvider.error}');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error: ${e.toString()}',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Error: ${e.toString()}');
     }
   }
 
@@ -701,16 +613,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       Navigator.pop(context);
 
       if (freelancer == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not load profile.',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error('Could not load profile.');
         return;
       }
 
@@ -724,16 +627,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not load profile.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Could not load profile.');
     }
   }
 
@@ -979,16 +873,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       if (!mounted) return;
 
       if (freelancer == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Freelancer profile not found.',
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error('Freelancer profile not found.');
         return;
       }
 
@@ -1001,34 +886,13 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.alreadyExists
-                ? 'Conversation already exists.'
-                : 'Message sent!',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: _primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+      AppToast.success(
+        result.alreadyExists ? 'Conversation already exists.' : 'Message sent!',
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to send message.',
-            style: GoogleFonts.poppins(fontSize: 12),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error('Failed to send message.');
     }
   }
 

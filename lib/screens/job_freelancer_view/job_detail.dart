@@ -19,6 +19,7 @@ import 'package:workbyte_app/widgets/appeal_dialog.dart';
 import 'package:workbyte_app/widgets/job_detail_header.dart';
 import 'package:workbyte_app/widgets/job_detail_tab_bar.dart';
 import 'package:workbyte_app/widgets/report_sheet.dart';
+import 'package:workbyte_app/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -258,9 +259,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     setState(() => _analyzingRoleId = null);
 
     if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Analysis failed. Please try again.')),
-      );
+      AppToast.error('Analysis failed. Please try again.');
       return;
     }
 
@@ -271,12 +270,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (result['rate_limited'] == true) {
       final usageLimit = (result['usage_limit'] as num?)?.toInt() ?? 0;
       final usageToday = (result['usage_today'] as num?)?.toInt() ?? 0;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Daily analysis limit reached ($usageToday/$usageLimit). Try again tomorrow.',
-          ),
-        ),
+      AppToast.error(
+        'Daily analysis limit reached ($usageToday/$usageLimit). Try again tomorrow.',
       );
       return;
     }
@@ -601,16 +596,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   void onApplyRole(JobRoleModel role) {
     if (hasAppliedToThisJobPost(widget.job.jobPostId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You have already applied to this job.')),
-      );
+      AppToast.error('You have already applied to this job.');
       return;
     }
 
     if (isRoleFilled(role)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This role is already full.')),
-      );
+      AppToast.error('This role is already full.');
       return;
     }
 

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/report_provider.dart';
 import '../providers/auth_provider.dart';
+import 'app_toast.dart';
 
 /// Shows the report bottom sheet.
 ///
@@ -163,20 +164,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
     if (ok) {
       provider.reset();
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Report submitted. Thank you for keeping the community safe.',
-            style: GoogleFonts.poppins(fontSize: 13),
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        ),
-      );
+      AppToast.success('Report submitted. Thank you for keeping the community safe.');
     }
   }
 

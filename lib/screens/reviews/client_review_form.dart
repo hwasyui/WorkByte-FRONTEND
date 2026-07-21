@@ -6,6 +6,7 @@ import '../../providers/client_review_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../widgets/review_rating_helpers.dart';
+import '../../widgets/app_toast.dart';
 import 'client_review_submitted.dart';
 
 /// Freelancer-reviews-client form - mirrors review_form.dart's structure for
@@ -109,7 +110,7 @@ class _ClientReviewFormScreenState extends State<ClientReviewFormScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    AppToast.error(msg);
   }
 
   @override

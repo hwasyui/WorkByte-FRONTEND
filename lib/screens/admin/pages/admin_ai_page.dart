@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/app_toast.dart';
 
 class AdminAiPage extends StatefulWidget {
   const AdminAiPage({super.key});
@@ -431,12 +432,7 @@ class _ScamCardState extends State<_ScamCard> {
     if (mounted) {
       setState(() => _loading = false);
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Action failed', style: GoogleFonts.poppins()),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        AppToast.error('Action failed');
       }
     }
   }
@@ -482,13 +478,11 @@ class _ScamCardState extends State<_ScamCard> {
     final ok = await context.read<AdminProvider>().adminCloseJob(jobPostId);
     if (mounted) {
       setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          ok ? 'Job post closed' : 'Failed to close job post',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-      ));
+      if (ok) {
+        AppToast.success('Job post closed');
+      } else {
+        AppToast.error('Failed to close job post');
+      }
     }
   }
 
@@ -1204,12 +1198,7 @@ class _ModerationCardState extends State<_ModerationCard> {
     if (mounted) {
       setState(() => _loading = false);
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Action failed', style: GoogleFonts.poppins()),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        AppToast.error('Action failed');
       }
     }
   }

@@ -7,6 +7,7 @@ import '../../widgets/login_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../dashboard/dashboard.dart';
+import '../../widgets/app_toast.dart';
 
 class OAuthRoleSelectScreen extends StatefulWidget {
   const OAuthRoleSelectScreen({super.key});
@@ -55,11 +56,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
     if (!mounted) return;
 
     if (!success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Failed to set up profile'),
-        ),
-      );
+      AppToast.error(authProvider.error ?? 'Failed to set up profile');
       return;
     }
 

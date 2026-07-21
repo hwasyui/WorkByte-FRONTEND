@@ -3,6 +3,7 @@ import 'package:workbyte_app/screens/app_gate.dart';
 import 'package:workbyte_app/screens/auth/login.dart';
 import 'package:workbyte_app/screens/no_internet_screen.dart';
 import 'package:workbyte_app/services/deep_link_service.dart';
+import 'package:workbyte_app/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,8 +31,6 @@ import 'firebase_options.dart';
 import 'services/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,7 +86,6 @@ class WorkByteApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'WorkByte',
         navigatorKey: navigatorKey,
-        scaffoldMessengerKey: scaffoldMessengerKey,
         builder: (context, child) {
           return Consumer2<ConnectivityProvider, AuthProvider>(
             builder: (context, connectivity, auth, _) {
@@ -96,15 +94,7 @@ class WorkByteApp extends StatelessWidget {
                   auth.clearSessionExpired();
                   context.read<NotificationProvider>().clear();
 
-                  scaffoldMessengerKey.currentState?.showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Your session has expired. Please log in again.',
-                      ),
-                      backgroundColor: Colors.redAccent,
-                      duration: Duration(seconds: 4),
-                    ),
-                  );
+                  AppToast.error('Your session has expired. Please log in again.');
 
                   navigatorKey.currentState?.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -119,11 +109,13 @@ class WorkByteApp extends StatelessWidget {
                 );
               }
 
-              return Stack(
-                children: [
-                  child ?? const SizedBox.shrink(),
-                  if (!connectivity.hasInternet) const NoInternetScreen(),
-                ],
+              return AppToastHost(
+                child: Stack(
+                  children: [
+                    child ?? const SizedBox.shrink(),
+                    if (!connectivity.hasInternet) const NoInternetScreen(),
+                  ],
+                ),
               );
             },
           );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -57,12 +58,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (!mounted) return;
 
     if (!admin.isAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(admin.error ?? 'Login failed'),
-          backgroundColor: const Color(0xFFEF4444),
-        ),
-      );
+      AppToast.error(admin.error ?? 'Login failed');
     }
     // AdminGate mendeteksi isAuthenticated == true dan menampilkan AdminShell
   }

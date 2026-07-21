@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../services/admin_service.dart';
+import '../../../widgets/app_toast.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -500,12 +501,11 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
     );
     if (mounted) {
       setState(() => _closing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Account closed successfully' : 'Failed to close account', style: GoogleFonts.poppins(fontSize: 13)),
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      if (ok) {
+        AppToast.success('Account closed successfully');
+      } else {
+        AppToast.error('Failed to close account');
+      }
       if (ok) Navigator.pop(context);
     }
   }
@@ -1045,10 +1045,11 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                                 );
                                 if (ctx.mounted) Navigator.of(ctx).pop();
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(ok ? 'Report submitted.' : 'Failed to submit report.'),
-                                    backgroundColor: ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                  ));
+                                  if (ok) {
+                                    AppToast.success('Report submitted.');
+                                  } else {
+                                    AppToast.error('Failed to submit report.');
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(

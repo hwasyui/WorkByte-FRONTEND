@@ -6,6 +6,7 @@ import '../../widgets/login_text_field.dart';
 import '../../screens/auth/login.dart';
 import '../../screens/auth/reset_password.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/app_toast.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -58,9 +59,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: email)),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? 'Failed to send reset code')),
-      );
+      AppToast.error(authProvider.error ?? 'Failed to send reset code');
     }
   }
 
