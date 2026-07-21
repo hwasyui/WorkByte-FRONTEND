@@ -270,16 +270,22 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     return _primary;
   }
 
-  String? _validate() {
-    if (_titleController.text.trim().isEmpty) return 'Title is required';
-    if (_descController.text.trim().isEmpty) return 'Description is required';
-    final descWordCount = _descController.text
+  static const int _minDescriptionWords = 50;
+
+  static int _countWords(String text) {
+    return text
         .trim()
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
         .length;
-    if (descWordCount < 50)
-      return 'Description must be at least 50 words (currently $descWordCount)';
+  }
+
+  String? _validate() {
+    if (_titleController.text.trim().isEmpty) return 'Title is required';
+    if (_descController.text.trim().isEmpty) return 'Description is required';
+    final descWordCount = _countWords(_descController.text);
+    if (descWordCount < _minDescriptionWords)
+      return 'Description must be at least $_minDescriptionWords words (currently $descWordCount)';
     if (_durationController.text.trim().isEmpty)
       return 'Estimation duration is required';
     if (int.tryParse(_durationController.text.trim()) == null)
@@ -410,6 +416,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                     maxLines: 5,
                     prefixIcon: Icons.description_outlined,
                   ),
+                  _buildDescriptionWordCounter(),
                   _buildSectionLabel('Experience Level'),
                   _buildDropdown<String>(
                     value: _experienceLevel,
@@ -809,6 +816,30 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionWordCounter() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 4, top: 2),
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _descController,
+        builder: (context, value, _) {
+          final count = _countWords(value.text);
+          final met = count >= _minDescriptionWords;
+          return Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '$count / $_minDescriptionWords words',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: met ? _success : _warning,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

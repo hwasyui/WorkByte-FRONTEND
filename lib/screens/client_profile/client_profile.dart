@@ -640,6 +640,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       context: context,
       isScrollControlled: true,
       builder: (_) => EditProfileForm(
+        showJobTitle: false,
         initialData: {
           "name": profile.clientProfile?.fullName,
           "username": auth.currentUser?.email ?? '',
@@ -647,7 +648,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
-          if (data['job'] != null) profile.updateJobTitle(data['job']);
           final identifier =
               profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
