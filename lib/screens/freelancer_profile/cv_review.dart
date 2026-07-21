@@ -49,7 +49,7 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
       _errorMessage = null;
     });
     try {
-      await _service.applyProfile(
+      final result = await _service.applyProfile(
         token: widget.token,
         profile: widget.profile,
         applyBio: _applyBio,
@@ -58,6 +58,24 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
         applyEducation: _applyEducation
       );
       if (!mounted) return;
+
+      final applied = (result['applied'] as Map<String, dynamic>?) ?? const {};
+      final anyApplied = applied.values.any((v) {
+        if (v is bool) return v;
+        if (v is num) return v > 0;
+        return false;
+      });
+
+      if (!anyApplied) {
+        setState(() {
+          _errorMessage =
+              "We couldn't apply any data from your CV to the selected "
+              "sections. Try re-uploading a clearer CV or fill your profile "
+              "manually instead.";
+        });
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

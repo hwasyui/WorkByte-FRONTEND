@@ -7,11 +7,13 @@ import 'package:google_fonts/google_fonts.dart';
 class EditProfileForm extends StatefulWidget {
   final Map<String, dynamic> initialData;
   final Function(Map<String, dynamic>) onSave;
+  final bool showJobTitle;
 
   const EditProfileForm({
     super.key,
     required this.initialData,
     required this.onSave,
+    this.showJobTitle = true,
   });
 
   @override
@@ -439,15 +441,17 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 _fieldLabel('Display Name', Icons.person_outline_rounded),
                 _textField(nameCtrl, hintText: 'Your name'),
 
-                const SizedBox(height: 16),
+                if (widget.showJobTitle) ...[
+                  const SizedBox(height: 16),
 
-                // Job Title
-                _fieldLabel('Job Title', Icons.work_outline_rounded),
-                _textField(
-                  jobTitleCtrl,
-                  hintText: 'e.g. UI Designer',
-                  required: false,
-                ),
+                  // Job Title
+                  _fieldLabel('Job Title', Icons.work_outline_rounded),
+                  _textField(
+                    jobTitleCtrl,
+                    hintText: 'e.g. UI Designer',
+                    required: false,
+                  ),
+                ],
 
                 const SizedBox(height: 28),
 

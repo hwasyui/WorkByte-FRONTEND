@@ -101,10 +101,10 @@ class ProfileProvider extends ChangeNotifier {
       final f = _freelancerProfile;
       if (f == null) return false;
       return f.fullName.trim().isNotEmpty &&
-          (f.jobTitle?.trim().isNotEmpty ?? false) &&
           (f.bio?.trim().isNotEmpty ?? false) &&
           _skills.isNotEmpty &&
-          _experiences.isNotEmpty;
+          _experiences.isNotEmpty &&
+          _educations.isNotEmpty;
     }
 
     return false;
@@ -125,10 +125,10 @@ class ProfileProvider extends ChangeNotifier {
       if (f == null) return ['Profile not loaded'];
       return [
         if (f.fullName.trim().isEmpty) 'Full name',
-        if (f.jobTitle.trim().isEmpty) 'Professional title',
         if (f.bio?.trim().isEmpty ?? true) 'Bio',
         if (_skills.isEmpty) 'Skills',
         if (_experiences.isEmpty) 'Work experience',
+        if (_educations.isEmpty) 'Education',
       ];
     }
 

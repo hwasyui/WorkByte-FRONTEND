@@ -33,18 +33,22 @@ class PortfolioService {
   }
 
   Future<List<PortfolioModel>> getPortfolios(String token) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/portfolios'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    final body = _decodeBody(res);
-    debugPrint('GET /portfolios: ${res.statusCode}');
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/portfolios'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 20));
+      final body = _decodeBody(res);
+      debugPrint('GET /portfolios: ${res.statusCode}');
 
-    if (res.statusCode == 200) {
-      final raw = body['details'] ?? body['data'] ?? body;
-      return _parseList(raw);
+      if (res.statusCode == 200) {
+        final raw = body['details'] ?? body['data'] ?? body;
+        return _parseList(raw);
+      }
+    } catch (e) {
+      debugPrint('getPortfolios error: $e');
     }
-    throw Exception(body['message'] ?? 'Failed to fetch portfolios');
+    return [];
   }
 
   Future<List<PortfolioModel>> getPortfoliosByFreelancer(
