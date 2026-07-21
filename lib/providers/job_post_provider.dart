@@ -319,9 +319,7 @@ class JobPostProvider extends ChangeNotifier {
     _draftRoleSkillMeta = {};
     _draftFiles = [];
     _lastDraftSavedAt = null;
-    if (_currentJobPost?.status == 'draft') {
-      _currentJobPost = null;
-    }
+    _currentJobPost = null;
     notifyListeners();
   }
 
