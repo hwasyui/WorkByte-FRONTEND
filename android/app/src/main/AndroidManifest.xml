@@ -47,6 +47,15 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- FCM notification icon/color for background (killed/backgrounded app) messages.
+             Must be a monochrome (white-on-transparent) drawable, not the full-color launcher icon,
+             or Android renders it as a plain white silhouette/box. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/workbyte_primary" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
