@@ -7,6 +7,7 @@ import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../../../../models/job_file_model.dart';
 import 'summary.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 class PostNewJobFiles extends StatefulWidget {
   const PostNewJobFiles({super.key});
@@ -29,6 +30,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
   //               job_file_id, status: 'uploading' | 'uploaded' | 'error' }
   final List<Map<String, dynamic>> _files = [];
   bool _isHydrating = false;
+  bool _isScreenReady = false;
 
   @override
   void initState() {
@@ -82,6 +84,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       _files
         ..clear()
         ..addAll(restored);
+      _isScreenReady = true;
     });
     _isHydrating = false;
     _syncToProvider();
@@ -264,7 +267,9 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
+            child: !_isScreenReady
+                ? const PostJobLoadingView(label: 'Loading attachments...')
+                : SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +298,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
               ),
             ),
           ),
-          _buildBottomBar(),
+          if (_isScreenReady) _buildBottomBar(),
         ],
       ),
     );

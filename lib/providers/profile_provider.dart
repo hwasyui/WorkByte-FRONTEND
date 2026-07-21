@@ -323,7 +323,12 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _clearImageCache();
+      // Don't clear the image cache before the delete request completes —
+      // the on-screen avatar is still bound to the old (soon-to-be-deleted)
+      // URL at this point, so clearing it here makes that widget immediately
+      // retry loading a URL that's being deleted server-side concurrently,
+      // producing a spurious NetworkImageLoadException (404). Clear only
+      // after the model reflects the new (null) URL below.
       if (isClient) {
         _clientProfile = await _service.deleteClientProfilePicture(
           token,

@@ -8,6 +8,8 @@ import '../dashboard/dashboard.dart';
 import 'job_roles.dart';
 import 'job_drafts_screen.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/confirm_action_dialog.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 class PostNewJobJobDetail extends StatefulWidget {
   const PostNewJobJobDetail({super.key, this.restoreFromExistingDraft = true});
@@ -41,6 +43,13 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   bool _isHydratingDraft = false;
   bool _didBootstrapEmptyDraft = false;
   Timer? _autosaveTimer;
+
+  ({int number, String label}) _stepInfo = (
+    number: 1,
+    label: 'Step 1 of 3 · Job detail',
+  );
+
+  bool _isScreenReady = false;
 
   @override
   void initState() {
@@ -77,10 +86,47 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   Future<void> _prepareDraftSession() async {
     if (widget.restoreFromExistingDraft) {
       await _restoreDraftIfAvailable();
+    } else {
+      _resetForm(notifyProvider: false);
+    }
+    await _refreshStepProgress();
+    if (mounted) setState(() => _isScreenReady = true);
+  }
+
+  /// Mirrors `_stepForDraft` in [JobDraftsScreen] so the progress shown here
+  /// matches the progress shown on the Drafts list for the same draft.
+  Future<void> _refreshStepProgress() async {
+    final provider = context.read<JobPostProvider>();
+    final token = context.read<AuthProvider>().token;
+    final jobPostId = provider.currentDraftJobPostId;
+
+    if (token == null ||
+        token.isEmpty ||
+        jobPostId == null ||
+        jobPostId.isEmpty) {
+      if (mounted) {
+        setState(
+          () => _stepInfo = (number: 1, label: 'Step 1 of 3 · Job detail'),
+        );
+      }
       return;
     }
 
-    _resetForm(notifyProvider: false);
+    await provider.fetchJobRoles(token, jobPostId);
+    final hasRole = provider.jobRoles.isNotEmpty;
+    await provider.fetchJobFiles(token, jobPostId);
+    final hasFiles = provider.filesForJob(jobPostId).isNotEmpty;
+
+    if (!mounted) return;
+    setState(() {
+      if (hasFiles) {
+        _stepInfo = (number: 3, label: 'Step 3 of 3 · Attachment');
+      } else if (hasRole) {
+        _stepInfo = (number: 2, label: 'Step 2 of 3 · Role');
+      } else {
+        _stepInfo = (number: 1, label: 'Step 1 of 3 · Job detail');
+      }
+    });
   }
 
   Future<void> _bootstrapNewDraftShell(JobPostProvider provider) async {
@@ -295,53 +341,24 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     return null;
   }
 
-  Future<void> _deleteCurrentDraft() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete this draft?'),
-        content: const Text(
-          'This removes only the currently opened draft. Other drafts stay available in the Drafts screen.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE11D48),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete draft'),
-          ),
-        ],
-      ),
+  Future<void> _clearCurrentDraft() async {
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      icon: Icons.refresh_rounded,
+      title: 'Clear this draft?',
+      message:
+          'This clears the form so you can start fresh. The draft record itself is not deleted — you can still find and delete it from the Drafts screen.',
+      confirmLabel: 'Clear draft',
+      tone: ConfirmDialogTone.warning,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     _autosaveTimer?.cancel();
-    final provider = context.read<JobPostProvider>();
-    final token = context.read<AuthProvider>().token;
-    final draftId = provider.currentDraftJobPostId;
-    if (token != null &&
-        token.isNotEmpty &&
-        draftId != null &&
-        draftId.isNotEmpty) {
-      await provider.deleteDraftJob(token, draftId);
-    } else {
-      provider.clearDraft();
-    }
+    context.read<JobPostProvider>().clearDraft();
 
     _resetForm(notifyProvider: false);
     if (!mounted) return;
-    AppToast.success('Draft deleted successfully');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const JobDraftsScreen()),
-    );
+    AppToast.success('Draft cleared');
   }
 
   Future<void> _onNext() async {
@@ -386,7 +403,9 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
+            child: !_isScreenReady
+                ? const PostJobLoadingView(label: 'Loading job detail...')
+                : SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,6 +491,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   }
 
   Widget _buildStepProgress() {
+    final current = _stepInfo.number;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       padding: const EdgeInsets.all(14),
@@ -481,24 +501,29 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         border: Border.all(color: _border),
       ),
       child: Row(
-        children: const [
+        children: [
           _StepPill(
             index: 1,
             label: 'Job detail',
-            active: true,
-            completed: false,
+            active: current == 1,
+            completed: current > 1,
           ),
-          SizedBox(width: 8),
-          Expanded(child: Divider(color: _border, thickness: 1)),
-          SizedBox(width: 8),
-          _StepPill(index: 2, label: 'Role', active: false, completed: false),
-          SizedBox(width: 8),
-          Expanded(child: Divider(color: _border, thickness: 1)),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
+          const Expanded(child: Divider(color: _border, thickness: 1)),
+          const SizedBox(width: 8),
+          _StepPill(
+            index: 2,
+            label: 'Role',
+            active: current == 2,
+            completed: current > 2,
+          ),
+          const SizedBox(width: 8),
+          const Expanded(child: Divider(color: _border, thickness: 1)),
+          const SizedBox(width: 8),
           _StepPill(
             index: 3,
             label: 'Attachment',
-            active: false,
+            active: current == 3,
             completed: false,
           ),
         ],
@@ -585,7 +610,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                       ),
                       _buildSoftChip(
                         icon: Icons.layers_outlined,
-                        label: 'Step 1 of 3',
+                        label: _stepInfo.label,
                       ),
                       _buildSoftChip(
                         icon: Icons.save_outlined,
@@ -622,7 +647,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                     ),
                     TextButton.icon(
                       onPressed: hasDraft || _hasAnyDraftContent
-                          ? _deleteCurrentDraft
+                          ? _clearCurrentDraft
                           : null,
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFFE11D48),
@@ -634,9 +659,9 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: const Text(
-                        'Delete this draft',
+                        'Clear draft',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),

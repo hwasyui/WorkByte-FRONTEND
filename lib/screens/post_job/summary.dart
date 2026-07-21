@@ -10,6 +10,7 @@ import '../../../widgets/app_toast.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import 'success.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 class PostNewJobSummary extends StatefulWidget {
   const PostNewJobSummary({super.key});
@@ -22,6 +23,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
   static const Color _primary = AppColors.primary;
   bool _isSubmitting = false;
   String _submitStatus = '';
+  bool _isScreenReady = false;
 
   Future<void> _onPostJob() async {
     setState(() {
@@ -143,6 +145,8 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       if (jobPostId != null && jobPostId.isNotEmpty) {
         await provider.fetchJobFiles(token, jobPostId);
       }
+
+      if (mounted) setState(() => _isScreenReady = true);
     });
   }
 
@@ -173,7 +177,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                   topRight: Radius.circular(24),
                 ),
               ),
-              child: SingleChildScrollView(
+              child: !_isScreenReady
+                  ? const PostJobLoadingView(label: 'Loading summary...')
+                  : SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

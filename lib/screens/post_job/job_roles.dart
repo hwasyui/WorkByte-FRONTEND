@@ -13,6 +13,7 @@ import '../../../../providers/skill_provider.dart';
 import '../../../../models/skill_model.dart';
 import '../../../../widgets/app_toast.dart';
 import 'job_files.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 const List<String> _supportedCurrencies = [
   'IDR',
@@ -108,6 +109,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
   int? _expandedIndex;
   bool _isSavingAll = false;
   bool _isHydrating = false;
+  bool _isScreenReady = false;
   String _projectType = 'individual';
 
   bool get _isIndividual => _projectType == 'individual';
@@ -122,6 +124,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
       await context.read<SkillProvider>().fetchAllSkills(token);
       await _hydrateProjectType();
       await _restoreDraftRolesIfAvailable();
+      if (mounted) setState(() => _isScreenReady = true);
     });
   }
 
@@ -147,6 +150,14 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
       'project_type': _projectType,
       'draft_step': 'roles',
     }, notify: false);
+  }
+
+  Future<void> _persistProjectType() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null || token.isEmpty) return;
+    final provider = context.read<JobPostProvider>();
+    if (provider.currentDraftJobPostId == null) return;
+    await provider.saveDraftJob(token);
   }
 
   Future<void> _restoreDraftRolesIfAvailable() async {
@@ -526,7 +537,9 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
+            child: !_isScreenReady
+                ? const PostJobLoadingView(label: 'Loading roles...')
+                : SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,7 +585,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
               ),
             ),
           ),
-          _buildBottomBar(),
+          if (_isScreenReady) _buildBottomBar(),
         ],
       ),
     );
@@ -699,6 +712,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
           setState(() => _projectType = value);
           _syncProjectTypeToProvider();
           _scheduleRoleAutosave(_expandedIndex ?? 0);
+          _persistProjectType();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

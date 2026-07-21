@@ -1340,8 +1340,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       fields: updateFields,
     );
 
+    if (!mounted) return;
     if (success) {
       await _refreshProfile();
+      if (!mounted) return;
       setState(() {
         uploadedCVPath = null;
         _cvRemoved = true;
@@ -1566,6 +1568,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     : (File(profileImage).existsSync()
                                           ? FileImage(File(profileImage))
                                           : null))
+                              : null,
+                          // A stale/expired URL (e.g. a picture that was just
+                          // deleted) failing to load is expected — handle it
+                          // silently instead of letting it surface as an
+                          // uncaught NetworkImageLoadException.
+                          onBackgroundImageError: profileImage != null
+                              ? (_, _) {}
                               : null,
                           child:
                               profileImage == null ||
@@ -2594,6 +2603,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 c.profilePictureUrl != null &&
                                     c.profilePictureUrl!.startsWith('http')
                                 ? NetworkImage(c.profilePictureUrl!)
+                                : null,
+                            onBackgroundImageError:
+                                c.profilePictureUrl != null &&
+                                    c.profilePictureUrl!.startsWith('http')
+                                ? (_, _) {}
                                 : null,
                             child:
                                 c.profilePictureUrl == null ||

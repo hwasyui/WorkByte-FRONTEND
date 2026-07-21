@@ -6,6 +6,8 @@ import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
 import 'job_detail.dart';
+import '../../widgets/confirm_action_dialog.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 class JobDraftsScreen extends StatefulWidget {
   const JobDraftsScreen({super.key});
@@ -109,31 +111,16 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
   }
 
   Future<void> _deleteDraft(String draftId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete draft?'),
-        content: const Text(
+    final confirmed = await ConfirmActionDialog.show(
+      context,
+      icon: Icons.delete_outline_rounded,
+      title: 'Delete draft?',
+      message:
           'This removes the selected draft only. Other drafts will remain available.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE11D48),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete',
+      tone: ConfirmDialogTone.destructive,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     final token = context.read<AuthProvider>().token;
     if (token != null && token.isNotEmpty) {
@@ -191,7 +178,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
               onRefresh: _loadDrafts,
               color: _primary,
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const PostJobLoadingView(label: 'Loading drafts...')
                   : drafts.isEmpty
                   ? _buildEmptyState()
                   : ListView(

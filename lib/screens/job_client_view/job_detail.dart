@@ -1283,14 +1283,43 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (_proposals.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
+        padding: const EdgeInsets.fromLTRB(24, 48, 24, 48),
         child: Center(
-          child: Text(
-            'No bids yet.',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: const Color(0xFF7D7D7D),
-            ),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.gavel_outlined,
+                  size: 34,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No bids yet',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1F2937),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Bids will appear here once freelancers start applying to this job.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF7D7D7D),
+                  height: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -2041,8 +2070,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           _sectionTitle('Terms'),
           const SizedBox(height: 12),
           _termRow('Project Type', _capitalize(_job.projectType)),
-          if (_job.workingDays != null)
-            _termRow('Working Days', '${_job.workingDays} days'),
           if (_job.deadline != null) _termRow('Deadline', _job.deadline!),
           if (_job.estimatedDuration != null)
             _termRow('Estimated Duration', _job.estimatedDuration!),
@@ -2244,7 +2271,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 if (role.positionsFilled > 0) ...[
                   const SizedBox(width: 4),
                   Text(
-                    'Â· ${role.positionsFilled} filled',
+                    '· ${role.positionsFilled} filled',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: _primary,
@@ -2459,7 +2486,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                   if (file.fileSizeFormatted.isNotEmpty)
                     Text(
-                      '${file.fileType.toUpperCase()} Â· ${file.fileSizeFormatted}',
+                      '${file.fileType.toUpperCase()} · ${file.fileSizeFormatted}',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: const Color(0xFF7D7D7D),
@@ -2504,7 +2531,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Widget _skillChip(String name, bool isRequired, String? importance) {
     final color = isRequired ? _primary : const Color(0xFF7D7D7D);
     final importanceLabel = importance != null && importance.isNotEmpty
-        ? ' Â· ${importance[0].toUpperCase()}${importance.substring(1)}'
+        ? ' · ${importance[0].toUpperCase()}${importance.substring(1)}'
         : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

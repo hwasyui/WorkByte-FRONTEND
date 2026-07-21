@@ -11,13 +11,13 @@ import '../../providers/saved_items_provider.dart';
 import '../../providers/client_review_provider.dart';
 import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
-import '../../widgets/job_list_card.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/app_toast.dart';
 import '../../widgets/trust_score_card.dart'
     show ScoreBar, StarRow, AiReviewSummaryCard;
 import '../../widgets/review_rating_helpers.dart';
 import '../../models/job_post_model.dart';
+import '../job_client_view/job_detail.dart';
 import 'dart:io';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -632,7 +632,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         initialData: {
           "name": profile.clientProfile?.fullName,
           "username": auth.currentUser?.email ?? '',
-          "job": profile.jobTitle,
           "image": profile.profilePictureUrl,
         },
         onSave: (data) async {
@@ -674,12 +673,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // ── Case 3: Update other fields (name, job_title, etc.) ─────────
+          // ── Case 3: Update other fields (name, etc.) ─────────────────────
+          // Note: clients don't have a job_title concept on the backend
+          // (ClientUpdate has no such field) — only full_name is editable
+          // here.
           final fields = <String, dynamic>{
             if (data['name'] != null) 'full_name': data['name'],
-            if ((data['job'] as String?)?.isNotEmpty == true &&
-                data['job'] != '-')
-              'job_title': data['job'],
           };
 
           if (fields.isNotEmpty) {
@@ -699,9 +698,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           await _refreshProfile();
           profile.forceRefreshProfilePicture();
 
+          // Note: the edit sheet already closes itself (see EditProfileForm's
+          // own _submit), so no Navigator.pop here — this `context` is the
+          // profile screen's, and popping it would kick the user back to
+          // whatever screen is beneath Profile (e.g. Home) instead of just
+          // refreshing this screen in place.
           if (mounted) {
             AppToast.success('Profile updated successfully');
-            Navigator.pop(context);
           }
         },
       ),
@@ -1026,6 +1029,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
+                          // A stale/expired URL (e.g. a picture that was just
+                          // deleted) failing to load is expected — handle it
+                          // silently instead of letting it surface as an
+                          // uncaught NetworkImageLoadException.
+                          onBackgroundImageError: profileImage != null
+                              ? (_, _) {}
+                              : null,
                           child:
                               profileImage == null ||
                                   (!profileImage.startsWith('http') &&
@@ -1092,30 +1102,107 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
           const SizedBox(height: 8),
 
-          Builder(
-            builder: (context) {
-              final rating =
-                  Provider.of<ProfileProvider>(
-                    context,
-                    listen: false,
-                  ).clientProfile?.averageRatingGiven ??
-                  0.0;
-              final safeRating = rating.clamp(0.0, 5.0);
-              return Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded, size: 15, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${safeRating.toStringAsFixed(1)}  ·  avg. rating given',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
+          Consumer<ClientReviewProvider>(
+            builder: (context, reviewProvider, _) {
+              // Ratings RECEIVED from freelancers (this client's own
+              // reputation) — distinct from `averageRatingGiven`, which is
+              // the rating this client gives to freelancers. Fetched via
+              // loadTrustScore in _loadReviews, so this can briefly be null
+              // while it's still loading, not just when there are no reviews.
+              final trustScore = reviewProvider.trustScore;
+              final rawRating = trustScore?.weightedReviewAvgReceived;
+              final totalReviews = trustScore?.totalReviewsReceived ?? 0;
+
+              if (rawRating == null || totalReviews == 0) {
+                // Self-explanatory as-is, so no tooltip needed here.
+                return Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                  ],
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey.withOpacity(0.22)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_border_rounded,
+                          size: 15,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'No ratings received yet',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final safeRating = rawRating.clamp(0.0, 5.0);
+              return Center(
+                child: Tooltip(
+                  triggerMode: TooltipTriggerMode.tap,
+                  message:
+                      'Average rating this client has received from freelancers, based on $totalReviews review${totalReviews == 1 ? '' : 's'}',
+                  textStyle: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: Colors.white,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.amber.withOpacity(0.25)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          size: 15,
+                          color: Colors.amber.shade700,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          safeRating.toStringAsFixed(1),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 13,
+                          color: Colors.grey[400],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -1460,41 +1547,165 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         children: [
-          ...postedJobs.asMap().entries.map((entry) {
-            final job = entry.value;
-            return Column(
-              children: [
-                JobListCard(
-                  posterLogo: Container(
-                    width: 35,
-                    height: 35,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.business,
-                      color: primaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  posterName: 'Your Job',
-                  title: job.jobTitle,
-                  category: job.projectType.toUpperCase(),
-                  teamSize: 1,
-                  salaryTag: job.projectScope.toUpperCase(),
-                  typeTag: job.projectType == 'team' ? 'Team' : 'Individual',
-                  bidderAvatars: const [],
-                  biddingsLabel:
-                      '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
-                  onTap: () {},
-                  showBookmark: false,
-                ),
-                const SizedBox(height: 12),
-              ],
-            );
-          }).toList(),
+          ...postedJobs.map(
+            (job) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildPostedJobCard(job),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  ({String label, Color color}) _jobStatusInfo(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return (label: 'Active', color: const Color(0xFF16A34A));
+      case 'filled':
+        return (label: 'Filled', color: primaryColor);
+      case 'closed':
+        return (label: 'Closed', color: const Color(0xFFE11D48));
+      case 'draft':
+      default:
+        return (label: 'Draft', color: const Color(0xFFF59E0B));
+    }
+  }
+
+  Widget _buildPostedJobCard(JobPostModel job) {
+    final status = _jobStatusInfo(job.status);
+    final roleCount = job.roleCount > 0 ? job.roleCount : 1;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ClientJobDetailScreen(job: job)),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFEEEEF5)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.work_outline_rounded,
+                color: primaryColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          job.jobTitle,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1A1A2E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: status.color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status.label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: status.color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          job.projectType == 'team' ? 'Team' : 'Individual',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.group_outlined,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$roleCount role${roleCount != 1 ? 's' : ''}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF7D7D7D),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.article_outlined,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF7D7D7D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
@@ -1730,6 +1941,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     (avatarUrl != null && avatarUrl.startsWith('http'))
                     ? NetworkImage(avatarUrl)
                     : null,
+                onBackgroundImageError:
+                    (avatarUrl != null && avatarUrl.startsWith('http'))
+                    ? (_, _) {}
+                    : null,
                 child: (avatarUrl != null && avatarUrl.startsWith('http'))
                     ? null
                     : const Icon(Icons.person_outline, color: primaryColor, size: 18),
@@ -1874,6 +2089,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                 f.profilePictureUrl != null &&
                                     f.profilePictureUrl!.startsWith('http')
                                 ? NetworkImage(f.profilePictureUrl!)
+                                : null,
+                            onBackgroundImageError:
+                                f.profilePictureUrl != null &&
+                                    f.profilePictureUrl!.startsWith('http')
+                                ? (_, _) {}
                                 : null,
                             child:
                                 f.profilePictureUrl == null ||

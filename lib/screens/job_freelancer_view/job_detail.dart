@@ -30,6 +30,7 @@ import '../freelancer_profile/freelancer_profile.dart';
 import '../people_list/people_list_screen.dart';
 import 'submit_proposal.dart';
 import '../../core/utils/helpers.dart';
+import '../../widgets/post_job_loading_view.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobPostModel job;
@@ -62,6 +63,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   List<JobFileModel> _jobFiles = [];
   bool _filesLoading = true;
 
+  bool _isScreenReady = false;
+
   bool get isTeam => widget.job.projectType.toLowerCase() == 'team';
 
   List<String> get tabs => ['Details', 'Terms'];
@@ -79,16 +82,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      fetchClient();
-      fetchRoles();
-      fetchAllSkills();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       fetchMyProposals();
       fetchJobFiles();
       if (!context.read<ProfileProvider>().isClient) {
         fetchJobFitUsage();
       }
+
+      // Job detail itself (widget.job) is already available synchronously;
+      // gate the screen on roles + their skills, and the client's profile
+      // (incl. its picture), so nothing pops in a moment after the screen
+      // is already showing.
+      await Future.wait([fetchRoles(), fetchAllSkills(), fetchClient()]);
+      await _precacheClientAvatar();
+      if (mounted) setState(() => _isScreenReady = true);
     });
+  }
+
+  Future<void> _precacheClientAvatar() async {
+    final url = client?.profilePictureUrl;
+    if (url == null || url.isEmpty || !mounted) return;
+    try {
+      await precacheImage(NetworkImage(url), context);
+    } catch (_) {
+      // Fall through to the header's own errorBuilder fallback.
+    }
   }
 
   Future<void> fetchJobFitUsage() async {
@@ -916,19 +934,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
               ),
 
-            // ── Tab bar ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
-              child: JobDetailTabBar(
-                tabs: tabs,
-                selectedIndex: selectedTab,
-                onTabSelected: (i) => setState(() => selectedTab = i),
+            if (!_isScreenReady)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: PostJobLoadingView(label: 'Loading job details...'),
+              )
+            else ...[
+              // ── Tab bar ──────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
+                child: JobDetailTabBar(
+                  tabs: tabs,
+                  selectedIndex: selectedTab,
+                  onTabSelected: (i) => setState(() => selectedTab = i),
+                ),
               ),
-            ),
 
-            // ── Tab content ──────────────────────────────────────────
-            if (selectedTab == 0) buildDetailsTab(),
-            if (selectedTab == 1) buildTermsTab(),
+              // ── Tab content ──────────────────────────────────────────
+              if (selectedTab == 0) buildDetailsTab(),
+              if (selectedTab == 1) buildTermsTab(),
+            ],
           ],
         ),
       ),
@@ -1026,8 +1051,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           termCard(
             children: [
               termRow('Project Type', capitalize(widget.job.projectType)),
-              if (widget.job.workingDays != null)
-                termRow('Working Days', '${widget.job.workingDays} days'),
               if (widget.job.deadline != null)
                 termRow('Deadline', widget.job.deadline!),
               if (widget.job.estimatedDuration != null)
@@ -1196,7 +1219,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ? '/ hour'
                             : role.budgetType == 'negotiable'
                             ? 'Negotiable'
-                            : 'fixed',
+                            : 'Fixed',
                         style: GoogleFonts.poppins(
                           fontSize: 10,
                           color: const Color(0xFF7D7D7D),
@@ -1570,7 +1593,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
-        importance != null && importance.isNotEmpty
+        // "Required" is redundant under the "Required Skills" heading above
+        // this chip, so only show importance when it says something else
+        // (e.g. "Preferred").
+        importance != null &&
+                importance.isNotEmpty &&
+                importance.toLowerCase() != 'required'
             ? '$label (${capitalize(importance)})'
             : label,
         style: GoogleFonts.poppins(
