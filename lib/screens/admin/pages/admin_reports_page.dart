@@ -76,8 +76,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                             separatorBuilder: (_, __) => const SizedBox(height: 10),
                             itemBuilder: (ctx, i) => _ReportCard(
                               report: admin.reports[i],
-                              onAccept: () => _handleAction(ctx, admin, admin.reports[i]['report_id'] as String, 'accept'),
-                              onDismiss: () => _handleAction(ctx, admin, admin.reports[i]['report_id'] as String, 'dismiss'),
+                              onAccept: () => _handleAction(ctx, admin, admin.reports[i], 'accept'),
+                              onDismiss: () => _handleAction(ctx, admin, admin.reports[i], 'dismiss'),
                             ),
                           ),
                         ),
@@ -91,22 +91,34 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   Future<void> _handleAction(
     BuildContext context,
     AdminProvider admin,
-    String reportId,
+    Map<String, dynamic> report,
     String action,
   ) async {
+    final reportId = report['report_id'] as String;
     final label = action == 'accept' ? 'Accept' : 'Dismiss';
+    // Accepting a report on a job that already has a live contract / engaged
+    // freelancer closes it out from under active work — make the admin
+    // acknowledge that first. The backend exposes `is_engaged` on job_post
+    // reports for exactly this warning.
+    final isEngagedJob = action == 'accept'
+        && (report['reported_type'] as String? ?? '') == 'job_post'
+        && report['is_engaged'] == true;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          '$label Report?',
+          isEngagedJob ? 'Job Has an Active Contract' : '$label Report?',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         content: Text(
-          action == 'accept'
-              ? 'This confirms the violation. The report will be marked as accepted.'
-              : 'This dismisses the report. No violation will be recorded.',
+          action != 'accept'
+              ? 'This dismisses the report. No violation will be recorded.'
+              : isEngagedJob
+                  ? 'This job already has an active contract or an engaged freelancer — '
+                      'there is an ongoing commitment on it. Accepting this report will '
+                      'close the job and end that live work. Are you sure you want to close it?'
+                  : 'This confirms the violation. The report will be marked as accepted.',
           style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
         ),
         actions: [
@@ -259,6 +271,13 @@ class _ReportCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (report['reported_type'] == 'job_post' && report['is_engaged'] == true) ...[
+                  const SizedBox(width: 6),
+                  const Tooltip(
+                    message: 'Has an active contract / engaged freelancer',
+                    child: Icon(Icons.handshake_outlined, size: 15, color: Color(0xFFD97706)),
+                  ),
+                ],
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
