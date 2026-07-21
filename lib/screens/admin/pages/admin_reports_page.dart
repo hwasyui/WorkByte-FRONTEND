@@ -276,6 +276,13 @@ class _ReportCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (report['reported_type'] == 'job_post' && report['is_engaged'] == true) ...[
+                  const SizedBox(width: 6),
+                  const Tooltip(
+                    message: 'Has an active contract / engaged freelancer',
+                    child: Icon(Icons.handshake_outlined, size: 15, color: Color(0xFFD97706)),
+                  ),
+                ],
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

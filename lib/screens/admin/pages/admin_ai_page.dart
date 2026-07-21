@@ -1590,6 +1590,13 @@ class _ModerationCardState extends State<_ModerationCard> {
                   ],
                 ),
               ),
+              if (item['is_engaged'] == true) ...[
+                const Tooltip(
+                  message: 'Has an active contract / engaged freelancer',
+                  child: Icon(Icons.handshake_outlined, size: 16, color: Color(0xFFD97706)),
+                ),
+                const SizedBox(width: 8),
+              ],
               _ScoreBadge(
                 score: displayTotal / 5.0,
                 color: scoreColor,
