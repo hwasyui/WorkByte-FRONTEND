@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/admin_dialog.dart';
+import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/app_toast.dart';
 
 class AdminAiPage extends StatefulWidget {
@@ -437,36 +439,29 @@ class _ScamCardState extends State<_ScamCard> {
     }
   }
 
+  Future<void> _confirmAct(BuildContext ctx, String action) async {
+    final isApprove = action == 'approve';
+    final confirmed = await showAdminConfirmDialog(
+      ctx,
+      title: isApprove ? 'Mark Job Safe?' : 'Remove This Job?',
+      message: isApprove
+          ? 'This clears the scam flag and keeps the job post live on the platform.'
+          : 'This will remove the job post for violating platform policy. This cannot be undone.',
+      icon: isApprove ? Icons.check_circle_outline_rounded : Icons.delete_outline_rounded,
+      confirmLabel: isApprove ? 'Mark Safe' : 'Remove Job',
+      confirmColor: isApprove ? const Color(0xFF059669) : const Color(0xFFDC2626),
+    );
+    if (confirmed == true) _act(action);
+  }
+
   Future<void> _confirmClose(BuildContext ctx) async {
-    final confirmed = await showDialog<bool>(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          'Close Job Post',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        content: Text(
-          'This will close the job post as an admin override. No scam strike is recorded against the client.',
-          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Close Job',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF7C3AED),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showAdminConfirmDialog(
+      ctx,
+      title: 'Close Job Post',
+      message: 'This will close the job post as an admin override. No scam strike is recorded against the client.',
+      icon: Icons.block_rounded,
+      confirmLabel: 'Close Job',
+      confirmColor: const Color(0xFF7C3AED),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _closing = true);
@@ -512,6 +507,7 @@ class _ScamCardState extends State<_ScamCard> {
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints: BoxConstraints(
+            maxWidth: 560,
             maxHeight: MediaQuery.of(dialogCtx).size.height * 0.82,
           ),
           child: Column(
@@ -756,7 +752,7 @@ class _ScamCardState extends State<_ScamCard> {
                 ),
               ),
               const SizedBox(width: 8),
-              _ScoreBadge(score: score, color: scoreColor, label: 'Scam Score'),
+              _ScoreBadge(score: score, color: scoreColor, label: 'Score: ${score.toStringAsFixed(3)}'),
             ],
           ),
           const SizedBox(height: 10),
@@ -845,7 +841,7 @@ class _ScamCardState extends State<_ScamCard> {
                         label: 'Mark Safe',
                         icon: Icons.check_circle_outline_rounded,
                         color: const Color(0xFF059669),
-                        onTap: () => _act('approve'),
+                        onTap: () => _confirmAct(context, 'approve'),
                       ),
                       const SizedBox(width: 8),
                       _ActionButton(
@@ -853,7 +849,7 @@ class _ScamCardState extends State<_ScamCard> {
                         icon: Icons.delete_outline_rounded,
                         color: const Color(0xFFDC2626),
                         filled: true,
-                        onTap: () => _act('remove'),
+                        onTap: () => _confirmAct(context, 'remove'),
                       ),
                     ],
                   )
@@ -1214,37 +1210,31 @@ class _ModerationCardState extends State<_ModerationCard> {
     }
   }
 
+  Future<void> _confirmAct(BuildContext ctx, String action) async {
+    final isApprove = action == 'approve';
+    final confirmed = await showAdminConfirmDialog(
+      ctx,
+      title: isApprove ? 'Confirm This Flag?' : 'Dismiss This Flag?',
+      message: isApprove
+          ? 'This confirms the flagged content violates platform policy. The job post will be closed.'
+          : 'This dismisses the flag. No violation will be recorded and the content stays live.',
+      icon: isApprove ? Icons.flag_rounded : Icons.check_circle_outline_rounded,
+      confirmLabel: isApprove ? 'Confirm Flag' : 'Dismiss',
+      confirmColor: isApprove ? const Color(0xFFDC2626) : const Color(0xFF059669),
+    );
+    if (confirmed == true) _act(action);
+  }
+
   Future<bool?> _confirmCloseEngaged(BuildContext ctx) {
-    return showDialog<bool>(
-      context: ctx,
-      builder: (dctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Job Has an Active Contract',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
-        ),
-        content: Text(
-          'This job already has an active contract or an engaged freelancer — '
+    return showAdminConfirmDialog(
+      ctx,
+      title: 'Job Has an Active Contract',
+      message: 'This job already has an active contract or an engaged freelancer — '
           'there is an ongoing commitment on it. Confirming this flag will close '
           'the job and end that live work. Are you sure you want to close it?',
-          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx, false),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            onPressed: () => Navigator.pop(dctx, true),
-            child: Text('Close Job', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+      icon: Icons.handshake_outlined,
+      confirmLabel: 'Close Job',
+      confirmColor: const Color(0xFFDC2626),
     );
   }
 
@@ -1291,6 +1281,7 @@ class _ModerationCardState extends State<_ModerationCard> {
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints: BoxConstraints(
+            maxWidth: 560,
             maxHeight: MediaQuery.of(dialogCtx).size.height * 0.82,
           ),
           child: Column(
@@ -1767,7 +1758,7 @@ class _ModerationCardState extends State<_ModerationCard> {
                         label: 'Dismiss',
                         icon: Icons.check_circle_outline_rounded,
                         color: const Color(0xFF059669),
-                        onTap: () => _act('reject'),
+                        onTap: () => _confirmAct(context, 'reject'),
                       ),
                       const SizedBox(width: 8),
                       _ActionButton(
@@ -1775,7 +1766,7 @@ class _ModerationCardState extends State<_ModerationCard> {
                         icon: Icons.flag_rounded,
                         color: const Color(0xFFDC2626),
                         filled: true,
-                        onTap: () => _act('approve'),
+                        onTap: () => _confirmAct(context, 'approve'),
                       ),
                     ],
                   )
@@ -2502,9 +2493,7 @@ class _RedFlagsList extends StatelessWidget {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         if (admin.isReviewIntegrityLoading && admin.reviewRedFlags.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
-          );
+          return const AdminSkeletonList();
         }
         if (admin.reviewRedFlags.isEmpty) {
           return const _Empty(
@@ -2621,9 +2610,7 @@ class _FlaggedReviewsList extends StatelessWidget {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         if (admin.isReviewIntegrityLoading && admin.flaggedReviews.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
-          );
+          return const AdminSkeletonList();
         }
         if (admin.flaggedReviews.isEmpty) {
           return const _Empty(
@@ -2776,9 +2763,7 @@ class _FlaggedClientReviewsList extends StatelessWidget {
       builder: (context, admin, _) {
         if (admin.isReviewIntegrityLoading &&
             admin.flaggedClientReviews.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
-          );
+          return const AdminSkeletonList();
         }
         if (admin.flaggedClientReviews.isEmpty) {
           return const _Empty(

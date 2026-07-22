@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../services/admin_service.dart';
 import '../../../widgets/app_toast.dart';
+import '../../../widgets/admin/admin_dialog.dart';
+import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -215,17 +219,14 @@ class _UsersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
-      );
+      return const AdminSkeletonList();
     }
 
     if (users.isEmpty) {
-      return Center(
-        child: Text(
-          'No ${type.toLowerCase()}s found',
-          style: GoogleFonts.poppins(color: const Color(0xFF9CA3AF)),
-        ),
+      return AdminEmptyState(
+        icon: Icons.people_outline_rounded,
+        title: 'No ${type.toLowerCase()}s found',
+        accent: color,
       );
     }
 
@@ -239,11 +240,14 @@ class _UsersList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: users.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) => _UserCard(
-              user: users[i],
-              type: type,
-              color: color,
-              subtitleBuilder: subtitleBuilder,
+            itemBuilder: (context, i) => AdminFadeIn(
+              index: i,
+              child: _UserCard(
+                user: users[i],
+                type: type,
+                color: color,
+                subtitleBuilder: subtitleBuilder,
+              ),
             ),
           ),
         ),
@@ -320,51 +324,51 @@ class _UserCard extends StatelessWidget {
       onTap: () => showDialog(
         context: context,
         barrierColor: Colors.black54,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          clipBehavior: Clip.antiAlias,
+        builder: (ctx) => AdminDetailDialogShell(
+          maxWidth: 640,
           child: _UserDetailSheet(user: user, type: type, color: color),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: color.withOpacity(0.12),
-              child: Text(
-                name[0].toUpperCase(),
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+      child: AdminHoverLift(
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: color.withOpacity(0.12),
+                child: Text(
+                  name[0].toUpperCase(),
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF111827)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    subtitleBuilder(user),
-                    style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF111827)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      subtitleBuilder(user),
+                      style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Text(joined, style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF))),
-          ],
+              Text(joined, style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF))),
+            ],
+          ),
         ),
       ),
     );
@@ -417,10 +421,9 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
     showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-        clipBehavior: Clip.antiAlias,
+      builder: (ctx) => AdminDetailDialogShell(
+        maxWidth: 560,
+        borderRadius: 16,
         child: _JobDetailDialog(job: job),
       ),
     );
@@ -437,59 +440,93 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
     final reasonCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.45),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Close Account?', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This will restrict the user\'s account. They will no longer be able to access the platform.',
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Reason / message for user *',
-                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF374151)),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: reasonCtrl,
-                maxLines: 3,
-                onChanged: (_) => setDlgState(() {}),
-                style: GoogleFonts.poppins(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Violation of community guidelines…',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
-                  filled: true,
-                  fillColor: const Color(0xFFF9FAFB),
-                  contentPadding: const EdgeInsets.all(12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+        builder: (ctx, setDlgState) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.person_off_rounded, color: Color(0xFFDC2626), size: 22),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Close Account?', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This will restrict the user\'s account. They will no longer be able to access the platform.',
+                      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280), height: 1.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Reason / message for user *',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF374151)),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: reasonCtrl,
+                      maxLines: 3,
+                      onChanged: (_) => setDlgState(() {}),
+                      style: GoogleFonts.poppins(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Violation of community guidelines…',
+                        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        contentPadding: const EdgeInsets.all(12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF6B7280),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: reasonCtrl.text.trim().isEmpty
+                                ? const Color(0xFFDC2626).withOpacity(0.4)
+                                : const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          ),
+                          onPressed: reasonCtrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, true),
+                          child: Text('Close Account', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: reasonCtrl.text.trim().isEmpty
-                    ? const Color(0xFFDC2626).withOpacity(0.4)
-                    : const Color(0xFFDC2626),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                elevation: 0,
-              ),
-              onPressed: reasonCtrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, true),
-              child: Text('Close Account', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ],
         ),
       ),
     );
@@ -973,13 +1010,19 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
     final customController = TextEditingController();
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.45),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) {
           bool submitting = false;
           final allReasons = ['spam', 'scam', 'inappropriate_content', 'harassment', 'other'];
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 60),
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1064,6 +1107,8 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                   ),
                 ],
               ),
+            ),
+            ),
             ),
           );
         },

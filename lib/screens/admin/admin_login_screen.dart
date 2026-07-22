@@ -69,6 +69,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       backgroundColor: const Color(0xFFF3F4F6),
       body: Center(
         child: SingleChildScrollView(
+          child: _LoginEntrance(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -238,6 +239,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ],
           ),
+          ),
         ),
       ),
     );
@@ -305,6 +307,26 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
         ),
       ),
+    );
+  }
+}
+
+/// Fades and slides the login card up on first paint.
+class _LoginEntrance extends StatelessWidget {
+  final Widget child;
+  const _LoginEntrance({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+      builder: (_, t, c) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, 24 * (1 - t)), child: c),
+      ),
+      child: child,
     );
   }
 }

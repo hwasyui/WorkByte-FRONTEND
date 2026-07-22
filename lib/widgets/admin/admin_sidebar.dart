@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../core/constants/admin_colors.dart';
+import 'admin_dialog.dart';
 
 class AdminSidebar extends StatelessWidget {
   const AdminSidebar({super.key});
@@ -11,10 +13,10 @@ class AdminSidebar extends StatelessWidget {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         return Material(
-          color: const Color(0xFF1E1B4B),
+          color: AdminColors.navy,
           child: Container(
             width: 240,
-            color: Colors.transparent,
+            decoration: const BoxDecoration(gradient: AdminColors.sidebarGradient),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -176,8 +178,18 @@ class AdminSidebar extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
                   child: InkWell(
                     onTap: () async {
-                      await admin.logout();
-                      // AdminGate otomatis menampilkan AdminLoginScreen
+                      final confirmed = await showAdminConfirmDialog(
+                        context,
+                        title: 'Log Out?',
+                        message: 'You will need to sign in again to access the admin dashboard.',
+                        icon: Icons.logout_rounded,
+                        confirmLabel: 'Log Out',
+                        confirmColor: const Color(0xFFDC2626),
+                      );
+                      if (confirmed == true) {
+                        await admin.logout();
+                        // AdminGate otomatis menampilkan AdminLoginScreen
+                      }
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
@@ -215,7 +227,7 @@ class AdminSidebar extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final AdminPage page;
@@ -233,12 +245,25 @@ class _NavItem extends StatelessWidget {
   });
 
   @override
+  State<_NavItem> createState() => _NavItemState();
+}
+
+class _NavItemState extends State<_NavItem> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
-    final isActive = page == current;
+    final icon = widget.icon;
+    final label = widget.label;
+    final badge = widget.badge;
+    final isActive = widget.page == widget.current;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: InkWell(
-        onTap: onTap,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
+        child: InkWell(
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -246,7 +271,9 @@ class _NavItem extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? const Color(0xFF4F46E5).withOpacity(0.25)
-                : Colors.transparent,
+                : _hovering
+                    ? Colors.white.withOpacity(0.06)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: isActive
                 ? Border.all(color: const Color(0xFF6366F1).withOpacity(0.4))
@@ -303,6 +330,7 @@ class _NavItem extends StatelessWidget {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );

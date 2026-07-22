@@ -3,6 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/admin_dialog.dart';
+import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
+import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/admin_badge.dart';
+import '../../../widgets/admin/admin_action_button.dart';
 import '../../../widgets/app_toast.dart';
 
 class AdminReportsPage extends StatefulWidget {
@@ -59,13 +65,16 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             ),
             Expanded(
               child: admin.isTableLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF4F46E5)),
-                    )
+                  ? const AdminSkeletonList()
                   : admin.reports.isEmpty
-                      ? _EmptyState(
-                          statusFilter: admin.reportsStatusFilter,
-                          typeFilter: admin.reportsTypeFilter,
+                      ? AdminEmptyState(
+                          icon: admin.reportsStatusFilter == 'pending'
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.inbox_outlined,
+                          title: admin.reportsStatusFilter == 'pending'
+                              ? 'No pending reports'
+                              : 'No reports found',
+                          subtitle: 'Try changing the filter above',
                         )
                       : RefreshIndicator(
                           color: const Color(0xFF4F46E5),
@@ -74,10 +83,13 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                             itemCount: admin.reports.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (ctx, i) => _ReportCard(
-                              report: admin.reports[i],
-                              onAccept: () => _handleAction(ctx, admin, admin.reports[i], 'accept'),
-                              onDismiss: () => _handleAction(ctx, admin, admin.reports[i], 'dismiss'),
+                            itemBuilder: (ctx, i) => AdminFadeIn(
+                              index: i,
+                              child: _ReportCard(
+                                report: admin.reports[i],
+                                onAccept: () => _handleAction(ctx, admin, admin.reports[i], 'accept'),
+                                onDismiss: () => _handleAction(ctx, admin, admin.reports[i], 'dismiss'),
+                              ),
                             ),
                           ),
                         ),
@@ -103,50 +115,23 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     final isEngagedJob = action == 'accept'
         && (report['reported_type'] as String? ?? '') == 'job_post'
         && report['is_engaged'] == true;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          isEngagedJob ? 'Job Has an Active Contract' : '$label Report?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
-        ),
-        content: Text(
-          action != 'accept'
-              ? 'This dismisses the report. No violation will be recorded.'
-              : isEngagedJob
-                  ? 'This job already has an active contract or an engaged freelancer — '
-                      'there is an ongoing commitment on it. Accepting this report will '
-                      'close the job and end that live work. Are you sure you want to close it?'
-                  : 'This confirms the violation. The report will be marked as accepted.',
-          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: const Color(0xFF6B7280)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: action == 'accept'
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showAdminConfirmDialog(
+      context,
+      title: isEngagedJob ? 'Job Has an Active Contract' : '$label Report?',
+      message: action != 'accept'
+          ? 'This dismisses the report. No violation will be recorded.'
+          : isEngagedJob
+              ? 'This job already has an active contract or an engaged freelancer — '
+                  'there is an ongoing commitment on it. Accepting this report will '
+                  'close the job and end that live work. Are you sure you want to close it?'
+              : 'This confirms the violation. The report will be marked as accepted.',
+      icon: isEngagedJob
+          ? Icons.handshake_outlined
+          : action == 'accept'
+              ? Icons.check_circle_outline_rounded
+              : Icons.close_rounded,
+      confirmLabel: label,
+      confirmColor: action == 'accept' ? const Color(0xFF059669) : const Color(0xFFDC2626),
     );
 
     if (confirmed == true && context.mounted) {
@@ -233,7 +218,8 @@ class _ReportCard extends StatelessWidget {
     final isPending = status == 'pending';
     final reasons = _reasons;
 
-    return Container(
+    return AdminHoverLift(
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -256,21 +242,7 @@ class _ReportCard extends StatelessWidget {
             // Header row
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _typeColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _typeLabel,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: _typeColor,
-                    ),
-                  ),
-                ),
+                AdminBadge(label: _typeLabel, color: _typeColor),
                 if (report['reported_type'] == 'job_post' && report['is_engaged'] == true) ...[
                   const SizedBox(width: 6),
                   const Tooltip(
@@ -279,20 +251,9 @@ class _ReportCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status[0].toUpperCase() + status.substring(1),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: _statusColor,
-                    ),
-                  ),
+                AdminBadge(
+                  label: status[0].toUpperCase() + status.substring(1),
+                  color: _statusColor,
                 ),
               ],
             ),
@@ -430,37 +391,21 @@ class _ReportCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: AdminActionButton(
+                      label: 'Dismiss',
+                      icon: Icons.close_rounded,
+                      color: const Color(0xFF6B7280),
+                      style: AdminActionStyle.outlined,
                       onPressed: onDismiss,
-                      icon: const Icon(Icons.close_rounded, size: 16),
-                      label: Text(
-                        'Dismiss',
-                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF6B7280),
-                        side: const BorderSide(color: Color(0xFFD1D5DB)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: AdminActionButton(
+                      label: 'Accept',
+                      icon: Icons.check_rounded,
+                      color: const Color(0xFF059669),
                       onPressed: onAccept,
-                      icon: const Icon(Icons.check_rounded, size: 16),
-                      label: Text(
-                        'Accept',
-                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
                     ),
                   ),
                 ],
@@ -469,44 +414,8 @@ class _ReportCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String statusFilter;
-  final String typeFilter;
-  const _EmptyState({required this.statusFilter, required this.typeFilter});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            statusFilter == 'pending'
-                ? Icons.check_circle_outline_rounded
-                : Icons.inbox_outlined,
-            size: 56,
-            color: const Color(0xFFD1D5DB),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            statusFilter == 'pending' ? 'No pending reports' : 'No reports found',
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF9CA3AF),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Try changing the filter above',
-            style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFFD1D5DB)),
-          ),
-        ],
       ),
     );
   }
 }
+

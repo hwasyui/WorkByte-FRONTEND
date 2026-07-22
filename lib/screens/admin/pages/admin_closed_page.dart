@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
+import '../../../widgets/admin/admin_badge.dart';
 
 class AdminClosedPage extends StatefulWidget {
   const AdminClosedPage({super.key});
@@ -195,15 +199,12 @@ class _ClosedJobsTab extends StatelessWidget {
             ),
             Expanded(
               child: admin.isClosedLoading && admin.closedJobs.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFD97706),
-                      ),
-                    )
+                  ? const AdminSkeletonList()
                   : admin.closedJobs.isEmpty
-                  ? const _EmptyClosed(
+                  ? const AdminEmptyState(
                       icon: Icons.work_off_rounded,
-                      text: 'No closed jobs found',
+                      title: 'No closed jobs found',
+                      accent: Color(0xFFD97706),
                     )
                   : RefreshIndicator(
                       color: const Color(0xFFD97706),
@@ -213,8 +214,10 @@ class _ClosedJobsTab extends StatelessWidget {
                         itemCount: admin.closedJobs.length,
                         separatorBuilder: (_, index) =>
                             const SizedBox(height: 10),
-                        itemBuilder: (_, i) =>
-                            _ClosedJobCard(job: admin.closedJobs[i]),
+                        itemBuilder: (_, i) => AdminFadeIn(
+                          index: i,
+                          child: _ClosedJobCard(job: admin.closedJobs[i]),
+                        ),
                       ),
                     ),
             ),
@@ -289,15 +292,12 @@ class _ClosedAccountsTab extends StatelessWidget {
             ),
             Expanded(
               child: admin.isClosedLoading && admin.closedAccounts.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFD97706),
-                      ),
-                    )
+                  ? const AdminSkeletonList()
                   : admin.closedAccounts.isEmpty
-                  ? const _EmptyClosed(
+                  ? const AdminEmptyState(
                       icon: Icons.person_off_rounded,
-                      text: 'No restricted accounts found',
+                      title: 'No restricted accounts found',
+                      accent: Color(0xFFD97706),
                     )
                   : RefreshIndicator(
                       color: const Color(0xFFD97706),
@@ -307,8 +307,11 @@ class _ClosedAccountsTab extends StatelessWidget {
                         itemCount: admin.closedAccounts.length,
                         separatorBuilder: (_, index) =>
                             const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _ClosedAccountCard(
-                          account: admin.closedAccounts[i],
+                        itemBuilder: (_, i) => AdminFadeIn(
+                          index: i,
+                          child: _ClosedAccountCard(
+                            account: admin.closedAccounts[i],
+                          ),
                         ),
                       ),
                     ),
@@ -394,76 +397,78 @@ class _RecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: const Color(0xFFD97706)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF111827),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: const Color(0xFF6B7280),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              _Badge(text: badge),
-            ],
-          ),
-          if (body.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              body,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: const Color(0xFF4B5563),
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+    return AdminHoverLift(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
-          const SizedBox(height: 8),
-          Text(
-            date,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: const Color(0xFF9CA3AF),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: const Color(0xFFD97706)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF111827),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF6B7280),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AdminBadge(label: badge, color: const Color(0xFFD97706), outlined: true),
+              ],
             ),
-          ),
-        ],
+            if (body.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                body,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF4B5563),
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              date,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: const Color(0xFF9CA3AF),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -514,54 +519,6 @@ class _Pagination extends StatelessWidget {
                 iconSize: 20,
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String text;
-  const _Badge({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFED7AA)),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.poppins(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFFD97706),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyClosed extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _EmptyClosed({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: const Color(0xFFD1D5DB)),
-          const SizedBox(height: 12),
-          Text(
-            text,
-            style: GoogleFonts.poppins(color: const Color(0xFF9CA3AF)),
           ),
         ],
       ),

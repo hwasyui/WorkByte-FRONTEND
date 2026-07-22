@@ -73,6 +73,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
       case 'job_closed_content_violation':
       case 'job_closed_scam':
       case 'job_closed_admin':
+      case 'job_closed_reports':
+      case 'job_closed_admin_contract':
         return Icons.gpp_bad_rounded;
       case 'review_published':
         return Icons.star_outline_rounded;
@@ -87,13 +89,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Job-closure notifications (harmful content, scam, admin) render in red so a
-  // client sees a removal as distinct from ordinary activity.
+  // Job-closure notifications (harmful content, scam, admin, reports, and the
+  // engaged-freelancer heads-up) render in red so both sides see a closure as
+  // distinct from ordinary activity.
   Color _colorForType(String type) {
     switch (type) {
       case 'job_closed_content_violation':
       case 'job_closed_scam':
       case 'job_closed_admin':
+      case 'job_closed_reports':
+      case 'job_closed_admin_contract':
         return const Color(0xFFDC2626);
       default:
         return const Color(0xFF6E6BF8);

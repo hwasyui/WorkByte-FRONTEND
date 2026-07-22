@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
 
 class AdminOverviewPage extends StatefulWidget {
   const AdminOverviewPage({super.key});
@@ -194,8 +195,8 @@ class _StatCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      value.toString(),
+                    _CountUpNumber(
+                      value: value,
                       style: GoogleFonts.poppins(
                         fontSize: 42,
                         fontWeight: FontWeight.w700,
@@ -273,8 +274,8 @@ class _ReportsCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    total.toString(),
+                  _CountUpNumber(
+                    value: total,
                     style: GoogleFonts.poppins(
                       fontSize: 42,
                       fontWeight: FontWeight.w700,
@@ -354,21 +355,41 @@ class _CardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return AdminHoverLift(
+      lift: 4,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: child,
       ),
-      child: child,
+    );
+  }
+}
+
+// Animates the big stat number counting up from 0 on first paint.
+class _CountUpNumber extends StatelessWidget {
+  final int value;
+  final TextStyle style;
+  const _CountUpNumber({required this.value, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<int>(
+      tween: IntTween(begin: 0, end: value),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, __) => Text(v.toString(), style: style),
     );
   }
 }

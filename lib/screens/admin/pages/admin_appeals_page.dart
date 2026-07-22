@@ -3,6 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/app_toast.dart';
+import '../../../widgets/admin/admin_dialog.dart';
+import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
+import '../../../widgets/admin/admin_action_button.dart';
 
 class AdminAppealsPage extends StatefulWidget {
   const AdminAppealsPage({super.key});
@@ -63,11 +68,7 @@ class _AdminAppealsPageState extends State<AdminAppealsPage>
             ),
             Expanded(
               child: admin.isAppealsLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF4F46E5),
-                      ),
-                    )
+                  ? const AdminSkeletonList()
                   : TabBarView(
                       controller: _tabCtrl,
                       children: [
@@ -107,34 +108,10 @@ class _AppealsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (appeals.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.gavel_rounded,
-                size: 30,
-                color: Color(0xFF4F46E5),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              emptyMessage,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF374151),
-              ),
-            ),
-          ],
-        ),
+      return AdminEmptyState(
+        icon: Icons.gavel_rounded,
+        title: emptyMessage,
+        accent: const Color(0xFF4F46E5),
       );
     }
 
@@ -145,9 +122,12 @@ class _AppealsList extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         itemCount: appeals.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, i) => _AppealCard(
-          appeal: appeals[i],
-          showActions: showActions,
+        itemBuilder: (context, i) => AdminFadeIn(
+          index: i,
+          child: _AppealCard(
+            appeal: appeals[i],
+            showActions: showActions,
+          ),
         ),
       ),
     );
@@ -188,7 +168,8 @@ class _AppealCard extends StatelessWidget {
             ? const Color(0xFFFFE4E6)
             : const Color(0xFFEEF2FF);
 
-    return Container(
+    return AdminHoverLift(
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -395,12 +376,12 @@ class _AppealCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: _ActionButton(
+                    child: AdminActionButton(
                       label: 'Approve',
                       icon: Icons.check_circle_rounded,
                       color: const Color(0xFF059669),
-                      bgColor: const Color(0xFFD1FAE5),
-                      onTap: () => _showResolveDialog(
+                      style: AdminActionStyle.outlined,
+                      onPressed: () => _showResolveDialog(
                         context,
                         appealId: appealId,
                         action: 'approve',
@@ -411,12 +392,12 @@ class _AppealCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
+                    child: AdminActionButton(
                       label: 'Reject',
                       icon: Icons.cancel_rounded,
                       color: const Color(0xFFDC2626),
-                      bgColor: const Color(0xFFFFE4E6),
-                      onTap: () => _showResolveDialog(
+                      style: AdminActionStyle.outlined,
+                      onPressed: () => _showResolveDialog(
                         context,
                         appealId: appealId,
                         action: 'reject',
@@ -432,6 +413,7 @@ class _AppealCard extends StatelessWidget {
             const SizedBox(height: 14),
         ],
       ),
+      ),
     );
   }
 
@@ -445,84 +427,51 @@ class _AppealCard extends StatelessWidget {
     final noteCtrl = TextEditingController();
     final isApprove = action == 'approve';
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          isApprove ? 'Approve Appeal?' : 'Reject Appeal?',
-          style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isApprove
-                  ? isAccount
-                      ? 'Approving will restore $userName\'s account.'
-                      : 'Approving will reopen the job post.'
-                  : isAccount
-                      ? 'Rejecting will keep $userName\'s account closed.'
-                      : 'Rejecting will keep the job post closed.',
-              style: GoogleFonts.poppins(
-                  fontSize: 13, color: const Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Note to user (optional)',
-              style: GoogleFonts.poppins(
-                  fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: noteCtrl,
-              maxLines: 3,
-              style: GoogleFonts.poppins(fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Explain your decision...',
-                hintStyle: GoogleFonts.poppins(
-                    fontSize: 12, color: const Color(0xFF9CA3AF)),
-                filled: true,
-                fillColor: const Color(0xFFF9FAFB),
-                contentPadding: const EdgeInsets.all(12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF4F46E5)),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
+    final confirmed = await showAdminConfirmDialog(
+      context,
+      title: isApprove ? 'Approve Appeal?' : 'Reject Appeal?',
+      message: isApprove
+          ? isAccount
+              ? 'Approving will restore $userName\'s account.'
+              : 'Approving will reopen the job post.'
+          : isAccount
+              ? 'Rejecting will keep $userName\'s account closed.'
+              : 'Rejecting will keep the job post closed.',
+      icon: isApprove ? Icons.check_circle_outline_rounded : Icons.cancel_outlined,
+      confirmLabel: isApprove ? 'Approve' : 'Reject',
+      confirmColor: isApprove ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      extra: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Note to user (optional)',
+            style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isApprove
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              isApprove ? 'Approve' : 'Reject',
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontWeight: FontWeight.w600),
+          const SizedBox(height: 6),
+          TextField(
+            controller: noteCtrl,
+            maxLines: 3,
+            style: GoogleFonts.poppins(fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Explain your decision...',
+              hintStyle: GoogleFonts.poppins(
+                  fontSize: 12, color: const Color(0xFF9CA3AF)),
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF4F46E5)),
+              ),
             ),
           ),
         ],
@@ -561,49 +510,3 @@ class _AppealCard extends StatelessWidget {
   }
 }
 
-// ── Action button ─────────────────────────────────────────────────────────────
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color bgColor;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.bgColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 15, color: color),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

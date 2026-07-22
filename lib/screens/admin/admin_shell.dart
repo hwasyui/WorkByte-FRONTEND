@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../widgets/admin/admin_sidebar.dart';
+import '../../widgets/admin/admin_dialog.dart';
 import 'pages/admin_overview_page.dart';
 import 'pages/admin_users_page.dart';
 import 'pages/admin_jobs_page.dart';
@@ -51,7 +52,27 @@ class AdminShell extends StatelessWidget {
             body: Row(
               children: [
                 const AdminSidebar(),
-                Expanded(child: _pages[idx]),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.02),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey(idx),
+                      child: _pages[idx],
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -316,6 +337,15 @@ class _MobileDrawer extends StatelessWidget {
                     ),
                   ),
                   onTap: () async {
+                    final confirmed = await showAdminConfirmDialog(
+                      context,
+                      title: 'Log Out?',
+                      message: 'You will need to sign in again to access the admin dashboard.',
+                      icon: Icons.logout_rounded,
+                      confirmLabel: 'Log Out',
+                      confirmColor: const Color(0xFFDC2626),
+                    );
+                    if (confirmed != true || !context.mounted) return;
                     await context.read<AdminProvider>().logout();
                     await context.read<AuthProvider>().logout(
                       profileProvider: context.read<ProfileProvider>(),

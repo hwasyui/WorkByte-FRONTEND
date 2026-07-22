@@ -4,6 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/admin_dialog.dart';
+import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_fade_in.dart';
+import '../../../widgets/admin/admin_badge.dart';
 import '../../../widgets/app_toast.dart';
 
 class AdminJobsPage extends StatefulWidget {
@@ -101,30 +106,11 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
             // Jobs list
             Expanded(
               child: admin.isTableLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF4F46E5),
-                      ),
-                    )
+                  ? const AdminSkeletonList()
                   : admin.tableJobs.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.work_off_rounded,
-                            size: 48,
-                            color: Color(0xFFD1D5DB),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No jobs found',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? const AdminEmptyState(
+                      icon: Icons.work_off_rounded,
+                      title: 'No jobs found',
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF4F46E5),
@@ -137,8 +123,10 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: admin.tableJobs.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) =>
-                            _JobCard(job: admin.tableJobs[i]),
+                        itemBuilder: (context, i) => AdminFadeIn(
+                          index: i,
+                          child: _JobCard(job: admin.tableJobs[i]),
+                        ),
                       ),
                     ),
             ),
@@ -246,79 +234,65 @@ class _JobCard extends StatelessWidget {
       onTap: () => showDialog(
         context: context,
         barrierColor: Colors.black54,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          clipBehavior: Clip.antiAlias,
+        builder: (ctx) => AdminDetailDialogShell(
+          maxWidth: 560,
           child: _JobDetailSheet(job: job),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    job['job_title'] as String? ?? 'Untitled',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF111827),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status.replaceAll('_', ' '),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: color,
+      child: AdminHoverLift(
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      job['job_title'] as String? ?? 'Untitled',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF111827),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              category,
-              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _InfoChip(icon: Icons.description_outlined, label: '$proposals proposals'),
-                const SizedBox(width: 12),
-                _InfoChip(icon: Icons.visibility_outlined, label: '$views views'),
-                const Spacer(),
-                Text(
-                  postedAt,
-                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  AdminBadge(label: status.replaceAll('_', ' '), color: color),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                category,
+                style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _InfoChip(icon: Icons.description_outlined, label: '$proposals proposals'),
+                  const SizedBox(width: 12),
+                  _InfoChip(icon: Icons.visibility_outlined, label: '$views views'),
+                  const Spacer(),
+                  Text(
+                    postedAt,
+                    style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,62 +329,93 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
     final reasonCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.45),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Close Job Post?',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This will permanently close the job post. Freelancers will no longer be able to apply.',
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Reason / closure note *',
-                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF374151)),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: reasonCtrl,
-                maxLines: 3,
-                onChanged: (_) => setDlgState(() {}),
-                style: GoogleFonts.poppins(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Job post violates platform policy…',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
-                  filled: true,
-                  fillColor: const Color(0xFFF9FAFB),
-                  contentPadding: const EdgeInsets.all(12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+        builder: (ctx, setDlgState) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 22),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Close Job Post?', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This will permanently close the job post. Freelancers will no longer be able to apply.',
+                      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280), height: 1.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Reason / closure note *',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF374151)),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: reasonCtrl,
+                      maxLines: 3,
+                      onChanged: (_) => setDlgState(() {}),
+                      style: GoogleFonts.poppins(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Job post violates platform policy…',
+                        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
+                        filled: true,
+                        fillColor: const Color(0xFFF9FAFB),
+                        contentPadding: const EdgeInsets.all(12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF6B7280),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: reasonCtrl.text.trim().isEmpty
+                                ? const Color(0xFFDC2626).withOpacity(0.4)
+                                : const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          ),
+                          onPressed: reasonCtrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, true),
+                          child: Text('Close Job', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF6B7280))),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: reasonCtrl.text.trim().isEmpty
-                    ? const Color(0xFFDC2626).withOpacity(0.4)
-                    : const Color(0xFFDC2626),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                elevation: 0,
-              ),
-              onPressed: reasonCtrl.text.trim().isEmpty ? null : () => Navigator.pop(ctx, true),
-              child: Text('Close Job', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ],
         ),
       ),
     );
@@ -511,14 +516,7 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                      child: Text(
-                        status.replaceAll('_', ' '),
-                        style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                      ),
-                    ),
+                    AdminBadge(label: status.replaceAll('_', ' '), color: color),
                   ],
                 ),
                 const SizedBox(height: 16),
