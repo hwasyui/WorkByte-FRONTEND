@@ -675,12 +675,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return;
     }
 
-    Navigator.push(
+    Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => SubmitProposalScreen(job: widget.job, role: role),
       ),
-    );
+    ).then((submitted) {
+      // The submit screen already refreshed ProposalProvider before popping,
+      // so just re-read it here instead of re-fetching over the network —
+      // this makes the Apply button flip to disabled immediately.
+      if (submitted == true && mounted) {
+        setState(() {
+          myProposals = context.read<ProposalProvider>().proposals;
+        });
+      }
+    });
   }
 
   String capitalize(String s) =>

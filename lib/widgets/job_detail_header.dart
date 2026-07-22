@@ -110,7 +110,7 @@ class JobDetailHeader extends StatelessWidget {
                         border: Border.all(color: Colors.white, width: 3),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(1),
                         child: companyLogo,
                       ),
                     ),

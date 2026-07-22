@@ -14,15 +14,7 @@ import '../../../../models/skill_model.dart';
 import '../../../../widgets/app_toast.dart';
 import 'job_files.dart';
 import '../../widgets/post_job_loading_view.dart';
-
-const List<String> _supportedCurrencies = [
-  'IDR',
-  'USD',
-  'EUR',
-  'SGD',
-  'AUD',
-  'MYR',
-];
+import '../../core/constants/currencies.dart';
 
 class _RoleDraft {
   String? jobRoleId;
@@ -1339,7 +1331,7 @@ class _RoleCardState extends State<_RoleCard> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _supportedCurrencies.contains(d.budgetCurrency)
+                value: kSupportedCurrencies.contains(d.budgetCurrency)
                     ? d.budgetCurrency
                     : 'IDR',
                 isExpanded: true,
@@ -1347,7 +1339,7 @@ class _RoleCardState extends State<_RoleCard> {
                   Icons.keyboard_arrow_down_rounded,
                   color: _primary,
                 ),
-                items: _supportedCurrencies.map((currency) {
+                items: kSupportedCurrencies.map((currency) {
                   return DropdownMenuItem<String>(
                     value: currency,
                     child: Text(

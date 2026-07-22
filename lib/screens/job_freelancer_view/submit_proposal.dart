@@ -9,6 +9,7 @@ import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/proposal_provider.dart';
 import '../../services/proposal_service.dart';
 import '../../widgets/app_toast.dart';
 
@@ -128,6 +129,16 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         files: _attachedFiles,
       );
 
+      // Refresh the freelancer's proposals before popping back, so the job
+      // detail screen's "Apply" button reads the up-to-date list the moment
+      // it regains focus instead of showing stale (still-enabled) state.
+      if (mounted) {
+        await context.read<ProposalProvider>().fetchProposalsByFreelancer(
+          token: token,
+          freelancerId: freelancerId,
+        );
+      }
+
       if (mounted) {
         Navigator.pop(context, true);
         AppToast.success('Proposal submitted successfully!');
@@ -246,11 +257,11 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             children: [
               _buildJobContext(),
               const SizedBox(height: 24),
-              _buildLabel('Cover Letter *'),
+              _buildLabel('Cover Letter'),
               const SizedBox(height: 8),
               _buildCoverLetterField(),
               const SizedBox(height: 20),
-              _buildLabel('Proposed Budget *'),
+              _buildLabel('Proposed Budget'),
               const SizedBox(height: 8),
               _buildBudgetSection(), // ← replaces bare _buildBudgetField()
               const SizedBox(height: 20),
@@ -478,62 +489,76 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     );
   }
 
+  String _pluralizeUnit(String unit) {
+    final label = unit[0].toUpperCase() + unit.substring(1);
+    return _durationNumber == '1' ? label : '${label}s';
+  }
+
   Widget _buildDurationField() {
     return Row(
       children: [
         // Number dropdown (1-31)
         Expanded(
           flex: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(10),
-              color: Colors.white,
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _durationNumber,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
-                isExpanded: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                items: List.generate(31, (i) {
-                  final num = (i + 1).toString();
-                  return DropdownMenuItem(value: num, child: Text(num));
-                }).toList(),
-                onChanged: (v) => setState(() => _durationNumber = v!),
-              ),
-            ),
+          child: _buildStyledDropdown<String>(
+            value: _durationNumber,
+            items: List.generate(31, (i) {
+              final num = (i + 1).toString();
+              return DropdownMenuItem(value: num, child: Text(num));
+            }),
+            onChanged: (v) => setState(() => _durationNumber = v!),
           ),
         ),
         const SizedBox(width: 12),
-        // Unit dropdown (day, week, month)
+        // Unit dropdown (day, week, month) — label reflects the chosen count
         Expanded(
           flex: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(10),
-              color: Colors.white,
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _durationUnit,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 18),
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF333333)),
-                isExpanded: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                items: const [
-                  DropdownMenuItem(value: 'day', child: Text('Day')),
-                  DropdownMenuItem(value: 'week', child: Text('Week')),
-                  DropdownMenuItem(value: 'month', child: Text('Month')),
-                ],
-                onChanged: (v) => setState(() => _durationUnit = v!),
-              ),
-            ),
+          child: _buildStyledDropdown<String>(
+            value: _durationUnit,
+            items: ['day', 'week', 'month']
+                .map((u) => DropdownMenuItem(value: u, child: Text(_pluralizeUnit(u))))
+                .toList(),
+            onChanged: (v) => setState(() => _durationUnit = v!),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStyledDropdown<T>({
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFF0F0F1)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.primary,
+            size: 20,
+          ),
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF333333),
+          ),
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(10),
+          dropdownColor: Colors.white,
+          elevation: 2,
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 

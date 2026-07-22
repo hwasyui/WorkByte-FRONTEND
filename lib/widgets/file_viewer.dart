@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:external_path/external_path.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -86,6 +86,13 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
           overflow: TextOverflow.ellipsis,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Save to Downloads',
+            onPressed: _saveToDownloads,
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -246,7 +253,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Preview ${_ext.toUpperCase()} tidak didukung secara langsung.',
+              'Preview for ${_ext.toUpperCase()} is not supported directly.',
               style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -259,7 +266,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.open_in_new),
-              label: Text('Buka dengan Aplikasi Lain', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              label: Text('Open with Another App', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
               onPressed: () async {
                 final result = await OpenFilex.open(widget.filePath);
                 if (result.type != ResultType.done && mounted) {
@@ -294,8 +301,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             const SizedBox(height: 8),
             Text(
               _isZip
-                  ? 'File ZIP tidak dapat di-preview.'
-                  : 'Format file ini tidak didukung untuk preview.',
+                  ? 'ZIP files cannot be previewed.'
+                  : 'This file format is not supported for preview.',
               style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -308,7 +315,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.download),
-              label: Text('Simpan ke Downloads', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              label: Text('Save to Downloads', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
               onPressed: _saveToDownloads,
             ),
           ],
@@ -319,16 +326,26 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
 
   Future<void> _saveToDownloads() async {
     try {
-      final downloadsPath = await ExternalPath.getExternalStoragePublicDirectory(
-        'Download',
+      final bytes = await File(widget.filePath).readAsBytes();
+
+      // Lets the user pick the destination via the system's native "Save As"
+      // picker (Storage Access Framework on Android) instead of silently
+      // writing to a hardcoded path - the latter also has no chance of
+      // working on a real device since this app declares no storage
+      // permission in AndroidManifest.xml.
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save File',
+        fileName: _displayName,
+        bytes: bytes,
       );
-      final dest = '$downloadsPath/$_displayName';
-      await File(widget.filePath).copy(dest);
+
       if (!mounted) return;
-      AppToast.success('Disimpan ke Downloads/$_displayName');
+      if (savedPath == null) return; // user cancelled the picker
+
+      AppToast.success('File saved successfully');
     } catch (e) {
       if (!mounted) return;
-      AppToast.error('Gagal menyimpan file: $e');
+      AppToast.error('Failed to save file: $e');
     }
   }
 }

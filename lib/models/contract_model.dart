@@ -15,7 +15,11 @@ class ContractModel {
   final String? endDate;
   final String? agreedDuration;
   final String? actualCompletionDate;
-  final int? totalHoursWorked;
+  // Backend column is DECIMAL(8,2) / Optional[float] - `int?` here used to
+  // hard-cast-crash the moment this was ever non-null (e.g. 12.5, or even
+  // 12.0 since JSON decodes that as a Dart double). Nothing currently
+  // populates this field, which is why it's never been hit in practice.
+  final double? totalHoursWorked;
   final double? totalPaid;
   final String? contractPdfUrl;
   final String? contractPdfGeneratedAt;
@@ -70,7 +74,7 @@ class ContractModel {
     endDate: json['end_date']?.toString(),
     agreedDuration: json['agreed_duration'] as String?,
     actualCompletionDate: json['actual_completion_date']?.toString(),
-    totalHoursWorked: json['total_hours_worked'] as int?,
+    totalHoursWorked: (json['total_hours_worked'] as num?)?.toDouble(),
     totalPaid: (json['total_paid'] as num?)?.toDouble(),
     contractPdfUrl: json['contract_pdf_url'] as String?,
     contractPdfGeneratedAt: json['contract_pdf_generated_at']?.toString(),

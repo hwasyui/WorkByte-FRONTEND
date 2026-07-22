@@ -48,8 +48,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   static const Color _primary = AppColors.primary;
 
   int _selectedTab = 0;
+  String? _selectedRoleFilter;
 
   final Set<String> _expandedProposalIds = {};
+  // Local-only shortlist: not persisted server-side (no backend support yet),
+  // so this resets whenever the app restarts.
+  final Set<String> _pinnedProposalIds = {};
 
   ClientModel? _client;
   bool _clientLoading = true;
@@ -89,6 +93,22 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       tags.add(_capitalize(_job.projectScope!));
     }
     return tags;
+  }
+
+  List<ProposalModel> get _filteredProposals {
+    final base = _selectedRoleFilter == null
+        ? _proposals
+        : _proposals.where((p) => p.jobRoleId == _selectedRoleFilter).toList();
+
+    // Pinned proposals float to the top; relative order within each group
+    // (pinned / unpinned) is otherwise preserved.
+    final pinned = base
+        .where((p) => _pinnedProposalIds.contains(p.proposalId))
+        .toList();
+    final unpinned = base
+        .where((p) => !_pinnedProposalIds.contains(p.proposalId))
+        .toList();
+    return [...pinned, ...unpinned];
   }
 
   String _roleTitle(String? jobRoleId) {
@@ -630,6 +650,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .fetchFreelancerById(
             token: token,
             freelancerId: proposal.freelancerId,
+            onRefreshToken: () async {
+              final auth = context.read<AuthProvider>();
+              final ok = await auth.tryRefresh();
+              if (!mounted) return null;
+              return ok ? auth.token : null;
+            },
           );
       if (!mounted) return;
       Navigator.pop(context);
@@ -771,18 +797,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                           child: Row(
                             children: [
                               const Spacer(),
-                              const Icon(
-                                Icons.attach_file_rounded,
-                                size: 20,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 10),
-                              const Icon(
-                                Icons.sentiment_satisfied_alt_outlined,
-                                size: 20,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 10),
                               Text(
                                 '${controller.text.length}/500',
                                 style: GoogleFonts.poppins(
@@ -890,6 +904,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           .fetchFreelancerById(
             token: token,
             freelancerId: proposal.freelancerId,
+            onRefreshToken: () async {
+              final auth = context.read<AuthProvider>();
+              final ok = await auth.tryRefresh();
+              if (!mounted) return null;
+              return ok ? auth.token : null;
+            },
           );
 
       if (!mounted) return;
@@ -908,9 +928,21 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
       if (!mounted) return;
 
-      AppToast.success(
-        result.alreadyExists ? 'Conversation already exists.' : 'Message sent!',
-      );
+      // Starting a thread that already exists just returns the existing one —
+      // the message just typed was never sent, so say so instead of a
+      // misleading "success" toast.
+      if (result.alreadyExists) {
+        final isPending = result.thread.status == 'request';
+        AppToast.info(
+          isPending
+              ? 'You already sent a message request to ${freelancer.displayName}. '
+                    'You can only send 1 message until they accept it.'
+              : 'You already have a conversation with ${freelancer.displayName}.',
+          title: isPending ? 'Message Request Pending' : 'Already Connected',
+        );
+      } else {
+        AppToast.success('Message sent!');
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -1377,30 +1409,113 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       );
     }
 
+    final filtered = _filteredProposals;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
         children: [
-          ..._proposals.map((p) => _buildProposalCard(p)),
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Color(0xFF7D7D7D),
-                size: 18,
-              ),
-              label: Text(
-                'Load more',
+          if (_roles.length > 1) ...[
+            _buildRoleFilterChips(),
+            const SizedBox(height: 16),
+          ],
+          if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Text(
+                'No bids for this role yet.',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: const Color(0xFF7D7D7D),
                 ),
               ),
+            )
+          else ...[
+            ...filtered.map((p) => _buildProposalCard(p)),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: TextButton.icon(
+                onPressed: () {},
+                icon: const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Color(0xFF7D7D7D),
+                  size: 18,
+                ),
+                label: Text(
+                  'Load more',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF7D7D7D),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoleFilterChips() {
+    final counts = <String, int>{};
+    for (final p in _proposals) {
+      if (p.jobRoleId == null) continue;
+      counts[p.jobRoleId!] = (counts[p.jobRoleId!] ?? 0) + 1;
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _roleFilterChip(
+            label: 'All',
+            count: _proposals.length,
+            selected: _selectedRoleFilter == null,
+            onTap: () => setState(() => _selectedRoleFilter = null),
+          ),
+          for (final role in _roles) ...[
+            const SizedBox(width: 8),
+            _roleFilterChip(
+              label: role.roleTitle,
+              count: counts[role.jobRoleId] ?? 0,
+              selected: _selectedRoleFilter == role.jobRoleId,
+              onTap: () =>
+                  setState(() => _selectedRoleFilter = role.jobRoleId),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _roleFilterChip({
+    required String label,
+    required int count,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? _primary.withValues(alpha: 0.1)
+              : const Color(0xFFF7F8FB),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? _primary : const Color(0xFFE9ECF2),
+          ),
+        ),
+        child: Text(
+          '$label ($count)',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? _primary : const Color(0xFF5B6178),
+          ),
+        ),
       ),
     );
   }
@@ -1408,6 +1523,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   Widget _buildProposalCard(ProposalModel proposal) {
     final isAccepted = proposal.status == 'accepted';
     final isRejected = proposal.status == 'rejected';
+    final isPinned = _pinnedProposalIds.contains(proposal.proposalId);
     final roleTitle = _roleTitle(proposal.jobRoleId);
     final isExpanded = _expandedProposalIds.contains(proposal.proposalId);
 
@@ -1505,18 +1621,37 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     bgColor: Colors.redAccent.withValues(alpha: 0.10),
                   )
                 else
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE8EAF0)),
-                    ),
-                    child: const Icon(
-                      Icons.push_pin_outlined,
-                      size: 18,
-                      color: Color(0xFF8A8F98),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isPinned) {
+                          _pinnedProposalIds.remove(proposal.proposalId);
+                        } else {
+                          _pinnedProposalIds.add(proposal.proposalId);
+                        }
+                      });
+                    },
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: isPinned
+                            ? AppColors.primary.withValues(alpha: 0.10)
+                            : const Color(0xFFF8F9FB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isPinned
+                              ? AppColors.primary.withValues(alpha: 0.30)
+                              : const Color(0xFFE8EAF0),
+                        ),
+                      ),
+                      child: Icon(
+                        isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        size: 18,
+                        color: isPinned
+                            ? AppColors.primary
+                            : const Color(0xFF8A8F98),
+                      ),
                     ),
                   ),
               ],
@@ -2582,9 +2717,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
   Widget _skillChip(String name, bool isRequired, String? importance) {
     final color = isRequired ? _primary : const Color(0xFF7D7D7D);
-    final importanceLabel = importance != null && importance.isNotEmpty
-        ? ' · ${importance[0].toUpperCase()}${importance.substring(1)}'
-        : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -2602,7 +2734,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           ),
           const SizedBox(width: 4),
           Text(
-            '$name$importanceLabel',
+            name,
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w500,

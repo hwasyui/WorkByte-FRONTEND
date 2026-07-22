@@ -1,17 +1,18 @@
-import 'dart:io';
-
-import 'package:external_path/external_path.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/dm_provider.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/constants/currencies.dart';
 import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../widgets/app_toast.dart';
+import '../workspace/workspace_detail.dart';
 
 class GenerateContractScreen extends StatefulWidget {
   final String contractId;
@@ -29,6 +30,16 @@ class GenerateContractScreen extends StatefulWidget {
 
 class _GenerateContractScreenState extends State<GenerateContractScreen> {
   static const Color _primary = AppColors.primary;
+
+  // Shared by every text field and dropdown on this screen so boxes are the
+  // same height whether or not they carry a prefixIcon — previously fields
+  // with an icon used a different (icon-only, no horizontal) padding than
+  // fields without one, which is why paired fields (Duration/Unit, Payment
+  // Structure/Payment Timing) didn't line up.
+  static const EdgeInsets _fieldPadding = EdgeInsets.symmetric(
+    horizontal: 14,
+    vertical: 14,
+  );
 
   static const Map<String, String> _paymentStructureLabels = {
     'full_payment': 'Full Payment',
@@ -52,6 +63,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   bool _loading = true;
   bool _generating = false;
   bool _sending = false;
+  bool _sentToFreelancer = false;
   String? _error;
 
   late TextEditingController _contractTitleController;
@@ -60,8 +72,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   late TextEditingController _endDateController;
   late TextEditingController _confidentialityTextController;
   late TextEditingController _additionalClausesController;
-  late TextEditingController _paymentScheduleController;
   late TextEditingController _revisionRoundsController;
+  late TextEditingController _latePaymentPenaltyController;
 
   final TextEditingController _durationValueController =
       TextEditingController();
@@ -90,10 +102,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _endDateController = TextEditingController();
     _confidentialityTextController = TextEditingController();
     _additionalClausesController = TextEditingController();
-    _paymentScheduleController = TextEditingController();
     _revisionRoundsController = TextEditingController(
       text: _revisionRounds.toString(),
     );
+    _latePaymentPenaltyController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadContract();
@@ -108,8 +120,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _endDateController.dispose();
     _confidentialityTextController.dispose();
     _additionalClausesController.dispose();
-    _paymentScheduleController.dispose();
     _revisionRoundsController.dispose();
+    _latePaymentPenaltyController.dispose();
     _durationValueController.dispose();
     _customFullPaymentController.dispose();
 
@@ -149,6 +161,17 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         _endDateController.text = _contract!.endDate ?? '';
 
         _hydrateDuration(_contract!.agreedDuration ?? '');
+
+        // contract_terms (termination notice, dispute resolution,
+        // confidentiality, late payment penalty, revision rounds, additional
+        // clauses, payment schedule/milestones) lives in a separate table —
+        // GET /contracts/:id (above) never returns it. This screen never
+        // fetched .../generation-data either, so every one of those fields
+        // silently reset to its hardcoded default each time the screen
+        // reopened, even after a PDF had already been generated with
+        // different values — re-generating would then quietly overwrite the
+        // real saved terms with those defaults.
+        await _hydrateContractTerms(token);
       }
 
       setState(() => _loading = false);
@@ -159,6 +182,112 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _hydrateContractTerms(String token) async {
+    try {
+      final data = await context.read<ContractProvider>().fetchGenerationData(
+        token,
+        widget.contractId,
+      );
+      final terms =
+          (data['contract_terms'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{};
+      if (terms.isEmpty || !mounted) return;
+
+      final terminationNotice = terms['termination_notice'];
+      if (terminationNotice != null) {
+        _selectedTerminationNotice = terminationNotice.toString();
+      }
+
+      final disputeResolution = terms['dispute_resolution'] as String?;
+      if (disputeResolution != null && disputeResolution.isNotEmpty) {
+        _selectedDisputeResolution = disputeResolution;
+      }
+
+      _confidentiality = terms['confidentiality'] as bool? ?? false;
+      _confidentialityTextController.text =
+          terms['confidentiality_text'] as String? ?? '';
+
+      final penalty = (terms['late_payment_penalty'] as num?)?.toDouble();
+      _latepaymentPenalty = penalty != null && penalty > 0;
+      if (_latepaymentPenalty) {
+        _latePaymentPenaltyController.text = penalty!.toStringAsFixed(
+          penalty % 1 == 0 ? 0 : 2,
+        );
+      }
+
+      final revisionRounds = terms['revision_rounds'];
+      if (revisionRounds != null) {
+        _revisionRounds = (revisionRounds as num).toInt();
+        _revisionRoundsController.text = _revisionRounds.toString();
+      }
+
+      _additionalClausesController.text =
+          terms['additional_clauses'] as String? ?? '';
+
+      _hydratePaymentSchedule(terms['payment_schedule'] as String? ?? '');
+    } catch (e) {
+      // Non-fatal: worst case the screen falls back to defaults, same as
+      // before this fix — it must not block the rest of the contract from
+      // loading.
+      debugPrint('Failed to hydrate contract terms: $e');
+    }
+  }
+
+  /// Reverses [_buildPaymentScheduleString]'s output back into form state —
+  /// either the milestone list or the full-payment timing selection.
+  void _hydratePaymentSchedule(String scheduleText) {
+    if (scheduleText.trim().isEmpty) return;
+
+    if (_selectedPaymentStructure == 'milestone_based') {
+      final lines = scheduleText
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
+      if (lines.isEmpty) return;
+
+      final lineRegex = RegExp(
+        r'^Milestone\s+\d+:\s*(.+?)(?:\s*-\s*([\d.]+)%\s*payment)?(?:\s*\((.+)\))?$',
+      );
+      final parsed = <_MilestoneItem>[];
+      for (final line in lines) {
+        final match = lineRegex.firstMatch(line);
+        final item = _MilestoneItem();
+        if (match != null) {
+          final title = match.group(1)?.trim() ?? '';
+          item.titleController.text = title == 'Unnamed milestone'
+              ? ''
+              : title;
+          item.percentageController.text = match.group(2)?.trim() ?? '';
+          item.noteController.text = match.group(3)?.trim() ?? '';
+        } else {
+          item.titleController.text = line;
+        }
+        parsed.add(item);
+      }
+
+      for (final m in _milestones) {
+        m.dispose();
+      }
+      _milestones
+        ..clear()
+        ..addAll(parsed);
+      return;
+    }
+
+    final trimmed = scheduleText.trim();
+    final matchedEntry = _fullPaymentTimingLabels.entries
+        .where((e) => e.key != 'custom' && e.value == trimmed)
+        .toList();
+
+    if (matchedEntry.isNotEmpty) {
+      _selectedFullPaymentTiming = matchedEntry.first.key;
+    } else {
+      _selectedFullPaymentTiming = 'custom';
+      _customFullPaymentController.text = trimmed;
     }
   }
 
@@ -263,8 +392,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       total += percentage;
     }
 
-    if (total > 100.0) {
-      _showError('Total milestone percentage cannot exceed 100%');
+    if ((total - 100.0).abs() > 0.01) {
+      _showError('Milestone payment percentages must add up to 100%');
       return false;
     }
 
@@ -342,7 +471,13 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       'governing_law': 'Indonesian Law',
       'confidentiality': _confidentiality,
       'confidentiality_text': _confidentialityTextController.text.trim(),
-      'late_payment_penalty': _latepaymentPenalty,
+      // Backend expects a penalty *percentage* (Optional[float], DB column
+      // is DECIMAL) here, not a yes/no flag - sending the raw checkbox bool
+      // used to silently coerce to 0.0/1.0, hard-coding a phantom 1% late
+      // fee whenever the box was checked with no way to actually set a rate.
+      'late_payment_penalty': _latepaymentPenalty
+          ? double.tryParse(_latePaymentPenaltyController.text.trim())
+          : null,
       'dispute_resolution': _selectedDisputeResolution ?? 'negotiation',
       'revision_rounds': int.tryParse(_revisionRoundsController.text) ?? 2,
       'additional_clauses': _additionalClausesController.text.trim(),
@@ -351,27 +486,44 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     };
   }
 
-  Future<void> _generateContract() async {
+  /// Shared by both _generateContract and _sendToFreelancer - previously
+  /// _sendToFreelancer only ran _validateMilestones, so editing the end
+  /// date/duration/custom-payment-text blank and pressing "Send to
+  /// Freelancer" (shown once a PDF already exists) could silently ship a
+  /// contract with an empty end date or payment schedule to the freelancer.
+  bool _validateBeforeGenerate() {
     if (_endDateController.text.isEmpty) {
       _showError('Please set an end date');
-      return;
+      return false;
     }
 
     if (_durationValueController.text.trim().isEmpty) {
       _showError('Please enter the agreed duration');
-      return;
+      return false;
     }
 
     if (_selectedPaymentStructure == 'full_payment' &&
         _selectedFullPaymentTiming == 'custom' &&
         _customFullPaymentController.text.trim().isEmpty) {
       _showError('Please describe the full payment schedule');
-      return;
+      return false;
     }
 
-    if (!_validateMilestones()) {
-      return;
+    if (_latepaymentPenalty) {
+      final penalty = double.tryParse(
+        _latePaymentPenaltyController.text.trim(),
+      );
+      if (penalty == null || penalty <= 0) {
+        _showError('Please enter a valid late payment penalty percentage');
+        return false;
+      }
     }
+
+    return _validateMilestones();
+  }
+
+  Future<void> _generateContract() async {
+    if (!_validateBeforeGenerate()) return;
 
     final token = context.read<AuthProvider>().token!;
     final contractProvider = context.read<ContractProvider>();
@@ -384,9 +536,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         setState(() => _generating = false);
         return;
       }
-
-      final paymentSchedule = _buildPaymentScheduleString();
-      _paymentScheduleController.text = paymentSchedule;
 
       final generationData = _buildGenerationData(sendNotification: false);
 
@@ -446,22 +595,30 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         Uri.parse(pdfUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (response.statusCode == 200) {
-        final downloadsPath =
-            await ExternalPath.getExternalStoragePublicDirectory(
-          ExternalPath.DIRECTORY_DOWNLOAD,
-        );
-        final fileName = 'contract_${widget.contractId}.pdf';
-        final filePath = '$downloadsPath/$fileName';
-
-        final file = File(filePath);
-        await file.writeAsBytes(response.bodyBytes);
-
-        if (!mounted) return;
-        AppToast.success('Saved to Downloads/$fileName');
-      } else {
+      if (response.statusCode != 200) {
         throw Exception('Failed to download PDF');
       }
+
+      final fileName = 'contract_${widget.contractId}.pdf';
+
+      // Lets the user pick the destination via the system's native "Save As"
+      // picker (Storage Access Framework on Android) instead of silently
+      // writing to a hardcoded path - the latter also has no chance of
+      // working on a real device since this app declares no storage
+      // permission in AndroidManifest.xml.
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Contract PDF',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        bytes: response.bodyBytes,
+      );
+
+      if (!mounted) return;
+
+      if (savedPath == null) return; // user cancelled the picker
+
+      AppToast.success('Contract saved successfully');
     } catch (e) {
       AppToast.error('Failed to download PDF: $e');
     }
@@ -473,7 +630,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       return;
     }
 
-    if (!_validateMilestones()) return;
+    if (!_validateBeforeGenerate()) return;
 
     final token = context.read<AuthProvider>().token!;
     final contractProvider = context.read<ContractProvider>();
@@ -497,7 +654,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       if (!mounted) return;
 
-      setState(() => _sending = false);
+      setState(() {
+        _sending = false;
+        if (success) _sentToFreelancer = true;
+      });
 
       if (success) {
         AppToast.success('Contract sent to freelancer successfully!');
@@ -507,8 +667,21 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       if (success) {
         await contractProvider.fetchContractById(token, widget.contractId);
-        if (mounted) {
-          setState(() => _contract = contractProvider.currentContract);
+        if (!mounted) return;
+
+        final refreshed = contractProvider.currentContract;
+        setState(() => _contract = refreshed);
+
+        if (refreshed != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WorkspaceDetailScreen(
+                contract: refreshed,
+                viewerRole: 'client',
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -573,7 +746,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                                 'Agreed Budget',
                                 _agreedBudgetController,
                                 'e.g. 5000000',
-                                keyboardType: TextInputType.number,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -581,7 +761,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                               child: _buildDropdownField(
                                 label: 'Currency',
                                 value: _selectedBudgetCurrency,
-                                items: const ['IDR', 'USD'],
+                                items: kSupportedCurrencies,
                                 labelBuilder: (v) => v,
                                 onChanged: (value) {
                                   setState(() {
@@ -605,6 +785,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                                   value ?? 'full_payment';
                             });
                           },
+                          prefixIcon: Icons.account_balance_wallet_outlined,
                         ),
                       ],
                     ),
@@ -690,6 +871,23 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                             () => _latepaymentPenalty = value ?? false,
                           ),
                         ),
+                        if (_latepaymentPenalty) ...[
+                          const SizedBox(height: 12),
+                          _buildTextField(
+                            'Penalty Percentage',
+                            _latePaymentPenaltyController,
+                            'e.g. 5 (as % of the agreed budget per late period)',
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d+\.?\d{0,2}'),
+                              ),
+                            ],
+                            prefixIcon: Icons.percent_rounded,
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         _buildTextField(
                           'Revision Rounds',
@@ -737,9 +935,13 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                       ),
                     ] else ...[
                       _buildActionButton(
-                        onPressed: _sending ? null : _sendToFreelancer,
+                        onPressed: (_sending || _sentToFreelancer)
+                            ? null
+                            : _sendToFreelancer,
                         icon: _sending ? null : Icons.send_outlined,
-                        label: 'Send to Freelancer',
+                        label: _sentToFreelancer
+                            ? 'Contract Sent'
+                            : 'Send to Freelancer',
                         loading: _sending,
                         backgroundColor: const Color(0xFF16A34A),
                         foregroundColor: Colors.white,
@@ -917,6 +1119,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     Function(String)? onChanged,
     TextInputType? keyboardType,
     IconData? prefixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -936,6 +1139,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           onTap: onTap,
           onChanged: onChanged,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           readOnly: onTap != null,
           style: GoogleFonts.poppins(
             fontSize: 13,
@@ -962,9 +1166,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: _primary, width: 1.5),
             ),
-            contentPadding: prefixIcon != null
-                ? const EdgeInsets.symmetric(vertical: 15)
-                : const EdgeInsets.all(14),
+            contentPadding: _fieldPadding,
             filled: true,
             fillColor: const Color(0xFFFCFCFD),
           ),
@@ -997,13 +1199,21 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           value: value,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _primary),
+          borderRadius: BorderRadius.circular(14),
+          dropdownColor: Colors.white,
+          elevation: 3,
+          menuMaxHeight: 320,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF101828),
+          ),
           items: items
               .map(
                 (item) => DropdownMenuItem<String>(
                   value: item,
                   child: Text(
                     labelBuilder(item),
-                    style: GoogleFonts.poppins(fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -1026,9 +1236,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: _primary, width: 1.5),
             ),
-            contentPadding: prefixIcon != null
-                ? const EdgeInsets.symmetric(vertical: 15)
-                : const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: _fieldPadding,
             filled: true,
             fillColor: const Color(0xFFFCFCFD),
           ),
@@ -1041,44 +1249,22 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Agreed Duration',
-          style: GoogleFonts.poppins(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF344054),
-          ),
-        ),
-        const SizedBox(height: 7),
+        // Paired the same way as "Agreed Budget" + "Currency" above: each
+        // side carries its own label via the shared field builders, so both
+        // boxes get identical height/padding and line up correctly — the
+        // previous version put one shared label above a bare TextField next
+        // to a fully self-labeled dropdown, which threw off the alignment.
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: TextField(
-                controller: _durationValueController,
+              flex: 2,
+              child: _buildTextField(
+                'Duration',
+                _durationValueController,
+                'e.g. 3',
                 keyboardType: TextInputType.number,
-                style: GoogleFonts.poppins(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'e.g. 3',
-                  prefixIcon: const Icon(
-                    Icons.timelapse_rounded,
-                    color: _primary,
-                    size: 20,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE4E7EC)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE4E7EC)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: _primary, width: 1.5),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFFCFCFD),
-                ),
+                prefixIcon: Icons.timelapse_rounded,
               ),
             ),
             const SizedBox(width: 12),
@@ -1209,7 +1395,14 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                   'Payment Percentage',
                   milestone.percentageController,
                   'e.g. 30',
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d+\.?\d{0,2}'),
+                    ),
+                  ],
                   prefixIcon: Icons.percent_rounded,
                 ),
                 const SizedBox(height: 12),

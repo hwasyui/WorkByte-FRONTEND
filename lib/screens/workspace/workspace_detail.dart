@@ -1,12 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:workbyte_app/models/dm_model.dart';
 import 'package:workbyte_app/providers/dm_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,19 +38,12 @@ class WorkspaceDetailScreen extends StatefulWidget {
 }
 
 class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
-  static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
-    RegExp(r'/$'),
-    '',
-  );
-
   late ContractModel _contract;
   bool _isActioning = false;
 
   ProposalModel? _proposalDetail;
   bool _isLoadingProposal = false;
   final ProposalService _proposalService = ProposalService();
-
-  static const int _autoApproveDays = 7;
 
   @override
   void initState() {
@@ -120,27 +110,34 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
-  /// Manual refresh - the day-3/6/7 reminder/auto-approve sweep
-  /// (contract_autoapprove_worker.py) can change contract/submission status
-  /// in the background at any time with no live push to this screen, so
-  /// there's no other way to see that update without navigating away and back.
-  /// Wired to the app bar's refresh button - the single refresh path for this
-  /// screen (previously duplicated by a pull-to-refresh that called an
-  /// overlapping, since-removed set of helpers).
+  /// Manual refresh - the other party's actions (approve, request revision,
+  /// cancel) change contract/submission status server-side with no live push
+  /// to this screen, so there's no other way to see that update without
+  /// navigating away and back. Wired to the app bar's refresh button - the
+  /// single refresh path for this screen (previously duplicated by a
+  /// pull-to-refresh that called an overlapping, since-removed set of
+  /// helpers).
   Future<void> _refreshWorkspace() async {
+    await _refreshContractStatus();
+    await Future.wait([_fetchProposalDetail(), _fetchSubmissions()]);
+  }
+
+  /// Re-fetches the authoritative contract from the server and syncs
+  /// `_contract` to it. Used after any action (submit, request revision,
+  /// approve) that changes the contract's status server-side, instead of
+  /// re-deriving/re-sending the status from this screen.
+  Future<void> _refreshContractStatus() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
     await context.read<ContractProvider>().fetchContractById(
       token,
       _contract.contractId,
     );
-    if (mounted) {
-      final latest = context.read<ContractProvider>().currentContract;
-      if (latest != null && latest.contractId == _contract.contractId) {
-        setState(() => _contract = latest);
-      }
+    if (!mounted) return;
+    final latest = context.read<ContractProvider>().currentContract;
+    if (latest != null && latest.contractId == _contract.contractId) {
+      setState(() => _contract = latest);
     }
-    await Future.wait([_fetchProposalDetail(), _fetchSubmissions()]);
   }
 
   void _maybeShowContractIncompletePrompt() {
@@ -268,40 +265,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
-  Future<bool> _updateStatus(String status, {String? note}) async {
-    try {
-      final token = context.read<AuthProvider>().token!;
-      final body = <String, dynamic>{'status': status};
-      if (note != null && note.trim().isNotEmpty) {
-        body['revision_note'] = note.trim();
-      }
-
-      final res = await http.put(
-        Uri.parse('$_baseUrl/contracts/${_contract.contractId}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final updated = data['details'] ?? data['data'] ?? data;
-        if (mounted) {
-          setState(() {
-            _contract = ContractModel.fromJson(updated as Map<String, dynamic>);
-          });
-        }
-        return true;
-      }
-
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   Future<void> _submitWork(List<File> files, String note) async {
     setState(() => _isActioning = true);
 
@@ -326,20 +289,17 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      final contractSuccess = await _updateStatus('under_review');
-
-      await _fetchSubmissions();
+      // Creating the submission already flips the contract to
+      // "under_review" server-side (see create_submission in
+      // contract_submission_functions.py) - just re-fetch to pick that up,
+      // rather than redundantly PUTting the same status again. The old
+      // redundant PUT was tolerated as a no-op by the backend, but a
+      // transient failure on it produced a false "failed to update status"
+      // toast even though the real status change had already succeeded.
+      await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
-
-      if (contractSuccess) {
-        _showSnack('Work submitted successfully!', isError: false);
-      } else {
-        _showSnack(
-          'Work submitted, but failed to update contract status.',
-          isError: true,
-        );
-      }
+      _showSnack('Work submitted successfully!', isError: false);
     } catch (e) {
       _showSnack('Something went wrong.', isError: true);
     } finally {
@@ -370,7 +330,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      await _fetchSubmissions();
+      // This request also flips the contract to "revision_requested"
+      // server-side, but _contract was previously never refreshed here, so
+      // the status banner/action buttons kept showing stale state until a
+      // manual pull-to-refresh.
+      await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
       _showSnack('Revision request sent to freelancer', isError: false);
@@ -403,36 +367,31 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      final contractSuccess = await _updateStatus('completed');
-
-      await _fetchSubmissions();
+      // Approving already flips the contract to "completed" server-side
+      // (see approve_latest_submission in contract_submission_functions.py)
+      // - just re-fetch to pick that up instead of redundantly PUTting the
+      // same status again.
+      await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
 
-      if (contractSuccess) {
-        _showSnack('Contract marked as completed!', isError: false);
-        // ── Navigate to review form ───────────────────────────────
-        await Future.delayed(
-          const Duration(milliseconds: 600),
-        ); // let snack show briefly
-        if (!mounted) return;
+      _showSnack('Contract marked as completed!', isError: false);
+      // ── Navigate to review form ───────────────────────────────
+      await Future.delayed(
+        const Duration(milliseconds: 600),
+      ); // let snack show briefly
+      if (!mounted) return;
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ReviewFormScreen(
-              contractId: _contract.contractId,
-              freelancerName: _contract.freelancerName ?? 'Freelancer',
-              projectTitle: _contract.contractTitle,
-            ),
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReviewFormScreen(
+            contractId: _contract.contractId,
+            freelancerName: _contract.freelancerName ?? 'Freelancer',
+            projectTitle: _contract.contractTitle,
           ),
-        );
-      } else {
-        _showSnack(
-          'Submission approved, but failed to update contract status.',
-          isError: true,
-        );
-      }
+        ),
+      );
     } catch (e) {
       _showSnack('Something went wrong.', isError: true);
     } finally {
@@ -483,7 +442,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           _buildMessagesButton(),
           const SizedBox(height: 16),
           if (_isFreelancer && _contract.status == 'revision_requested')
-            _buildRevisionNote(),
+            _buildRevisionNote(submissionProvider),
         ],
       ),
       bottomNavigationBar: _buildBottomActions(submissionProvider),
@@ -595,6 +554,13 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
+  // NOTE: there is no auto-approve worker running on the backend - the
+  // sweep that would flip a stale submission to approved after N days of
+  // client silence was designed (see contract_submission_functions.py's
+  // run_autoapprove_sweep) but never wired to a scheduler, and never
+  // shipped. This widget must not promise an outcome the platform can't
+  // deliver - it's a plain "still waiting" nudge that points the
+  // freelancer at Messages instead, with no deadline claim.
   Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
     final latest = provider.latestSubmission;
     if (latest == null ||
@@ -603,12 +569,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       return const SizedBox.shrink();
     }
     final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
-    final daysRemaining = _autoApproveDays - daysElapsed;
-    if (daysRemaining > 3) {
-      // Not close enough to auto-approve yet - no need to nag the freelancer.
+    if (daysElapsed < 3) {
+      // Not waiting long enough yet to be worth a nudge.
       return const SizedBox.shrink();
     }
-    final isUrgent = daysRemaining <= 1;
+    final isUrgent = daysElapsed >= 7;
     final color = isUrgent ? const Color(0xFFC62828) : const Color(0xFFEF6C00);
     final bg = isUrgent ? const Color(0xFFFFEBEE) : const Color(0xFFFFF3E0);
 
@@ -623,22 +588,21 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.timer_outlined, color: color, size: 20),
+            Icon(Icons.hourglass_bottom_rounded, color: color, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    daysRemaining <= 0
-                        ? 'Auto-Approving Soon'
-                        : 'Auto-Approves in $daysRemaining day${daysRemaining == 1 ? '' : 's'}',
+                    'Still Awaiting Review',
                     style: AppText.captionSemiBold.copyWith(color: color),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'The client hasn\'t reviewed your submission yet. If they stay silent, '
-                    'this contract will be automatically approved and marked complete.',
+                    'It\'s been $daysElapsed day${daysElapsed == 1 ? '' : 's'} since you submitted '
+                    'this work and the client hasn\'t reviewed it yet. Consider following up '
+                    'with them via Messages.',
                     style: AppText.caption.copyWith(
                       color: color.withOpacity(0.85),
                     ),
@@ -1313,7 +1277,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
-  Widget _buildRevisionNote() {
+  Widget _buildRevisionNote(ContractSubmissionProvider provider) {
+    // revision_note is now actually persisted on the submission (see
+    // request_revision_for_latest_submission in contract_submission_functions.py)
+    // instead of only ever existing as an ephemeral DM message - show it
+    // directly when present, still pointing to Messages as a fallback/for
+    // full context otherwise.
+    final note = provider.latestSubmission?.revisionNote?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1342,11 +1314,22 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'The client has requested changes. Please review the feedback in Messages and resubmit your work.',
+                  hasNote
+                      ? note
+                      : 'The client has requested changes. Please review the feedback in Messages and resubmit your work.',
                   style: AppText.caption.copyWith(
                     color: const Color(0xFF795548),
                   ),
                 ),
+                if (hasNote) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'See Messages for full context.',
+                    style: AppText.caption.copyWith(
+                      color: const Color(0xFF795548).withOpacity(0.7),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

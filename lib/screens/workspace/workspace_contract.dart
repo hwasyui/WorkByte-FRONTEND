@@ -7,6 +7,7 @@ import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../contract/generate_contract_screen.dart';
 import 'workspace_detail.dart';
 
 class WorkspaceContractScreen extends StatefulWidget {
@@ -519,15 +520,30 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => WorkspaceDetailScreen(
-                      contract: contract,
-                      viewerRole: isClient ? 'client' : 'freelancer',
+                onPressed: () {
+                  // Client-side contracts with no generated PDF yet aren't
+                  // ready for the workspace - route straight to finishing
+                  // setup instead of opening a workspace that's just going
+                  // to nag them with the incomplete-contract prompt anyway.
+                  final needsGeneration =
+                      isClient &&
+                      (contract.contractPdfUrl ?? '').trim().isEmpty;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => needsGeneration
+                          ? GenerateContractScreen(
+                              contractId: contract.contractId,
+                              initialContract: contract,
+                            )
+                          : WorkspaceDetailScreen(
+                              contract: contract,
+                              viewerRole: isClient ? 'client' : 'freelancer',
+                            ),
                     ),
-                  ),
-                ).then((_) => _loadContracts()),
+                  ).then((_) => _loadContracts());
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
@@ -537,7 +553,9 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text(
-                  'View Details',
+                  isClient && (contract.contractPdfUrl ?? '').trim().isEmpty
+                      ? 'Complete Contract Setup'
+                      : 'View Details',
                   style: AppText.bodySemiBold.copyWith(color: Colors.white),
                 ),
               ),

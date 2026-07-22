@@ -90,13 +90,27 @@ class ProfileService {
 
   Future<FreelancerModel?> fetchFreelancerById(
     String token,
-    String freelancerId,
-  ) async {
+    String freelancerId, {
+    Future<String?> Function()? onRefreshToken,
+  }) async {
     try {
-      final res = await http.get(
+      var res = await http.get(
         Uri.parse('$_baseUrl/freelancers/$freelancerId'),
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
+
+      // Access token may have expired between screen load and this tap;
+      // silently refresh and retry once before surfacing an error.
+      if (res.statusCode == 401 && onRefreshToken != null) {
+        final newToken = await onRefreshToken();
+        if (newToken != null) {
+          res = await http.get(
+            Uri.parse('$_baseUrl/freelancers/$freelancerId'),
+            headers: _headers(newToken),
+          ).timeout(const Duration(seconds: 20));
+        }
+      }
+
       final body = _decodeBody(res);
       if (res.statusCode == 200) {
         final data = body['details'] ?? body['data'] ?? body;

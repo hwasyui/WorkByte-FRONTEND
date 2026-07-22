@@ -236,8 +236,13 @@ class ProfileProvider extends ChangeNotifier {
   Future<FreelancerModel?> fetchFreelancerById({
     required String token,
     required String freelancerId,
+    Future<String?> Function()? onRefreshToken,
   }) async {
-    return await _service.fetchFreelancerById(token, freelancerId);
+    return await _service.fetchFreelancerById(
+      token,
+      freelancerId,
+      onRefreshToken: onRefreshToken,
+    );
   }
 
   // ─── Update profile ───────────────────────────────────────────────────────
