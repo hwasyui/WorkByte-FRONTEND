@@ -24,6 +24,7 @@ import 'providers/dm_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/appeal_provider.dart';
 import 'providers/report_provider.dart';
+import 'providers/guideline_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -81,6 +82,7 @@ class WorkByteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => ReportProvider()),
         ChangeNotifierProvider(create: (_) => AppealProvider()),
+        ChangeNotifierProvider(create: (_) => GuidelineProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

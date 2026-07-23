@@ -12,6 +12,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/guideline_provider.dart';
+import '../../widgets/guideline_prompt_dialog.dart';
 import '../auth/login.dart';
 import '../../core/constants/colors.dart';
 import '../../widgets/search_bar.dart';
@@ -168,7 +170,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _loadTopFreelancers();
       _loadCategoryCounts();
       context.read<NotificationProvider>().fetchUnreadCount();
+      _checkGuidelines();
     });
+  }
+
+  Future<void> _checkGuidelines() async {
+    final auth = context.read<AuthProvider>();
+    final profile = context.read<ProfileProvider>();
+    final guideline = context.read<GuidelineProvider>();
+
+    if (auth.token == null || auth.currentUser == null) return;
+
+    await guideline.fetchStatus(
+      token: auth.token!,
+      userId: auth.currentUser!.userId,
+    );
+    if (!mounted) return;
+
+    final activeRole = profile.isClient ? 'client' : 'freelancer';
+    final pending = guideline.pendingSections(activeRole);
+    if (pending.isNotEmpty) {
+      GuidelinePromptDialog.show(context, activeRole: activeRole);
+    }
   }
 
   @override

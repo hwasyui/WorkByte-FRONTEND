@@ -7,12 +7,15 @@ import 'package:provider/provider.dart';
 import '../core/constants/colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/guideline_provider.dart';
 import '../screens/freelancer_profile/freelancer_profile.dart';
 import '../screens/client_profile/client_profile.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/about/about_screen.dart';
 import '../screens/auth/login.dart';
 import '../screens/appeals/my_appeals_screen.dart'; // 👈 NEW
+import '../screens/guidelines/guidelines_screen.dart';
+import '../widgets/guideline_prompt_dialog.dart';
 
 class SideDrawer extends StatelessWidget {
   const SideDrawer({super.key});
@@ -52,6 +55,19 @@ class SideDrawer extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const MyAppealsScreen()),
+    );
+  }
+
+  void _navigateToGuidelines(BuildContext context) {
+    Navigator.pop(context);
+    final profile = context.read<ProfileProvider>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GuidelinesScreen(
+          activeRole: profile.isClient ? 'client' : 'freelancer',
+        ),
+      ),
     );
   }
 
@@ -232,14 +248,29 @@ class SideDrawer extends StatelessWidget {
     );
   }
 
-  void _switchRole(BuildContext context, String newRole) {
+  void _switchRole(BuildContext context, String newRole) async {
     Navigator.pop(context);
     final auth = context.read<AuthProvider>();
     final profile = context.read<ProfileProvider>();
+    final guideline = context.read<GuidelineProvider>();
     final userId = auth.currentUser?.userId;
     if (userId == null || auth.token == null) return;
 
-    profile.switchRole(token: auth.token!, userId: userId, newRole: newRole);
+    final success = await profile.switchRole(
+      token: auth.token!,
+      userId: userId,
+      newRole: newRole,
+    );
+
+    if (!success || !context.mounted) return;
+
+    await guideline.fetchStatus(token: auth.token!, userId: userId);
+    if (!context.mounted) return;
+
+    final pending = guideline.pendingSections(newRole);
+    if (pending.isNotEmpty) {
+      GuidelinePromptDialog.show(context, activeRole: newRole);
+    }
   }
 
   @override
@@ -485,6 +516,11 @@ class SideDrawer extends StatelessWidget {
               icon: Icons.settings_outlined,
               label: 'Settings',
               onTap: () => _navigateToSettings(context),
+            ),
+            _DrawerItem(
+              icon: Icons.menu_book_outlined,
+              label: 'Guidelines',
+              onTap: () => _navigateToGuidelines(context),
             ),
 
             // 👇 NEW: My Appeals — always visible so users can track status
