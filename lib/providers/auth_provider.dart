@@ -12,10 +12,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
 
   AuthProvider() {
-    // Any service that detects a 401 via SessionGuard.check() routes here.
-    // The access token is short-lived (7 days) but the refresh token lasts
-    // 30, so try a silent refresh first — only log the user out if the
-    // refresh token itself is gone/invalid too.
+    // Access token is short-lived (30 min); try a silent refresh before logging out.
     SessionGuard.register(() {
       _refreshOrRetryOnce().then((refreshed) {
         if (!refreshed) handleSessionExpired();
