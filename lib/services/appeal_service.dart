@@ -19,22 +19,24 @@ class AppealService {
     required String targetId,
     required String message,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/appeals'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'target_type': targetType,
-        'target_id': targetId,
-        'message': message,
-      }),
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/appeals'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+        body: jsonEncode({
+          'target_type': targetType,
+          'target_id': targetId,
+          'message': message,
+        }),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('POST /appeals status: ${response.statusCode}');
     debugPrint('POST /appeals body: ${response.body}');
-    SessionGuard.check(response);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       try {
@@ -71,17 +73,19 @@ class AppealService {
 
   /// GET /appeals/mine
   Future<List<AppealModel>> getMyAppeals(String token) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/appeals/mine'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/appeals/mine'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('GET /appeals/mine status: ${response.statusCode}');
     debugPrint('GET /appeals/mine body: ${response.body}');
-    SessionGuard.check(response);
 
     if (response.statusCode == 200) {
       try {
@@ -129,17 +133,19 @@ class AppealService {
       },
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('GET /appeals/status status: ${response.statusCode}');
     debugPrint('GET /appeals/status body: ${response.body}');
-    SessionGuard.check(response);
 
     if (response.statusCode == 200) {
       try {

@@ -41,15 +41,18 @@ class DMService {
     String? jobPostId,
     String? messageText,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/dm/threads'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'participant_id': participantId, // ✅ Fixed: snake_case
-        if (jobPostId != null) 'job_post_id': jobPostId, // ✅ Fixed: snake_case
-        if (messageText != null && messageText.trim().isNotEmpty)
-          'message_text': messageText.trim(), // ✅ Fixed: snake_case
-      }),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/dm/threads'),
+        headers: _headers(t),
+        body: jsonEncode({
+          'participant_id': participantId, // ✅ Fixed: snake_case
+          if (jobPostId != null) 'job_post_id': jobPostId, // ✅ Fixed: snake_case
+          if (messageText != null && messageText.trim().isNotEmpty)
+            'message_text': messageText.trim(), // ✅ Fixed: snake_case
+        }),
+      ),
     );
 
     debugPrint('POST /dm/threads -> ${res.statusCode}');
@@ -70,7 +73,10 @@ class DMService {
       '$_baseUrl/dm/threads',
     ).replace(queryParameters: status != null ? {'status': status} : null);
 
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)),
+    );
     debugPrint('GET /dm/threads -> ${res.statusCode}');
     final body = _unwrap(res);
 
@@ -84,9 +90,12 @@ class DMService {
   }
 
   Future<List<DMThreadModel>> getRequests(String token) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/dm/threads/requests'),
-      headers: _headers(token),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/dm/threads/requests'),
+        headers: _headers(t),
+      ),
     );
 
     debugPrint('GET /dm/threads/requests -> ${res.statusCode}');
@@ -106,9 +115,12 @@ class DMService {
   }
 
   Future<DMThreadModel> getThread(String token, String threadId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/dm/threads/$threadId'),
-      headers: _headers(token),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/dm/threads/$threadId'),
+        headers: _headers(t),
+      ),
     );
 
     debugPrint('GET /dm/threads/$threadId -> ${res.statusCode}');
@@ -122,9 +134,12 @@ class DMService {
   }
 
   Future<DMThreadModel> acceptThread(String token, String threadId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/accept'),
-      headers: _headers(token),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/dm/threads/$threadId/accept'),
+        headers: _headers(t),
+      ),
     );
 
     debugPrint('PUT /dm/threads/$threadId/accept -> ${res.statusCode}');
@@ -138,9 +153,12 @@ class DMService {
   }
 
   Future<DMThreadModel> declineThread(String token, String threadId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/decline'),
-      headers: _headers(token),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/dm/threads/$threadId/decline'),
+        headers: _headers(t),
+      ),
     );
 
     debugPrint('PUT /dm/threads/$threadId/decline -> ${res.statusCode}');
@@ -166,7 +184,10 @@ class DMService {
       },
     );
 
-    final res = await http.get(uri, headers: _headers(token));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)),
+    );
     debugPrint('GET /dm/threads/$threadId/messages -> ${res.statusCode}');
     final body = _unwrap(res);
 
@@ -182,12 +203,15 @@ class DMService {
     required String threadId,
     required String messageText,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/messages'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'message_text': messageText.trim(), // ✅ Fixed: snake_case
-      }),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/dm/threads/$threadId/messages'),
+        headers: _headers(t),
+        body: jsonEncode({
+          'message_text': messageText.trim(), // ✅ Fixed: snake_case
+        }),
+      ),
     );
 
     debugPrint('POST /dm/threads/$threadId/messages -> ${res.statusCode}');
@@ -210,21 +234,24 @@ class DMService {
     bool isVoiceNote = false,
   }) async {
     final uri = Uri.parse('$_baseUrl/dm/threads/$threadId/messages/upload');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token';
 
-    request.files.add(
-      await http.MultipartFile.fromPath('file', filePath, filename: fileName),
-    );
-    if (messageText != null && messageText.trim().isNotEmpty) {
-      request.fields['message_text'] = messageText.trim();
-    }
-    if (isVoiceNote) {
-      request.fields['is_voice_note'] = 'true';
-    }
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t';
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
+      request.files.add(
+        await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+      );
+      if (messageText != null && messageText.trim().isNotEmpty) {
+        request.fields['message_text'] = messageText.trim();
+      }
+      if (isVoiceNote) {
+        request.fields['is_voice_note'] = 'true';
+      }
+
+      final streamed = await request.send();
+      return http.Response.fromStream(streamed);
+    });
 
     debugPrint(
       'POST /dm/threads/$threadId/messages/upload -> ${res.statusCode}',
@@ -242,9 +269,12 @@ class DMService {
     required String token,
     required String threadId,
   }) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/dm/threads/$threadId/read'),
-      headers: _headers(token),
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/dm/threads/$threadId/read'),
+        headers: _headers(t),
+      ),
     );
 
     debugPrint('PUT /dm/threads/$threadId/read -> ${res.statusCode}');

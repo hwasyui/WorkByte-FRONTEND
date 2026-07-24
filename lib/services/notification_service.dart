@@ -194,16 +194,17 @@ class NotificationService {
     int limit = 20,
     int offset = 0,
   }) async {
-    final token = await _storage.read(key: _tokenKey);
-    final response = await http.get(
-      Uri.parse('$_baseUrl/notifications?limit=$limit&offset=$offset'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(response);
+    final token = await _storage.read(key: _tokenKey) ?? '';
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/notifications?limit=$limit&offset=$offset'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
       final list = body['details'] ?? body['data'] ?? [];
@@ -215,16 +216,17 @@ class NotificationService {
   }
 
   Future<int> getUnreadCount() async {
-    final token = await _storage.read(key: _tokenKey);
-    final response = await http.get(
-      Uri.parse('$_baseUrl/notifications/unread-count'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(response);
+    final token = await _storage.read(key: _tokenKey) ?? '';
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/notifications/unread-count'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(response.body);
     if (response.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -234,26 +236,30 @@ class NotificationService {
   }
 
   Future<void> markAsRead(String notificationId) async {
-    final token = await _storage.read(key: _tokenKey);
-    final res = await http.patch(
-      Uri.parse('$_baseUrl/notifications/$notificationId/read'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final token = await _storage.read(key: _tokenKey) ?? '';
+    await SessionGuard.guard(
+      token,
+      (t) => http.patch(
+        Uri.parse('$_baseUrl/notifications/$notificationId/read'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
   }
 
   Future<void> markAllRead() async {
-    final token = await _storage.read(key: _tokenKey);
-    final res = await http.patch(
-      Uri.parse('$_baseUrl/notifications/read-all'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final token = await _storage.read(key: _tokenKey) ?? '';
+    await SessionGuard.guard(
+      token,
+      (t) => http.patch(
+        Uri.parse('$_baseUrl/notifications/read-all'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
   }
 }

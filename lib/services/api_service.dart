@@ -64,14 +64,16 @@ class ApiService {
     String clientId,
   ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/job-posts/client/$clientId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/job-posts/client/$clientId'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -92,14 +94,16 @@ class ApiService {
     String jobPostId,
   ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -131,14 +135,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -168,14 +174,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -217,14 +225,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -254,14 +264,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -286,29 +298,22 @@ class ApiService {
     }
   }
 
-  /// Analyzes one freelancer's fit for a single job role. Backend only
-  /// supports per-role analysis (`GET /ai/job-engine/analyse/role/{job_role_id}`)
-  /// — there is no job-level aggregate endpoint, so this must be called once
-  /// per role rather than once per job post.
-  ///
-  /// Returns the flat per-role result map on success. On a 429 (daily analysis
-  /// limit reached), returns a map with `rate_limited: true` plus
-  /// `message`/`usage_today`/`usage_limit`/`remaining_today` so the caller can
-  /// show a specific message instead of a generic failure. Returns null on
-  /// any other error.
+  /// Per-role analysis; on 429 returns {rate_limited: true, ...usage info}.
   static Future<Map<String, dynamic>?> analyzeRoleMatch(
     String token,
     String jobRoleId,
   ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/ai/job-engine/analyse/role/$jobRoleId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/ai/job-engine/analyse/role/$jobRoleId'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
@@ -325,19 +330,19 @@ class ApiService {
     }
   }
 
-  /// Read-only lookup of today's job-fit analysis usage
-  /// (`usage_today`/`usage_limit`/`remaining_today`) — doesn't spend a request
-  /// against the daily cap the way `analyzeRoleMatch` does.
+  /// Read-only usage lookup; doesn't spend a request against the daily cap.
   static Future<Map<String, dynamic>?> getJobFitUsage(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/ai/job-engine/usage'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/ai/job-engine/usage'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return Map<String, dynamic>.from(data['details'] ?? data['data'] ?? {});
@@ -366,14 +371,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -403,14 +410,16 @@ class ApiService {
         },
       );
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(response);
+      final response = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $t',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

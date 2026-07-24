@@ -18,11 +18,13 @@ class ContractService {
 
   /// GET /contracts - Get all contracts for current user
   Future<List<ContractModel>> getAllContracts(String token) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -42,11 +44,13 @@ class ContractService {
     String token,
     String clientId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts/client/$clientId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/client/$clientId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/client/$clientId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -66,11 +70,13 @@ class ContractService {
     String token,
     String freelancerId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts/freelancer/$freelancerId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/freelancer/$freelancerId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -87,11 +93,13 @@ class ContractService {
 
   /// GET /contracts/:contractId
   Future<ContractModel> getContractById(String token, String contractId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts/$contractId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/$contractId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -105,11 +113,13 @@ class ContractService {
     String token,
     String contractId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts/$contractId/generation-data'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/$contractId/generation-data'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint(
       'GET /contracts/$contractId/generation-data → ${res.statusCode}',
@@ -122,11 +132,13 @@ class ContractService {
 
   /// GET /contracts/:contractId/pdf-url
   Future<String> getContractPdfUrl(String token, String contractId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contracts/$contractId/pdf-url'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/$contractId/pdf-url'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -148,12 +160,14 @@ class ContractService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/contracts'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/contracts'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts → ${res.statusCode}');
     if (res.statusCode == 201) {
@@ -168,12 +182,14 @@ class ContractService {
     String contractId,
     Map<String, dynamic> generationData,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/contracts/$contractId/generate'),
-      headers: _headers(token),
-      body: jsonEncode(generationData),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/contracts/$contractId/generate'),
+        headers: _headers(t),
+        body: jsonEncode(generationData),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('POST /contracts/$contractId/generate → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -190,12 +206,14 @@ class ContractService {
     String contractId,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/contracts/$contractId'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/contracts/$contractId'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('PUT /contracts/$contractId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -205,15 +223,16 @@ class ContractService {
   }
 
   Future<ContractModel> cancelContract(String token, String contractId) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/contracts/$contractId/cancel'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/contracts/$contractId/cancel'),
+        headers: {
+          'Authorization': 'Bearer $t',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {

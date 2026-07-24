@@ -10,20 +10,19 @@ class ClientService {
     '',
   );
 
-  /// GET /clients/:clientId/reliability - "Responsive" | "Unresponsive",
-  /// derived server-side from how often the client's contracts had to be
-  /// auto-approved due to inactivity. Lets a freelancer gauge a client
-  /// before taking on their job.
+  /// GET /clients/:clientId/reliability - "Responsive" | "Unresponsive".
   Future<String?> getClientReliability(String token, String clientId) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/clients/$clientId/reliability'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/clients/$clientId/reliability'),
+          headers: {
+            'Authorization': 'Bearer $t',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final data = body['details'] ?? body['data'] ?? body;

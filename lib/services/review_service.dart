@@ -5,9 +5,8 @@ import 'package:http/http.dart' as http;
 import '../models/review_model.dart';
 import 'session_guard.dart';
 
-/// Centralises all HTTP calls for the review system.
-/// Throws [ReviewServiceException] on any non-2xx response so the
-/// provider can catch and surface a human-readable message.
+/// Centralises HTTP calls for the review system; throws [ReviewServiceException]
+/// on any non-2xx response.
 class ReviewService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
@@ -44,10 +43,6 @@ class ReviewService {
     throw _buildException(res, context);
   }
 
-  // Technical context (endpoint + status code) is logged for debugging but kept
-  // out of `message`, since that string is shown to users as-is (see review_form.dart) -
-  // "submitReview failed (400): ..." reads as a crash log, not a message a client
-  // wrote a bad review would understand.
   ReviewServiceException _buildException(http.Response res, String context) {
     String message;
     List<String>? detectedLabels;
@@ -69,17 +64,18 @@ class ReviewService {
   }
 
   // ── GET /reviews/contract/{contract_id} ─────────────────────────────────
-  // Returns ReviewDetailResponse — the pending review shell with AI question
-  // and suggested skill tags. Called when loading the review form.
 
   Future<Review> getReviewForContract({
     required String token,
     required String contractId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/reviews/contract/$contractId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reviews/contract/$contractId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     return Review.fromJson(_parse(res, 'getReviewForContract'));
   }
 
@@ -91,11 +87,14 @@ class ReviewService {
     required String reviewId,
     required SubmitReviewRequest request,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/reviews/$reviewId/submit'),
-      headers: _headers(token),
-      body: jsonEncode(request.toJson()),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/reviews/$reviewId/submit'),
+        headers: _headers(t),
+        body: jsonEncode(request.toJson()),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final data = _parse(res, 'submitReview');
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
@@ -107,10 +106,13 @@ class ReviewService {
     required String token,
     required String reviewId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/reviews/$reviewId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reviews/$reviewId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     return Review.fromJson(_parse(res, 'getReview'));
   }
 
@@ -121,10 +123,13 @@ class ReviewService {
     required String token,
     required String freelancerId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/reviews/freelancer/$freelancerId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reviews/freelancer/$freelancerId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final list = _parseList(res, 'getFreelancerReviews');
     return list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -136,10 +141,13 @@ class ReviewService {
     required String token,
     required String freelancerId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/reviews/trust-score/$freelancerId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reviews/trust-score/$freelancerId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     return TrustScore.fromJson(_parse(res, 'getTrustScore'));
   }
 
@@ -150,10 +158,13 @@ class ReviewService {
     required String token,
     required String freelancerId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/reviews/red-flags/$freelancerId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reviews/red-flags/$freelancerId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final list = _parseList(res, 'getRedFlags');
     return list
         .map((e) => RedFlagAlert.fromJson(e as Map<String, dynamic>))

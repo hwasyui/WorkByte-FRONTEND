@@ -39,17 +39,12 @@ class ClientReviewService {
     throw _buildException(res, context);
   }
 
-  // Technical context (endpoint + status code) is logged for debugging but kept
-  // out of `message`, since that string is shown to users as-is.
   ClientReviewServiceException _buildException(http.Response res, String context) {
     String message;
     List<String>? detectedLabels;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      // ResponseSchema.error() puts the human-readable message under 'details'
-      // (see functions/response_utils.py) - this previously checked only
-      // 'message'/'detail', neither of which an error response ever has, so
-      // every failure here silently fell through to 'Unknown error'.
+      // Backend puts the message under 'details', not 'message'/'detail'.
       message =
           body['details'] as String? ??
           body['message'] as String? ??
@@ -67,17 +62,18 @@ class ClientReviewService {
   }
 
   // ── GET /client-reviews/contract/{contract_id} ──────────────────────────
-  // Returns the pending client-review shell with the AI question. Called
-  // when a freelancer opens the "rate this client" form.
 
   Future<ClientReview> getClientReviewForContract({
     required String token,
     required String contractId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/client-reviews/contract/$contractId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/client-reviews/contract/$contractId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     return ClientReview.fromJson(_parse(res, 'getClientReviewForContract'));
   }
 
@@ -88,11 +84,14 @@ class ClientReviewService {
     required String clientReviewId,
     required SubmitClientReviewRequest request,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/client-reviews/$clientReviewId/submit'),
-      headers: _headers(token),
-      body: jsonEncode(request.toJson()),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/client-reviews/$clientReviewId/submit'),
+        headers: _headers(t),
+        body: jsonEncode(request.toJson()),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final data = _parse(res, 'submitClientReview');
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
@@ -104,10 +103,13 @@ class ClientReviewService {
     required String token,
     required String clientId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/client-reviews/client/$clientId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/client-reviews/client/$clientId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final list = _parseList(res, 'getClientReviews');
     return list
         .map((e) => ClientReview.fromJson(e as Map<String, dynamic>))
@@ -120,10 +122,13 @@ class ClientReviewService {
     required String token,
     required String clientId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/client-reviews/trust-score/$clientId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/client-reviews/trust-score/$clientId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     return ClientTrustScore.fromJson(_parse(res, 'getClientTrustScore'));
   }
 
@@ -135,10 +140,13 @@ class ClientReviewService {
     required String token,
     required String clientId,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/client-reviews/red-flags/$clientId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/client-reviews/red-flags/$clientId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final list = _parseList(res, 'getClientRedFlags');
     return list
         .map((e) => RedFlagAlert.fromJson(e as Map<String, dynamic>))

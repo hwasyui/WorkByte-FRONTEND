@@ -27,11 +27,13 @@ class ProposalService {
     String token,
     String jobPostId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/proposals/job-post/$jobPostId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/proposals/job-post/$jobPostId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/job-post/$jobPostId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -47,11 +49,13 @@ class ProposalService {
     String token,
     String freelancerId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/proposals/freelancer/$freelancerId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/proposals/freelancer/$freelancerId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('GET /proposals/freelancer/$freelancerId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -64,11 +68,13 @@ class ProposalService {
   }
 
   Future<ProposalModel> getProposalById(String token, String proposalId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/proposals/$proposalId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/proposals/$proposalId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
@@ -80,12 +86,14 @@ class ProposalService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/proposals'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/proposals'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('POST /proposals → ${res.statusCode}');
     if (res.statusCode == 200 || res.statusCode == 201) {
@@ -140,30 +148,32 @@ class ProposalService {
     required List<File> files,
   }) async {
     final uri = Uri.parse('$_baseUrl/proposal-files');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_authHeader(token))
-      ..fields['proposal_id'] = proposalId;
 
-    for (final file in files) {
-      final fileName = file.path.split('/').last;
-      final mimeType = _guessMime(fileName);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'files',
-          file.path,
-          contentType: MediaType.parse(mimeType),
-          filename: fileName,
-        ),
-      );
-    }
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(_authHeader(t))
+        ..fields['proposal_id'] = proposalId;
 
-    debugPrint('Uploading ${files.length} file(s) to /proposal-files');
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
+      for (final file in files) {
+        final fileName = file.path.split('/').last;
+        final mimeType = _guessMime(fileName);
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'files',
+            file.path,
+            contentType: MediaType.parse(mimeType),
+            filename: fileName,
+          ),
+        );
+      }
+
+      debugPrint('Uploading ${files.length} file(s) to /proposal-files');
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     debugPrint('POST /proposal-files → ${res.statusCode}: ${res.body}');
 
     if (res.statusCode != 200 && res.statusCode != 201) {
-      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to upload proposal files');
     }
@@ -193,12 +203,14 @@ class ProposalService {
     String proposalId,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/proposals/$proposalId'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/proposals/$proposalId'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('PUT /proposals/$proposalId → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -212,11 +224,13 @@ class ProposalService {
     String proposalId,
     String status,
   ) async {
-    final res = await http.patch(
-      Uri.parse('$_baseUrl/proposals/$proposalId/status?status=$status'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.patch(
+        Uri.parse('$_baseUrl/proposals/$proposalId/status?status=$status'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('PATCH /proposals/$proposalId/status → ${res.statusCode}');
     if (res.statusCode == 200) {
@@ -226,12 +240,14 @@ class ProposalService {
   }
 
   Future<void> deleteProposal(String token, String proposalId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/proposals/$proposalId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/proposals/$proposalId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     if (res.statusCode != 200) {
-      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to delete proposal');
     }
@@ -244,19 +260,21 @@ class ProposalService {
     required String messageText,
     String? contractId,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/messages'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message_text': messageText,
-        if (contractId != null) 'contract_id': contractId,
-      }),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/messages'),
+        headers: _headers(t),
+        body: jsonEncode({
+          'sender_id': senderId,
+          'receiver_id': receiverId,
+          'message_text': messageText,
+          if (contractId != null) 'contract_id': contractId,
+        }),
+      ).timeout(const Duration(seconds: 20)),
+    );
     debugPrint('POST /messages → ${res.statusCode}');
     if (res.statusCode != 200 && res.statusCode != 201) {
-      SessionGuard.check(res);
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to send message');
     }

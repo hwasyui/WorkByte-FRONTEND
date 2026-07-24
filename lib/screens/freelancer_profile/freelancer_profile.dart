@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
 import 'package:workbyte_app/models/cv_suggested_profile.dart';
-import 'package:http/http.dart' as http;
 import 'package:workbyte_app/screens/freelancer_profile/cv_review.dart';
 import 'package:workbyte_app/services/cv_analysis_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
@@ -59,10 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _selectedCurrency = 'USD';
   late TabController _tabController;
 
-  // Cached currency list loaded once from REST Countries API
-  static List<Map<String, String>>? _currencyCache;
-
-  static const List<Map<String, String>> _fallbackCurrencies = [
+  static const List<Map<String, String>> _availableCurrencies = [
     {'code': 'USD', 'name': 'United States Dollar'},
     {'code': 'EUR', 'name': 'Euro'},
     {'code': 'GBP', 'name': 'British Pound Sterling'},
@@ -84,31 +79,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     {'code': 'AED', 'name': 'UAE Dirham'},
     {'code': 'SAR', 'name': 'Saudi Riyal'},
   ];
-
-  Future<List<Map<String, String>>> _loadCurrencies() async {
-    if (_currencyCache != null) return _currencyCache!;
-    final res = await http.get(
-      Uri.parse('https://restcountries.com/v3.1/all?fields=currencies'),
-    );
-    if (res.statusCode != 200) throw Exception('Failed to load currencies');
-    final countries = jsonDecode(res.body) as List<dynamic>;
-    final seen = <String>{};
-    final result = <Map<String, String>>[];
-    for (final c in countries) {
-      final map = c['currencies'] as Map<String, dynamic>?;
-      if (map == null) continue;
-      for (final e in map.entries) {
-        if (seen.contains(e.key)) continue;
-        seen.add(e.key);
-        final name =
-            (e.value as Map<String, dynamic>)['name'] as String? ?? e.key;
-        result.add({'code': e.key, 'name': name});
-      }
-    }
-    result.sort((a, b) => a['code']!.compareTo(b['code']!));
-    _currencyCache = result;
-    return result;
-  }
 
   static const Color primaryColor = AppColors.primary;
 
@@ -864,40 +834,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       builder: (dialogContext) {
         String localRateTime = _selectedRateTime;
         String localCurrency = _selectedCurrency;
-        List<Map<String, String>>? currencies;
-        bool loadingCurrencies = false;
-        String? currencyError;
 
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
-            // Kick off currency load once
-            if (currencies == null &&
-                !loadingCurrencies &&
-                currencyError == null) {
-              loadingCurrencies = true;
-              _loadCurrencies()
-                  .then((list) {
-                    setDialogState(() {
-                      currencies = list;
-                      loadingCurrencies = false;
-                    });
-                  })
-                  .catchError((e) {
-                    setDialogState(() {
-                      currencies = _fallbackCurrencies;
-                      currencyError = e.toString();
-                      loadingCurrencies = false;
-                    });
-                  });
-            }
-
             Future<void> pickCurrency() async {
-              if (currencies == null) return;
               final picked = await showModalBottomSheet<String>(
                 context: ctx,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                builder: (_) => _CurrencyPickerSheet(currencies: currencies!),
+                builder: (_) =>
+                    const _CurrencyPickerSheet(currencies: _availableCurrencies),
               );
               if (picked != null) {
                 setDialogState(() => localCurrency = picked);
@@ -1077,7 +1023,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             // Currency picker button
                             GestureDetector(
-                              onTap: loadingCurrencies ? null : pickCurrency,
+                              onTap: pickCurrency,
                               child: Container(
                                 margin: const EdgeInsets.only(right: 8),
                                 padding: const EdgeInsets.symmetric(
@@ -1091,24 +1037,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (loadingCurrencies)
-                                      const SizedBox(
-                                        width: 12,
-                                        height: 12,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 1.5,
-                                          color: AppColors.primary,
-                                        ),
-                                      )
-                                    else
-                                      Text(
-                                        localCurrency,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primary,
-                                        ),
+                                    Text(
+                                      localCurrency,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primary,
                                       ),
+                                    ),
                                     const SizedBox(width: 4),
                                     const Icon(
                                       Icons.arrow_drop_down,
@@ -1122,16 +1058,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ],
                         ),
                       ),
-                      if (currencyError != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          'Could not load currencies. Using cached list.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
                       const SizedBox(height: 20),
                       const Divider(color: Color(0xFFF0F0F1)),
                       const SizedBox(height: 16),
@@ -1569,10 +1495,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
-                          // A stale/expired URL (e.g. a picture that was just
-                          // deleted) failing to load is expected — handle it
-                          // silently instead of letting it surface as an
-                          // uncaught NetworkImageLoadException.
+                          // Suppress errors from a stale/deleted image URL.
                           onBackgroundImageError: profileImage != null
                               ? (_, _) {}
                               : null,
@@ -3172,9 +3095,7 @@ class _SkillChip extends StatelessWidget {
   }
 }
 
-// ── Thousands separator formatter ─────────────────────────────────────────────
-// International format: comma = thousands separator, period = decimal separator.
-// e.g. 14000 → "14,000" | 20.25 → "20.25" | 1500000.5 → "1,500,000.5"
+// ── Thousands separator formatter (e.g. 14000 → "14,000") ────────────────────
 class ThousandsSeparatorFormatter extends TextInputFormatter {
   static final _intFmt = NumberFormat('#,##0', 'en');
 

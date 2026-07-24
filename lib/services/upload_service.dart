@@ -19,13 +19,14 @@ class UploadService {
     required String bucket,
   }) async {
     final uri = Uri.parse('$_baseUrl/upload?bucket=$bucket');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = jsonDecode(res.body);
 
     debugPrint('POST /upload?bucket=$bucket → ${res.statusCode}');
@@ -54,14 +55,15 @@ class UploadService {
     bool useLLM = false,
   }) async {
     final uri = Uri.parse('$_baseUrl/cv_upload');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['use_llm'] = useLLM.toString()
-      ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..fields['use_llm'] = useLLM.toString()
+        ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = jsonDecode(res.body);
 
     debugPrint('POST /cv_upload → ${res.statusCode}');

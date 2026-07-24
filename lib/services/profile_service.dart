@@ -35,10 +35,13 @@ class ProfileService {
   // ─── Fetch profiles ───────────────────────────────────────────────────────
 
   Future<ClientModel?> fetchClientProfile(String token, String userId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/clients/$userId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/clients/$userId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = _decodeBody(res);
     debugPrint('GET /clients/$userId: $body');
 
@@ -55,10 +58,13 @@ class ProfileService {
     String token,
     String userId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/freelancers/$userId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/freelancers/$userId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = _decodeBody(res);
     debugPrint('GET /freelancers/$userId: $body');
 
@@ -73,10 +79,13 @@ class ProfileService {
 
   Future<ClientModel?> fetchClientById(String token, String clientId) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/clients/$clientId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/clients/$clientId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       final body = _decodeBody(res);
       if (res.statusCode == 200) {
         final data = body['details'] ?? body['data'] ?? body;
@@ -130,15 +139,16 @@ class ProfileService {
     Map<String, dynamic> fields,
   ) async {
     final uri = Uri.parse('$_baseUrl/clients/$identifier');
-    final request = http.MultipartRequest('PUT', uri)
-      ..headers.addAll(_multipartHeaders(token));
 
-    fields.forEach((key, value) {
-      if (value != null) request.fields[key] = value.toString();
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('PUT', uri)
+        ..headers.addAll(_multipartHeaders(t));
+      fields.forEach((key, value) {
+        if (value != null) request.fields[key] = value.toString();
+      });
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
     });
-
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
     if (res.statusCode == 200) {
@@ -156,15 +166,16 @@ class ProfileService {
     Map<String, dynamic> fields,
   ) async {
     final uri = Uri.parse('$_baseUrl/freelancers/$identifier');
-    final request = http.MultipartRequest('PUT', uri)
-      ..headers.addAll(_multipartHeaders(token));
 
-    fields.forEach((key, value) {
-      request.fields[key] = value?.toString() ?? '';
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('PUT', uri)
+        ..headers.addAll(_multipartHeaders(t));
+      fields.forEach((key, value) {
+        request.fields[key] = value?.toString() ?? '';
+      });
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
     });
-
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
     final body = _decodeBody(res);
 
     if (res.statusCode == 200) {
@@ -195,18 +206,19 @@ class ProfileService {
       _ => 'image/jpeg',
     };
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_multipartHeaders(token))
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
-
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(_multipartHeaders(t))
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            imageFile.path,
+            contentType: MediaType.parse(mimeType),
+          ),
+        );
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = _decodeBody(res);
 
     if (res.statusCode == 200) {
@@ -235,18 +247,19 @@ class ProfileService {
       _ => 'image/jpeg',
     };
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_multipartHeaders(token))
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
-
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(_multipartHeaders(t))
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            imageFile.path,
+            contentType: MediaType.parse(mimeType),
+          ),
+        );
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = _decodeBody(res);
 
     if (res.statusCode == 200) {
@@ -262,10 +275,13 @@ class ProfileService {
     String token,
     String clientId,
   ) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/clients/$clientId/profile-picture'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/clients/$clientId/profile-picture'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = _decodeBody(res);
     if (res.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -283,10 +299,13 @@ class ProfileService {
     String token,
     String freelancerId,
   ) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/freelancers/$freelancerId/profile-picture'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/freelancers/$freelancerId/profile-picture'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = _decodeBody(res);
     if (res.statusCode == 200) {
       final data = body['details'] ?? body['data'] ?? body;
@@ -307,11 +326,13 @@ class ProfileService {
     String freelancerId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/educations/freelancer/$freelancerId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -327,12 +348,14 @@ class ProfileService {
 
   Future<bool> createEducation(String token, Map<String, dynamic> data) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/educations'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/educations'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('createEducation error: $e');
@@ -346,12 +369,14 @@ class ProfileService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final res = await http.put(
-        Uri.parse('$_baseUrl/educations/$educationId'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.put(
+          Uri.parse('$_baseUrl/educations/$educationId'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('updateEducation error: $e');
@@ -361,11 +386,13 @@ class ProfileService {
 
   Future<bool> deleteEducation(String token, String educationId) async {
     try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/educations/$educationId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.delete(
+          Uri.parse('$_baseUrl/educations/$educationId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteEducation error: $e');
@@ -380,11 +407,13 @@ class ProfileService {
     String freelancerId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/work-experiences/freelancer/$freelancerId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -403,12 +432,14 @@ class ProfileService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/work-experiences'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/work-experiences'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('createWorkExperience error: $e');
@@ -422,12 +453,14 @@ class ProfileService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final res = await http.put(
-        Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.put(
+          Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('updateWorkExperience error: $e');
@@ -440,11 +473,13 @@ class ProfileService {
     String workExperienceId,
   ) async {
     try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.delete(
+          Uri.parse('$_baseUrl/work-experiences/$workExperienceId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteWorkExperience error: $e');
@@ -459,11 +494,13 @@ class ProfileService {
     String freelancerId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/freelancers/$freelancerId/skills'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -481,11 +518,13 @@ class ProfileService {
 
   Future<List<Map<String, dynamic>>> getAllSkills(String token) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/skills'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/skills'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final data = body['details'] ?? body['data'] ?? [];
@@ -505,8 +544,10 @@ class ProfileService {
       final uri = Uri.parse(
         '$_baseUrl/skills/search',
       ).replace(queryParameters: {'q': searchTerm});
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = _decodeBody(res);
         final details = body['details'] ?? body['data'] ?? {};
@@ -526,12 +567,14 @@ class ProfileService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/skills'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/skills'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 201) {
         final body = _decodeBody(res);
         return Map<String, dynamic>.from(body['details'] ?? {});
@@ -547,12 +590,14 @@ class ProfileService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/freelancer-skills'),
-        headers: _headers(token),
-        body: jsonEncode(data),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/freelancer-skills'),
+          headers: _headers(t),
+          body: jsonEncode(data),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 201;
     } catch (e) {
       debugPrint('addFreelancerSkill error: $e');
@@ -565,11 +610,13 @@ class ProfileService {
     String freelancerSkillId,
   ) async {
     try {
-      final res = await http.delete(
-        Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      SessionGuard.check(res);
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.delete(
+          Uri.parse('$_baseUrl/freelancer-skills/$freelancerSkillId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('deleteFreelancerSkill error: $e');
@@ -583,19 +630,19 @@ class ProfileService {
   }) async {
     final uri = Uri.parse('$_baseUrl/cv_upload');
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          file.path,
-          filename: file.path.split('/').last,
-        ),
-      );
-
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamedResponse);
-    SessionGuard.check(response);
+    final response = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            file.path,
+            filename: file.path.split('/').last,
+          ),
+        );
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamedResponse);
+    });
 
     Map<String, dynamic> body = {};
     try {

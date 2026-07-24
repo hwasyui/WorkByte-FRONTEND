@@ -21,8 +21,10 @@ class ProposalFileService {
     String proposalId,
   ) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/proposal/$proposalId');
-    final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body);
@@ -44,18 +46,20 @@ class ProposalFileService {
     int? fileSize,
   }) async {
     final uri = Uri.parse('$_baseUrl/proposal-files');
-    final res = await http.post(
-      uri,
-      headers: _headers(token),
-      body: jsonEncode({
-        'proposal_id': proposalId,
-        'file_url': fileUrl,
-        'file_type': fileType,
-        'file_name': fileName,
-        'file_size': fileSize,
-      }),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        uri,
+        headers: _headers(t),
+        body: jsonEncode({
+          'proposal_id': proposalId,
+          'file_url': fileUrl,
+          'file_type': fileType,
+          'file_name': fileName,
+          'file_size': fileSize,
+        }),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode == 201) {
       final body = jsonDecode(res.body);
@@ -67,8 +71,10 @@ class ProposalFileService {
   /// Delete a proposal file
   Future<bool> deleteProposalFile(String token, String proposalFileId) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/$proposalFileId');
-    final res = await http.delete(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     return res.statusCode == 200;
   }
 }

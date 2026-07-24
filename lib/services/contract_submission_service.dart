@@ -91,11 +91,13 @@ class ContractSubmissionService {
     String token,
     String contractId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/contract-submissions/contract/$contractId'),
-      headers: _jsonHeaders(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contract-submissions/contract/$contractId'),
+        headers: _jsonHeaders(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode == 200) {
       return _parseSubmissionList(res.body);
@@ -117,29 +119,30 @@ class ContractSubmissionService {
   }) async {
     final uri = Uri.parse('$_baseUrl/contract-submissions');
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['contract_id'] = contractId;
+    final res = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..fields['contract_id'] = contractId;
 
-    if (note != null && note.trim().isNotEmpty) {
-      request.fields['note'] = note.trim();
-    }
+      if (note != null && note.trim().isNotEmpty) {
+        request.fields['note'] = note.trim();
+      }
 
-    for (final file in files) {
-      final fileName = file.path.split('/').last;
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'files',
-          file.path,
-          filename: fileName,
-          contentType: MediaType.parse(_guessMime(fileName)),
-        ),
-      );
-    }
+      for (final file in files) {
+        final fileName = file.path.split('/').last;
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'files',
+            file.path,
+            filename: fileName,
+            contentType: MediaType.parse(_guessMime(fileName)),
+          ),
+        );
+      }
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
-    SessionGuard.check(res);
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return _parseSingleSubmission(res.body);
@@ -158,14 +161,16 @@ class ContractSubmissionService {
     required String contractId,
     String? note,
   }) async {
-    final res = await http.put(
-      Uri.parse(
-        '$_baseUrl/contract-submissions/contract/$contractId/request-revision',
-      ),
-      headers: _jsonHeaders(token),
-      body: jsonEncode({'note': note}), // ← add this
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse(
+          '$_baseUrl/contract-submissions/contract/$contractId/request-revision',
+        ),
+        headers: _jsonHeaders(t),
+        body: jsonEncode({'note': note}),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);
@@ -183,11 +188,13 @@ class ContractSubmissionService {
     required String token,
     required String contractId,
   }) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/contract-submissions/contract/$contractId/approve'),
-      headers: _jsonHeaders(token),
-    ).timeout(const Duration(seconds: 20));
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/contract-submissions/contract/$contractId/approve'),
+        headers: _jsonHeaders(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode == 200) {
       return _parseSingleSubmission(res.body);

@@ -22,18 +22,19 @@ class MessageService {
     String messageText, {
     String? contractId,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/messages'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message_text': messageText,
-        if (contractId != null) 'contract_id': contractId,
-      }),
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(res);
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/messages'),
+        headers: _headers(t),
+        body: jsonEncode({
+          'sender_id': senderId,
+          'receiver_id': receiverId,
+          'message_text': messageText,
+          if (contractId != null) 'contract_id': contractId,
+        }),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(res.body);
     debugPrint('POST /messages → ${res.statusCode}');
 

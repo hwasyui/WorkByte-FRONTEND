@@ -34,10 +34,13 @@ class PortfolioService {
 
   Future<List<PortfolioModel>> getPortfolios(String token) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/portfolios'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/portfolios'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       final body = _decodeBody(res);
       debugPrint('GET /portfolios: ${res.statusCode}');
 
@@ -56,10 +59,13 @@ class PortfolioService {
     String freelancerId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/portfolios/freelancer/$freelancerId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
+      final res = await SessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/portfolios/freelancer/$freelancerId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       final body = _decodeBody(res);
       debugPrint(
         'GET /portfolios/freelancer/$freelancerId: ${res.statusCode}',
@@ -79,11 +85,14 @@ class PortfolioService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/portfolios'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/portfolios'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = _decodeBody(res);
     debugPrint('POST /portfolios: ${res.statusCode}');
 
@@ -95,10 +104,13 @@ class PortfolioService {
   }
 
   Future<void> deletePortfolio(String token, String portfolioId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/portfolios/$portfolioId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/portfolios/$portfolioId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     debugPrint('DELETE /portfolios/$portfolioId: ${res.statusCode}');
 
     if (res.statusCode != 200 && res.statusCode != 204) {

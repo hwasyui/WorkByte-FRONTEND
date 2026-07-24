@@ -13,15 +13,16 @@ class ReportService {
 
   /// GET /reports/reasons
   Future<List<String>> getReportReasons(String token) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/reports/reasons'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(response);
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/reports/reasons'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(response.body);
     debugPrint('GET /reports/reasons response: $body');
 
@@ -53,23 +54,24 @@ class ReportService {
     required List<String> reasons,
     String? customReason,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/reports'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'reported_type': reportedType,
-        if (reportedUserId != null) 'reported_user_id': reportedUserId,
-        if (jobPostId != null) 'job_post_id': jobPostId,
-        'reasons': reasons,
-        if (customReason != null && customReason.isNotEmpty)
-          'custom_reason': customReason,
-      }),
-    ).timeout(const Duration(seconds: 20));
-
-    SessionGuard.check(response);
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/reports'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+        body: jsonEncode({
+          'reported_type': reportedType,
+          if (reportedUserId != null) 'reported_user_id': reportedUserId,
+          if (jobPostId != null) 'job_post_id': jobPostId,
+          'reasons': reasons,
+          if (customReason != null && customReason.isNotEmpty)
+            'custom_reason': customReason,
+        }),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = jsonDecode(response.body);
     debugPrint('POST /reports response: $body');
 

@@ -87,33 +87,6 @@ class _AdminAiPageState extends State<AdminAiPage>
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  Consumer<AdminProvider>(
-                    builder: (_, admin, __) {
-                      final scam = admin.pendingScamFlags;
-                      final mod = admin.pendingModerationItems;
-                      if (scam == 0 && mod == 0) return const SizedBox.shrink();
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFCA5A5)),
-                        ),
-                        child: Text(
-                          '${scam + mod} pending review',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFFDC2626),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -887,10 +860,6 @@ class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['all', 'pending', 'approved', 'rejected'];
-  // No content-type filter: job posts are the only content the backend scans, so
-  // every queue item is a job post and filtering by type would do nothing.
-  // The backend sorts by score or recency; it has no score cut-off filter, so
-  // severity is offered as an ordering rather than a filter.
   static const _sorts = ['total_score', 'max_score', 'created_at'];
   static const _sortLabels = {
     'total_score': 'Severity (total)',
@@ -1187,10 +1156,7 @@ class _ModerationCardState extends State<_ModerationCard> {
   bool _labelsExpanded = false;
 
   Future<void> _act(String action) async {
-    // Confirming a flag ('approve') closes the job post server-side. If that job
-    // already has a live contract / engaged freelancer (backend exposes this as
-    // `is_engaged`), make the admin acknowledge they're closing it out from under
-    // active work before it happens.
+    // Approving a flag closes the job; warn if it has an engaged freelancer.
     final isEngagedJob = action == 'approve'
         && (widget.item['content_type'] as String? ?? '') == 'job_post'
         && widget.item['is_engaged'] == true;
@@ -1772,16 +1738,11 @@ class _ModerationCardState extends State<_ModerationCard> {
                   )
           else
             _ModerationStatusPill(status: status),
-          // No separate "Close Job" override here: confirming the flag already closes the
-          // job post server-side. A redundant button would just be a second path to the
-          // same action.
         ],
       ),
     );
   }
 
-  // Only 'job_post' ever appears — freelancer/client profile fields aren't
-  // scanned by the backend, so those content types never reach this queue.
   String _typeLabel(String type) {
     switch (type) {
       case 'job_post':
@@ -2353,12 +2314,6 @@ class _Empty extends StatelessWidget {
 }
 
 // ─── Review Integrity tab ─────────────────────────────────────────────────────
-//
-// Surfaces two things the review/rating AI pipeline already computes but the
-// app never showed anywhere: RedFlagAlert (trust score drops) and reviews
-// held back from publishing (overall_pass=false) because the LLM + the three
-// trained review_ml models (authenticity, sentiment-rating mismatch,
-// sentiment) flagged them.
 
 class _ReviewIntegrityTab extends StatefulWidget {
   const _ReviewIntegrityTab();

@@ -28,16 +28,18 @@ class GuidelineService {
     required String token,
     required String userId,
   }) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/users/$userId/guidelines-ack'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/users/$userId/guidelines-ack'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('GET /users/$userId/guidelines-ack status: ${response.statusCode}');
-    SessionGuard.check(response);
 
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
@@ -54,17 +56,19 @@ class GuidelineService {
     required String userId,
     required String section,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/users/$userId/guidelines-ack'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'section': section}),
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/users/$userId/guidelines-ack'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $t',
+        },
+        body: jsonEncode({'section': section}),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('POST /users/$userId/guidelines-ack status: ${response.statusCode}');
-    SessionGuard.check(response);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final body = jsonDecode(response.body);

@@ -52,16 +52,19 @@ class JobPostService {
     int pageSize = 20,
     String? category,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts').replace(
-        queryParameters: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-          if (category != null) 'category': category,
-        },
-      ),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts').replace(
+          queryParameters: {
+            'page': page.toString(),
+            'page_size': pageSize.toString(),
+            if (category != null) 'category': category,
+          },
+        ),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('GET /job-posts: $body');
     if (res.statusCode == 200) {
@@ -81,15 +84,18 @@ class JobPostService {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts').replace(
-        queryParameters: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-        },
-      ),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts').replace(
+          queryParameters: {
+            'page': page.toString(),
+            'page_size': pageSize.toString(),
+          },
+        ),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final details = body['details'];
@@ -108,10 +114,13 @@ class JobPostService {
   }
 
   Future<JobPostModel> getJobPost(String token, String jobPostId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts/$jobPostId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       return JobPostModel.fromJson(_extractBody(body));
@@ -123,10 +132,13 @@ class JobPostService {
     String token,
     String clientId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts/client/$clientId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts/client/$clientId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = _extractBody(body) ?? [];
@@ -138,10 +150,13 @@ class JobPostService {
   }
 
   Future<Map<String, int>> getCategoryCounts(String token) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts/category-counts'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts/category-counts'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = _extractBody(body) ?? [];
@@ -157,11 +172,14 @@ class JobPostService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/job-posts'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/job-posts'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('POST /job-posts request: $data');
     debugPrint('POST /job-posts response: $body');
@@ -176,11 +194,14 @@ class JobPostService {
     String jobPostId,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/job-posts/$jobPostId'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-posts/$jobPostId request: $data');
     debugPrint('PUT /job-posts/$jobPostId response: $body');
@@ -191,10 +212,13 @@ class JobPostService {
   }
 
   Future<void> deleteJobPost(String token, String jobPostId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/job-posts/$jobPostId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job post'));
@@ -203,10 +227,13 @@ class JobPostService {
 
   // ─── Job Roles ────────────────────────────────────────────────────────────
   Future<List<JobRoleModel>> getJobRoles(String token, String jobPostId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('GET /job-roles/job-post/$jobPostId: $body');
     if (res.statusCode == 200) {
@@ -222,11 +249,14 @@ class JobPostService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/job-roles'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/job-roles'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('POST /job-roles request: $data');
     debugPrint('POST /job-roles response: $body');
@@ -241,11 +271,14 @@ class JobPostService {
     String jobRoleId,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-roles/$jobRoleId request: $data');
     debugPrint('PUT /job-roles/$jobRoleId response: $body');
@@ -256,10 +289,13 @@ class JobPostService {
   }
 
   Future<void> deleteJobRole(String token, String jobRoleId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job role'));
@@ -271,10 +307,13 @@ class JobPostService {
     String token,
     String jobRoleId,
   ) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-role-skills/job-role/$jobRoleId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-role-skills/job-role/$jobRoleId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('GET /job-role-skills/job-role/$jobRoleId: $body');
     if (res.statusCode == 200) {
@@ -290,11 +329,14 @@ class JobPostService {
     String token,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/job-role-skills'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        Uri.parse('$_baseUrl/job-role-skills'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('POST /job-role-skills request: $data');
     debugPrint('POST /job-role-skills response: $body');
@@ -309,11 +351,14 @@ class JobPostService {
     String jobRoleSkillId,
     Map<String, dynamic> data,
   ) async {
-    final res = await http.put(
-      Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
+        headers: _headers(t),
+        body: jsonEncode(data),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     debugPrint('PUT /job-role-skills/$jobRoleSkillId request: $data');
     debugPrint('PUT /job-role-skills/$jobRoleSkillId response: $body');
@@ -324,10 +369,13 @@ class JobPostService {
   }
 
   Future<void> deleteJobRoleSkill(String token, String jobRoleSkillId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/job-role-skills/$jobRoleSkillId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
       throw Exception(_extractError(body, 'Failed to delete job role skill'));
@@ -336,10 +384,13 @@ class JobPostService {
 
   // ─── Job Files ────────────────────────────────────────────────────────────
   Future<List<JobFileModel>> getJobFiles(String token, String jobPostId) async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-files/job-post/$jobPostId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-files/job-post/$jobPostId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     final body = await _decodeResponse(res);
     debugPrint('GET /job-files/job-post/$jobPostId: $body');
@@ -360,18 +411,19 @@ class JobPostService {
     required List<File> files,
   }) async {
     final uri = Uri.parse('$_baseUrl/job-files');
-    final request = http.MultipartRequest('POST', uri);
 
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['job_post_id'] = jobPostId;
+    final response = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $t';
+      request.fields['job_post_id'] = jobPostId;
 
-    for (final file in files) {
-      request.files.add(await http.MultipartFile.fromPath('files', file.path));
-    }
+      for (final file in files) {
+        request.files.add(await http.MultipartFile.fromPath('files', file.path));
+      }
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamedResponse);
-    SessionGuard.check(response);
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamedResponse);
+    });
     final body = response.body.isEmpty ? {} : jsonDecode(response.body);
 
     debugPrint('POST /job-files response: $body');
@@ -387,10 +439,13 @@ class JobPostService {
   }
 
   Future<void> deleteJobFile(String token, String jobFileId) async {
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/job-files/$jobFileId'),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.delete(
+        Uri.parse('$_baseUrl/job-files/$jobFileId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     if (res.statusCode != 200) {
       final body = await _decodeResponse(res);
@@ -407,12 +462,15 @@ class JobPostService {
     final params = <String, String>{'limit': limit.toString()};
     if (category != null) params['category'] = category;
 
-    final res = await http.get(
-      Uri.parse(
-        '$_baseUrl/job-posts/relevant',
-      ).replace(queryParameters: params),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse(
+          '$_baseUrl/job-posts/relevant',
+        ).replace(queryParameters: params),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final list = body['data'] ?? body['details'] ?? [];
@@ -435,10 +493,13 @@ class JobPostService {
     };
     if (category != null) params['category'] = category;
 
-    final res = await http.get(
-      Uri.parse('$_baseUrl/job-posts/popular').replace(queryParameters: params),
-      headers: _headers(token),
-    ).timeout(const Duration(seconds: 20));
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-posts/popular').replace(queryParameters: params),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {
       final details = body['details'];

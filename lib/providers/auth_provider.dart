@@ -13,30 +13,32 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider() {
     // Access token is short-lived (30 min); try a silent refresh before logging out.
+    SessionGuard.registerRefresh(_refreshOrRetryOnce);
     SessionGuard.register(() {
-      _refreshOrRetryOnce().then((refreshed) {
-        if (!refreshed) handleSessionExpired();
-      });
+      handleSessionExpired();
     });
   }
 
-  // Dedupes concurrent 401s (e.g. several parallel requests failing at once)
-  // into a single refresh attempt instead of racing multiple rotations of
-  // the same refresh token.
-  Future<bool>? _refreshInFlight;
+  // Dedupes concurrent 401s into a single refresh attempt.
+  Future<String?>? _refreshInFlight;
 
-  Future<bool> _refreshOrRetryOnce() {
+  Future<String?> _refreshOrRetryOnce() {
     return _refreshInFlight ??= _attemptRefresh().whenComplete(() {
       _refreshInFlight = null;
     });
   }
 
-  Future<bool> _attemptRefresh() async {
+  Future<String?> _attemptRefresh() async {
     try {
-      return await tryRefresh();
+      final newToken = await _service.refreshAccessToken();
+      if (newToken != null) {
+        _token = newToken;
+        notifyListeners();
+      }
+      return newToken;
     } catch (e) {
       debugPrint('Silent token refresh failed: $e');
-      return false;
+      return null;
     }
   }
 
@@ -89,8 +91,8 @@ class AuthProvider extends ChangeNotifier {
       } on SessionExpiredException {
         // Access token expired — try the refresh token before giving up.
         final refreshed = await _refreshOrRetryOnce();
-        if (!refreshed) rethrow;
-        user = await _service.getMe(_token!);
+        if (refreshed == null) rethrow;
+        user = await _service.getMe(refreshed);
       }
       _currentUser = user;
 
@@ -421,8 +423,8 @@ class AuthProvider extends ChangeNotifier {
         user = await _service.getMe(_token!);
       } on SessionExpiredException {
         final refreshed = await _refreshOrRetryOnce();
-        if (!refreshed) rethrow;
-        user = await _service.getMe(_token!);
+        if (refreshed == null) rethrow;
+        user = await _service.getMe(refreshed);
       }
       _currentUser = user;
       notifyListeners();
@@ -437,11 +439,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> tryRefresh() async {
-    final newToken = await _service.refreshAccessToken();
-    if (newToken == null) return false;
-    _token = newToken;
-    notifyListeners();
-    return true;
+    final newToken = await _refreshOrRetryOnce();
+    return newToken != null;
   }
 
   Future<void> handleSessionExpired({

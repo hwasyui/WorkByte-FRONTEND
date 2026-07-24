@@ -15,13 +15,14 @@ class CvAnalysisService {
 
   Future<Map<String, dynamic>> analyzeCV(String token, File cvFile) async {
     final uri = Uri.parse('$_baseUrl/cv_analysis/analyze');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('cv_file', cvFile.path));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamed);
-    SessionGuard.check(response);
+    final response = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..files.add(await http.MultipartFile.fromPath('cv_file', cvFile.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = jsonDecode(response.body);
 
     debugPrint(
@@ -44,13 +45,14 @@ class CvAnalysisService {
   /// Check [is_initial] in the result to decide which screen to show next.
   Future<Map<String, dynamic>> uploadCV(String token, File cvFile) async {
     final uri = Uri.parse('$_baseUrl/cv_upload');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
 
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamed);
-    SessionGuard.check(response);
+    final response = await SessionGuard.guard(token, (t) async {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $t'
+        ..files.add(await http.MultipartFile.fromPath('file', cvFile.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      return http.Response.fromStream(streamed);
+    });
     final body = jsonDecode(response.body);
 
     debugPrint('POST /cv_upload status=${response.statusCode}');
@@ -88,17 +90,19 @@ class CvAnalysisService {
       'education': profile.education.map((e) => e.toJson()).toList(),
     };
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(bodyMap),
-    ).timeout(const Duration(seconds: 20));
+    final response = await SessionGuard.guard(
+      token,
+      (t) => http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $t',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(bodyMap),
+      ).timeout(const Duration(seconds: 20)),
+    );
 
     debugPrint('POST /cv_upload/apply status=${response.statusCode}');
-    SessionGuard.check(response);
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
