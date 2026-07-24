@@ -76,6 +76,20 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     return endDay.isBefore(todayDay);
   }
 
+  static const int _autoApproveDays = 7;
+
+  bool get _canRaiseDispute =>
+      _contract.status == 'under_review' ||
+      _contract.status == 'revision_requested';
+
+  // Matches the backend's cancellable_statuses - either party, any of these
+  // three statuses. Previously only shown to the client and only while
+  // 'active', even though the API always allowed both roles and all three.
+  bool get _canCancel =>
+      _contract.status == 'active' ||
+      _contract.status == 'under_review' ||
+      _contract.status == 'revision_requested';
+
 
   Future<void> _fetchProposalDetail() async {
     if (_contract.proposalId == null) return;
@@ -440,6 +454,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           _buildSubmittedWorkSection(submissionProvider),
           const SizedBox(height: 16),
           _buildMessagesButton(),
+          if (_canCancel) ...[
+            const SizedBox(height: 16),
+            _buildCancelSection(),
+          ],
+          if (_canRaiseDispute) ...[
+            const SizedBox(height: 16),
+            _buildDisputeSection(),
+          ],
           const SizedBox(height: 16),
           if (_isFreelancer && _contract.status == 'revision_requested')
             _buildRevisionNote(submissionProvider),
@@ -554,26 +576,23 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
-  // NOTE: there is no auto-approve worker running on the backend - the
-  // sweep that would flip a stale submission to approved after N days of
-  // client silence was designed (see contract_submission_functions.py's
-  // run_autoapprove_sweep) but never wired to a scheduler, and never
-  // shipped. This widget must not promise an outcome the platform can't
-  // deliver - it's a plain "still waiting" nudge that points the
-  // freelancer at Messages instead, with no deadline claim.
+  // The autoapprove worker (contract_autoapprove_worker.py, wired into
+  // main.py's lifespan) is restored and actually running again, so this
+  // countdown's promise is genuine - see run_autoapprove_sweep in
+  // contract_submission_functions.py for the day-3/6/7 reminder/final
+  // warning/auto-approve schedule this mirrors.
   Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
     final latest = provider.latestSubmission;
-    if (latest == null ||
-        latest.status != 'submitted' ||
-        latest.submittedAt == null) {
+    if (latest == null || latest.status != 'submitted' || latest.submittedAt == null) {
       return const SizedBox.shrink();
     }
     final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
-    if (daysElapsed < 3) {
-      // Not waiting long enough yet to be worth a nudge.
+    final daysRemaining = _autoApproveDays - daysElapsed;
+    if (daysRemaining > 3) {
+      // Not close enough to auto-approve yet - no need to nag the freelancer.
       return const SizedBox.shrink();
     }
-    final isUrgent = daysElapsed >= 7;
+    final isUrgent = daysRemaining <= 1;
     final color = isUrgent ? const Color(0xFFC62828) : const Color(0xFFEF6C00);
     final bg = isUrgent ? const Color(0xFFFFEBEE) : const Color(0xFFFFF3E0);
 
@@ -588,24 +607,23 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.hourglass_bottom_rounded, color: color, size: 20),
+            Icon(Icons.timer_outlined, color: color, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Still Awaiting Review',
+                    daysRemaining <= 0
+                        ? 'Auto-Approving Soon'
+                        : 'Auto-Approves in $daysRemaining day${daysRemaining == 1 ? '' : 's'}',
                     style: AppText.captionSemiBold.copyWith(color: color),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'It\'s been $daysElapsed day${daysElapsed == 1 ? '' : 's'} since you submitted '
-                    'this work and the client hasn\'t reviewed it yet. Consider following up '
-                    'with them via Messages.',
-                    style: AppText.caption.copyWith(
-                      color: color.withOpacity(0.85),
-                    ),
+                    'The client hasn\'t reviewed your submission yet. If they stay silent, '
+                    'this contract will be automatically approved and marked complete.',
+                    style: AppText.caption.copyWith(color: color.withOpacity(0.85)),
                   ),
                 ],
               ),
@@ -1338,6 +1356,210 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
+  Widget _buildCancelSection() {
+    return GestureDetector(
+      onTap: _showCancelDialog,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.cancel_outlined,
+                color: Colors.grey.shade600,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cancel Contract',
+                    style: AppText.bodySemiBold.copyWith(
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  Text(
+                    'Either party can end this contract. A reason is required '
+                    'once work is in progress.',
+                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisputeSection() {
+    return GestureDetector(
+      onTap: _showRaiseDisputeDialog,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.gavel_rounded,
+                color: Colors.redAccent,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Raise a Dispute',
+                    style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
+                  ),
+                  Text(
+                    'Can\'t resolve this with the other party? Ask an admin to step in.',
+                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRaiseDisputeDialog() {
+    final reasonCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Raise a Dispute', style: AppText.h2),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'An admin will review this contract and decide the outcome. '
+                  'Explain what went wrong.',
+                  style: AppText.caption.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: reasonCtrl,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: InputDecoration(
+                    labelText: 'Reason',
+                    hintText: 'Describe the issue in detail...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().length < 20) {
+                      return 'Please provide at least 20 characters';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: AppText.bodySemiBold.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSubmitting = true);
+                      final token = context.read<AuthProvider>().token!;
+                      final success = await context
+                          .read<ContractProvider>()
+                          .raiseDispute(
+                            token,
+                            _contract.contractId,
+                            reasonCtrl.text.trim(),
+                          );
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        setState(() => _contract = _contract.copyWith(status: 'disputed'));
+                        _showSnack(
+                          'Dispute raised. An admin will review it.',
+                          isError: false,
+                        );
+                      } else {
+                        _showSnack('Failed to raise dispute.', isError: true);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Submit',
+                      style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomActions(ContractSubmissionProvider provider) {
     final status = _contract.status;
 
@@ -1466,8 +1688,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       );
     }
 
-    // client + active needs more height for 2 stacked widgets
-    final isClientActive = _isClient && status == 'active';
     // freelancer sees an extra "contract pending" banner in place of the button
     final isFreelancerBlockedByContract =
         _isFreelancer &&
@@ -1475,7 +1695,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         (status == 'active' || status == 'revision_requested');
 
     return Container(
-      height: isClientActive || isFreelancerBlockedByContract ? 140 : 80,
+      height: isFreelancerBlockedByContract ? 140 : 80,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1582,59 +1802,33 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
     if (_isClient) {
       if (status == 'active') {
-        return Column(
-          children: [
-            // existing "waiting" banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.circular(14),
+        // Cancel is now its own standalone section (_buildCancelSection,
+        // shown for both roles across all cancellable statuses) rather than
+        // bolted onto this one branch, so this is just the waiting banner.
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.secondary,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.hourglass_top_rounded,
+                color: AppColors.primary,
+                size: 18,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.hourglass_top_rounded,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Waiting for freelancer to submit...',
-                    style: AppText.bodySemiBold.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // ✅ New cancel button
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: _showCancelDialog,
-                icon: const Icon(
-                  Icons.cancel_outlined,
-                  size: 16,
-                  color: Colors.redAccent,
-                ),
-                label: Text(
-                  'Cancel Contract',
-                  style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.redAccent),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                'Waiting for freelancer to submit...',
+                style: AppText.bodySemiBold.copyWith(
+                  color: AppColors.primary,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       }
 
@@ -2251,60 +2445,124 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   void _showCancelDialog() {
+    final reasonCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    // Free to cancel with no reason before any work exists; once real work
+    // is in progress a reason is mandatory (mirrors the backend check in
+    // PUT /contracts/{id}/cancel) - it's the only accountability trail the
+    // other party gets, and what a later dispute against this cancellation
+    // would be responding to.
+    final reasonRequired = _contract.status != 'active';
+    bool isSubmitting = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Cancel Contract', style: AppText.h2),
-        content: Text(
-          'Are you sure you want to cancel this contract? This action cannot be undone.',
-          style: AppText.body.copyWith(color: Colors.grey.shade600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Keep Contract',
-              style: AppText.bodySemiBold.copyWith(color: Colors.grey.shade600),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Cancel Contract', style: AppText.h2),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to cancel this contract? This action cannot be undone.',
+                  style: AppText.body.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: reasonCtrl,
+                  maxLines: 3,
+                  maxLength: 500,
+                  decoration: InputDecoration(
+                    labelText: reasonRequired
+                        ? 'Reason (required)'
+                        : 'Reason (optional)',
+                    hintText: 'Why are you cancelling?',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (reasonRequired && (v == null || v.trim().isEmpty)) {
+                      return 'A reason is required once work is in progress';
+                    }
+                    return null;
+                  },
+                ),
+              ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isActioning = true);
-              final token = context.read<AuthProvider>().token!;
-              final success = await context
-                  .read<ContractProvider>()
-                  .cancelContract(token, _contract.contractId);
-              if (mounted) {
-                setState(() => _isActioning = false);
-                if (success) {
-                  setState(
-                    () => _contract = _contract.copyWith(status: 'cancelled'),
-                  );
-                  _showSnack('Contract cancelled.', isError: false);
-                  await Future.delayed(const Duration(milliseconds: 800));
-                  if (mounted) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                } else {
-                  _showSnack('Failed to cancel contract.', isError: true);
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text(
+                'Keep Contract',
+                style: AppText.bodySemiBold.copyWith(
+                  color: Colors.grey.shade600,
+                ),
               ),
-              elevation: 0,
             ),
-            child: Text(
-              'Cancel Contract',
-              style: AppText.bodySemiBold.copyWith(color: Colors.white),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSubmitting = true);
+                      final token = context.read<AuthProvider>().token!;
+                      final contractProvider = context
+                          .read<ContractProvider>();
+                      final success = await contractProvider.cancelContract(
+                        token,
+                        _contract.contractId,
+                        reason: reasonCtrl.text.trim().isEmpty
+                            ? null
+                            : reasonCtrl.text.trim(),
+                      );
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        setState(
+                          () =>
+                              _contract = _contract.copyWith(status: 'cancelled'),
+                        );
+                        _showSnack('Contract cancelled.', isError: false);
+                        await Future.delayed(const Duration(milliseconds: 800));
+                        if (mounted) {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        }
+                      } else {
+                        _showSnack(
+                          contractProvider.error ?? 'Failed to cancel contract.',
+                          isError: true,
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Cancel Contract',
+                      style: AppText.bodySemiBold.copyWith(color: Colors.white),
+                    ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -222,7 +222,33 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to update contract');
   }
 
-  Future<ContractModel> cancelContract(String token, String contractId) async {
+  /// PUT /contracts/:contractId/dispute - Raise a dispute on the contract
+  Future<ContractModel> raiseDispute(
+    String token,
+    String contractId,
+    String reason,
+  ) async {
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.put(
+        Uri.parse('$_baseUrl/contracts/$contractId/dispute'),
+        headers: _headers(t),
+        body: jsonEncode({'reason': reason}),
+      ).timeout(const Duration(seconds: 20)),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('PUT /contracts/$contractId/dispute → ${res.statusCode}');
+    if (res.statusCode == 200) {
+      return ContractModel.fromJson(body['details'] ?? body['data'] ?? body);
+    }
+    throw Exception(body['details'] ?? 'Failed to raise dispute');
+  }
+
+  Future<ContractModel> cancelContract(
+    String token,
+    String contractId, {
+    String? reason,
+  }) async {
     final res = await SessionGuard.guard(
       token,
       (t) => http.put(
@@ -231,6 +257,9 @@ class ContractService {
           'Authorization': 'Bearer $t',
           'Content-Type': 'application/json',
         },
+        body: jsonEncode({
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        }),
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);

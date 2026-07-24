@@ -15,7 +15,9 @@ import 'package:workbyte_app/providers/saved_items_provider.dart';
 import 'package:workbyte_app/providers/skill_provider.dart';
 import 'package:workbyte_app/services/api_service.dart';
 import 'package:workbyte_app/services/auth_service.dart';
+import 'package:workbyte_app/services/client_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
+import 'package:workbyte_app/widgets/client_reliability_badge.dart';
 import 'package:workbyte_app/widgets/job_detail_header.dart';
 import 'package:workbyte_app/widgets/job_detail_tab_bar.dart';
 import 'package:workbyte_app/widgets/report_sheet.dart';
@@ -46,6 +48,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   int selectedTab = 0;
   ClientModel? client;
   bool clientLoading = true;
+  String? _clientReliability;
+  final ClientService _clientService = ClientService();
   List<JobRoleModel> roles = [];
   bool rolesLoading = true;
   String? _analyzingRoleId;
@@ -143,6 +147,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         this.client = client;
         clientLoading = false;
       });
+    }
+    if (client != null) {
+      final label = await _clientService.getClientReliability(
+        token,
+        client.clientId,
+      );
+      if (mounted) setState(() => _clientReliability = label);
     }
   }
 
@@ -1022,6 +1033,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ],
             ),
             const SizedBox(height: 8),
+            if (_clientReliability != null) ...[
+              ClientReliabilityBadge(label: _clientReliability),
+              const SizedBox(height: 8),
+            ],
             Text(
               client!.bio?.isNotEmpty == true
                   ? client!.bio!
