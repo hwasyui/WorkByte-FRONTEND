@@ -414,15 +414,35 @@ class _ScamCardState extends State<_ScamCard> {
 
   Future<void> _confirmAct(BuildContext ctx, String action) async {
     final isApprove = action == 'approve';
+    if (!isApprove) {
+      // Removing a job normally records a scam strike against the client;
+      // the checkbox lets the admin close it as a no-strike override instead
+      // without needing a second, separate "Close Job" button.
+      final recordStrike = ValueNotifier<bool>(true);
+      final confirmed = await showAdminConfirmDialog(
+        ctx,
+        title: 'Remove This Job?',
+        message: 'This will close the job post for violating platform policy. This cannot be undone.',
+        icon: Icons.delete_outline_rounded,
+        confirmLabel: 'Remove Job',
+        confirmColor: const Color(0xFFDC2626),
+        extra: _ScamStrikeToggle(notifier: recordStrike),
+      );
+      if (confirmed != true || !mounted) return;
+      if (recordStrike.value) {
+        _act(action);
+      } else {
+        _closeJobWithoutStrike();
+      }
+      return;
+    }
     final confirmed = await showAdminConfirmDialog(
       ctx,
-      title: isApprove ? 'Mark Job Safe?' : 'Remove This Job?',
-      message: isApprove
-          ? 'This clears the scam flag and keeps the job post live on the platform.'
-          : 'This will remove the job post for violating platform policy. This cannot be undone.',
-      icon: isApprove ? Icons.check_circle_outline_rounded : Icons.delete_outline_rounded,
-      confirmLabel: isApprove ? 'Mark Safe' : 'Remove Job',
-      confirmColor: isApprove ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      title: 'Mark Job Safe?',
+      message: 'This clears the scam flag and keeps the job post live on the platform.',
+      icon: Icons.check_circle_outline_rounded,
+      confirmLabel: 'Mark Safe',
+      confirmColor: const Color(0xFF059669),
     );
     if (confirmed == true) _act(action);
   }
@@ -437,6 +457,10 @@ class _ScamCardState extends State<_ScamCard> {
       confirmColor: const Color(0xFF7C3AED),
     );
     if (confirmed != true || !mounted) return;
+    _closeJobWithoutStrike();
+  }
+
+  Future<void> _closeJobWithoutStrike() async {
     setState(() => _closing = true);
     final jobPostId = widget.flag['job_post_id']?.toString() ?? '';
     if (jobPostId.isEmpty) {
@@ -828,7 +852,7 @@ class _ScamCardState extends State<_ScamCard> {
                   )
           else
             _StatusPill(status: status),
-          if (status != 'removed') ...[
+          if (status != 'removed' && status != 'pending') ...[
             const SizedBox(height: 8),
             _closing
                 ? const Center(
@@ -2072,6 +2096,51 @@ class _AdminOverrideBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Scam-strike opt-out toggle (shown inside the Remove Job confirm dialog) ──
+
+class _ScamStrikeToggle extends StatefulWidget {
+  final ValueNotifier<bool> notifier;
+  const _ScamStrikeToggle({required this.notifier});
+
+  @override
+  State<_ScamStrikeToggle> createState() => _ScamStrikeToggleState();
+}
+
+class _ScamStrikeToggleState extends State<_ScamStrikeToggle> {
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => setState(() => widget.notifier.value = !widget.notifier.value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: widget.notifier.value,
+              onChanged: (v) => setState(() => widget.notifier.value = v ?? true),
+              activeColor: const Color(0xFFDC2626),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Record a scam strike against the client (repeated confirmed scams lead to an automatic ban)',
+                  style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
