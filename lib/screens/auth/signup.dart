@@ -24,13 +24,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
-      TextEditingController(); // ← NEW
+      TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
   String? _nameError;
   String? _emailError;
   String? _passwordError;
-  String? _confirmPasswordError; // ← NEW
+  String? _confirmPasswordError;
 
   String _selectedRole = 'Freelancer';
 
@@ -38,7 +38,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose(); // ← NEW
+    _confirmPasswordController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -50,7 +50,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _validate() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim(); // ← NEW
+    final confirmPassword = _confirmPasswordController.text.trim();
     final fullName = _nameController.text.trim();
 
     setState(() {
@@ -81,7 +81,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _passwordError = null;
       }
 
-      // ← NEW: Confirm Password
+      // Confirm password
       if (confirmPassword.isEmpty) {
         _confirmPasswordError = 'Please confirm your password';
       } else if (confirmPassword != password) {
@@ -94,7 +94,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return _nameError == null &&
         _emailError == null &&
         _passwordError == null &&
-        _confirmPasswordError == null; // ← NEW
+        _confirmPasswordError == null;
   }
 
   Future<void> _handleGoogleSignUp() async {

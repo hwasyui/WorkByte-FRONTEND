@@ -52,7 +52,7 @@ class JobListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── Company logo container ──────────────────────────────────
+            // Company logo container
             Container(
               width: 56,
               height: 56,
@@ -64,7 +64,7 @@ class JobListCard extends StatelessWidget {
             ),
             const SizedBox(width: 14),
 
-            // ── Content ─────────────────────────────────────────────────
+            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

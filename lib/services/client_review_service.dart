@@ -61,7 +61,7 @@ class ClientReviewService {
     return ClientReviewServiceException(message, detectedLabels: detectedLabels);
   }
 
-  // ── GET /client-reviews/contract/{contract_id} ──────────────────────────
+  // GET /client-reviews/contract/{contract_id}
 
   Future<ClientReview> getClientReviewForContract({
     required String token,
@@ -77,7 +77,7 @@ class ClientReviewService {
     return ClientReview.fromJson(_parse(res, 'getClientReviewForContract'));
   }
 
-  // ── POST /client-reviews/{client_review_id}/submit ───────────────────────
+  // POST /client-reviews/{client_review_id}/submit
 
   Future<String> submitClientReview({
     required String token,
@@ -96,7 +96,7 @@ class ClientReviewService {
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
 
-  // ── GET /client-reviews/client/{client_id} ───────────────────────────────
+  // GET /client-reviews/client/{client_id}
   // All published reviews for a client's public profile.
 
   Future<List<ClientReview>> getClientReviews({
@@ -116,7 +116,7 @@ class ClientReviewService {
         .toList();
   }
 
-  // ── GET /client-reviews/trust-score/{client_id} ──────────────────────────
+  // GET /client-reviews/trust-score/{client_id}
 
   Future<ClientTrustScore> getClientTrustScore({
     required String token,
@@ -132,7 +132,7 @@ class ClientReviewService {
     return ClientTrustScore.fromJson(_parse(res, 'getClientTrustScore'));
   }
 
-  // ── GET /client-reviews/red-flags/{client_id} ────────────────────────────
+  // GET /client-reviews/red-flags/{client_id}
   // Unresolved red flag alerts - reuses RedFlagAlert (review_model.dart),
   // same red_flag_alerts table/shape as the freelancer side.
 
@@ -154,7 +154,7 @@ class ClientReviewService {
   }
 }
 
-// ── Exception ────────────────────────────────────────────────────────────────
+// Exception
 
 class ClientReviewServiceException implements Exception {
   final String message;

@@ -292,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // ── Sorted category cards ──────────────────────────────────────────────────
+  // Sorted category cards
   List<_CategoryDef> get _sortedCategories {
     final sorted = [..._kCategoryDefs];
     sorted.sort(
@@ -707,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   const SizedBox(height: 16),
 
-                  // ── User greeting row ──
+                  // User greeting row
                   Consumer2<AuthProvider, ProfileProvider>(
                     builder: (context, auth, profile, child) {
                       final imageUrl = profile.profilePictureUrl;
@@ -855,7 +855,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                   const SizedBox(height: 16),
 
-                  // ── Complete profile banner ──
+                  // Complete profile banner
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
                       if (profile.isProfileComplete)
@@ -948,11 +948,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     },
                   ),
 
-                  // ── Search bar ──
+                  // Search bar
                   SearchBarWidget(onSearch: _handleSearch),
                   const SizedBox(height: 20),
 
-                  // ── Quick access cards ──
+                  // Quick access cards
                   Consumer<ProfileProvider>(
                     builder: (context, profile, _) {
                       return Row(
@@ -1008,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                   const SizedBox(height: 24),
 
-                  // ── Most Relevant (freelancers only) ──
+                  // Most Relevant (freelancers only)
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (profile.isClient) return const SizedBox.shrink();
@@ -1064,7 +1064,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     },
                   ),
 
-                  // ── Most Popular ──
+                  // Most Popular
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1112,7 +1112,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ],
                   ),
 
-                  // ── Top Freelancers (clients only) ──
+                  // Top Freelancers (clients only)
                   Consumer<ProfileProvider>(
                     builder: (context, profile, child) {
                       if (!profile.isClient) return const SizedBox.shrink();
@@ -1237,7 +1237,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     },
                   ),
 
-                  // ── Popular Categories ──
+                  // Popular Categories
                   SectionHeader(
                     title: 'Popular Categories',
                     onViewAll: () => Navigator.push(
@@ -1401,7 +1401,7 @@ class _QuickAccessCard extends StatelessWidget {
   }
 }
 
-// ── Category Card ─────────────────────────────────────────────────────────────
+// Category Card
 class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -1480,7 +1480,7 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-// ── Category Card Skeleton (loading state) ────────────────────────────────────
+// Category Card Skeleton (loading state)
 class _CategoryCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -1562,7 +1562,7 @@ class _NotificationPlaceholder extends StatelessWidget {
   }
 }
 
-// ── Banned-account gate ───────────────────────────────────────────────────────
+// Banned-account gate
 // Shown instead of the normal app when the user's account has been closed.
 
 class _BannedAccountGate extends StatelessWidget {

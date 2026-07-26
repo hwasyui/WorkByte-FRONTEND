@@ -89,7 +89,7 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
     }
   }
 
-  // ── Reusable styled text field ──────────────────────────────────────────────
+  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -147,7 +147,7 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
     );
   }
 
-  // ── Date picker field ───────────────────────────────────────────────────────
+  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,

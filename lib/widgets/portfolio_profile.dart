@@ -76,7 +76,7 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
     }
   }
 
-  // ── Reusable styled text field ──────────────────────────────────────────────
+  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -135,7 +135,7 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
     );
   }
 
-  // ── Date picker field ───────────────────────────────────────────────────────
+  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,

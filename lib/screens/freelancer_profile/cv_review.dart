@@ -298,7 +298,7 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
   }
 }
 
-// ── Score Banner ──────────────────────────────────────────────────────────────
+// Score Banner
 
 class _ScoreBanner extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -394,7 +394,7 @@ class _BannerStat extends StatelessWidget {
   }
 }
 
-// ── Section Card ──────────────────────────────────────────────────────────────
+// Section Card
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -525,7 +525,7 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ── Skill Chip ────────────────────────────────────────────────────────────────
+// Skill Chip
 
 class _SkillChip extends StatelessWidget {
   final String label;
@@ -551,7 +551,7 @@ class _SkillChip extends StatelessWidget {
   }
 }
 
-// ── Experience Item ───────────────────────────────────────────────────────────
+// Experience Item
 
 class _ExperienceItem extends StatelessWidget {
   final SuggestedWorkExperience exp;
@@ -631,7 +631,7 @@ class _ExperienceItem extends StatelessWidget {
   }
 }
 
-// ── Education Item ────────────────────────────────────────────────────────────
+// Education Item
 
 class _EducationItem extends StatelessWidget {
   final SuggestedEducation edu;

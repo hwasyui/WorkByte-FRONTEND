@@ -186,7 +186,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                   children: [
                     const SizedBox(height: 8),
 
-                    // ── Job detail rows ─────────────────────────────
+                    // Job detail rows
                     _buildRow(
                       'Title',
                       draft['job_title'] ?? '',
@@ -223,7 +223,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     // if (draft['project_scope'] != null)
                     //   _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
 
-                    // ── Roles ───────────────────────────────────────
+                    // Roles
                     if (roles.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
@@ -329,7 +329,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       }),
                     ],
 
-                    // ── Attachments ─────────────────────────────────
+                    // Attachments
                     if (files.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(
@@ -450,7 +450,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                           ),
                         );
                       }),
-                    ], // ── Submit status ───────────────────────────────
+                    ],
                     if (_isSubmitting && _submitStatus.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 16, bottom: 4),
@@ -467,7 +467,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
 
                     const SizedBox(height: 24),
 
-                    // ── Post button ─────────────────────────────────
+                    // Post button
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: SizedBox(

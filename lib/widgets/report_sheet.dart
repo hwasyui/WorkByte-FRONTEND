@@ -182,7 +182,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── drag handle ──
+            // drag handle
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -195,7 +195,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               ),
             ),
 
-            // ── header ──
+            // header
             Row(
               children: [
                 Container(
@@ -258,7 +258,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
             ),
             const SizedBox(height: 16),
 
-            // ── reason tiles ──
+            // reason tiles
             Consumer<ReportProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
@@ -295,7 +295,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               },
             ),
 
-            // ── custom reason field (animates in when 'other' selected) ──
+            // custom reason field (animates in when 'other' selected)
             FadeTransition(
               opacity: _fadeAnim,
               child: SizeTransition(
@@ -343,7 +343,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
 
             const SizedBox(height: 20),
 
-            // ── error banner ──
+            // error banner
             Consumer<ReportProvider>(
               builder: (_, provider, __) {
                 if (provider.error == null) return const SizedBox.shrink();
@@ -380,7 +380,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               },
             ),
 
-            // ── submit button ──
+            // submit button
             Consumer<ReportProvider>(
               builder: (_, provider, __) {
                 return SizedBox(
@@ -441,7 +441,7 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
   }
 }
 
-// ── Reason Tile ───────────────────────────────────────────────────────────────
+// Reason Tile
 class _ReasonTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -542,7 +542,7 @@ class _ReasonTile extends StatelessWidget {
   }
 }
 
-// ── Internal data class ───────────────────────────────────────────────────────
+// Internal data class
 class _ReasonMeta {
   final IconData icon;
   final String label;

@@ -168,7 +168,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── App bar ──────────────────────────────────────────────
+            // App bar
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
               child: Row(
@@ -211,7 +211,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
             ),
 
-            // ── List ─────────────────────────────────────────────────
+            // List
             Expanded(
               child: Consumer<NotificationProvider>(
                 builder: (context, provider, _) {

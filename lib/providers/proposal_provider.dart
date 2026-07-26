@@ -13,7 +13,7 @@ class ProposalProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // ── Fetch proposals for a job post (raw, no enrichment) ──────────────────
+  // Fetch proposals for a job post (raw, no enrichment)
   Future<void> fetchProposalsByJob({
     required String token,
     required String jobPostId,
@@ -32,7 +32,7 @@ class ProposalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch proposals submitted by a freelancer ─────────────────────────────
+  // Fetch proposals submitted by a freelancer
   Future<void> fetchProposalsByFreelancer({
     required String token,
     required String freelancerId,
@@ -51,7 +51,7 @@ class ProposalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Accept a bid ──────────────────────────────────────────────────────────
+  // Accept a bid
   Future<bool> acceptProposal({
     required String token,
     required String proposalId,
@@ -78,7 +78,7 @@ class ProposalProvider extends ChangeNotifier {
     }
   }
 
-  // ── Reject a bid ──────────────────────────────────────────────────────────
+  // Reject a bid
   Future<bool> rejectProposal({
     required String token,
     required String proposalId,
@@ -105,7 +105,7 @@ class ProposalProvider extends ChangeNotifier {
     }
   }
 
-  // ── Submit a new proposal (freelancer side) ───────────────────────────────
+  // Submit a new proposal (freelancer side)
   Future<ProposalModel?> createProposal({
     required String token,
     required Map<String, dynamic> data,
@@ -122,7 +122,7 @@ class ProposalProvider extends ChangeNotifier {
     }
   }
 
-  // ── Delete a proposal ─────────────────────────────────────────────────────
+  // Delete a proposal
   Future<bool> deleteProposal({
     required String token,
     required String proposalId,

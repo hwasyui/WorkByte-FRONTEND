@@ -45,7 +45,7 @@ class JobPostService {
     return jsonDecode(res.body);
   }
 
-  // ─── Job Posts ────────────────────────────────────────────────────────────
+  // Job Posts
   Future<List<JobPostModel>> getAllJobPosts(
     String token, {
     int page = 1,
@@ -225,7 +225,7 @@ class JobPostService {
     }
   }
 
-  // ─── Job Roles ────────────────────────────────────────────────────────────
+  // Job Roles
   Future<List<JobRoleModel>> getJobRoles(String token, String jobPostId) async {
     final res = await SessionGuard.guard(
       token,
@@ -302,7 +302,7 @@ class JobPostService {
     }
   }
 
-  // ─── Job Role Skills ──────────────────────────────────────────────────────
+  // Job Role Skills
   Future<List<JobRoleSkillModel>> getJobRoleSkills(
     String token,
     String jobRoleId,
@@ -382,7 +382,7 @@ class JobPostService {
     }
   }
 
-  // ─── Job Files ────────────────────────────────────────────────────────────
+  // Job Files
   Future<List<JobFileModel>> getJobFiles(String token, String jobPostId) async {
     final res = await SessionGuard.guard(
       token,
@@ -453,7 +453,7 @@ class JobPostService {
     }
   }
 
-  // ─── Relevant & Popular feeds ──────────────────────────────────────────────
+  // Relevant & Popular feeds
   Future<List<JobPostModel>> getRelevantJobs(
     String token, {
     int limit = 10,

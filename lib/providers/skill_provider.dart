@@ -19,7 +19,7 @@ class SkillProvider extends ChangeNotifier {
     // If already loaded, just make sure searchResults is in sync
     if (_skills.isNotEmpty) {
       if (_searchResults.isEmpty) {
-        _searchResults = List.from(_skills); // ← fix: sync if out of step
+        _searchResults = List.from(_skills);
         notifyListeners();
       }
       return;
@@ -31,7 +31,7 @@ class SkillProvider extends ChangeNotifier {
 
     try {
       _skills = await _service.getAllSkills(token);
-      _searchResults = List.from(_skills); // ← always copy, not reference
+      _searchResults = List.from(_skills);
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
@@ -42,7 +42,7 @@ class SkillProvider extends ChangeNotifier {
 
   Future<void> searchSkills(String token, String term) async {
     if (term.trim().isEmpty) {
-      _searchResults = List.from(_skills); // ← show all when empty query
+      _searchResults = List.from(_skills);
       notifyListeners();
       return;
     }

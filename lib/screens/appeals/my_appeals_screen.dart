@@ -188,7 +188,7 @@ class _MyAppealsScreenState extends State<MyAppealsScreen>
   }
 }
 
-// ── Appeal list ───────────────────────────────────────────────────────────────
+// Appeal list
 class _AppealList extends StatelessWidget {
   final List<AppealModel> appeals;
   final Future<void> Function() onRefresh;
@@ -259,7 +259,7 @@ class _AppealList extends StatelessWidget {
   }
 }
 
-// ── Appeal card ───────────────────────────────────────────────────────────────
+// Appeal card
 class _AppealCard extends StatelessWidget {
   final AppealModel appeal;
   const _AppealCard({required this.appeal});
@@ -284,7 +284,7 @@ class _AppealCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── colored header strip ──
+          // colored header strip
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -365,7 +365,7 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
-          // ── message body ──
+          // message body
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Column(
@@ -395,7 +395,7 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
-          // ── admin note (resolved only) ──
+          // admin note (resolved only)
           if (appeal.adminNote != null && appeal.adminNote!.isNotEmpty) ...[
             const SizedBox(height: 10),
             Padding(
@@ -448,7 +448,7 @@ class _AppealCard extends StatelessWidget {
             ),
           ],
 
-          // ── actioned date ──
+          // actioned date
           if (appeal.actionedAt != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -486,7 +486,7 @@ class _AppealCard extends StatelessWidget {
   }
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// Status badge
 class _StatusBadge extends StatelessWidget {
   final String status;
   final _StatusMeta meta;
@@ -519,7 +519,7 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
+// Skeleton card
 class _AppealCardSkeleton extends StatelessWidget {
   const _AppealCardSkeleton();
 
@@ -580,7 +580,7 @@ class _SkeletonBox extends StatelessWidget {
   );
 }
 
-// ── Status metadata ───────────────────────────────────────────────────────────
+// Status metadata
 class _StatusMeta {
   final String label;
   final Color bgColor;

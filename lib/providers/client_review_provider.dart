@@ -10,7 +10,7 @@ enum ClientReviewLoadState { idle, loading, loaded, error }
 class ClientReviewProvider extends ChangeNotifier {
   final ClientReviewService _service = ClientReviewService();
 
-  // ── Review form (pending review for a contract) ──────────────────────────
+  // Review form (pending review for a contract)
 
   ClientReviewLoadState _formState = ClientReviewLoadState.idle;
   ClientReviewLoadState get formState => _formState;
@@ -21,7 +21,7 @@ class ClientReviewProvider extends ChangeNotifier {
   bool _submitting = false;
   bool get submitting => _submitting;
 
-  // ── Client reviews list ───────────────────────────────────────────────────
+  // Client reviews list
 
   ClientReviewLoadState _reviewsState = ClientReviewLoadState.idle;
   ClientReviewLoadState get reviewsState => _reviewsState;
@@ -29,7 +29,7 @@ class ClientReviewProvider extends ChangeNotifier {
   List<ClientReview> _reviews = [];
   List<ClientReview> get reviews => List.unmodifiable(_reviews);
 
-  // ── Trust score ────────────────────────────────────────────────────────────
+  // Trust score
 
   ClientReviewLoadState _trustState = ClientReviewLoadState.idle;
   ClientReviewLoadState get trustState => _trustState;
@@ -37,7 +37,7 @@ class ClientReviewProvider extends ChangeNotifier {
   ClientTrustScore? _trustScore;
   ClientTrustScore? get trustScore => _trustScore;
 
-  // ── Red flags ────────────────────────────────────────────────────────────
+  // Red flags
 
   ClientReviewLoadState _flagsState = ClientReviewLoadState.idle;
   ClientReviewLoadState get flagsState => _flagsState;
@@ -54,7 +54,7 @@ class ClientReviewProvider extends ChangeNotifier {
   List<String>? _flaggedLabels;
   List<String>? get flaggedLabels => _flaggedLabels;
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // Actions
 
   Future<void> loadReviewForm({
     required String token,

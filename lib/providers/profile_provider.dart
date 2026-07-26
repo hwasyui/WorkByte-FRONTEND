@@ -27,7 +27,7 @@ class ProfileProvider extends ChangeNotifier {
 
   String? _userType;
 
-  // ─── Getters ──────────────────────────────────────────────────────────────
+  // Getters
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -167,7 +167,7 @@ class ProfileProvider extends ChangeNotifier {
     return '-';
   }
 
-  // ─── Fetch ────────────────────────────────────────────────────────────────
+  // Fetch
 
   Future<bool> fetchProfile({
     required String token,
@@ -245,7 +245,7 @@ class ProfileProvider extends ChangeNotifier {
     );
   }
 
-  // ─── Update profile ───────────────────────────────────────────────────────
+  // Update profile
 
   Future<bool> updateProfile({
     required String token,
@@ -281,7 +281,7 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  // ─── Profile picture ──────────────────────────────────────────────────────
+  // Profile picture
 
   Future<bool> uploadProfilePicture({
     required String token,
@@ -357,7 +357,7 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  // ─── Education ────────────────────────────────────────────────────────────
+  // Education
 
   Future<bool> addEducation({
     required String token,
@@ -384,7 +384,7 @@ class ProfileProvider extends ChangeNotifier {
     return ok;
   }
 
-  // ─── Work experience ──────────────────────────────────────────────────────
+  // Work experience
 
   Future<bool> addWorkExperience({
     required String token,
@@ -411,7 +411,7 @@ class ProfileProvider extends ChangeNotifier {
     return ok;
   }
 
-  // ─── Skills ───────────────────────────────────────────────────────────────
+  // Skills
 
   Future<bool> addFreelancerSkill({
     required String token,
@@ -438,7 +438,7 @@ class ProfileProvider extends ChangeNotifier {
     return ok;
   }
 
-  // ─── Portfolio ──────────────────────────────────────────────────
+  // Portfolio
 
   Future<bool> addPortfolio({
     required String token,
@@ -486,7 +486,7 @@ class ProfileProvider extends ChangeNotifier {
     Map<String, dynamic> data,
   ) => _service.createSkill(token, data);
 
-  // ─── Upload CV ──────────────────────────────────────────────────
+  // Upload CV
 
   Future<bool> uploadCV({required String token, required File file}) async {
     _isLoading = true;
@@ -514,7 +514,7 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  // ─── Local state helpers ──────────────────────────────────────────────────
+  // Local state helpers
 
   void updateJobTitle(String jobTitle) {
     if (isClient) {

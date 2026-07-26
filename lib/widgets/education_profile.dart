@@ -92,7 +92,7 @@ class _EducationProfileState extends State<EducationProfile> {
     }
   }
 
-  // ── Reusable styled text field ──────────────────────────────────────────────
+  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -151,7 +151,7 @@ class _EducationProfileState extends State<EducationProfile> {
     );
   }
 
-  // ── Date picker field ───────────────────────────────────────────────────────
+  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,

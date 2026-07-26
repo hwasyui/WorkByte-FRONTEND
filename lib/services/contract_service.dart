@@ -26,7 +26,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /contracts → ${res.statusCode}');
+    debugPrint('GET /contracts status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
       final list = (details is Map && details['items'] != null) 
@@ -52,7 +52,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /contracts/client/$clientId → ${res.statusCode}');
+    debugPrint('GET /contracts/client/$clientId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
       final list = (details is Map && details['items'] != null) 
@@ -78,7 +78,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /contracts/freelancer/$freelancerId → ${res.statusCode}');
+    debugPrint('GET /contracts/freelancer/$freelancerId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
       final list = (details is Map && details['items'] != null) 
@@ -101,7 +101,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /contracts/$contractId → ${res.statusCode}');
+    debugPrint('GET /contracts/$contractId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
@@ -122,7 +122,7 @@ class ContractService {
     );
     final body = jsonDecode(res.body);
     debugPrint(
-      'GET /contracts/$contractId/generation-data → ${res.statusCode}',
+      'GET /contracts/$contractId/generation-data status: ${res.statusCode}',
     );
     if (res.statusCode == 200) {
       return body['data'] ?? body['details'] ?? {};
@@ -140,7 +140,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /contracts/$contractId/pdf-url → ${res.statusCode}');
+    debugPrint('GET /contracts/$contractId/pdf-url status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final data = (body['details'] ?? body['data']) as Map<String, dynamic>?;
       final pdfUrl =
@@ -153,7 +153,7 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to get PDF URL');
   }
 
-  // ── POST /contracts ───────────────────────────────────────────────────────
+  // POST /contracts
 
   /// POST /contracts - Create a new contract
   Future<ContractModel> createContract(
@@ -169,7 +169,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('POST /contracts → ${res.statusCode}');
+    debugPrint('POST /contracts status: ${res.statusCode}');
     if (res.statusCode == 201) {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
@@ -191,14 +191,14 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('POST /contracts/$contractId/generate → ${res.statusCode}');
+    debugPrint('POST /contracts/$contractId/generate status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
     throw Exception(body['details'] ?? 'Failed to generate contract');
   }
 
-  // ── PUT /contracts/:contractId ────────────────────────────────────────────
+  // PUT /contracts/:contractId
 
   /// PUT /contracts/:contractId - Update contract status
   Future<ContractModel> updateContract(
@@ -215,7 +215,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('PUT /contracts/$contractId → ${res.statusCode}');
+    debugPrint('PUT /contracts/$contractId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
@@ -237,7 +237,7 @@ class ContractService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('PUT /contracts/$contractId/dispute → ${res.statusCode}');
+    debugPrint('PUT /contracts/$contractId/dispute status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ContractModel.fromJson(body['details'] ?? body['data'] ?? body);
     }

@@ -1,4 +1,4 @@
-// ── ReviewRating ──────────────────────────────────────────────────────────────
+// ReviewRating
 
 class ReviewRating {
   final String id;
@@ -23,7 +23,7 @@ class ReviewRating {
   Map<String, dynamic> toJson() => {'category': category, 'score': score};
 }
 
-// ── ReviewWrittenContent ──────────────────────────────────────────────────────
+// ReviewWrittenContent
 
 class ReviewWrittenContent {
   final String id;
@@ -50,7 +50,7 @@ class ReviewWrittenContent {
       );
 }
 
-// ── ReviewSkillTag ────────────────────────────────────────────────────────────
+// ReviewSkillTag
 
 class ReviewSkillTag {
   final String id;
@@ -73,7 +73,7 @@ class ReviewSkillTag {
   );
 }
 
-// ── ReviewAiAnalysis ──────────────────────────────────────────────────────────
+// ReviewAiAnalysis
 
 class ReviewAiAnalysis {
   final String id;
@@ -126,7 +126,7 @@ class ReviewAiAnalysis {
       );
 }
 
-// ── Review (matches ReviewResponse) ──────────────────────────────────────────
+// Review (matches ReviewResponse)
 
 class Review {
   final String id;
@@ -207,7 +207,7 @@ class Review {
   }
 }
 
-// ── TrustScore (matches TrustScoreResponse) ───────────────────────────────────
+// TrustScore (matches TrustScoreResponse)
 
 class TrustScore {
   final String freelancerId;
@@ -283,7 +283,7 @@ class TrustScore {
   }
 }
 
-// ── RedFlagAlert (matches RedFlagAlertResponse) ───────────────────────────────
+// RedFlagAlert (matches RedFlagAlertResponse)
 
 class RedFlagAlert {
   final String id;
@@ -317,7 +317,7 @@ class RedFlagAlert {
   );
 }
 
-// ── SubmitReviewRequest ───────────────────────────────────────────────────────
+// SubmitReviewRequest
 
 class SubmitReviewRequest {
   final List<ReviewRatingInput> ratings;

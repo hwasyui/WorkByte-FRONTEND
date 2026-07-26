@@ -643,7 +643,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           final identifier =
               profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
-          // ── Case 1: New local image selected → upload via fixed endpoint ──
+          // New local image selected, upload it
           if (data['image'] != null &&
               data['image'].toString().isNotEmpty &&
               data['image'] != profile.profilePictureUrl &&
@@ -667,7 +667,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               return;
             }
           }
-          // ── Case 2: Image deleted ─────────────────────────────────────────
+          // Image deleted
           else if (data['imageDeleted'] == true) {
             final success = await profile.deleteProfilePicture(
               token: auth.token!,
@@ -682,7 +682,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // ── Case 3: Update other fields (name, etc.) ─────────────────────
+          // Update other fields
           // Note: clients don't have a job_title concept on the backend
           // (ClientUpdate has no such field) — only full_name is editable
           // here.
@@ -703,7 +703,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // ── Done ──────────────────────────────────────────────────────────
+          // Done
           await _refreshProfile();
           profile.forceRefreshProfilePicture();
 
@@ -1347,7 +1347,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           const SizedBox(height: 12),
 
-          // ── Tab bar ─────────────────────────────────────────────────────
+          // Tab bar
           Container(
             color: Colors.white,
             child: TabBar(

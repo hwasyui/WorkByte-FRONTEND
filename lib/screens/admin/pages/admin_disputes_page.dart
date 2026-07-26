@@ -77,7 +77,7 @@ class _AdminDisputesPageState extends State<AdminDisputesPage> {
   }
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+// Card
 
 class _DisputeCard extends StatelessWidget {
   final Map<String, dynamic> contract;
@@ -501,7 +501,7 @@ class _PartyChip extends StatelessWidget {
   }
 }
 
-// ── Action button ─────────────────────────────────────────────────────────────
+// Action button
 
 class _ActionButton extends StatelessWidget {
   final String label;

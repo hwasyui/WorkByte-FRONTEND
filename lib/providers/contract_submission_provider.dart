@@ -72,7 +72,7 @@ class ContractSubmissionProvider extends ChangeNotifier {
   Future<bool> requestRevisionForLatestSubmission({
     required String token,
     required String contractId,
-    String? note, // ← add this
+    String? note,
   }) async {
     _isUploading = true;
     _errorMessage = null;
@@ -82,7 +82,7 @@ class ContractSubmissionProvider extends ChangeNotifier {
       await _service.requestRevisionForLatestSubmission(
         token: token,
         contractId: contractId,
-        note: note, // ← pass through
+        note: note,
       );
 
       _submissions = await _service.getSubmissionsByContract(token, contractId);

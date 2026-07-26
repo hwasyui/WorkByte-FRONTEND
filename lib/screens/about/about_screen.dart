@@ -11,7 +11,7 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // ── App Bar ──────────────────────────────────────────────────────────
+          // App Bar
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
@@ -117,7 +117,7 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── About section ───────────────────────────────────────────
+                  // About section
                   _SectionTitle(title: 'About WorkByte'),
                   const SizedBox(height: 12),
                   _InfoCard(
@@ -125,10 +125,10 @@ class AboutScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'WorkByte is a modern freelance platform that connects skilled '
-                          'professionals with clients from around the world. Whether you\'re '
-                          'looking for top talent or your next career opportunity, WorkByte '
-                          'makes it seamless, smart, and efficient.',
+                          'WorkByte is a freelance platform that connects skilled '
+                          'professionals with clients from around the world. Whether '
+                          'you\'re looking for great talent or your next opportunity, '
+                          'WorkByte makes it simple.',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: const Color(0xFF555555),
@@ -137,10 +137,9 @@ class AboutScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Powered by cutting-edge Artificial Intelligence, WorkByte goes '
-                          'beyond a typical job board — it learns, adapts, and delivers '
-                          'personalized experiences to help both freelancers and clients '
-                          'achieve their goals faster.',
+                          'We use smart technology behind the scenes to help you find '
+                          'the right match faster and to keep the platform safe and '
+                          'trustworthy for everyone.',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: const Color(0xFF555555),
@@ -153,8 +152,8 @@ class AboutScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // ── Authentication section ──────────────────────────────────
-                  _SectionTitle(title: 'Authentication'),
+                  // Signing In section
+                  _SectionTitle(title: 'Signing In'),
                   const SizedBox(height: 12),
 
                   _FeatureCard(
@@ -162,30 +161,22 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF0891B2),
                     iconBg: const Color(0xFFCFFAFE),
                     accentColor: const Color(0xFF0891B2),
-                    badge: 'OAuth 2.0',
-                    title: 'Social Sign-In',
+                    badge: 'Google Sign-In',
+                    title: 'Sign In with Google',
                     description:
-                        'WorkByte supports one-tap sign-in via Google using the '
-                        'OAuth 2.0 Authorization Code flow with OpenID Connect. '
-                        'Each login request is protected by an HMAC-SHA256-signed state '
-                        'token to prevent CSRF attacks — no server-side session storage '
-                        'is needed. Accounts are resolved in three tiers: a returning '
-                        'OAuth user is matched by their Google ID, a new Google login '
-                        'with an already-registered email auto-links the account and '
-                        'marks the email as verified, and a completely new email creates '
-                        'a fresh account with email verification pre-confirmed by Google. '
-                        'The user then chooses their role (freelancer or client) '
-                        'on first login.',
+                        'Sign in quickly and securely using your Google account — '
+                        'no need to remember another password. On your first login, '
+                        'just choose whether you\'re joining as a freelancer or a client.',
                     highlights: const [
-                      'Google OAuth 2.0 + OpenID Connect',
-                      'HMAC-SHA256 CSRF state token — no server-side session storage',
-                      '3-tier resolution: provider link → email match → new account',
+                      'One-tap sign-in with Google',
+                      'No extra password to remember',
+                      'Choose your role on first login',
                     ],
                   ),
 
                   const SizedBox(height: 28),
 
-                  // ── AI Features section ─────────────────────────────────────
+                  // AI Features section
                   _SectionTitle(title: 'AI-Powered Features'),
                   const SizedBox(height: 12),
 
@@ -194,18 +185,14 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF4F46E5),
                     iconBg: const Color(0xFFEEECFB),
                     accentColor: const Color(0xFF4F46E5),
-                    badge: 'CV Analysis',
-                    title: 'AI CV Analysis',
+                    badge: 'CV Reading',
+                    title: 'Smart CV Reading',
                     description:
-                        'WorkByte automatically analyzes each freelancer\'s uploaded CV '
-                        'to extract skills, qualifications, and work experience. The AI '
-                        'turns unstructured resume data into a structured profile, making '
-                        'it easier for clients to evaluate candidates at a glance without '
-                        'reading the full document.',
+                        'Upload your CV and WorkByte reads it for you, picking out '
+                        'your skills and experience automatically.',
                     highlights: const [
-                      'Auto-extracts skills & experience',
-                      'Structures CV data into a clear profile',
-                      'Speeds up candidate evaluation',
+                      'Reads your CV for you',
+                      'Highlights your key skills and experience',
                     ],
                   ),
 
@@ -217,17 +204,14 @@ class AboutScreen extends StatelessWidget {
                     iconBg: const Color(0xFFCFFAFE),
                     accentColor: const Color(0xFF0891B2),
                     badge: 'Profile Setup',
-                    title: 'CV-to-Profile Auto Fill',
+                    title: 'Quick Profile Setup',
                     description:
-                        'Freelancers can skip filling in their profile manually by uploading '
-                        'a CV instead. WorkByte parses the document and automatically '
-                        'populates the profile fields: skills, bio, work experience, and '
-                        'education. The parsed data is editable before saving, so freelancers '
-                        'stay in control while still saving time on setup.',
+                        'No need to fill out your profile from scratch — upload your '
+                        'CV and WorkByte fills it in for you. You can always review '
+                        'and edit it before saving.',
                     highlights: const [
-                      'Upload CV to auto-fill profile fields',
-                      'Parses skills, bio, experience and education',
-                      'Editable before saving',
+                      'Fills your profile from your CV',
+                      'Easy to review and edit',
                     ],
                   ),
 
@@ -241,17 +225,11 @@ class AboutScreen extends StatelessWidget {
                     badge: 'Job Discovery',
                     title: 'Smart Job Discovery',
                     description:
-                        'The homepage surfaces two personalised feeds. '
-                        'Most Relevant ranks active jobs by cosine similarity between '
-                        'the freelancer\'s profile vector (skills, bio, experience, '
-                        'portfolio) and each job description — so the closest semantic '
-                        'matches appear first. Most Popular ranks jobs by proposal '
-                        'count and view count, highlighting the opportunities that '
-                        'are attracting the most attention on the platform.',
+                        'WorkByte shows you jobs that fit your skills, plus what\'s '
+                        'trending with other freelancers right now.',
                     highlights: const [
-                      'Most Relevant: cosine similarity between profile & job embeddings',
-                      'Most Popular: ranked by proposal count then view count',
-                      'Profile completeness improves relevant feed quality',
+                      'Jobs picked to match your skills',
+                      'See what\'s popular on the platform',
                     ],
                   ),
 
@@ -262,20 +240,15 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF059669),
                     iconBg: const Color(0xFFD1FAE5),
                     accentColor: const Color(0xFF059669),
-                    badge: 'Job Fit Analysis',
-                    title: 'Deep Job Fit Analysis',
+                    badge: 'Job Match',
+                    title: 'Job Match Details',
                     description:
-                        'When a freelancer wants a detailed view of how well they fit a '
-                        'specific job, WorkByte runs a RAG + LLM analysis. It retrieves '
-                        'the job\'s requirements, the freelancer\'s full profile, and '
-                        'relevant past contracts from the database, then asks a local '
-                        'language model for a structured assessment — covering matched '
-                        'skills, skill gaps, strengths, and practical improvement tips. '
-                        'This is a deeper, advisory complement to the quick feed ranking.',
+                        'Curious how well you fit a job? Get a quick breakdown of '
+                        'your matching skills, any gaps, and tips to improve your '
+                        'chances.',
                     highlights: const [
-                      'Retrieval-Augmented Generation (RAG) over profile & contracts',
-                      'Per-role breakdown: matched skills, gaps & strengths',
-                      'Actionable skill improvement tips from the LLM',
+                      'Shows your matching skills and gaps',
+                      'Gives tips to boost your chances',
                     ],
                   ),
 
@@ -286,20 +259,14 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF7C3AED),
                     iconBg: const Color(0xFFF3E8FF),
                     accentColor: const Color(0xFF7C3AED),
-                    badge: 'Harmful Text Detection',
-                    title: 'Harmful Text Detection',
+                    badge: 'Safe Content',
+                    title: 'Harmful Content Detection',
                     description:
-                        'Every job posting, profile bio, and user-submitted text is '
-                        'automatically scanned by a fine-tuned RoBERTa classifier '
-                        'before it reaches the community. The model scores '
-                        'content across five harm labels and routes likely violations '
-                        'to admin review. Low-risk content is auto-approved; high-risk '
-                        'content can be auto-rejected using stricter thresholds for '
-                        'jobs and profiles. Pending items expire after 30 days.',
+                        'WorkByte automatically checks job posts, profiles, and '
+                        'messages to help keep the community safe and respectful.',
                     highlights: const [
-                      '5 harm labels: Toxicity, Obscene, Threat, Insult, Identity Hate',
-                      'RoBERTa classifier fine-tuned for platform moderation',
-                      'Automated triage with human-readable label explanations for reviewers',
+                      'Helps keep content safe and respectful',
+                      'Flagged content is reviewed by our team',
                     ],
                   ),
 
@@ -310,23 +277,14 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFFDC2626),
                     iconBg: const Color(0xFFFEE2E2),
                     accentColor: const Color(0xFFDC2626),
-                    badge: 'Scam Detection',
+                    badge: 'Scam Protection',
                     title: 'Job Scam Detection',
                     description:
-                        'Every new job post is automatically scanned for fraudulent '
-                        'signals before it goes live. An SBERT sentence encoder converts '
-                        'the title and description into a 384-dimensional semantic '
-                        'embedding, which is combined with 10 engineered features — '
-                        'urgent-language signals, unrealistic pay promises, low-skill '
-                        'bait, and suspicious payment keywords (e.g. wire transfer, '
-                        'Bitcoin, advance fee). A Random Forest classifier trained on '
-                        'this 394-feature vector produces a scam probability score. '
-                        'High-confidence posts are auto-closed instantly; borderline '
-                        'cases are queued for admin review.',
+                        'New job posts are automatically checked to help catch '
+                        'scams and fake listings before they reach you.',
                     highlights: const [
-                      'SBERT + Random Forest on 394 features (embedding + engineered signals)',
-                      'Score ≥ 0.40: job auto-closed immediately',
-                      'Score 0.25–0.39: flagged for admin review without closing',
+                      'Helps catch scam job posts early',
+                      'Suspicious posts are reviewed by our team',
                     ],
                   ),
 
@@ -337,24 +295,20 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFFF59E0B),
                     iconBg: const Color(0xFFFEF3C7),
                     accentColor: const Color(0xFFF59E0B),
-                    badge: 'AI Ratings',
-                    title: 'AI Ratings',
+                    badge: 'Ratings',
+                    title: 'Fair Freelancer Ratings',
                     description:
-                        'WorkByte uses AI to generate objective, comprehensive ratings '
-                        'for freelancers based on multiple signals — including client '
-                        'feedback, project completion rate, communication quality, and '
-                        'revision history. This creates a fair, transparent, and '
-                        'trustworthy scoring system for the entire community.',
+                        'Freelancers get a fair, easy-to-understand rating based on '
+                        'things like client feedback and work history.',
                     highlights: const [
-                      'Multi-signal rating evaluation',
-                      'Consistent, transparent scoring criteria',
-                      'Covers communication & delivery quality',
+                      'Fair, easy-to-understand ratings',
+                      'Based on client feedback and work history',
                     ],
                   ),
 
                   const SizedBox(height: 28),
 
-                  // ── Version info ────────────────────────────────────────────
+                  // Version info
                   Center(
                     child: Column(
                       children: [
@@ -368,7 +322,7 @@ class AboutScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            'Version 1.0.0',
+                            'Version 1.0.1',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -397,7 +351,7 @@ class AboutScreen extends StatelessWidget {
   }
 }
 
-// ── Reusable widgets ───────────────────────────────────────────────────────────
+// Reusable widgets
 
 class _SectionTitle extends StatelessWidget {
   final String title;

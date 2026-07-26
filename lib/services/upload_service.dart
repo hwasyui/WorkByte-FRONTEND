@@ -29,7 +29,7 @@ class UploadService {
     });
     final body = jsonDecode(res.body);
 
-    debugPrint('POST /upload?bucket=$bucket → ${res.statusCode}');
+    debugPrint('POST /upload?bucket=$bucket status: ${res.statusCode}');
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return body['details'] as Map<String, dynamic>?;
@@ -66,7 +66,7 @@ class UploadService {
     });
     final body = jsonDecode(res.body);
 
-    debugPrint('POST /cv_upload → ${res.statusCode}');
+    debugPrint('POST /cv_upload status: ${res.statusCode}');
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return body['details'] as Map<String, dynamic>?;

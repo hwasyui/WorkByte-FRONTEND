@@ -29,7 +29,7 @@ class Frame1State extends State<Frame1> {
         backgroundColor: Colors.white,
         body: Column(
           children: [
-            // ── Top indigo section ────────────────────────────────────────────
+            // Top indigo section
             Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
@@ -106,7 +106,7 @@ class Frame1State extends State<Frame1> {
               ],
             ),
 
-            // ── Bottom content section ────────────────────────────────────────
+            // Bottom content section
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(

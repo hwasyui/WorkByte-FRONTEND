@@ -390,7 +390,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       if (!mounted) return;
 
       _showSnack('Contract marked as completed!', isError: false);
-      // ── Navigate to review form ───────────────────────────────
+      // Navigate to review form
       await Future.delayed(
         const Duration(milliseconds: 600),
       ); // let snack show briefly

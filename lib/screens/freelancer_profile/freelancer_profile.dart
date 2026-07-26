@@ -1749,7 +1749,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 12),
 
-          // ── Tab bar ──────────────────────────────────────────────────────
+          // Tab bar
           Container(
             color: Colors.white,
             child: TabBar(
@@ -3095,7 +3095,7 @@ class _SkillChip extends StatelessWidget {
   }
 }
 
-// ── Thousands separator formatter (e.g. 14000 → "14,000") ────────────────────
+// Thousands separator formatter
 class ThousandsSeparatorFormatter extends TextInputFormatter {
   static final _intFmt = NumberFormat('#,##0', 'en');
 
@@ -3156,7 +3156,7 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
   }
 }
 
-// ── Currency picker bottom sheet ───────────────────────────────────────────────
+// Currency picker bottom sheet
 class _CurrencyPickerSheet extends StatefulWidget {
   final List<Map<String, String>> currencies;
 

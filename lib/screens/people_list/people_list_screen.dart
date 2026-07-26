@@ -101,9 +101,7 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           ? rawItems.map((e) => ClientModel.fromJson(e)).toList()
           : rawItems.map((e) => FreelancerModel.fromJson(e)).toList();
 
-      // ── Sort freelancers by weighted review average (descending), then by
-      // review count (descending) as a tie-breaker - so a 5.0★/1-review
-      // freelancer doesn't rank above a 5.0★/50-review one. ──
+      // Sort by weighted review average, tie-broken by review count
       if (!widget.showClients) {
         (mapped as List<FreelancerModel>).sort((a, b) {
           final aScore = a.weightedReviewAvg ?? 0.0;
@@ -427,7 +425,7 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
   }
 }
 
-// ── Freelancer card ────────────────────────────────────────────────────────────
+// Freelancer card
 class _FreelancerCard extends StatelessWidget {
   final FreelancerModel freelancer;
   final VoidCallback onTap;
@@ -466,7 +464,7 @@ class _FreelancerCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Name row with optional Top Rated badge ──
+                  // Name row with optional Top Rated badge
                   Row(
                     children: [
                       Expanded(
@@ -525,7 +523,7 @@ class _FreelancerCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // ── Star rating row ──
+                  // Star rating row
                   _StarRating(avg: avg, count: freelancer.totalReviews),
                   const SizedBox(height: 8),
                   Row(
@@ -569,7 +567,7 @@ class _FreelancerCard extends StatelessWidget {
   }
 }
 
-// ── Client card ────────────────────────────────────────────────────────────────
+// Client card
 class _ClientCard extends StatelessWidget {
   final ClientModel client;
   final VoidCallback onTap;
@@ -607,7 +605,7 @@ class _ClientCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Name row with optional Top Rated badge ──
+                  // Name row with optional Top Rated badge
                   Row(
                     children: [
                       Expanded(
@@ -664,9 +662,7 @@ class _ClientCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // ── Star rating row - rating this client RECEIVED from
-                  // freelancers they've worked with, same treatment as the
-                  // freelancer card's rating. ──
+                  // Rating this client received from freelancers
                   _StarRating(
                     avg: client.weightedReviewAvgReceived,
                     count: client.totalReviewsReceived,
@@ -713,7 +709,7 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-// ── Shared avatar widget ───────────────────────────────────────────────────────
+// Shared avatar widget
 class _Avatar extends StatelessWidget {
   final String? imageUrl;
   final String name;
@@ -758,7 +754,7 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-// ── Small stat chip ────────────────────────────────────────────────────────────
+// Small stat chip
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -870,7 +866,7 @@ class _StarRating extends StatelessWidget {
   }
 }
 
-// ── Profile detail screen ──────────────────────────────────────────────────────
+// Profile detail screen
 class PeopleProfileScreen extends StatefulWidget {
   final bool isClient;
   final ClientModel? client;
@@ -996,13 +992,13 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               ),
             ),
             actions: [
-              // ── Share ──
+              // Share
               if (_targetUserId != null)
                 IconButton(
                   onPressed: () => Share.share(profileShareUrl(_targetUserId!)),
                   icon: const Icon(Icons.share_outlined, color: Colors.white, size: 22),
                 ),
-              // ── Bookmark ──
+              // Bookmark
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {
                   final isSaved = widget.isClient
@@ -1026,7 +1022,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   );
                 },
               ),
-              // ── Report — hidden if viewing own profile ──
+              // Report, hidden if viewing own profile
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (_targetUserId != null && _targetUserId == auth.userId) {
@@ -1477,7 +1473,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
   }
 }
 
-// ── All helper widgets below are completely unchanged ─────────────────────────
+// All helper widgets below are completely unchanged
 
 class _SectionHeader extends StatelessWidget {
   final String label;

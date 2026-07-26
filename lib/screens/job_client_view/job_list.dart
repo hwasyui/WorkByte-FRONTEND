@@ -227,7 +227,7 @@ class JobListScreenState extends State<JobListScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 12),
-            // ── Search bar ──────────────────────────────────────────────────
+            // Search bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -348,7 +348,7 @@ class JobListScreenState extends State<JobListScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Job list ────────────────────────────────────────────────────
+            // Job list
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -421,7 +421,7 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // ── Job card — unchanged ───────────────────────────────────────────────────
+  // Job card
   Widget _buildJobCard(Map<String, dynamic> job) {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';

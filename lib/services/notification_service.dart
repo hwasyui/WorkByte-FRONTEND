@@ -37,7 +37,7 @@ class NotificationService {
     importance: Importance.high,
   );
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  // Init
 
   static Future<void> initialize({
     required GlobalKey<NavigatorState> navigatorKey,
@@ -108,7 +108,7 @@ class NotificationService {
     }
   }
 
-  // ── Deep link navigation on tap ───────────────────────────────────────────
+  // Deep link navigation on tap
 
   static void _navigate(
     GlobalKey<NavigatorState> navigatorKey,
@@ -153,7 +153,7 @@ class NotificationService {
     }
   }
 
-  // ── FCM Token ─────────────────────────────────────────────────────────────
+  // FCM Token
 
   static Future<void> saveTokenToBackend() async {
     try {
@@ -188,7 +188,7 @@ class NotificationService {
     }
   }
 
-  // ── API calls ─────────────────────────────────────────────────────────────
+  // API calls
 
   Future<List<NotificationModel>> getNotifications({
     int limit = 20,

@@ -39,7 +39,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
   String _durationNumber = '1';
   String _durationUnit = 'day';
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // Helpers
 
   String get _currency => widget.role.budgetCurrency;
 
@@ -70,7 +70,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     super.dispose();
   }
 
-  // ── File picker ──────────────────────────────────────────────────────────
+  // File picker
   Future<void> _pickFiles() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -92,7 +92,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     setState(() => _attachedFiles.removeAt(index));
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────
+  // Submit
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -222,7 +222,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     AppToast.error(message);
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  // Build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -280,7 +280,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     );
   }
 
-  // ── Widgets ──────────────────────────────────────────────────────────────
+  // Widgets
 
   Widget _buildJobContext() {
     return Container(

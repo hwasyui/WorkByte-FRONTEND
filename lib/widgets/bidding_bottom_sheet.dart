@@ -126,7 +126,7 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
   }
 }
 
-// ── Field label ───────────────────────────────────────────────────────────────
+// Field label
 class _FieldLabel extends StatelessWidget {
   final String label;
   const _FieldLabel({required this.label});
@@ -144,7 +144,7 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-// ── Input box ─────────────────────────────────────────────────────────────────
+// Input box
 class _InputBox extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;

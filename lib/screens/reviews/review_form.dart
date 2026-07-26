@@ -26,7 +26,7 @@ class ReviewFormScreen extends StatefulWidget {
 }
 
 class _ReviewFormScreenState extends State<ReviewFormScreen> {
-  // ── Rating values ─────────────────────────────────────────────────────────
+  // Rating values
   final Map<String, double> _ratings = {
     'communication': 5.0,
     'quality': 5.0,
@@ -48,12 +48,12 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     'value_for_money': Icons.monetization_on_outlined,
   };
 
-  // ── Controllers ───────────────────────────────────────────────────────────
+  // Controllers
   final TextEditingController _answerController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _tagController = TextEditingController();
 
-  // ── Skill tags ────────────────────────────────────────────────────────────
+  // Skill tags
   // Tracks which AI-suggested tags the client has confirmed (toggled on/off).
   final Set<String> _confirmedTags = {};
   // Extra tags manually typed by the client.
@@ -150,7 +150,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     super.dispose();
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +202,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               _buildProjectHeader(),
               const SizedBox(height: 20),
 
-              // ── Star ratings ──────────────────────────────────────────────
+              // Star ratings
               _buildCard(
                 title: 'Rate Your Experience',
                 child: Column(
@@ -211,7 +211,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── AI targeted question ──────────────────────────────────────
+              // AI targeted question
               _buildCard(
                 title: 'Quick Question',
                 subtitle: 'AI-generated based on your project type',
@@ -258,7 +258,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Overall comment ───────────────────────────────────────────
+              // Overall comment
               _buildCard(
                 title: 'Overall Review',
                 child: _buildTextField(
@@ -270,7 +270,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Skill tags ────────────────────────────────────────────────
+              // Skill tags
               _buildSkillTagsCard(review.suggestedSkillTags),
               const SizedBox(height: 16),
 
@@ -279,7 +279,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
           ),
         ),
 
-        // ── Sticky submit ─────────────────────────────────────────────────
+        // Sticky submit
         Positioned(
           bottom: 0,
           left: 0,
@@ -323,7 +323,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     );
   }
 
-  // ── Sub-widgets ───────────────────────────────────────────────────────────
+  // Sub-widgets
 
   Widget _buildProjectHeader() {
     return Container(

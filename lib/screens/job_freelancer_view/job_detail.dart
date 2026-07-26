@@ -732,7 +732,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return role.positionsFilled >= role.positionsAvailable;
   }
 
-  // ── BUILD ──────────────────────────────────────────────────────────────────
+  // BUILD
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
@@ -748,7 +748,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────────
+            // Header
             JobDetailHeader(
               companyLogo: client?.profilePictureUrl != null
                   ? ClipOval(
@@ -850,7 +850,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ── Title row with closed-at date ──
+                            // Title row with closed-at date
                             Row(
                               children: [
                                 Expanded(
@@ -874,7 +874,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ],
                             ),
 
-                            // ── Closure reason badge ──
+                            // Closure reason badge
                             if (widget.job.closureReason != null &&
                                 widget.job.closureReason!.isNotEmpty) ...[
                               const SizedBox(height: 6),
@@ -900,7 +900,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                             ],
 
-                            // ── Closure note (admin message) ──
+                            // Closure note (admin message)
                             if (widget.job.closureNote != null &&
                                 widget.job.closureNote!.isNotEmpty) ...[
                               const SizedBox(height: 6),
@@ -916,7 +916,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                             const SizedBox(height: 10),
 
-                            // ── Appeal CTA ──
+                            // Appeal CTA
                             GestureDetector(
                               onTap: () => AppealDialog.show(
                                 context,
@@ -960,7 +960,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: PostJobLoadingView(label: 'Loading job details...'),
               )
             else ...[
-              // ── Tab bar ──────────────────────────────────────────────
+              // Tab bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
                 child: JobDetailTabBar(
@@ -970,7 +970,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
               ),
 
-              // ── Tab content ──────────────────────────────────────────
+              // Tab content
               if (selectedTab == 0) buildDetailsTab(),
               if (selectedTab == 1) buildTermsTab(),
             ],
@@ -980,7 +980,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // ── Tab: Details ───────────────────────────────────────────────────────────
+  // Tab: Details
   Widget buildDetailsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
@@ -1063,7 +1063,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // ── Tab: Terms ─────────────────────────────────────────────────────────────
+  // Tab: Terms
   Widget buildTermsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
@@ -1113,7 +1113,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // ── Roles section ──────────────────────────────────────────────────────────
+  // Roles section
   Widget buildRolesSection() {
     if (rolesLoading) {
       return const Padding(
@@ -1539,7 +1539,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // ── Shared helpers ─────────────────────────────────────────────────────────
+  // Shared helpers
   Widget sectionTitle(String title) => Text(
     title,
     style: GoogleFonts.poppins(
@@ -1674,7 +1674,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 }
 
-// ── Standalone widget classes (unchanged) ─────────────────────────────────────
+// Standalone widget classes (unchanged)
 
 class ScoreBadge extends StatelessWidget {
   final int score;

@@ -593,7 +593,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
-                // ── Profile header ──────────────────────────────────────
+                // Profile header
                 Row(
                   children: [
                     CircleAvatar(
@@ -630,7 +630,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                 const SizedBox(height: 14),
                 const Divider(color: Color(0xFFF3F4F6)),
 
-                // ── FREELANCER details ───────────────────────────────────
+                // FREELANCER details
                 if (_isFreelancer) ...[
                   if (_loadingProfile) ...[
                     const SizedBox(height: 24),
@@ -789,7 +789,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                     ],
                   ],
                 ] else ...[
-                  // ── CLIENT details ────────────────────────────────────
+                  // CLIENT details
                   if (bio.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     _UserSectionLabel('BIO'),
@@ -830,7 +830,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                       ],
                     ],
                   ),
-                  // ── Posted Jobs ───────────────────────────────────────
+                  // Posted Jobs
                   const SizedBox(height: 20),
                   _UserSectionLabel('POSTED JOBS'),
                   const SizedBox(height: 8),
@@ -896,7 +896,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                     ),
                 ],
 
-                // ── Close button ─────────────────────────────────────────
+                // Close button
                 const SizedBox(height: 28),
                 const Divider(color: Color(0xFFF3F4F6)),
                 const SizedBox(height: 16),

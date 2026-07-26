@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 
-// ── Category definition (now with colors matching dashboard) ─────────────────
+// Category definition (now with colors matching dashboard)
 class CategoryInfo {
   final String label;
   final String categoryKey;
@@ -93,7 +93,7 @@ const List<CategoryInfo> kJobCategories = [
   ),
 ];
 
-// ── Screen ────────────────────────────────────────────────────────────────────
+// Screen
 class CategoryListScreen extends StatelessWidget {
   const CategoryListScreen({super.key});
 
@@ -189,7 +189,7 @@ class CategoryListScreen extends StatelessWidget {
   }
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+// Card
 class _CategoryCard extends StatelessWidget {
   final CategoryInfo category;
   final VoidCallback onTap;
@@ -220,7 +220,7 @@ class _CategoryCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: category.iconBg, // ← per-category bg
+                color: category.iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(

@@ -304,7 +304,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────
+  // Header
   Widget _buildHeader() {
     return Container(
       color: _primary,
@@ -393,7 +393,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── Step progress ─────────────────────────────────────────────────
+  // Step progress
   Widget _buildStepProgress() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -429,7 +429,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── Section helpers ───────────────────────────────────────────────
+  // Section helpers
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, bottom: 4, top: 4),
@@ -483,7 +483,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── Upload card ────────────────────────────────────────────────────
+  // Upload card
   Widget _buildUploadCard() {
     return GestureDetector(
       onTap: _pickFiles,
@@ -542,7 +542,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── File list ──────────────────────────────────────────────────────
+  // File list
   Widget _buildFileCountLabel() {
     final uploadedCount = _files.where((f) => f['status'] == 'uploaded').length;
     return Padding(
@@ -749,7 +749,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // ── Bottom bar ─────────────────────────────────────────────────────
+  // Bottom bar
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),

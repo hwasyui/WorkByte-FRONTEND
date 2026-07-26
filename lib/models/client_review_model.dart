@@ -1,6 +1,6 @@
 // Freelancer-reviews-client models - symmetric counterpart to review_model.dart.
 
-// ── ClientReviewRating ────────────────────────────────────────────────────────
+// ClientReviewRating
 
 class ClientReviewRating {
   final String id;
@@ -26,7 +26,7 @@ class ClientReviewRating {
   Map<String, dynamic> toJson() => {'category': category, 'score': score};
 }
 
-// ── ClientReviewWrittenContent ────────────────────────────────────────────────
+// ClientReviewWrittenContent
 
 class ClientReviewWrittenContent {
   final String id;
@@ -53,7 +53,7 @@ class ClientReviewWrittenContent {
       );
 }
 
-// ── ClientReviewAiAnalysis ────────────────────────────────────────────────────
+// ClientReviewAiAnalysis
 
 class ClientReviewAiAnalysis {
   final String id;
@@ -103,7 +103,7 @@ class ClientReviewAiAnalysis {
       );
 }
 
-// ── ClientReview ──────────────────────────────────────────────────────────────
+// ClientReview
 
 class ClientReview {
   final String id;
@@ -168,7 +168,7 @@ class ClientReview {
   }
 }
 
-// ── ClientTrustScore ───────────────────────────────────────────────────────────
+// ClientTrustScore
 
 class ClientTrustScore {
   final String clientId;
@@ -222,7 +222,7 @@ class ClientTrustScore {
   double get disputeFairnessDisplay => (disputeFairnessScore ?? 0) * 100;
 }
 
-// ── SubmitClientReviewRequest ──────────────────────────────────────────────────
+// SubmitClientReviewRequest
 
 class SubmitClientReviewRequest {
   final List<ClientReviewRatingInput> ratings;

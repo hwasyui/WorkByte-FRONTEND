@@ -2,16 +2,16 @@ import 'package:flutter/foundation.dart';
 import '../models/review_model.dart';
 import '../services/review_service.dart';
 
-// ── Load states ───────────────────────────────────────────────────────────────
+// Load states
 
 enum ReviewLoadState { idle, loading, loaded, error }
 
-// ── Provider ──────────────────────────────────────────────────────────────────
+// Provider
 
 class ReviewProvider extends ChangeNotifier {
   final ReviewService _service = ReviewService();
 
-  // ── Review form (pending review for a contract) ──────────────────────────
+  // Review form (pending review for a contract)
 
   ReviewLoadState _formState = ReviewLoadState.idle;
   ReviewLoadState get formState => _formState;
@@ -19,12 +19,12 @@ class ReviewProvider extends ChangeNotifier {
   Review? _pendingReview;
   Review? get pendingReview => _pendingReview;
 
-  // ── Submission state ─────────────────────────────────────────────────────
+  // Submission state
 
   bool _submitting = false;
   bool get submitting => _submitting;
 
-  // ── Freelancer reviews list ──────────────────────────────────────────────
+  // Freelancer reviews list
 
   ReviewLoadState _reviewsState = ReviewLoadState.idle;
   ReviewLoadState get reviewsState => _reviewsState;
@@ -32,7 +32,7 @@ class ReviewProvider extends ChangeNotifier {
   List<Review> _reviews = [];
   List<Review> get reviews => List.unmodifiable(_reviews);
 
-  // ── Trust score ──────────────────────────────────────────────────────────
+  // Trust score
 
   ReviewLoadState _trustState = ReviewLoadState.idle;
   ReviewLoadState get trustState => _trustState;
@@ -40,7 +40,7 @@ class ReviewProvider extends ChangeNotifier {
   TrustScore? _trustScore;
   TrustScore? get trustScore => _trustScore;
 
-  // ── Red flags ────────────────────────────────────────────────────────────
+  // Red flags
 
   ReviewLoadState _flagsState = ReviewLoadState.idle;
   ReviewLoadState get flagsState => _flagsState;
@@ -48,7 +48,7 @@ class ReviewProvider extends ChangeNotifier {
   List<RedFlagAlert> _redFlags = [];
   List<RedFlagAlert> get redFlags => List.unmodifiable(_redFlags);
 
-  // ── Error ────────────────────────────────────────────────────────────────
+  // Error
 
   String? _error;
   String? get error => _error;
@@ -59,7 +59,7 @@ class ReviewProvider extends ChangeNotifier {
   List<String>? _flaggedLabels;
   List<String>? get flaggedLabels => _flaggedLabels;
 
-  // ── Actions ──────────────────────────────────────────────────────────────
+  // Actions
 
   /// Called when the review form screen initialises.
   /// Fetches the pending review shell (AI question + suggested skill tags)
@@ -212,7 +212,7 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
+  // Reset
 
   void resetForm() {
     _pendingReview = null;

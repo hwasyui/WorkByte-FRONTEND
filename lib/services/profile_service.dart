@@ -32,7 +32,7 @@ class ProfileService {
     return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
 
-  // ─── Fetch profiles ───────────────────────────────────────────────────────
+  // Fetch profiles
 
   Future<ClientModel?> fetchClientProfile(String token, String userId) async {
     final res = await SessionGuard.guard(
@@ -131,7 +131,7 @@ class ProfileService {
     return null;
   }
 
-  // ─── Update profiles ──────────────────────────────────────────────────────
+  // Update profiles
 
   Future<ClientModel> updateClientProfile(
     String token,
@@ -189,7 +189,7 @@ class ProfileService {
     );
   }
 
-  // ─── Profile picture ──────────────────────────────────────────────────────
+  // Profile picture
 
   Future<ClientModel> uploadClientProfilePicture(
     String token,
@@ -319,7 +319,7 @@ class ProfileService {
     );
   }
 
-  // ─── Education ────────────────────────────────────────────────────────────
+  // Education
 
   Future<List<EducationModel>> getEducations(
     String token,
@@ -400,7 +400,7 @@ class ProfileService {
     }
   }
 
-  // ─── Work experience ──────────────────────────────────────────────────────
+  // Work experience
 
   Future<List<ExperienceModel>> getWorkExperiences(
     String token,
@@ -487,7 +487,7 @@ class ProfileService {
     }
   }
 
-  // ─── Skills ───────────────────────────────────────────────────────────────
+  // Skills
 
   Future<List<FreelancerSkillModel>> getFreelancerSkills(
     String token,

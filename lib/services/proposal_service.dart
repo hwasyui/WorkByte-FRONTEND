@@ -35,7 +35,7 @@ class ProposalService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /proposals/job-post/$jobPostId → ${res.statusCode}');
+    debugPrint('GET /proposals/job-post/$jobPostId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final list = body['details'] ?? body['data'] ?? body;
       return (list as List)
@@ -57,7 +57,7 @@ class ProposalService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /proposals/freelancer/$freelancerId → ${res.statusCode}');
+    debugPrint('GET /proposals/freelancer/$freelancerId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final list = body['details'] ?? body['data'] ?? body;
       return (list as List)
@@ -95,7 +95,7 @@ class ProposalService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('POST /proposals → ${res.statusCode}');
+    debugPrint('POST /proposals status: ${res.statusCode}');
     if (res.statusCode == 200 || res.statusCode == 201) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
     }
@@ -171,7 +171,7 @@ class ProposalService {
       final streamed = await request.send().timeout(const Duration(seconds: 60));
       return http.Response.fromStream(streamed);
     });
-    debugPrint('POST /proposal-files → ${res.statusCode}: ${res.body}');
+    debugPrint('POST /proposal-files status: ${res.statusCode}, body: ${res.body}');
 
     if (res.statusCode != 200 && res.statusCode != 201) {
       final body = jsonDecode(res.body);
@@ -212,7 +212,7 @@ class ProposalService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('PUT /proposals/$proposalId → ${res.statusCode}');
+    debugPrint('PUT /proposals/$proposalId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
     }
@@ -232,7 +232,7 @@ class ProposalService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('PATCH /proposals/$proposalId/status → ${res.statusCode}');
+    debugPrint('PATCH /proposals/$proposalId/status status: ${res.statusCode}');
     if (res.statusCode == 200) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
     }
@@ -273,7 +273,7 @@ class ProposalService {
         }),
       ).timeout(const Duration(seconds: 20)),
     );
-    debugPrint('POST /messages → ${res.statusCode}');
+    debugPrint('POST /messages status: ${res.statusCode}');
     if (res.statusCode != 200 && res.statusCode != 201) {
       final body = jsonDecode(res.body);
       throw Exception(body['details'] ?? 'Failed to send message');

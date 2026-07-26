@@ -555,7 +555,7 @@ class SideDrawer extends StatelessWidget {
   }
 }
 
-// ── _AccountTile — unchanged ───────────────────────────────────────────────
+// _AccountTile
 
 class _AccountTile extends StatelessWidget {
   final String name;
@@ -662,7 +662,7 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
-// ── _DrawerItem — updated to support optional badge ───────────────────────
+// _DrawerItem
 
 class _DrawerItem extends StatelessWidget {
   final IconData icon;

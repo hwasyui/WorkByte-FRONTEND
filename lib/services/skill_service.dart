@@ -26,7 +26,7 @@ class SkillService {
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
-      final raw = body['details']; // ← was: body['data']
+      final raw = body['details'];
       if (raw == null) return [];
       final data = raw as List<dynamic>;
       return data
@@ -48,7 +48,7 @@ class SkillService {
 
     if (res.statusCode == 200) {
       final raw =
-          body['details']?['results']; // ← was: body['data']?['results']
+          body['details']?['results'];
       if (raw == null) return [];
       final results = raw as List<dynamic>;
       return results
@@ -70,7 +70,7 @@ class SkillService {
     final body = jsonDecode(res.body);
 
     if (res.statusCode == 200) {
-      final raw = body['details']; // ← was: body['data']
+      final raw = body['details'];
       if (raw == null) return [];
       final data = raw as List<dynamic>;
       return data

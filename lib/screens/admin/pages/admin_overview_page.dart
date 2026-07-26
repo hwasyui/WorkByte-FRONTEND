@@ -144,7 +144,7 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
   }
 }
 
-// ─── Stat card (Total Users / Freelancers / Jobs) ─────────────────────────────
+// Stat card (Total Users / Freelancers / Jobs)
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -238,7 +238,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ─── Reports card ─────────────────────────────────────────────────────────────
+// Reports card
 
 class _ReportsCard extends StatelessWidget {
   final int pending;
@@ -347,7 +347,7 @@ class _ReportsCard extends StatelessWidget {
   }
 }
 
-// ─── Shared structural widgets ────────────────────────────────────────────────
+// Shared structural widgets
 
 class _CardShell extends StatelessWidget {
   final Widget child;
@@ -530,7 +530,7 @@ class _ReportLegend extends StatelessWidget {
   }
 }
 
-// ─── Charts ───────────────────────────────────────────────────────────────────
+// Charts
 
 class _LineChart extends StatelessWidget {
   final List<double> data;
@@ -850,7 +850,7 @@ class _DonutChart extends StatelessWidget {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 int _si(Map<String, dynamic> m, String k) =>
     (m[k] as num?)?.toInt() ?? 0;

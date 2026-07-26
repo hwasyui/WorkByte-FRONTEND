@@ -126,7 +126,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
     );
   }
 
-  // ── Success state ──────────────────────────────────────────────────────────
+  // Success state
   Widget _buildSuccess() {
     return Column(
       key: const ValueKey('success'),
@@ -215,7 +215,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
     );
   }
 
-  // ── Form state ─────────────────────────────────────────────────────────────
+  // Form state
   Widget _buildForm() {
     return SingleChildScrollView(
       child: Column(
@@ -225,7 +225,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
         children: [
           _DragHandle(),
 
-          // ── header ──
+          // header
           Row(
             children: [
               Container(
@@ -275,7 +275,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ],
           ),
 
-          // ── closure note banner ──
+          // closure note banner
           if (widget.closureNote != null) ...[
             const SizedBox(height: 14),
             Container(
@@ -311,7 +311,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ),
           ],
 
-          // ── appeal status banner ──
+          // appeal status banner
           Consumer<AppealProvider>(
             builder: (_, provider, __) {
               if (provider.isCheckingStatus || provider.appealStatus.isEmpty) {
@@ -442,7 +442,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ),
           ),
 
-          // ── char hint ──
+          // char hint
           if (_msgCtrl.text.trim().isNotEmpty &&
               _msgCtrl.text.trim().length < 20)
             Padding(
@@ -458,7 +458,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
 
           const SizedBox(height: 16),
 
-          // ── error banner ──
+          // error banner
           Consumer<AppealProvider>(
             builder: (_, provider, __) {
               if (provider.error == null) return const SizedBox.shrink();
@@ -495,7 +495,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             },
           ),
 
-          // ── submit button ──
+          // submit button
           Consumer<AppealProvider>(
             builder: (_, provider, __) => SizedBox(
               width: double.infinity,
@@ -540,7 +540,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
   }
 }
 
-// ── Shared drag handle ────────────────────────────────────────────────────────
+// Shared drag handle
 class _DragHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(

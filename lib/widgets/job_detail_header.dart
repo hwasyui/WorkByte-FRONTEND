@@ -37,7 +37,7 @@ class JobDetailHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Teal section ─────────────────────────────────────────────
+        // Teal section
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -150,7 +150,7 @@ class JobDetailHeader extends StatelessWidget {
           ),
         ),
 
-        // ── White rounded card section ── unchanged
+        // White rounded card section
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(

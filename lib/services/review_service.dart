@@ -15,20 +15,20 @@ class ReviewService {
 
   ReviewService();
 
-  // ── Shared headers ──────────────────────────────────────────────────────
+  // Shared headers
 
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
   };
 
-  // ── Response parser ─────────────────────────────────────────────────────
+  // Response parser
 
   Map<String, dynamic> _parse(http.Response res, String context) {
     SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      // Your backend wraps everything in ResponseSchema.success → {data: ...}
+      // Responses are wrapped in ResponseSchema.success
       return body['details'] as Map<String, dynamic>? ?? body;
     }
     throw _buildException(res, context);
@@ -63,7 +63,7 @@ class ReviewService {
     return ReviewServiceException(message, detectedLabels: detectedLabels);
   }
 
-  // ── GET /reviews/contract/{contract_id} ─────────────────────────────────
+  // GET /reviews/contract/{contract_id}
 
   Future<Review> getReviewForContract({
     required String token,
@@ -79,7 +79,7 @@ class ReviewService {
     return Review.fromJson(_parse(res, 'getReviewForContract'));
   }
 
-  // ── POST /reviews/{review_id}/submit ────────────────────────────────────
+  // POST /reviews/{review_id}/submit
   // Submits the completed client review. Returns a success message string.
 
   Future<String> submitReview({
@@ -99,7 +99,7 @@ class ReviewService {
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
 
-  // ── GET /reviews/{review_id} ─────────────────────────────────────────────
+  // GET /reviews/{review_id}
   // Full review detail including ratings, written content, skill tags, AI analysis.
 
   Future<Review> getReview({
@@ -116,7 +116,7 @@ class ReviewService {
     return Review.fromJson(_parse(res, 'getReview'));
   }
 
-  // ── GET /reviews/freelancer/{freelancer_id} ──────────────────────────────
+  // GET /reviews/freelancer/{freelancer_id}
   // All published reviews for a freelancer's public profile.
 
   Future<List<Review>> getFreelancerReviews({
@@ -134,7 +134,7 @@ class ReviewService {
     return list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // ── GET /reviews/trust-score/{freelancer_id} ─────────────────────────────
+  // GET /reviews/trust-score/{freelancer_id}
   // Live AI-computed trust score with component breakdown and rank.
 
   Future<TrustScore> getTrustScore({
@@ -151,7 +151,7 @@ class ReviewService {
     return TrustScore.fromJson(_parse(res, 'getTrustScore'));
   }
 
-  // ── GET /reviews/red-flags/{freelancer_id} ───────────────────────────────
+  // GET /reviews/red-flags/{freelancer_id}
   // Unresolved red flag alerts — intended for admin dashboards.
 
   Future<List<RedFlagAlert>> getRedFlags({
@@ -172,7 +172,7 @@ class ReviewService {
   }
 }
 
-// ── Exception ────────────────────────────────────────────────────────────────
+// Exception
 
 class ReviewServiceException implements Exception {
   final String message;

@@ -36,7 +36,7 @@ class MessageService {
       ).timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('POST /messages → ${res.statusCode}');
+    debugPrint('POST /messages status: ${res.statusCode}');
 
     if (res.statusCode == 200 || res.statusCode == 201) {
       return body['details'] ?? body['data'] ?? body;
