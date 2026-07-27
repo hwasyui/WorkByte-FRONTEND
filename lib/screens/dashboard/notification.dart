@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/moderation_display.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
@@ -74,7 +75,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.upload_file_outlined;
       case 'revision_requested':
         return Icons.edit_outlined;
-      case 'job_closed_content_violation':
+      case kNotifJobClosedHarmfulText:
       case 'job_closed_scam':
       case 'job_closed_admin':
       case 'job_closed_reports':
@@ -104,13 +105,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Job-closure notifications (harmful content, scam, admin, reports, and the
+  // Job-closure notifications (harmful text, scam, admin, reports, and the
   // engaged-freelancer heads-up) and urgent contract-lifecycle events
   // (dispute, overdue, imminent/actual auto-approve) render in red so both
   // sides see them as distinct from ordinary activity.
   Color _colorForType(String type) {
     switch (type) {
-      case 'job_closed_content_violation':
+      case kNotifJobClosedHarmfulText:
       case 'job_closed_scam':
       case 'job_closed_admin':
       case 'job_closed_reports':

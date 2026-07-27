@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/job_categories.dart';
+import '../../core/utils/moderation_display.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
 import '../../models/job_role_skill_model.dart';
@@ -978,12 +979,18 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isDraft = _job.status.toLowerCase() == 'draft';
     final isOwnJob = auth.currentUser?.clientId == _job.clientId;
     // Closure reason drives the banner's title and colour. The backend closes a job
-    // for one of four reasons (scam, content_violation, community_reports,
+    // for one of four reasons (scam, harmful_text, community_reports,
     // admin_override).
     final closureReason = (_job.closureReason ?? '').toLowerCase();
     final closureNote = _job.closureNote?.trim();
-    final isAiClosure =
-        closureReason == 'scam' || closureReason == 'content_violation';
+    final isAiClosure = isAutomatedClosure(closureReason);
+    // Notes on an automated closure are generated from the classifier's raw
+    // labels, so the owner gets the banner's own copy instead - only a human
+    // admin's note survives this. See core/utils/moderation_display.dart.
+    final visibleClosureNote = viewerFacingClosureNote(
+      closureReason: closureReason,
+      closureNote: closureNote,
+    );
     final closureTitle = _closureTitle(closureReason);
     final hasClosureDetails =
         closureReason.isNotEmpty || (closureNote?.isNotEmpty ?? false);
@@ -1122,7 +1129,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                             if (isAiClosure) ...[
                               const SizedBox(height: 6),
                               Text(
-                                'Our AI detected patterns associated with fraudulent job listings and automatically closed this post. If this was a legitimate job, submit an appeal for admin review.',
+                                isHarmfulTextClosure(closureReason)
+                                    ? 'Our Harmful Text Detection flagged the wording in this post, so it was closed. If you believe that was a mistake, submit an appeal and an admin will review it.'
+                                    : 'Our AI detected patterns associated with fraudulent job listings and automatically closed this post. If this was a legitimate job, submit an appeal for admin review.',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: const Color(0xFF991B1B),
@@ -1166,11 +1175,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                 ),
                               ),
                             ],
-                            if (_job.closureNote != null &&
-                                _job.closureNote!.isNotEmpty) ...[
+                            if (visibleClosureNote != null) ...[
                               const SizedBox(height: 6),
                               Text(
-                                _job.closureNote!,
+                                visibleClosureNote,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: const Color(0xFF7D7D7D),
@@ -1187,7 +1195,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                                   targetId: _job.jobPostId,
                                   targetLabel: _job.jobTitle,
                                   closureNote:
-                                      _job.closureNote ?? _job.closureReason,
+                                      visibleClosureNote ?? closureTitle,
                                 ),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -2815,14 +2823,14 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   /// Banner headline per closure reason. The four values the backend actually
-  /// writes are scam, content_violation, community_reports and admin_override
+  /// writes are scam, harmful_text, community_reports and admin_override
   /// (see DEFAULT_CLOSURE_REASON_* in admin_functions.py).
   String _closureTitle(String reason) {
     switch (reason) {
       case 'scam':
         return 'Auto-closed by AI scam detection';
-      case 'content_violation':
-        return 'Auto-closed by harmful content detection';
+      case kClosureReasonHarmfulText:
+        return 'Closed by Harmful Text Detection';
       case 'community_reports':
         return 'Closed after community reports';
       case 'admin_override':
@@ -2836,7 +2844,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     const labels = {
       'spam': 'Spam',
       'scam': 'Scam / Fraud',
-      'content_violation': 'Harmful Content',
+      kClosureReasonHarmfulText: 'Harmful Text',
       'community_reports': 'Community Reports',
       'admin_override': 'Admin Decision',
       'inappropriate_content': 'Inappropriate Content',

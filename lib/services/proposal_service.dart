@@ -5,8 +5,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../core/utils/moderation_display.dart';
 import '../models/proposal_model.dart';
 import 'session_guard.dart';
+
+/// Thrown by [ProposalService.createProposal] so a harmful-text rejection is
+/// distinguishable from an ordinary failure without matching the message text.
+/// Implements Exception, so existing `catch (e)` blocks keep working, and
+/// toString() is the bare message so `replaceFirst('Exception: ', '')` callers
+/// are unaffected.
+class ProposalFailureException implements Exception {
+  final String message;
+
+  /// Set from the backend's structured `blocked_by` flag - see
+  /// core/utils/moderation_display.dart.
+  final bool blockedByModeration;
+
+  const ProposalFailureException(
+    this.message, {
+    this.blockedByModeration = false,
+  });
+
+  @override
+  String toString() => message;
+}
 
 class ProposalService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -99,7 +121,10 @@ class ProposalService {
     if (res.statusCode == 200 || res.statusCode == 201) {
       return ProposalModel.fromJson(body['details'] ?? body['data'] ?? body);
     }
-    throw Exception(body['details'] ?? 'Failed to create proposal');
+    throw ProposalFailureException(
+      (body['details'] ?? 'Failed to create proposal').toString(),
+      blockedByModeration: isModerationBlockedBody(body),
+    );
   }
 
   Future<ProposalModel> submitProposal({

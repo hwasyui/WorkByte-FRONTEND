@@ -1,5 +1,6 @@
 import 'package:workbyte_app/core/constants/colors.dart';
 import 'package:workbyte_app/core/constants/job_categories.dart';
+import 'package:workbyte_app/core/utils/moderation_display.dart';
 import 'package:workbyte_app/models/client_model.dart';
 import 'package:workbyte_app/models/job_file_model.dart';
 import 'package:workbyte_app/models/job_post_model.dart';
@@ -350,7 +351,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'AI Job-Fit Analysis',
+                              'Job Fit Analysis',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -711,6 +712,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     const labels = {
       'spam': 'Spam',
       'scam': 'Scam / Fraud',
+      // Matches the client view's wording - without this the badge fell through
+      // to a bare "Harmful text".
+      kClosureReasonHarmfulText: 'Harmful Text',
       'inappropriate_content': 'Inappropriate Content',
       'duplicate': 'Duplicate Listing',
       'policy_violation': 'Policy Violation',
@@ -741,6 +745,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     // NEW: self-ownership + closed status flags
     final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
     final isClosed = widget.job.status?.toLowerCase() == 'closed';
+    // Notes written by the automated pipeline name the classifier's raw labels,
+    // so only a human admin's note reaches the banner below.
+    // See core/utils/moderation_display.dart.
+    final visibleClosureNote = viewerFacingClosureNote(
+      closureReason: widget.job.closureReason,
+      closureNote: widget.job.closureNote,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -900,12 +911,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                             ],
 
-                            // Closure note (admin message)
-                            if (widget.job.closureNote != null &&
-                                widget.job.closureNote!.isNotEmpty) ...[
+                            // Closure note (human admin's message only)
+                            if (visibleClosureNote != null) ...[
                               const SizedBox(height: 6),
                               Text(
-                                widget.job.closureNote!,
+                                visibleClosureNote,
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: const Color(0xFF7D7D7D),
@@ -924,8 +934,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 targetId: widget.job.jobPostId,
                                 targetLabel: widget.job.jobTitle,
                                 closureNote:
-                                    widget.job.closureNote ??
-                                    widget.job.closureReason,
+                                    visibleClosureNote ??
+                                    _formatClosureReason(
+                                      widget.job.closureReason ?? '',
+                                    ),
                               ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1799,7 +1811,7 @@ class _AnalysisLoadingDialogState extends State<_AnalysisLoadingDialog>
   static const _messages = [
     'Scanning skill overlap',
     'Reviewing job requirements',
-    'Calculating match score',
+    'Calculating score',
     'Analyzing your experience',
     'Generating insights',
   ];

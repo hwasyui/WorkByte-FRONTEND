@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
+import '../../core/utils/moderation_display.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
@@ -430,7 +431,7 @@ class JobListScreenState extends State<JobListScreen> {
     final closureReason = job['closure_reason'] as String? ?? '';
     final isScamClosed = status == 'closed' && closureReason == 'scam';
     final isHarmfulClosed =
-        status == 'closed' && closureReason == 'content_violation';
+        status == 'closed' && isHarmfulTextClosure(closureReason);
     final positionCount = isTeam
         ? (job['position_count'] as int?) ??
               ((job['roles'] as List?)?.fold<int>(
@@ -600,7 +601,7 @@ class JobListScreenState extends State<JobListScreen> {
                             child: Text(
                               isScamClosed
                                   ? 'Closed by AI scam detection · Tap to appeal'
-                                  : 'Closed by AI content moderation · Tap to appeal',
+                                  : 'Closed by Harmful Text Detection · Tap to appeal',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,

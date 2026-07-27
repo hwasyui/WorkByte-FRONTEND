@@ -1,3 +1,5 @@
+import '../core/utils/moderation_display.dart';
+
 class UserModel {
   final String userId;
   final String email;
@@ -42,7 +44,10 @@ class UserModel {
         : null,
     passwordLoginEnabled: json['password_login_enabled'] as bool? ?? true,
     isReportBanned: json['is_report_banned'] as bool? ?? false, // 👈 NEW
-    banMessage: json['ban_message'] as String?, // 👈 NEW
+    // A ban message can be generated from the moderation pipeline, so the
+    // classifier's categories are stripped before the value reaches any of the
+    // six screens that render it. See core/utils/moderation_display.dart.
+    banMessage: redactModerationLabelsOrNull(json['ban_message'] as String?),
     reportBannedAt:
         json['report_banned_at'] !=
             null // 👈 NEW

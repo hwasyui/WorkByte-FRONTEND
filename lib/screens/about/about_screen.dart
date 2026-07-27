@@ -240,8 +240,8 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF059669),
                     iconBg: const Color(0xFFD1FAE5),
                     accentColor: const Color(0xFF059669),
-                    badge: 'Job Match',
-                    title: 'Job Match Details',
+                    badge: 'Job Fit',
+                    title: 'Job Fit Analysis',
                     description:
                         'Curious how well you fit a job? Get a quick breakdown of '
                         'your matching skills, any gaps, and tips to improve your '
@@ -259,8 +259,8 @@ class AboutScreen extends StatelessWidget {
                     iconColor: const Color(0xFF7C3AED),
                     iconBg: const Color(0xFFF3E8FF),
                     accentColor: const Color(0xFF7C3AED),
-                    badge: 'Safe Content',
-                    title: 'Harmful Content Detection',
+                    badge: 'Harmful Text',
+                    title: 'Harmful Text Detection',
                     description:
                         'WorkByte automatically checks job posts, profiles, and '
                         'messages to help keep the community safe and respectful.',

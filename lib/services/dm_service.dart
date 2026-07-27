@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import '../core/utils/moderation_display.dart';
 import '../models/dm_model.dart';
 import 'session_guard.dart';
 
 class DMFailureException implements Exception {
   final String message;
-
-  const DMFailureException(this.message);
+  final bool blockedByModeration;
+  const DMFailureException(this.message, {this.blockedByModeration = false});
 
   @override
   String toString() => message;
@@ -32,6 +33,16 @@ class DMService {
       return body['details'] ?? body['data'] ?? body['message'] ?? body;
     } catch (_) {
       return res.body;
+    }
+  }
+
+  /// The `blocked_by` flag sits at the top level of the error body next to
+  /// `details`, and _unwrap() returns only `details` - so re-read the raw body.
+  bool _isModerationBlock(http.Response res) {
+    try {
+      return isModerationBlockedBody(jsonDecode(res.body));
+    } catch (_) {
+      return false;
     }
   }
 
@@ -222,7 +233,10 @@ class DMService {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw DMFailureException(body is String ? body : 'Failed to send message');
+    throw DMFailureException(
+      body is String ? body : 'Failed to send message',
+      blockedByModeration: _isModerationBlock(res),
+    );
   }
 
   Future<DMMessageModel> sendFileMessage({
@@ -262,7 +276,10 @@ class DMService {
       return DMMessageModel.fromJson(Map<String, dynamic>.from(body as Map));
     }
 
-    throw DMFailureException(body is String ? body : 'Failed to send file');
+    throw DMFailureException(
+      body is String ? body : 'Failed to send file',
+      blockedByModeration: _isModerationBlock(res),
+    );
   }
 
   Future<void> markThreadAsRead({
