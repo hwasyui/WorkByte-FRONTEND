@@ -256,7 +256,7 @@ class _DMChatScreenState extends State<DMChatScreen>
               ),
               const SizedBox(height: 10),
               Text(
-                'It will disappear once you refresh the app. Please reword it and try again, and keep the conversation respectful.',
+                'Please reword it and try again. This one will clear when you refresh.',
                 style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
               ),
             ],

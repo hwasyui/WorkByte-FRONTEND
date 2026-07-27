@@ -180,7 +180,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Please reword it in a professional tone and try again. Nothing was sent to the client.',
+                'Nothing was sent to the client. Please reword it and try again.',
                 style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
               ),
             ],
