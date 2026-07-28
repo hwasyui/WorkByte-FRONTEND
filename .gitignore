@@ -39,5 +39,10 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Keystore 
+# Keystore
 android/debug.keystore
+
+# Environment - the backend URL differs per machine (localhost vs VPS), so it is
+# configured locally and not committed. See .env.example for the expected keys.
+.env
+.env.local

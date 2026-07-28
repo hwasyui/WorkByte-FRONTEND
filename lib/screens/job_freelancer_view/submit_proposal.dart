@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/utils/moderation_display.dart';
 import '../../models/job_post_model.dart';
 import '../../models/job_role_model.dart';
 import '../../providers/auth_provider.dart';
@@ -143,6 +144,8 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         Navigator.pop(context, true);
         AppToast.success('Proposal submitted successfully!');
       }
+    } on ProposalFailureException catch (e) {
+      _showError(e.message, blockedByModeration: e.blockedByModeration);
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       _showError(msg.isNotEmpty ? msg : 'Failed to submit proposal. Please try again.');
@@ -151,30 +154,11 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     }
   }
 
-  static const _harmfulLabelNames = {
-    'identity_hate': 'Identity Hate',
-    'toxic': 'Toxicity',
-    'toxicity': 'Toxicity',
-    'severe_toxic': 'Severe Toxicity',
-    'obscene': 'Obscene',
-    'threat': 'Threat',
-    'insult': 'Insult',
-  };
-
-  static String _formatHarmfulLabel(String raw) =>
-      _harmfulLabelNames[raw.trim().toLowerCase()] ??
-      raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
-
-  void _showError(String message) {
-    final isHarmful = message.toLowerCase().contains('detected as harmful') ||
-        message.toLowerCase().contains('harmful content');
-
-    if (isHarmful) {
-      final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(message);
-      final labels = labelMatch != null
-          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
-          : '';
-
+  void _showError(String message, {bool blockedByModeration = false}) {
+    // Structured flag first, message wording only as a fallback. The
+    // classifier's categories are deliberately not surfaced either way - see
+    // moderation_display.dart for why the freelancer only gets the outcome.
+    if (blockedByModeration || looksLikeModerationBlock(message)) {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -191,19 +175,12 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your cover letter contains harmful content and was not submitted.',
+                'Our Harmful Text Detection flagged your cover letter, so the proposal wasn\'t submitted.',
                 style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
               ),
-              if (labels.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Detected: $labels',
-                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
-                ),
-              ],
               const SizedBox(height: 10),
               Text(
-                'Please revise your cover letter and try again.',
+                'Nothing was sent to the client. Please reword it and try again.',
                 style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
               ),
             ],

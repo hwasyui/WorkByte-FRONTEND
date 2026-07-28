@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../core/utils/moderation_display.dart';
+
 DateTime? _parseDate(dynamic value) {
   if (value == null) return null;
   final str = value.toString();
@@ -164,6 +166,13 @@ class DMMessageModel {
     final value = metadata?['failure_reason'] ?? metadata?['reason'];
     return value?.toString();
   }
+
+  /// True when the send was rejected by the harmful-text gate rather than for
+  /// an ordinary reason. Recorded by DMProvider from the backend's structured
+  /// `blocked_by` flag, so it does not depend on the wording of
+  /// [failureReason]. See core/utils/moderation_display.dart.
+  bool get blockedByModeration =>
+      metadata?['blocked_by'] == kModerationBlockedBy;
 
   DMMessageModel copyWith({
     String? dmMessageId,

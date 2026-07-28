@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/moderation_display.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
 import '../../../widgets/admin/admin_loading.dart';
@@ -24,7 +25,7 @@ class _AdminClosedPageState extends State<AdminClosedPage>
 
   static const _jobReasons = [
     'all',
-    'content_violation',
+    kClosureReasonHarmfulText,
     'scam',
     'community_reports',
     'admin_override',

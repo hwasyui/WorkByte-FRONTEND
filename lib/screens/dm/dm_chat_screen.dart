@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
 import '../../models/dm_model.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/moderation_display.dart';
 import '../../widgets/app_toast.dart';
 import 'dm_thread_list.dart';
 
@@ -227,31 +228,13 @@ class _DMChatScreenState extends State<DMChatScreen>
     }
   }
 
-  static const _harmfulLabelNames = {
-    'identity_hate': 'Identity Hate',
-    'toxic': 'Toxicity',
-    'toxicity': 'Toxicity',
-    'severe_toxic': 'Severe Toxicity',
-    'obscene': 'Obscene',
-    'threat': 'Threat',
-    'insult': 'Insult',
-  };
-
-  static String _formatHarmfulLabel(String raw) =>
-      _harmfulLabelNames[raw.trim().toLowerCase()] ??
-      raw.trim().split('_').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
-
   void _showFailedMessageReason(DMMessageModel message) {
     final raw = message.failureReason ?? '';
-    final isHarmful = raw.toLowerCase().contains('detected as harmful') ||
-        raw.toLowerCase().contains('harmful content');
 
-    if (isHarmful) {
-      final labelMatch = RegExp(r'\(([^)]+)\)').firstMatch(raw);
-      final labels = labelMatch != null
-          ? labelMatch.group(1)!.split(',').map(_formatHarmfulLabel).join(', ')
-          : '';
-
+    // Structured flag first, message wording only as a fallback. The
+    // classifier's categories are deliberately not surfaced either way - see
+    // moderation_display.dart for why the sender only gets the outcome.
+    if (message.blockedByModeration || looksLikeModerationBlock(raw)) {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -268,19 +251,12 @@ class _DMChatScreenState extends State<DMChatScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'This message contains harmful content and was not saved.',
+                'Our Harmful Text Detection flagged this message, so it wasn\'t sent.',
                 style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
               ),
-              if (labels.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Detected: $labels',
-                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
-                ),
-              ],
               const SizedBox(height: 10),
               Text(
-                'This message will disappear once you refresh the app. Please be mindful of the content in your next message.',
+                'Please reword it and try again. This one will clear when you refresh.',
                 style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.5),
               ),
             ],
