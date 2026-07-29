@@ -679,12 +679,9 @@ class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['all', 'pending', 'approved', 'rejected'];
-  static const _sorts = ['total_score', 'max_score', 'created_at'];
-  static const _sortLabels = {
-    'total_score': 'Severity (total)',
-    'max_score': 'Severity (highest label)',
-    'created_at': 'Newest',
-  };
+  // No sort control: the queue is always ordered by the highest single label,
+  // descending, the same way the scam queue is always ordered by scam_score.
+  // The ordering lives in AdminService.getModerationItems' default.
 
 
   @override
@@ -694,11 +691,15 @@ class _ModerationTab extends StatelessWidget {
         return Column(
           children: [
             FilterDropdownBar(
-              summaryText: admin.moderationStatusFilter != 'all'
-                  ? 'Filters active'
-                  : 'All content',
+              // Name the status that is actually applied rather than a generic
+              // "Filters active", and surface the item count — same contract as
+              // the scam tab so both queues read the same way.
+              summaryText: admin.moderationStatusFilter == 'all'
+                  ? 'All flags'
+                  : '${admin.moderationStatusFilter[0].toUpperCase()}${admin.moderationStatusFilter.substring(1)}',
               hasActiveFilter: admin.moderationStatusFilter != 'all',
               accentColor: const Color(0xFF4F46E5),
+              count: admin.moderationItems.length,
               groups: [
                 FilterGroupData(
                   label: 'STATUS',
@@ -706,13 +707,6 @@ class _ModerationTab extends StatelessWidget {
                   labelFor: (s) => '${s[0].toUpperCase()}${s.substring(1)}',
                   selected: admin.moderationStatusFilter,
                   onSelect: (s) => admin.loadModerationItems(status: s),
-                ),
-                FilterGroupData(
-                  label: 'SORT BY',
-                  options: _sorts,
-                  labelFor: (s) => _sortLabels[s] ?? s,
-                  selected: admin.moderationSortBy,
-                  onSelect: (s) => admin.loadModerationItems(sortBy: s),
                 ),
               ],
             ),
@@ -727,8 +721,8 @@ class _ModerationTab extends StatelessWidget {
                   : admin.moderationItems.isEmpty
                   ? _Empty(
                       icon: Icons.shield_rounded,
-                      message: 'No flagged content found',
-                      sub: 'All content is within guidelines',
+                      message: 'No flags found',
+                      sub: 'All job posts look clean',
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF7C3AED),
@@ -817,7 +811,6 @@ class _ModerationCardState extends State<_ModerationCard> {
 
   void _showDetail(BuildContext ctx) {
     final item = widget.item;
-    final totalScore = (item['total_score'] as num?)?.toDouble() ?? 0.0;
     final contentType = item['content_type'] as String? ?? '';
     final flaggedText =
         item['flagged_text_excerpt'] as String? ??
@@ -826,6 +819,11 @@ class _ModerationCardState extends State<_ModerationCard> {
     final createdAt = item['created_at']?.toString() ?? '';
     final adminNote = item['admin_note']?.toString() ?? '';
     final status = item['status'] as String? ?? 'pending';
+
+    // Same fallback as the card: job_title is null for non-job_post rows.
+    final jobTitle = (item['job_title'] as String?)?.trim() ?? '';
+    final userEmail = (item['user_email'] as String?)?.trim() ?? '';
+    final headline = jobTitle.isNotEmpty ? jobTitle : _typeLabel(contentType);
 
     final labelScores = _labels.map((l) {
       final key = l['key'] as String;
@@ -838,15 +836,10 @@ class _ModerationCardState extends State<_ModerationCard> {
       return {'meta': l, 'score': score};
     }).toList();
 
-    final displayTotal = labelScores.fold<double>(
-      0.0,
-      (sum, e) => sum + (e['score'] as double),
-    );
-    final scoreColor = totalScore >= 1.5
-        ? const Color(0xFFDC2626)
-        : totalScore >= 0.5
-        ? const Color(0xFFD97706)
-        : const Color(0xFF059669);
+    final topLabel = _topLabel(labelScores);
+    final topScore = topLabel['score'] as double;
+    final topMeta = topLabel['meta'] as Map<String, Object?>;
+    final scoreColor = _severityColor(topScore, topMeta['key'] as String);
 
     showDialog(
       context: ctx,
@@ -900,29 +893,31 @@ class _ModerationCardState extends State<_ModerationCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _typeLabel(contentType),
+                        headline,
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF111827),
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if ((item['user_email'] as String?)?.isNotEmpty == true)
+                      if (userEmail.isNotEmpty)
                         Text(
-                          item['user_email'] as String,
+                          userEmail,
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             color: const Color(0xFF9CA3AF),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                     ],
                   ),
                 ),
-                _ScoreBadge(
-                  score: displayTotal / 5.0,
-                  color: scoreColor,
-                  label: '${displayTotal.toStringAsFixed(2)}/5.0',
-                ),
+                // No summary badge here: the full per-label breakdown sits a
+                // few lines below, and a single "highest label" chip would read
+                // as Toxicity on nearly every row anyway.
               ],
             ),
             const SizedBox(height: 16),
@@ -1038,16 +1033,47 @@ class _ModerationCardState extends State<_ModerationCard> {
     },
   ];
 
-  static const _defaultBlockedMessages = {
-    'job_post':
-        'This job post was removed due to a content policy violation. '
-        'Submit an appeal if you believe this was a mistake.',
+  // Per-label cut-offs the served model actually uses, from bert/config.pkl ->
+  // best_thresholds. Keys match _labels above. Update these if the served model
+  // is swapped, otherwise the badge colour stops matching what the backend does.
+  static const _labelThresholds = <String, double>{
+    'toxicity': 0.50,
+    'obscene_score': 0.38,
+    'threat_score': 0.58,
+    'insult_score': 0.28,
+    'identity_hate_score': 0.38,
   };
+
+  // The 30-day auto-close sweep compares this against the highest single label
+  // score (admin_functions.py, CONTENT_AUTO_CLOSE_THRESHOLD_JOB).
+  static const _autoCloseThreshold = 0.88;
+
+  /// Strongest single label. Mirrors the backend's GREATEST(...) / max()
+  /// semantics: a text is as severe as its strongest single label, never the
+  /// sum of several weak ones. Summing would rank a row scoring moderately on
+  /// three labels above a row the model is near-certain about on one.
+  static Map<String, Object> _topLabel(List<Map<String, Object>> labelScores) {
+    var best = labelScores.first;
+    for (final e in labelScores) {
+      if ((e['score'] as double) > (best['score'] as double)) best = e;
+    }
+    return best;
+  }
+
+  /// Both cut-offs are real system numbers, not display-only constants:
+  /// red = the sweep would auto-close this, amber = this label cleared its own
+  /// tuned cut-off (i.e. it is why the row was queued).
+  static Color _severityColor(double topScore, String topKey) {
+    if (topScore >= _autoCloseThreshold) return const Color(0xFFDC2626);
+    if (topScore >= (_labelThresholds[topKey] ?? 0.5)) {
+      return const Color(0xFFD97706);
+    }
+    return const Color(0xFF059669);
+  }
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
-    final totalScore = (item['total_score'] as num?)?.toDouble() ?? 0.0;
     final contentType = item['content_type'] as String? ?? '';
     final status = item['status'] as String? ?? 'pending';
     final flaggedText =
@@ -1055,11 +1081,14 @@ class _ModerationCardState extends State<_ModerationCard> {
         item['flagged_text'] as String? ??
         '';
 
-    final scoreColor = totalScore >= 1.5
-        ? const Color(0xFFDC2626)
-        : totalScore >= 0.5
-        ? const Color(0xFFD97706)
-        : const Color(0xFF059669);
+    // job_title arrives from the LEFT JOIN in list_moderation_queue, so it is
+    // null for any row whose content_type is not job_post. The type label is
+    // not shown on its own line: every row in this queue is a job post today,
+    // so printing "Job Post" on every card carries no information. It survives
+    // only as the headline fallback for rows where job_title is null.
+    final jobTitle = (item['job_title'] as String?)?.trim() ?? '';
+    final userEmail = (item['user_email'] as String?)?.trim() ?? '';
+    final headline = jobTitle.isNotEmpty ? jobTitle : _typeLabel(contentType);
 
     // Build the list of all 5 label scores. Older queue rows may still carry
     // severe_toxic_score; fold it into Toxicity so the UI matches the model.
@@ -1074,19 +1103,27 @@ class _ModerationCardState extends State<_ModerationCard> {
       return {'meta': l, 'score': score};
     }).toList();
 
-    // Top triggered labels (score >= 0.3) for the summary chips
-    final activeLabels = labelScores
-        .where((e) => (e['score'] as double) >= 0.3)
-        .toList();
-    final displayTotal = labelScores.fold<double>(
-      0.0,
-      (sum, e) => sum + (e['score'] as double),
-    );
+    final topLabel = _topLabel(labelScores);
+    final topScore = topLabel['score'] as double;
+    final topMeta = topLabel['meta'] as Map<String, Object?>;
+    final scoreColor = _severityColor(topScore, topMeta['key'] as String);
 
-    final defaultMsg =
-        _defaultBlockedMessages[contentType] ??
-        'This content was removed due to a policy violation. '
-            'Submit an appeal if you believe this was a mistake.';
+    // Chips show the labels that actually cleared their own tuned cut-off, i.e.
+    // the reason this row is in the queue at all. Keyword-fallback and legacy
+    // rows may clear none, so fall back to the strongest label rather than
+    // rendering an empty row.
+    final activeLabels = labelScores.where((e) {
+      final key = (e['meta'] as Map<String, Object?>)['key'] as String;
+      return (e['score'] as double) >= (_labelThresholds[key] ?? 0.5);
+    }).toList();
+    if (activeLabels.isEmpty) activeLabels.add(topLabel);
+    activeLabels.sort(
+      (a, b) => (b['score'] as double).compareTo(a['score'] as double),
+    );
+    const maxChips = 3;
+    final shownLabels = activeLabels.take(maxChips).toList();
+    final hiddenLabelCount = activeLabels.length - shownLabels.length;
+
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1105,8 +1142,13 @@ class _ModerationCardState extends State<_ModerationCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: content type icon + score badge
+          // Row 1: content type icon + the labels that actually fired.
+          // A single "highest label" badge would read as Toxicity on almost
+          // every row, since toxicity co-occurs with 94.76% of harmful rows —
+          // so every label over its own cut-off is shown instead, each coloured
+          // by its own severity.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 36,
@@ -1123,59 +1165,85 @@ class _ModerationCardState extends State<_ModerationCard> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                flex: 5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _typeLabel(contentType),
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF111827),
-                      ),
+                    // The engagement marker describes the job post, not the
+                    // harm scores, so it sits with the title rather than
+                    // floating between the title block and the score chips.
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            headline,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF111827),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (item['is_engaged'] == true) ...[
+                          const SizedBox(width: 6),
+                          const Tooltip(
+                            message:
+                                'Has an active contract / engaged freelancer',
+                            child: Icon(
+                              Icons.handshake_outlined,
+                              size: 15,
+                              color: Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if ((item['user_email'] as String?)?.isNotEmpty == true)
+                    if (userEmail.isNotEmpty)
                       Text(
-                        item['user_email'] as String,
+                        userEmail,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                   ],
                 ),
               ),
-              if (item['is_engaged'] == true) ...[
-                const Tooltip(
-                  message: 'Has an active contract / engaged freelancer',
-                  child: Icon(Icons.handshake_outlined, size: 16, color: Color(0xFFD97706)),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    // Strongest first, capped so a row firing on 4-5 labels
+                    // does not push the card apart. The expander below always
+                    // lists all five.
+                    for (final e in shownLabels)
+                      _LabelChip(
+                        text:
+                            '${(e['meta'] as Map<String, Object?>)['name']} '
+                            '${(e['score'] as double).toStringAsFixed(2)}',
+                        color: _severityColor(
+                          e['score'] as double,
+                          (e['meta'] as Map<String, Object?>)['key'] as String,
+                        ),
+                      ),
+                    if (hiddenLabelCount > 0)
+                      _LabelChip(
+                        text: '+$hiddenLabelCount',
+                        color: const Color(0xFF6B7280),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-              ],
-              _ScoreBadge(
-                score: displayTotal / 5.0,
-                color: scoreColor,
-                label: 'Score ${displayTotal.toStringAsFixed(2)}/5.0',
               ),
             ],
           ),
-
-          // Active label chips (summary)
-          if (activeLabels.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: activeLabels.map((e) {
-                final meta = e['meta'] as Map<String, Object?>;
-                final v = e['score'] as double;
-                return _KeywordChip(
-                  text: '${meta['name']}: ${v.toStringAsFixed(2)}',
-                );
-              }).toList(),
-            ),
-          ],
 
           // Expandable 5-label breakdown
           const SizedBox(height: 10),
@@ -1246,50 +1314,13 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ],
 
-          // Default blocked message (shown when flag confirmed)
-          if (status == 'approved') ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFED7AA)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.message_outlined,
-                        size: 13,
-                        color: Color(0xFFD97706),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Message shown to user',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFD97706),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    defaultMsg,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: const Color(0xFF92400E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          // No "message shown to user" preview here. The copy lives in
+          // admin_functions.py (DEFAULT_CLOSURE_NOTE_CONTENT) and is only
+          // written at closure time, so anything rendered here would be the
+          // frontend re-typing a backend string with nothing keeping the two in
+          // sync — it had already drifted once. The admin's own note, when
+          // there is one, is real API data and is shown in the detail dialog.
+          // The scam queue has no such preview either.
 
           // Actions
           const SizedBox(height: 10),
@@ -1591,6 +1622,34 @@ class _ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         label,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// A fired label plus its score, tinted by that label's own severity.
+/// Same visual language as _ScoreBadge so the queue reads consistently.
+class _LabelChip extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _LabelChip({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
         style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
