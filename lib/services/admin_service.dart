@@ -15,6 +15,7 @@ class AdminService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static const String _tokenKey = 'admin_token';
+  static const String _refreshTokenKey = 'admin_refresh_token';
 
   static Future<void> saveToken(String token) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -26,6 +27,43 @@ class AdminService {
 
   static Future<void> clearToken() async {
     await _storage.delete(key: _tokenKey);
+  }
+
+  static Future<void> saveRefreshToken(String token) async {
+    await _storage.write(key: _refreshTokenKey, value: token);
+  }
+
+  static Future<String?> getSavedRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
+  }
+
+  static Future<void> clearRefreshToken() async {
+    await _storage.delete(key: _refreshTokenKey);
+  }
+
+  static Future<String?> refreshAccessToken() async {
+    final refreshToken = await getSavedRefreshToken();
+    if (refreshToken == null) return null;
+
+    final res = await http.post(
+      Uri.parse('$_baseUrl/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh_token': refreshToken}),
+    ).timeout(const Duration(seconds: 20));
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(res.body);
+      final details = body['details'] as Map<String, dynamic>;
+      final newAccess = details['access_token'] as String;
+      final newRefresh = details['refresh_token'] as String;
+      await saveToken(newAccess);
+      await saveRefreshToken(newRefresh);
+      return newAccess;
+    }
+
+    await clearToken();
+    await clearRefreshToken();
+    return null;
   }
 
   static Future<bool> verifyAdminToken(String token) async {
@@ -62,8 +100,8 @@ class AdminService {
     final inner = loginBody['details'] ?? loginBody['data'] ?? loginBody;
     final token = inner['access_token'] as String?;
     if (token == null) throw Exception('Login failed');
+    final refreshToken = inner['refresh_token'] as String?;
 
-    // Double-check is_admin flag from the backend as a second layer of security
     final meRes = await http.get(
       Uri.parse('$_baseUrl/auth/me'),
       headers: _headers(token),
@@ -78,6 +116,7 @@ class AdminService {
         'Access denied. This account does not have admin privileges.',
       );
 
+    if (refreshToken != null) await saveRefreshToken(refreshToken);
     return token;
   }
 
@@ -94,8 +133,10 @@ class AdminService {
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -115,8 +156,10 @@ class AdminService {
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -134,8 +177,10 @@ class AdminService {
         'page_size': pageSize.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -182,8 +227,10 @@ class AdminService {
     final uri = Uri.parse(
       '$_baseUrl/admin/jobs',
     ).replace(queryParameters: query);
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -217,8 +264,10 @@ class AdminService {
     final uri = Uri.parse(
       '$_baseUrl/admin/users',
     ).replace(queryParameters: query);
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -227,11 +276,13 @@ class AdminService {
 
   static Future<Map<String, dynamic>> getDashboardStats(String token) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/admin/dashboard'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/admin/dashboard'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode != 200) return {};
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final details = body['details'] ?? body['data'] ?? body;
@@ -256,8 +307,10 @@ class AdminService {
         'page_size': pageSize.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-    AdminSessionGuard.check(response);
+    final response = await AdminSessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode == 200) {
       return _extract(jsonDecode(response.body) as Map<String, dynamic>);
     }
@@ -271,12 +324,14 @@ class AdminService {
     String? adminNote,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/reports/$reportId/$action'),
-        headers: _headers(token),
-        body: jsonEncode({'admin_note': adminNote}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/reports/$reportId/$action'),
+          headers: _headers(t),
+          body: jsonEncode({'admin_note': adminNote}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -301,8 +356,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -317,12 +374,14 @@ class AdminService {
     String? adminNote,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/scam-flags/$flagId/$action'),
-        headers: _headers(token),
-        body: jsonEncode({'admin_note': adminNote}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/scam-flags/$flagId/$action'),
+          headers: _headers(t),
+          body: jsonEncode({'admin_note': adminNote}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -347,8 +406,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -358,11 +419,13 @@ class AdminService {
 
   static Future<bool> resolveReviewRedFlag(String token, String alertId) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId/resolve'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId/resolve'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -387,8 +450,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -398,11 +463,13 @@ class AdminService {
 
   static Future<bool> overridePublishReview(String token, String reviewId) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/reviews/$reviewId/override-publish'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/reviews/$reviewId/override-publish'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -427,8 +494,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -441,11 +510,13 @@ class AdminService {
     String clientReviewId,
   ) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/client-reviews/$clientReviewId/override-publish'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/client-reviews/$clientReviewId/override-publish'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -461,8 +532,6 @@ class AdminService {
     int pageSize = 30,
   }) async {
     try {
-      // No content_type: job posts are the only content the backend scans, so
-      // the queue is single-type and the filter would be a no-op.
       final uri = Uri.parse('$_baseUrl/admin/moderation').replace(
         queryParameters: {
           'status': status,
@@ -472,8 +541,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -488,12 +559,14 @@ class AdminService {
     String? adminNote,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/moderation/$moderationId/$action'),
-        headers: _headers(token),
-        body: jsonEncode({'admin_note': adminNote}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/moderation/$moderationId/$action'),
+          headers: _headers(t),
+          body: jsonEncode({'admin_note': adminNote}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -506,12 +579,14 @@ class AdminService {
     String? reason,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/jobs/$jobPostId/close'),
-        headers: _headers(token),
-        body: jsonEncode({'reason': reason}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/jobs/$jobPostId/close'),
+          headers: _headers(t),
+          body: jsonEncode({'reason': reason}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -524,8 +599,10 @@ class AdminService {
   ) async {
     try {
       final uri = Uri.parse('$_baseUrl/freelancers/$freelancerId/profile');
-      final response = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(response);
+      final response = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -541,12 +618,14 @@ class AdminService {
     String? reason,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/accounts/$userId/close'),
-        headers: _headers(token),
-        body: jsonEncode({'reason': reason}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/accounts/$userId/close'),
+          headers: _headers(t),
+          body: jsonEncode({'reason': reason}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -567,8 +646,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token)).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -598,16 +679,18 @@ class AdminService {
   static Future<bool> resolveAppeal(
     String token, {
     required String appealId,
-    required String action, // 'approve' | 'reject'
+    required String action,
     String? adminNote,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/admin/appeals/$appealId/$action'),
-        headers: _headers(token),
-        body: jsonEncode({'admin_note': adminNote}),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.post(
+          Uri.parse('$_baseUrl/admin/appeals/$appealId/$action'),
+          headers: _headers(t),
+          body: jsonEncode({'admin_note': adminNote}),
+        ).timeout(const Duration(seconds: 20)),
+      );
       debugPrint('resolveAppeal status: ${res.statusCode}');
       debugPrint('resolveAppeal body: ${res.body}');
       return res.statusCode == 200 || res.statusCode == 201;
@@ -631,7 +714,10 @@ class AdminService {
           'page_size': pageSize.toString(),
         },
       );
-      final res = await http.get(uri, headers: _headers(token));
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)),
+      );
       if (res.statusCode == 200) {
         return _extract(jsonDecode(res.body) as Map<String, dynamic>);
       }
@@ -642,19 +728,22 @@ class AdminService {
   static Future<Map<String, dynamic>?> arbitrateDispute(
     String token, {
     required String contractId,
-    required String outcome, // 'approve' | 'cancel' | 'revise'
+    required String outcome,
     String? note,
-    String? newDeadline, // ISO date string, required if outcome == 'revise'
+    String? newDeadline,
   }) async {
     try {
-      final res = await http.put(
-        Uri.parse('$_baseUrl/admin/contracts/$contractId/arbitrate'),
-        headers: _headers(token),
-        body: jsonEncode({
-          'outcome': outcome,
-          if (note != null && note.isNotEmpty) 'note': note,
-          if (newDeadline != null) 'new_deadline': newDeadline,
-        }),
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.put(
+          Uri.parse('$_baseUrl/admin/contracts/$contractId/arbitrate'),
+          headers: _headers(t),
+          body: jsonEncode({
+            'outcome': outcome,
+            if (note != null && note.isNotEmpty) 'note': note,
+            if (newDeadline != null) 'new_deadline': newDeadline,
+          }),
+        ),
       );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -670,9 +759,12 @@ class AdminService {
     String clientId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/admin/clients/$clientId/autoapprove-history'),
-        headers: _headers(token),
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/admin/clients/$clientId/autoapprove-history'),
+          headers: _headers(t),
+        ),
       );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -688,11 +780,13 @@ class AdminService {
     String jobPostId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/job-posts/$jobPostId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/job-posts/$jobPostId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;
@@ -707,11 +801,13 @@ class AdminService {
     String jobPostId,
   ) async {
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
-        headers: _headers(token),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(
+          Uri.parse('$_baseUrl/job-roles/job-post/$jobPostId'),
+          headers: _headers(t),
+        ).timeout(const Duration(seconds: 20)),
+      );
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final details = body['details'] ?? body['data'] ?? body;

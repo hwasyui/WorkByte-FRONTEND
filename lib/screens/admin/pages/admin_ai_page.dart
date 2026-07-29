@@ -78,7 +78,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                         ),
                       ),
                       Text(
-                        'Job scam detection & harmful text detection',
+                        'Job Scam Detection, Harmful Text Detection, and Review Integrity',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),

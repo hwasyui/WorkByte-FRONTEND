@@ -6,15 +6,36 @@ enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes }
 
 class AdminProvider extends ChangeNotifier {
   AdminProvider() {
-    // Any AdminService call that hits a 401 routes here, so an expired admin
-    // token drops back to AdminLoginScreen (via AdminGate's isAuthenticated
-    // check) no matter which admin page triggered it.
+    AdminSessionGuard.registerRefresh(_refreshOrRetryOnce);
     AdminSessionGuard.register(() {
-      logout();
+      handleSessionExpired();
     });
   }
 
+  Future<String?>? _refreshInFlight;
+
+  Future<String?> _refreshOrRetryOnce() {
+    return _refreshInFlight ??= _attemptRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  Future<String?> _attemptRefresh() async {
+    try {
+      final newToken = await AdminService.refreshAccessToken();
+      if (newToken != null) {
+        _token = newToken;
+        notifyListeners();
+      }
+      return newToken;
+    } catch (e) {
+      debugPrint('Admin silent token refresh failed: $e');
+      return null;
+    }
+  }
+
   String? _token;
+  bool _sessionExpired = false;
   bool _isLoading = false;
   bool _isRestoring = false;
   bool _isTableLoading = false;
@@ -75,7 +96,6 @@ class AdminProvider extends ChangeNotifier {
   bool _isDisputesLoading = false;
   Map<String, dynamic> _disputesPagination = {};
 
-  // Getters
   String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isRestoring => _isRestoring;
@@ -83,6 +103,7 @@ class AdminProvider extends ChangeNotifier {
   String? get error => _error;
   AdminPage get currentPage => _currentPage;
   bool get isAuthenticated => _token != null;
+  bool get sessionExpired => _sessionExpired;
 
   int get totalFreelancers => _totalFreelancers;
   int get totalClients => _totalClients;
@@ -164,21 +185,31 @@ class AdminProvider extends ChangeNotifier {
         return false;
       }
 
-      final isValid = await AdminService.verifyAdminToken(savedToken);
+      var activeToken = savedToken;
+      var isValid = await AdminService.verifyAdminToken(activeToken);
+      if (!isValid) {
+        final refreshed = await AdminService.refreshAccessToken();
+        if (refreshed != null) {
+          activeToken = refreshed;
+          isValid = await AdminService.verifyAdminToken(activeToken);
+        }
+      }
       if (!isValid) {
         await AdminService.clearToken();
+        await AdminService.clearRefreshToken();
         _isRestoring = false;
         notifyListeners();
         return false;
       }
 
-      _token = savedToken;
+      _token = activeToken;
       _isRestoring = false;
       notifyListeners();
       loadOverviewData();
       return true;
     } catch (_) {
       await AdminService.clearToken();
+      await AdminService.clearRefreshToken();
       _isRestoring = false;
       notifyListeners();
       return false;
@@ -809,8 +840,20 @@ class AdminProvider extends ChangeNotifier {
     loadOverviewData();
   }
 
+  Future<void> handleSessionExpired() async {
+    await logout();
+    _sessionExpired = true;
+    notifyListeners();
+  }
+
+  void clearSessionExpired() {
+    _sessionExpired = false;
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await AdminService.clearToken();
+    await AdminService.clearRefreshToken();
     _token = null;
     _currentPage = AdminPage.overview;
     _totalFreelancers = 0;
