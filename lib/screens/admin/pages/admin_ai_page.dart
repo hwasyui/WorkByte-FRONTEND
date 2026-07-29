@@ -192,7 +192,6 @@ class _ScamCard extends StatefulWidget {
 
 class _ScamCardState extends State<_ScamCard> {
   bool _loading = false;
-  bool _closing = false;
 
   Future<void> _act(String action) async {
     setState(() => _loading = true);
@@ -208,11 +207,8 @@ class _ScamCardState extends State<_ScamCard> {
   }
 
   Future<void> _confirmAct(BuildContext ctx, String action) async {
-    final isApprove = action == 'approve';
-    if (!isApprove) {
-      // Removing a job normally records a scam strike against the client;
-      // the checkbox lets the admin close it as a no-strike override instead
-      // without needing a second, separate "Close Job" button.
+    final isDismiss = action == 'dismiss';
+    if (!isDismiss) {
       final recordStrike = ValueNotifier<bool>(true);
       final confirmed = await showAdminConfirmDialog(
         ctx,
@@ -242,29 +238,16 @@ class _ScamCardState extends State<_ScamCard> {
     if (confirmed == true) _act(action);
   }
 
-  Future<void> _confirmClose(BuildContext ctx) async {
-    final confirmed = await showAdminConfirmDialog(
-      ctx,
-      title: 'Close Job Post',
-      message: 'This will close the job post as an admin override. No scam strike is recorded against the client.',
-      icon: Icons.block_rounded,
-      confirmLabel: 'Close Job',
-      confirmColor: const Color(0xFF7C3AED),
-    );
-    if (confirmed != true || !mounted) return;
-    _closeJobWithoutStrike();
-  }
-
   Future<void> _closeJobWithoutStrike() async {
-    setState(() => _closing = true);
+    setState(() => _loading = true);
     final jobPostId = widget.flag['job_post_id']?.toString() ?? '';
     if (jobPostId.isEmpty) {
-      setState(() => _closing = false);
+      setState(() => _loading = false);
       return;
     }
     final ok = await context.read<AdminProvider>().adminCloseJob(jobPostId);
     if (mounted) {
-      setState(() => _closing = false);
+      setState(() => _loading = false);
       if (ok) {
         AppToast.success('Job post closed');
       } else {
@@ -633,7 +616,7 @@ class _ScamCardState extends State<_ScamCard> {
                         label: 'Mark Safe',
                         icon: Icons.check_circle_outline_rounded,
                         color: const Color(0xFF059669),
-                        onTap: () => _confirmAct(context, 'approve'),
+                        onTap: () => _confirmAct(context, 'dismiss'),
                       ),
                       const SizedBox(width: 8),
                       _ActionButton(
@@ -641,32 +624,12 @@ class _ScamCardState extends State<_ScamCard> {
                         icon: Icons.delete_outline_rounded,
                         color: const Color(0xFFDC2626),
                         filled: true,
-                        onTap: () => _confirmAct(context, 'remove'),
+                        onTap: () => _confirmAct(context, 'uphold'),
                       ),
                     ],
                   )
           else
             _StatusPill(status: status),
-          if (status != 'removed' && status != 'pending') ...[
-            const SizedBox(height: 8),
-            _closing
-                ? const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF7C3AED),
-                      ),
-                    ),
-                  )
-                : _AdminOverrideBar(
-                    label: 'Close Job',
-                    icon: Icons.block_rounded,
-                    color: const Color(0xFF7C3AED),
-                    onTap: () => _confirmClose(context),
-                  ),
-          ],
         ],
       ),
     );
@@ -820,9 +783,9 @@ class _ModerationCardState extends State<_ModerationCard> {
     final adminNote = item['admin_note']?.toString() ?? '';
     final status = item['status'] as String? ?? 'pending';
 
-    // Same fallback as the card: job_title is null for non-job_post rows.
     final jobTitle = (item['job_title'] as String?)?.trim() ?? '';
     final userEmail = (item['user_email'] as String?)?.trim() ?? '';
+    final clientName = (item['client_name'] as String?)?.trim() ?? '';
     final headline = jobTitle.isNotEmpty ? jobTitle : _typeLabel(contentType);
 
     final labelScores = _labels.map((l) {
@@ -902,9 +865,9 @@ class _ModerationCardState extends State<_ModerationCard> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (userEmail.isNotEmpty)
+                      if (userEmail.isNotEmpty || clientName.isNotEmpty)
                         Text(
-                          userEmail,
+                          clientName.isNotEmpty ? '$clientName - $userEmail' : userEmail,
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             color: const Color(0xFF9CA3AF),
@@ -915,9 +878,6 @@ class _ModerationCardState extends State<_ModerationCard> {
                     ],
                   ),
                 ),
-                // No summary badge here: the full per-label breakdown sits a
-                // few lines below, and a single "highest label" chip would read
-                // as Toxicity on nearly every row anyway.
               ],
             ),
             const SizedBox(height: 16),
@@ -1081,17 +1041,11 @@ class _ModerationCardState extends State<_ModerationCard> {
         item['flagged_text'] as String? ??
         '';
 
-    // job_title arrives from the LEFT JOIN in list_moderation_queue, so it is
-    // null for any row whose content_type is not job_post. The type label is
-    // not shown on its own line: every row in this queue is a job post today,
-    // so printing "Job Post" on every card carries no information. It survives
-    // only as the headline fallback for rows where job_title is null.
     final jobTitle = (item['job_title'] as String?)?.trim() ?? '';
     final userEmail = (item['user_email'] as String?)?.trim() ?? '';
+    final clientName = (item['client_name'] as String?)?.trim() ?? '';
     final headline = jobTitle.isNotEmpty ? jobTitle : _typeLabel(contentType);
 
-    // Build the list of all 5 label scores. Older queue rows may still carry
-    // severe_toxic_score; fold it into Toxicity so the UI matches the model.
     final labelScores = _labels.map((l) {
       final key = l['key'] as String;
       final score = key == 'toxicity'
@@ -1108,10 +1062,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     final topMeta = topLabel['meta'] as Map<String, Object?>;
     final scoreColor = _severityColor(topScore, topMeta['key'] as String);
 
-    // Chips show the labels that actually cleared their own tuned cut-off, i.e.
-    // the reason this row is in the queue at all. Keyword-fallback and legacy
-    // rows may clear none, so fall back to the strongest label rather than
-    // rendering an empty row.
     final activeLabels = labelScores.where((e) {
       final key = (e['meta'] as Map<String, Object?>)['key'] as String;
       return (e['score'] as double) >= (_labelThresholds[key] ?? 0.5);
@@ -1142,11 +1092,6 @@ class _ModerationCardState extends State<_ModerationCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: content type icon + the labels that actually fired.
-          // A single "highest label" badge would read as Toxicity on almost
-          // every row, since toxicity co-occurs with 94.76% of harmful rows —
-          // so every label over its own cut-off is shown instead, each coloured
-          // by its own severity.
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1169,9 +1114,6 @@ class _ModerationCardState extends State<_ModerationCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // The engagement marker describes the job post, not the
-                    // harm scores, so it sits with the title rather than
-                    // floating between the title block and the score chips.
                     Row(
                       children: [
                         Flexible(
@@ -1200,9 +1142,9 @@ class _ModerationCardState extends State<_ModerationCard> {
                         ],
                       ],
                     ),
-                    if (userEmail.isNotEmpty)
+                    if (userEmail.isNotEmpty || clientName.isNotEmpty)
                       Text(
-                        userEmail,
+                        clientName.isNotEmpty ? '$clientName - $userEmail' : userEmail,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),
@@ -1221,9 +1163,6 @@ class _ModerationCardState extends State<_ModerationCard> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    // Strongest first, capped so a row firing on 4-5 labels
-                    // does not push the card apart. The expander below always
-                    // lists all five.
                     for (final e in shownLabels)
                       _LabelChip(
                         text:
@@ -1489,74 +1428,6 @@ class _LabelsBreakdown extends StatelessWidget {
     );
   }
 }
-
-// Admin override action bar
-
-class _AdminOverrideBar extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _AdminOverrideBar({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Admin override',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              color: const Color(0xFF9CA3AF),
-            ),
-          ),
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withOpacity(0.25)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 12, color: color),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Scam-strike opt-out toggle (shown inside the Remove Job confirm dialog)
 
 class _ScamStrikeToggle extends StatefulWidget {
   final ValueNotifier<bool> notifier;
