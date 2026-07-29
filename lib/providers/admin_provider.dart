@@ -57,9 +57,9 @@ class AdminProvider extends ChangeNotifier {
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
   String _moderationStatusFilter = 'all';
-  // Backend supports sorting by score (severity) or recency — there is no score
-  // *filter*, so severity is surfaced as an ordering, not a cut-off.
-  String _moderationSortBy = 'total_score';
+  // No sort state: the queue is always ordered by the highest single label,
+  // descending, set once in AdminService.getModerationItems — same shape as the
+  // scam queue, which is always ordered by scam_score.
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
   String _closedAccountReasonFilter = 'all';
@@ -121,7 +121,6 @@ class AdminProvider extends ChangeNotifier {
   bool get isClosedLoading => _isClosedLoading;
   String get scamStatusFilter => _scamStatusFilter;
   String get moderationStatusFilter => _moderationStatusFilter;
-  String get moderationSortBy => _moderationSortBy;
   String get closedJobReasonFilter => _closedJobReasonFilter;
   String get closedAccountRoleFilter => _closedAccountRoleFilter;
   String get closedAccountReasonFilter => _closedAccountReasonFilter;
@@ -643,22 +642,18 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadModerationItems({
-    String? status,
-    String? sortBy,
-  }) async {
+  Future<void> loadModerationItems({String? status}) async {
     if (_token == null) return;
     if (status != null) _moderationStatusFilter = status;
-    if (sortBy != null) _moderationSortBy = sortBy;
     _isAiLoading = true;
     notifyListeners();
     try {
       // Job posts are the only content the backend scans, so the queue is
-      // single-type and no content-type filter is sent.
+      // single-type and no content-type filter is sent. Ordering is fixed in
+      // the service default, so no sortBy is passed either.
       final data = await AdminService.getModerationItems(
         _token!,
         status: _moderationStatusFilter,
-        sortBy: _moderationSortBy,
       );
       _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {

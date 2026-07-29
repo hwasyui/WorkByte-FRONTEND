@@ -455,7 +455,9 @@ class AdminService {
   static Future<Map<String, dynamic>> getModerationItems(
     String token, {
     String status = 'pending',
-    String sortBy = 'total_score',
+    // Highest single label, not the sum of all five — same number the card
+    // badge and the auto-close sweep use.
+    String sortBy = 'max_score',
     String sortDir = 'desc',
     int page = 1,
     int pageSize = 30,
