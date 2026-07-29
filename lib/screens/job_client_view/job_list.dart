@@ -422,7 +422,6 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // Job card
   Widget _buildJobCard(Map<String, dynamic> job) {
     final jobPostId = job['job_post_id'] as String? ?? '';
     final isTeam = (job['project_type'] ?? '') == 'team';
@@ -600,7 +599,7 @@ class JobListScreenState extends State<JobListScreen> {
                           Flexible(
                             child: Text(
                               isScamClosed
-                                  ? 'Closed by AI scam detection · Tap to appeal'
+                                  ? 'Closed by Job Scam Detection · Tap to appeal'
                                   : 'Closed by Harmful Text Detection · Tap to appeal',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,

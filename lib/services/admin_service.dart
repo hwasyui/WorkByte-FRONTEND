@@ -721,31 +721,6 @@ class AdminService {
     return [];
   }
 
-  static Future<bool> submitJobReport(
-    String token, {
-    required String jobPostId,
-    required List<String> reasons,
-    String? customReason,
-  }) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/reports'),
-        headers: _headers(token),
-        body: jsonEncode({
-          'reported_type': 'job_post',
-          'job_post_id': jobPostId,
-          'reasons': reasons,
-          if (customReason != null && customReason.isNotEmpty)
-            'custom_reason': customReason,
-        }),
-      ).timeout(const Duration(seconds: 20));
-      AdminSessionGuard.check(res);
-      return res.statusCode == 200 || res.statusCode == 201;
-    } catch (_) {
-      return false;
-    }
-  }
-
   static Map<String, dynamic> _extract(Map<String, dynamic> data) {
     final details = data['details'] ?? data['data'] ?? data;
     List<Map<String, dynamic>> items = [];

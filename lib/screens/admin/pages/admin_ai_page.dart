@@ -43,7 +43,6 @@ class _AdminAiPageState extends State<AdminAiPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
         Container(
           width: double.infinity,
           color: Colors.white,
@@ -79,7 +78,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                         ),
                       ),
                       Text(
-                        'Scam detection & harmful text detection',
+                        'Job scam detection & harmful text detection',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: const Color(0xFF9CA3AF),
@@ -102,7 +101,7 @@ class _AdminAiPageState extends State<AdminAiPage>
                 indicatorColor: const Color(0xFF4F46E5),
                 indicatorWeight: 2.5,
                 tabs: const [
-                  Tab(text: 'Scam Detection'),
+                  Tab(text: 'Job Scam Detection'),
                   Tab(text: 'Harmful Text Detection'),
                   Tab(text: 'Review Integrity'),
                 ],
@@ -110,8 +109,6 @@ class _AdminAiPageState extends State<AdminAiPage>
             ],
           ),
         ),
-
-        // Tab views
         Expanded(
           child: TabBarView(
             controller: _tab,
@@ -122,8 +119,6 @@ class _AdminAiPageState extends State<AdminAiPage>
     );
   }
 }
-
-// Scam Detection Tab
 
 class _ScamTab extends StatelessWidget {
   const _ScamTab();
@@ -355,7 +350,7 @@ class _ScamCardState extends State<_ScamCard> {
                         ),
                       ),
                       Text(
-                        'Scam Detection Details',
+                        'Job Scam Detection Details',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: const Color(0xFF9CA3AF),

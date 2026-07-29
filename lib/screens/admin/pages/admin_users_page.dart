@@ -572,7 +572,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // dialog drag handle / close row
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
             child: Row(
@@ -593,7 +592,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               children: [
-                // Profile header
                 Row(
                   children: [
                     CircleAvatar(
@@ -630,7 +628,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                 const SizedBox(height: 14),
                 const Divider(color: Color(0xFFF3F4F6)),
 
-                // FREELANCER details
                 if (_isFreelancer) ...[
                   if (_loadingProfile) ...[
                     const SizedBox(height: 24),
@@ -638,7 +635,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                     const SizedBox(height: 8),
                     Center(child: Text('Loading full profile...', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)))),
                   ] else ...[
-                    // Rate
                     if (freelancer['estimated_rate'] != null) ...[
                       const SizedBox(height: 14),
                       _UserSectionLabel('RATE'),
@@ -648,7 +644,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
                       ),
                     ],
-                    // Rating stats
                     if (totalRatings > 0) ...[
                       const SizedBox(height: 14),
                       _UserSectionLabel('RATING'),
@@ -666,14 +661,12 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         ],
                       ),
                     ],
-                    // Bio
                     if (bio.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       _UserSectionLabel('BIO'),
                       const SizedBox(height: 4),
                       Text(bio, style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151), height: 1.5)),
                     ],
-                    // Skills
                     if (skills.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _UserSectionLabel('SKILLS (${skills.length})'),
@@ -703,7 +696,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         }).toList(),
                       ),
                     ],
-                    // Specialities
                     if (specialities.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _UserSectionLabel('SPECIALITIES'),
@@ -726,7 +718,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         }).toList(),
                       ),
                     ],
-                    // Work Experience
                     if (workExp.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _UserSectionLabel('WORK EXPERIENCE (${workExp.length})'),
@@ -746,7 +737,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         );
                       }),
                     ],
-                    // Education
                     if (education.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _UserSectionLabel('EDUCATION (${education.length})'),
@@ -768,7 +758,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                         );
                       }),
                     ],
-                    // Portfolio
                     if (portfolio.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _UserSectionLabel('PORTFOLIO (${portfolio.length})'),
@@ -789,7 +778,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                     ],
                   ],
                 ] else ...[
-                  // CLIENT details
                   if (bio.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     _UserSectionLabel('BIO'),
@@ -830,7 +818,6 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                       ],
                     ],
                   ),
-                  // Posted Jobs
                   const SizedBox(height: 20),
                   _UserSectionLabel('POSTED JOBS'),
                   const SizedBox(height: 8),
@@ -895,9 +882,13 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                       }).toList(),
                     ),
                 ],
-
-                // Close button
-                const SizedBox(height: 28),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              children: [
                 const Divider(color: Color(0xFFF3F4F6)),
                 const SizedBox(height: 16),
                 _closing
@@ -1005,117 +996,6 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
     );
   }
 
-  void _showReportDialog() {
-    final reasons = <String>{};
-    final customController = TextEditingController();
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.45),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) {
-          bool submitting = false;
-          final allReasons = ['spam', 'scam', 'inappropriate_content', 'harassment', 'other'];
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Report This Job', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF111827))),
-                  const SizedBox(height: 4),
-                  Text('Select one or more reasons', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280))),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: allReasons.map((r) {
-                      final active = reasons.contains(r);
-                      return GestureDetector(
-                        onTap: () => setInner(() { if (active) reasons.remove(r); else reasons.add(r); }),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 120),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: active ? const Color(0xFFDC2626) : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(r.replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: active ? Colors.white : const Color(0xFF6B7280))),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: customController,
-                    maxLines: 2,
-                    style: GoogleFonts.poppins(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Additional details (optional)',
-                      hintStyle: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF9CA3AF)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280))),
-                      ),
-                      const SizedBox(width: 8),
-                      submitting
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)))
-                          : ElevatedButton(
-                              onPressed: (reasons.isEmpty && customController.text.trim().isEmpty) ? null : () async {
-                                setInner(() => submitting = true);
-                                final token = context.read<AdminProvider>().token ?? '';
-                                final jobPostId = widget.job['job_post_id']?.toString() ?? '';
-                                final ok = await AdminService.submitJobReport(
-                                  token,
-                                  jobPostId: jobPostId,
-                                  reasons: reasons.toList(),
-                                  customReason: customController.text.trim().isEmpty ? null : customController.text.trim(),
-                                );
-                                if (ctx.mounted) Navigator.of(ctx).pop();
-                                if (mounted) {
-                                  if (ok) {
-                                    AppToast.success('Report submitted.');
-                                  } else {
-                                    AppToast.error('Failed to submit report.');
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFDC2626),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                elevation: 0,
-                              ),
-                              child: Text('Submit Report', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-                            ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final title = widget.job['job_title']?.toString() ?? 'Untitled';
@@ -1131,7 +1011,6 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header
         Container(
           padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
           decoration: const BoxDecoration(
@@ -1164,7 +1043,6 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
             ],
           ),
         ),
-        // Body
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 480),
           child: _loading
@@ -1186,14 +1064,12 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                       if ((d['closure_reason']?.toString() ?? '').isNotEmpty)
                         _row('Closure Reason', d['closure_reason'].toString(), valueColor: const Color(0xFFDC2626)),
 
-                      // Description
                       if ((d['job_description']?.toString() ?? '').isNotEmpty) ...[
                         const Divider(color: Color(0xFFF3F4F6)),
                         const SizedBox(height: 4),
                         _row('Description', d['job_description'].toString(), multiLine: true),
                       ],
 
-                      // Roles
                       if (_roles.isNotEmpty) ...[
                         const Divider(color: Color(0xFFF3F4F6)),
                         const SizedBox(height: 4),
@@ -1249,25 +1125,6 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                     ],
                   ),
                 ),
-        ),
-        // Footer: Report button
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF3F4F6)))),
-          child: SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _loading ? null : _showReportDialog,
-              icon: const Icon(Icons.flag_outlined, size: 16),
-              label: Text('Report This Job', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFDC2626),
-                side: const BorderSide(color: Color(0xFFDC2626)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(vertical: 11),
-              ),
-            ),
-          ),
         ),
       ],
     );

@@ -2822,13 +2822,10 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
-  /// Banner headline per closure reason. The four values the backend actually
-  /// writes are scam, harmful_text, community_reports and admin_override
-  /// (see DEFAULT_CLOSURE_REASON_* in admin_functions.py).
   String _closureTitle(String reason) {
     switch (reason) {
       case 'scam':
-        return 'Auto-closed by AI scam detection';
+        return 'Closed by Job Scam Detection';
       case kClosureReasonHarmfulText:
         return 'Closed by Harmful Text Detection';
       case 'community_reports':
