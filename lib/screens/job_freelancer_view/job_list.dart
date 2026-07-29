@@ -1073,7 +1073,7 @@ class _JobListScreenState extends State<JobListScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _proposalStatusChip(proposal.status),
+                      _proposalStatusChip(proposal.status, job.status),
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -1247,7 +1247,7 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  Widget _proposalStatusChip(String status) {
+  Widget _proposalStatusChip(String status, String jobStatus) {
     final normalized = status.toLowerCase();
 
     final config = {
@@ -1269,7 +1269,15 @@ class _JobListScreenState extends State<JobListScreen> {
       ],
     };
 
-    final item = config[normalized] ?? config['pending']!;
+    final isJobClosed =
+        normalized == 'pending' && jobStatus.toLowerCase() == 'closed';
+    final item = isJobClosed
+        ? [
+            'Job Closed',
+            const Color(0xFF6B7280),
+            const Color(0xFFF3F4F6),
+          ]
+        : (config[normalized] ?? config['pending']!);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),

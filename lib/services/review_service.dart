@@ -48,7 +48,9 @@ class ReviewService {
     List<String>? detectedLabels;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
+      // Backend puts the message under 'details', not 'message'/'detail'.
       message =
+          body['details'] as String? ??
           body['message'] as String? ??
           body['detail'] as String? ??
           'Unknown error';

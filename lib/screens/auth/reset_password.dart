@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../core/utils/validators.dart';
 import '../../widgets/login_text_field.dart';
 import '../../widgets/primary_button.dart';
 import '../../screens/auth/login.dart';
@@ -84,13 +85,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final confirm = _confirmController.text.trim();
 
     setState(() {
-      if (password.isEmpty) {
-        _passwordError = 'New password is required';
-      } else if (password.length < 8) {
-        _passwordError = 'Password must be at least 8 characters';
-      } else {
-        _passwordError = null;
-      }
+      _passwordError = PasswordValidator.validate(password);
 
       if (confirm.isEmpty) {
         _confirmError = 'Please confirm your password';
@@ -259,6 +254,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   ),
                                 ),
                               ),
+                              if (_passwordError == null) ...[
+                                const SizedBox(height: 6),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 18),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      PasswordValidator.requirementsHint,
+                                      style: AppText.caption.copyWith(
+                                        color: const Color(0xFF9CA3AF),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
 
                               const SizedBox(height: 14),
 

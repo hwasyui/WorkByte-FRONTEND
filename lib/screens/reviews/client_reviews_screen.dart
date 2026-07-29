@@ -6,9 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/client_review_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../models/client_review_model.dart';
+import '../../widgets/review_card.dart' show SentimentBadge;
 import '../../widgets/review_rating_helpers.dart';
-import '../../widgets/trust_score_card.dart'
-    show ScoreBar, StarRow, AiReviewSummaryCard;
+import '../../widgets/trust_score_card.dart';
 
 /// Public reviews + trust score screen for a client, reached from the
 /// discovery/people-list flow. Symmetric counterpart to
@@ -136,10 +136,20 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (trustScore != null) ...[
-                    _buildRatingSummary(trustScore, totalReviews),
+                    RatingSummaryCard(
+                      averageRating: trustScore.weightedReviewAvgReceived ?? 0.0,
+                      totalReviews: totalReviews,
+                      confidence: trustScore.confidence,
+                    ),
                     const SizedBox(height: 16),
-                    _buildTrustScoreCard(trustScore, totalReviews),
+                    ClientTrustScoreCard(trustScore: trustScore),
                     const SizedBox(height: 16),
+                    SentimentDistributionCard(
+                      distribution: trustScore.sentimentDistribution,
+                      confidence: trustScore.confidence,
+                    ),
+                    if (trustScore.sentimentDistribution.total > 0)
+                      const SizedBox(height: 16),
                     AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
                     if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
                       const SizedBox(height: 16),
@@ -175,198 +185,6 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildRatingSummary(ClientTrustScore trustScore, int totalReviews) {
-    final rating = (trustScore.weightedReviewAvgReceived ?? 0.0).clamp(
-      0.0,
-      5.0,
-    );
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Text(
-                rating.toStringAsFixed(1),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Average Rating',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                StarRow(rating: rating),
-                const SizedBox(height: 6),
-                Text(
-                  'Based on $totalReviews review${totalReviews == 1 ? '' : 's'} from freelancers',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrustScoreCard(ClientTrustScore trustScore, int totalReviews) {
-    final score = trustScore.trustScore;
-    Color scoreColor;
-    String scoreLabel;
-    if (score >= 80) {
-      scoreColor = AppColors.primary;
-      scoreLabel = 'Excellent';
-    } else if (score >= 60) {
-      scoreColor = Colors.amber.shade700;
-      scoreLabel = 'Good';
-    } else if (score >= 40) {
-      scoreColor = Colors.orange;
-      scoreLabel = 'Fair';
-    } else {
-      scoreColor = Colors.red.shade400;
-      scoreLabel = 'Needs Work';
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 72,
-                height: 72,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: score / 100,
-                      strokeWidth: 7,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation(scoreColor),
-                    ),
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            score.toStringAsFixed(0),
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: scoreColor,
-                            ),
-                          ),
-                          Text(
-                            '/100',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      scoreLabel,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Based on $totalReviews review${totalReviews == 1 ? '' : 's'} from freelancers',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ScoreBar(
-            label: 'Responsiveness',
-            icon: Icons.bolt_outlined,
-            value: trustScore.responsivenessScore,
-          ),
-          ScoreBar(
-            label: 'Dispute-Free Rate',
-            icon: Icons.gavel_outlined,
-            value: trustScore.disputeFairnessScore,
-          ),
-          ScoreBar(
-            label: 'Communication',
-            icon: Icons.sentiment_satisfied_outlined,
-            value: trustScore.communicationSentiment,
-          ),
-          ScoreBar(
-            label: 'Review Authenticity',
-            icon: Icons.verified_outlined,
-            value: trustScore.authenticityConfidence,
-          ),
-          ScoreBar(
-            label: 'Rating Consistency',
-            icon: Icons.balance_outlined,
-            value: trustScore.consistencyScore,
-          ),
-        ],
       ),
     );
   }
@@ -471,6 +289,10 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
               ),
             ],
           ),
+          if (review.sentiment != null) ...[
+            const SizedBox(height: 10),
+            SentimentBadge(sentiment: review.sentiment),
+          ],
           if (review.ratings.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(

@@ -116,8 +116,10 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              ReviewSubmittedScreen(freelancerName: widget.freelancerName),
+          builder: (_) => ReviewSubmittedScreen(
+            reviewId: reviewId,
+            freelancerName: widget.freelancerName,
+          ),
         ),
       );
     } else if (provider.flaggedLabels != null) {

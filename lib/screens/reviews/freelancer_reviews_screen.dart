@@ -102,8 +102,7 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
 
           final reviews = reviewProvider.reviews;
           final trustScore = reviewProvider.trustScore;
-          final double averageRating =
-              trustScore?.displayStarAvg ?? trustScore?.weightedReviewAvg ?? 0.0;
+          final double averageRating = trustScore?.displayStarAvg ?? 0.0;
           final int totalReviews = trustScore?.totalReviews ?? reviews.length;
           final categoryAverages = buildCategoryAverages(reviews);
 
@@ -143,18 +142,21 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
                     RatingSummaryCard(
                       averageRating: averageRating,
                       totalReviews: totalReviews,
+                      confidence: trustScore?.confidence,
                     ),
                     const SizedBox(height: 16),
                     CategoryRatingsCard(categoryAverages: categoryAverages),
-                    const SizedBox(height: 16),
-                    SentimentDistributionBar(
-                      counts: buildSentimentDistribution(reviews),
-                    ),
                     const SizedBox(height: 16),
                   ],
                   if (trustScore != null) ...[
                     TrustScoreCard(trustScore: trustScore),
                     const SizedBox(height: 16),
+                    SentimentDistributionCard(
+                      distribution: trustScore.sentimentDistribution,
+                      confidence: trustScore.confidence,
+                    ),
+                    if (trustScore.sentimentDistribution.total > 0)
+                      const SizedBox(height: 16),
                     AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
                     if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
                       const SizedBox(height: 16),

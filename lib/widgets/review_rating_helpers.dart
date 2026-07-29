@@ -176,17 +176,3 @@ Map<String, double> buildCategoryAverages(List<Review> reviews) {
     return MapEntry(key, total / count);
   });
 }
-
-/// {positive: n, neutral: n, negative: n} across reviews that carry AI
-/// sentiment analysis (older reviews fetched before this field existed
-/// won't have it, so counts only reflect reviews with aiAnalysis present).
-Map<String, int> buildSentimentDistribution(List<Review> reviews) {
-  final counts = {'positive': 0, 'neutral': 0, 'negative': 0};
-  for (final review in reviews) {
-    final label = review.aiAnalysis?.sentimentLabel;
-    if (label != null && counts.containsKey(label)) {
-      counts[label] = counts[label]! + 1;
-    }
-  }
-  return counts;
-}

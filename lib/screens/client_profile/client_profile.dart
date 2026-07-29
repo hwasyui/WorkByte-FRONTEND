@@ -13,8 +13,8 @@ import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/app_toast.dart';
-import '../../widgets/trust_score_card.dart'
-    show ScoreBar, StarRow, AiReviewSummaryCard;
+import '../../widgets/review_card.dart' show SentimentBadge;
+import '../../widgets/trust_score_card.dart';
 import '../../widgets/review_rating_helpers.dart';
 import '../../models/job_post_model.dart';
 import '../job_client_view/job_detail.dart';
@@ -1781,8 +1781,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (trustScore != null) ...[
-                  _buildOwnTrustScoreCard(trustScore, totalReviews),
+                  ClientTrustScoreCard(trustScore: trustScore, isOwnProfile: true),
                   const SizedBox(height: 16),
+                  SentimentDistributionCard(
+                    distribution: trustScore.sentimentDistribution,
+                    confidence: trustScore.confidence,
+                  ),
+                  if (trustScore.sentimentDistribution.total > 0)
+                    const SizedBox(height: 16),
                   AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
                   if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
                     const SizedBox(height: 16),
@@ -1809,112 +1815,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  Widget _buildOwnTrustScoreCard(dynamic trustScore, int totalReviews) {
-    final score = trustScore.trustScore as double;
-    Color scoreColor;
-    String scoreLabel;
-    if (score >= 80) {
-      scoreColor = primaryColor;
-      scoreLabel = 'Excellent';
-    } else if (score >= 60) {
-      scoreColor = Colors.amber.shade700;
-      scoreLabel = 'Good';
-    } else if (score >= 40) {
-      scoreColor = Colors.orange;
-      scoreLabel = 'Fair';
-    } else {
-      scoreColor = Colors.red.shade400;
-      scoreLabel = 'Needs Work';
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 64,
-                height: 64,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: score / 100,
-                      strokeWidth: 6,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation(scoreColor),
-                    ),
-                    Center(
-                      child: Text(
-                        score.toStringAsFixed(0),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: scoreColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$scoreLabel Client',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Based on $totalReviews review${totalReviews == 1 ? '' : 's'} from freelancers',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ScoreBar(
-            label: 'Responsiveness',
-            icon: Icons.bolt_outlined,
-            value: trustScore.responsivenessScore as double?,
-          ),
-          ScoreBar(
-            label: 'Dispute-Free Rate',
-            icon: Icons.gavel_outlined,
-            value: trustScore.disputeFairnessScore as double?,
-          ),
-          ScoreBar(
-            label: 'Communication',
-            icon: Icons.sentiment_satisfied_outlined,
-            value: trustScore.communicationSentiment as double?,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildOwnReviewCard(dynamic review) {
     final displayName = review.isAnonymous == true
@@ -1981,6 +1881,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               StarRow(rating: avg),
             ],
           ),
+          if (review.sentiment != null) ...[
+            const SizedBox(height: 10),
+            SentimentBadge(sentiment: review.sentiment as String?),
+          ],
           if (comment.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(

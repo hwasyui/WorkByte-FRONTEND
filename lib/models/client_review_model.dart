@@ -1,5 +1,7 @@
 // Freelancer-reviews-client models - symmetric counterpart to review_model.dart.
 
+import 'review_model.dart' show SentimentDistribution;
+
 // ClientReviewRating
 
 class ClientReviewRating {
@@ -53,56 +55,6 @@ class ClientReviewWrittenContent {
       );
 }
 
-// ClientReviewAiAnalysis
-
-class ClientReviewAiAnalysis {
-  final String id;
-  final String clientReviewId;
-  final double sentimentScore;
-  final String sentimentLabel;
-  final bool sentimentMismatch;
-  final double? mismatchSeverity;
-  final double authenticityScore;
-  final bool isFlaggedFake;
-  final bool isFlaggedCoerced;
-  final List<String> flagReasons;
-  final bool overallPass;
-
-  const ClientReviewAiAnalysis({
-    required this.id,
-    required this.clientReviewId,
-    required this.sentimentScore,
-    required this.sentimentLabel,
-    required this.sentimentMismatch,
-    this.mismatchSeverity,
-    required this.authenticityScore,
-    required this.isFlaggedFake,
-    required this.isFlaggedCoerced,
-    required this.flagReasons,
-    required this.overallPass,
-  });
-
-  factory ClientReviewAiAnalysis.fromJson(Map<String, dynamic> json) =>
-      ClientReviewAiAnalysis(
-        id: json['id'] as String? ?? '',
-        clientReviewId: json['client_review_id'] as String? ?? '',
-        sentimentScore: (json['sentiment_score'] as num?)?.toDouble() ?? 0.0,
-        sentimentLabel: json['sentiment_label'] as String? ?? 'neutral',
-        sentimentMismatch: json['sentiment_mismatch'] as bool? ?? false,
-        mismatchSeverity: (json['mismatch_severity'] as num?)?.toDouble(),
-        authenticityScore:
-            (json['authenticity_score'] as num?)?.toDouble() ?? 1.0,
-        isFlaggedFake: json['is_flagged_fake'] as bool? ?? false,
-        isFlaggedCoerced: json['is_flagged_coerced'] as bool? ?? false,
-        flagReasons:
-            (json['flag_reasons'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            [],
-        overallPass: json['overall_pass'] as bool? ?? true,
-      );
-}
-
 // ClientReview
 
 class ClientReview {
@@ -117,7 +69,10 @@ class ClientReview {
 
   final List<ClientReviewRating> ratings;
   final ClientReviewWrittenContent? writtenContent;
-  final ClientReviewAiAnalysis? aiAnalysis;
+
+  /// "positive" | "neutral" | "negative" | null — null means no sentiment
+  /// analysis exists for this review, never defaulted to "neutral".
+  final String? sentiment;
 
   const ClientReview({
     required this.id,
@@ -130,7 +85,7 @@ class ClientReview {
     this.publishedAt,
     this.ratings = const [],
     this.writtenContent,
-    this.aiAnalysis,
+    this.sentiment,
   });
 
   factory ClientReview.fromJson(Map<String, dynamic> json) {
@@ -159,11 +114,7 @@ class ClientReview {
               json['written_content'] as Map<String, dynamic>,
             )
           : null,
-      aiAnalysis: json['ai_analysis'] != null
-          ? ClientReviewAiAnalysis.fromJson(
-              json['ai_analysis'] as Map<String, dynamic>,
-            )
-          : null,
+      sentiment: json['sentiment'] as String?,
     );
   }
 }
@@ -176,11 +127,12 @@ class ClientTrustScore {
   final double? weightedReviewAvgReceived;
   final double? responsivenessScore;
   final double? communicationSentiment;
-  final double? authenticityConfidence;
-  final double? consistencyScore;
   final double? disputeFairnessScore;
+  final String confidence;
   final int totalReviewsReceived;
   final String? aiReviewSummary;
+  final String? message;
+  final SentimentDistribution sentimentDistribution;
 
   const ClientTrustScore({
     required this.clientId,
@@ -188,11 +140,12 @@ class ClientTrustScore {
     this.weightedReviewAvgReceived,
     this.responsivenessScore,
     this.communicationSentiment,
-    this.authenticityConfidence,
-    this.consistencyScore,
     this.disputeFairnessScore,
+    required this.confidence,
     required this.totalReviewsReceived,
     this.aiReviewSummary,
+    this.message,
+    required this.sentimentDistribution,
   });
 
   factory ClientTrustScore.fromJson(Map<String, dynamic> json) =>
@@ -205,21 +158,17 @@ class ClientTrustScore {
             ?.toDouble(),
         communicationSentiment: (json['communication_sentiment'] as num?)
             ?.toDouble(),
-        authenticityConfidence: (json['authenticity_confidence'] as num?)
-            ?.toDouble(),
-        consistencyScore: (json['consistency_score'] as num?)?.toDouble(),
         disputeFairnessScore: (json['dispute_fairness_score'] as num?)
             ?.toDouble(),
+        confidence: json['confidence'] as String? ?? 'new',
         totalReviewsReceived:
             (json['total_reviews_received'] as num?)?.toInt() ?? 0,
         aiReviewSummary: json['ai_review_summary'] as String?,
+        message: json['message'] as String?,
+        sentimentDistribution: SentimentDistribution.fromJson(
+          json['sentiment_distribution'] as Map<String, dynamic>?,
+        ),
       );
-
-  double get responsivenessDisplay => (responsivenessScore ?? 0) * 100;
-  double get communicationDisplay => (communicationSentiment ?? 0) * 100;
-  double get authenticityDisplay => (authenticityConfidence ?? 0) * 100;
-  double get consistencyDisplay => (consistencyScore ?? 0) * 100;
-  double get disputeFairnessDisplay => (disputeFairnessScore ?? 0) * 100;
 }
 
 // SubmitClientReviewRequest

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
+import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/app_toast.dart';
@@ -159,7 +160,7 @@ class SettingsScreen extends StatelessWidget {
                     ],
                     _PasswordField(
                       label: 'New Password',
-                      hint: 'Min. 8 characters',
+                      hint: PasswordValidator.requirementsHint,
                       controller: newCtrl,
                       isVisible: showNew,
                       errorText: newError,
@@ -223,9 +224,10 @@ class SettingsScreen extends StatelessWidget {
                                           setState(() => currentError = null);
                                         }
 
-                                        if (newPass.length < 8) {
-                                          setState(() => newError =
-                                              'Password must be at least 8 characters');
+                                        final passwordError =
+                                            PasswordValidator.validate(newPass);
+                                        if (passwordError != null) {
+                                          setState(() => newError = passwordError);
                                           hasError = true;
                                         } else {
                                           setState(() => newError = null);

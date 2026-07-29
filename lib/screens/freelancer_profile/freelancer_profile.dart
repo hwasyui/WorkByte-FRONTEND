@@ -1568,7 +1568,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           Consumer<ReviewProvider>(
             builder: (context, reviewProvider, child) {
-              final rating = reviewProvider.trustScore?.weightedReviewAvg ?? 0.0;
+              final rating = reviewProvider.trustScore?.displayStarAvg ?? 0.0;
               final safeRating = rating.clamp(0.0, 5.0);
               final total = reviewProvider.trustScore?.totalReviews ?? 0;
               return Center(
@@ -2246,8 +2246,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         final reviews = reviewProvider.reviews;
         final trustScore = reviewProvider.trustScore;
 
-        final double averageRating =
-            trustScore?.displayStarAvg ?? trustScore?.weightedReviewAvg ?? 0.0;
+        final double averageRating = trustScore?.displayStarAvg ?? 0.0;
 
         final int totalReviews = trustScore?.totalReviews ?? reviews.length;
         final categoryAverages = buildCategoryAverages(reviews);
@@ -2261,18 +2260,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                 RatingSummaryCard(
                   averageRating: averageRating,
                   totalReviews: totalReviews,
+                  confidence: trustScore?.confidence,
                 ),
                 const SizedBox(height: 16),
                 CategoryRatingsCard(categoryAverages: categoryAverages),
                 const SizedBox(height: 16),
-                SentimentDistributionBar(
-                  counts: buildSentimentDistribution(reviews),
-                ),
-                const SizedBox(height: 16),
               ],
               if (trustScore != null) ...[
-                TrustScoreCard(trustScore: trustScore),
+                TrustScoreCard(trustScore: trustScore, isOwnProfile: true),
                 const SizedBox(height: 16),
+                SentimentDistributionCard(
+                  distribution: trustScore.sentimentDistribution,
+                  confidence: trustScore.confidence,
+                ),
+                if (trustScore.sentimentDistribution.total > 0)
+                  const SizedBox(height: 16),
                 AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
                 if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
                   const SizedBox(height: 16),

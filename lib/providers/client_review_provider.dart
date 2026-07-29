@@ -198,6 +198,22 @@ class ClientReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Plain passthrough fetch (no state mutation) used by the post-submit
+  /// status screen to poll a review's status without disturbing formState.
+  Future<ClientReview?> fetchClientReviewById({
+    required String token,
+    required String clientReviewId,
+  }) async {
+    try {
+      return await _service.getClientReview(
+        token: token,
+        clientReviewId: clientReviewId,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   void resetForm() {
     _pendingReview = null;
     _formState = ClientReviewLoadState.idle;

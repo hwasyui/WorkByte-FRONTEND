@@ -99,7 +99,10 @@ class _ClientReviewFormScreenState extends State<ClientReviewFormScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ClientReviewSubmittedScreen(clientName: widget.clientName),
+          builder: (_) => ClientReviewSubmittedScreen(
+            clientReviewId: reviewId,
+            clientName: widget.clientName,
+          ),
         ),
       );
     } else if (provider.flaggedLabels != null) {

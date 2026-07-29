@@ -212,6 +212,19 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Plain passthrough fetch (no state mutation) used by the post-submit
+  /// status screen to poll a review's status without disturbing formState.
+  Future<Review?> fetchReviewById({
+    required String token,
+    required String reviewId,
+  }) async {
+    try {
+      return await _service.getReview(token: token, reviewId: reviewId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Reset
 
   void resetForm() {

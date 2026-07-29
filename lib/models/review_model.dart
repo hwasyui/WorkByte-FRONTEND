@@ -73,59 +73,6 @@ class ReviewSkillTag {
   );
 }
 
-// ReviewAiAnalysis
-
-class ReviewAiAnalysis {
-  final String id;
-  final String reviewId;
-  final double sentimentScore;
-  final String sentimentLabel;
-  final bool sentimentMismatch;
-  final double? mismatchSeverity;
-  final double authenticityScore;
-  final bool isFlaggedFake;
-  final bool isFlaggedCoerced;
-  final List<String> flagReasons;
-  final bool overallPass;
-
-  const ReviewAiAnalysis({
-    required this.id,
-    required this.reviewId,
-    required this.sentimentScore,
-    required this.sentimentLabel,
-    required this.sentimentMismatch,
-    this.mismatchSeverity,
-    required this.authenticityScore,
-    required this.isFlaggedFake,
-    required this.isFlaggedCoerced,
-    required this.flagReasons,
-    required this.overallPass,
-  });
-
-  /// True/positive/negative come from the review_ml sentiment classifier,
-  /// authenticity/mismatch are blended with the trained review_ml models -
-  /// see ai_related/review_analysis/review_ml/ on the backend.
-  factory ReviewAiAnalysis.fromJson(Map<String, dynamic> json) =>
-      ReviewAiAnalysis(
-        id: json['id'] as String? ?? '',
-        reviewId: json['review_id'] as String? ?? '',
-        sentimentScore: (json['sentiment_score'] as num?)?.toDouble() ?? 0.0,
-        sentimentLabel: json['sentiment_label'] as String? ?? 'neutral',
-        sentimentMismatch: json['sentiment_mismatch'] as bool? ?? false,
-        mismatchSeverity: (json['mismatch_severity'] as num?)?.toDouble(),
-        authenticityScore:
-            (json['authenticity_score'] as num?)?.toDouble() ?? 1.0,
-        isFlaggedFake: json['is_flagged_fake'] as bool? ?? false,
-        isFlaggedCoerced: json['is_flagged_coerced'] as bool? ?? false,
-        flagReasons:
-            (json['flag_reasons'] as List<dynamic>?)
-                ?.map((e) => e as String)
-                .toList() ??
-            [],
-        overallPass: json['overall_pass'] as bool? ?? true,
-      );
-}
-
 // Review (matches ReviewResponse)
 
 class Review {
@@ -143,8 +90,12 @@ class Review {
   final List<ReviewRating> ratings;
   final ReviewWrittenContent? writtenContent;
   final List<ReviewSkillTag> skillTags;
-  final ReviewAiAnalysis? aiAnalysis;
   final List<String> suggestedSkillTags;
+
+  /// "positive" | "neutral" | "negative" | null. Null means no sentiment
+  /// analysis exists for this review (AI outage at submit time, or an older
+  /// row) — distinct from a measured "neutral", so it must never be defaulted.
+  final String? sentiment;
 
   const Review({
     required this.id,
@@ -159,8 +110,8 @@ class Review {
     this.ratings = const [],
     this.writtenContent,
     this.skillTags = const [],
-    this.aiAnalysis,
     this.suggestedSkillTags = const [],
+    this.sentiment,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -193,16 +144,54 @@ class Review {
               ?.map((e) => ReviewSkillTag.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      aiAnalysis: json['ai_analysis'] != null
-          ? ReviewAiAnalysis.fromJson(
-              json['ai_analysis'] as Map<String, dynamic>,
-            )
-          : null,
       suggestedSkillTags:
           (json['suggested_skill_tags'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
+      sentiment: json['sentiment'] as String?,
+    );
+  }
+}
+
+// SentimentDistribution (matches SentimentDistributionResponse)
+//
+// Shared between the freelancer and client trust-score responses - counts
+// cover published reviews only, and the four categories always sum to total.
+
+class SentimentDistribution {
+  final int positive;
+  final int neutral;
+  final int negative;
+  final int unclassified;
+  final int total;
+
+  const SentimentDistribution({
+    required this.positive,
+    required this.neutral,
+    required this.negative,
+    required this.unclassified,
+    required this.total,
+  });
+
+  /// Handles both the full trust-score shape and the "no reviews yet" shape
+  /// (where sentiment_distribution is still present, every count just 0).
+  factory SentimentDistribution.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SentimentDistribution(
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+        unclassified: 0,
+        total: 0,
+      );
+    }
+    return SentimentDistribution(
+      positive: (json['positive'] as num?)?.toInt() ?? 0,
+      neutral: (json['neutral'] as num?)?.toInt() ?? 0,
+      negative: (json['negative'] as num?)?.toInt() ?? 0,
+      unclassified: (json['unclassified'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -212,51 +201,48 @@ class Review {
 class TrustScore {
   final String freelancerId;
   final double overallScore;
-  final double? weightedReviewAvg;
   final double? displayStarAvg;
   final double? onTimeScore;
   final double? revisionRateScore;
   final double? responsivenessScore;
   final double? communicationSentiment;
-  final double? authenticityConfidence;
-  final double? consistencyScore;
+  final String confidence;
   final int totalReviews;
   final String? category;
   final double? categoryRankPct;
   final DateTime? lastUpdated;
   final String? aiReviewSummary;
+  final String? message;
+  final SentimentDistribution sentimentDistribution;
 
   const TrustScore({
     required this.freelancerId,
     required this.overallScore,
-    this.weightedReviewAvg,
     this.displayStarAvg,
     this.onTimeScore,
     this.revisionRateScore,
     this.responsivenessScore,
     this.communicationSentiment,
-    this.authenticityConfidence,
-    this.consistencyScore,
+    required this.confidence,
     required this.totalReviews,
     this.category,
     this.categoryRankPct,
     this.lastUpdated,
     this.aiReviewSummary,
+    this.message,
+    required this.sentimentDistribution,
   });
 
   factory TrustScore.fromJson(Map<String, dynamic> json) => TrustScore(
     freelancerId: json['freelancer_id'] as String? ?? '',
     overallScore: (json['overall_score'] as num?)?.toDouble() ?? 0.0,
-    weightedReviewAvg: (json['weighted_review_avg'] as num?)?.toDouble(),
     displayStarAvg: (json['display_star_avg'] as num?)?.toDouble(),
     onTimeScore: (json['on_time_score'] as num?)?.toDouble(),
     revisionRateScore: (json['revision_rate_score'] as num?)?.toDouble(),
     responsivenessScore: (json['responsiveness_score'] as num?)?.toDouble(),
     communicationSentiment: (json['communication_sentiment'] as num?)
         ?.toDouble(),
-    authenticityConfidence: (json['authenticity_confidence'] as num?)
-        ?.toDouble(),
-    consistencyScore: (json['consistency_score'] as num?)?.toDouble(),
+    confidence: json['confidence'] as String? ?? 'new',
     totalReviews: (json['total_reviews'] as num?)?.toInt() ?? 0,
     category: json['category'] as String?,
     categoryRankPct: (json['category_rank_pct'] as num?)?.toDouble(),
@@ -264,15 +250,11 @@ class TrustScore {
         ? DateTime.tryParse(json['last_updated'] as String)
         : null,
     aiReviewSummary: json['ai_review_summary'] as String?,
+    message: json['message'] as String?,
+    sentimentDistribution: SentimentDistribution.fromJson(
+      json['sentiment_distribution'] as Map<String, dynamic>?,
+    ),
   );
-
-  /// Converts 0–1 component scores to 0–100 for display.
-  double get onTimeDisplay => (onTimeScore ?? 0) * 100;
-  double get revisionRateDisplay => (revisionRateScore ?? 0) * 100;
-  double get responsivenessDisplay => (responsivenessScore ?? 0) * 100;
-  double get communicationDisplay => (communicationSentiment ?? 0) * 100;
-  double get authenticityDisplay => (authenticityConfidence ?? 0) * 100;
-  double get consistencyDisplay => (consistencyScore ?? 0) * 100;
 
   /// e.g. "Top 6%" string from category_rank_pct (percentile from bottom).
   /// Backend returns what % of freelancers score BELOW this freelancer.

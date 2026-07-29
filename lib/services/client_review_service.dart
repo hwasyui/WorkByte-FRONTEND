@@ -96,6 +96,23 @@ class ClientReviewService {
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
 
+  // GET /client-reviews/{client_review_id}
+  // Full review detail — used to poll post-submit status.
+
+  Future<ClientReview> getClientReview({
+    required String token,
+    required String clientReviewId,
+  }) async {
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/client-reviews/$clientReviewId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
+    return ClientReview.fromJson(_parse(res, 'getClientReview'));
+  }
+
   // GET /client-reviews/client/{client_id}
   // All published reviews for a client's public profile.
 

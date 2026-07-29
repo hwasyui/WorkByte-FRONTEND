@@ -3,10 +3,7 @@ import '../core/constants/colors.dart';
 import '../models/review_model.dart';
 import 'review_rating_helpers.dart';
 
-/// A published review with rating chips, comment text, skill tags, and an
-/// AI sentiment/authenticity badge when the review carries ai_analysis
-/// (requires the freelancer-reviews endpoint to include it - see
-/// ReviewFunctions.get_reviews_by_freelancer_id on the backend).
+/// A published review with rating chips, comment text, and skill tags.
 class ReviewCard extends StatelessWidget {
   final Review review;
   final String? reviewerName;
@@ -123,9 +120,9 @@ class ReviewCard extends StatelessWidget {
               ),
             ],
           ),
-          if (review.aiAnalysis != null) ...[
+          if (review.sentiment != null) ...[
             const SizedBox(height: 10),
-            SentimentBadge(analysis: review.aiAnalysis!),
+            SentimentBadge(sentiment: review.sentiment),
           ],
           if (review.ratings.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -165,12 +162,13 @@ class ReviewCard extends StatelessWidget {
   }
 }
 
-/// Small positive/neutral/negative pill backed by the review_ml sentiment
-/// classifier's output (ReviewAiAnalysis.sentimentLabel).
+/// Small positive/neutral/negative pill backed by the review's flat
+/// `sentiment` label. Renders nothing for null (no analysis exists for this
+/// review) or an unrecognized value — never guessed or defaulted.
 class SentimentBadge extends StatelessWidget {
-  final ReviewAiAnalysis analysis;
+  final String? sentiment;
 
-  const SentimentBadge({super.key, required this.analysis});
+  const SentimentBadge({super.key, required this.sentiment});
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +176,7 @@ class SentimentBadge extends StatelessWidget {
     late final IconData icon;
     late final String label;
 
-    switch (analysis.sentimentLabel) {
+    switch (sentiment) {
       case 'positive':
         color = const Color(0xFF059669);
         icon = Icons.sentiment_satisfied_alt_rounded;
@@ -189,67 +187,36 @@ class SentimentBadge extends StatelessWidget {
         icon = Icons.sentiment_dissatisfied_rounded;
         label = 'Negative';
         break;
-      default:
+      case 'neutral':
         color = const Color(0xFF6B7280);
         icon = Icons.sentiment_neutral_rounded;
         label = 'Neutral';
+        break;
+      default:
+        return const SizedBox.shrink();
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 12, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (analysis.overallPass) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.verified_outlined,
-                  size: 12,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'AI-verified',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -361,92 +328,3 @@ class _ExpandableReviewTextState extends State<ExpandableReviewText> {
   }
 }
 
-/// "82% positive · 12% neutral · 6% negative" horizontal bar for a
-/// freelancer's public reviews screen, built client-side from the AI
-/// sentiment label already attached to each review.
-class SentimentDistributionBar extends StatelessWidget {
-  final Map<String, int> counts;
-
-  const SentimentDistributionBar({super.key, required this.counts});
-
-  @override
-  Widget build(BuildContext context) {
-    final total = counts.values.fold(0, (a, b) => a + b);
-    if (total == 0) return const SizedBox.shrink();
-
-    final positive = counts['positive'] ?? 0;
-    final neutral = counts['neutral'] ?? 0;
-    final negative = counts['negative'] ?? 0;
-
-    Widget segment(int count, Color color) {
-      if (count == 0) return const SizedBox.shrink();
-      return Expanded(
-        flex: count,
-        child: Container(height: 8, color: color),
-      );
-    }
-
-    String pct(int count) => '${(count / total * 100).round()}%';
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Review Sentiment',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Row(
-              children: [
-                segment(positive, const Color(0xFF059669)),
-                segment(neutral, const Color(0xFF9CA3AF)),
-                segment(negative, const Color(0xFFDC2626)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 14,
-            runSpacing: 6,
-            children: [
-              _legend('${pct(positive)} positive', const Color(0xFF059669)),
-              _legend('${pct(neutral)} neutral', const Color(0xFF9CA3AF)),
-              _legend('${pct(negative)} negative', const Color(0xFFDC2626)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legend(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      ],
-    );
-  }
-}
