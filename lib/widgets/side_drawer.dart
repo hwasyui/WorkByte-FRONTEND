@@ -12,6 +12,7 @@ import '../screens/freelancer_profile/freelancer_profile.dart';
 import '../screens/client_profile/client_profile.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/about/about_screen.dart';
+import '../screens/contact/contact_us_screen.dart';
 import '../screens/auth/login.dart';
 import '../screens/appeals/my_appeals_screen.dart'; // 👈 NEW
 import '../screens/guidelines/guidelines_screen.dart';
@@ -46,6 +47,14 @@ class SideDrawer extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AboutScreen()),
+    );
+  }
+
+  void _navigateToContactUs(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ContactUsScreen()),
     );
   }
 
@@ -538,6 +547,11 @@ class SideDrawer extends StatelessWidget {
               icon: Icons.info_outline_rounded,
               label: 'About Us',
               onTap: () => _navigateToAbout(context),
+            ),
+            _DrawerItem(
+              icon: Icons.mail_outline_rounded,
+              label: 'Contact Us',
+              onTap: () => _navigateToContactUs(context),
             ),
             const Spacer(),
             const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
