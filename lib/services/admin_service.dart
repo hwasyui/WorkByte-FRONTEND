@@ -3,7 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import '../models/admin_review_moderation_model.dart';
+import '../models/admin_red_flag_detail_model.dart';
 import 'admin_session_guard.dart';
+
+/// Result of an admin action that requires a reason. Carries the failure
+/// message (including a field-level 422 validation message) so the UI can
+/// surface it inline rather than as a generic snackbar.
+class AdminActionOutcome {
+  final bool success;
+  final int? statusCode;
+  final String? errorMessage;
+
+  /// For red-flag resolve: false means the note was NOT persisted because the
+  /// DB migration is pending. Null when the response didn't report it.
+  final bool? resolutionRecorded;
+
+  const AdminActionOutcome({
+    required this.success,
+    this.statusCode,
+    this.errorMessage,
+    this.resolutionRecorded,
+  });
+
+  /// True on 404 — the item was already actioned by another admin.
+  bool get alreadyActioned => statusCode == 404;
+}
 
 class AdminService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
@@ -417,19 +442,17 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
-  static Future<bool> resolveReviewRedFlag(String token, String alertId) async {
-    try {
-      final res = await AdminSessionGuard.guard(
-        token,
-        (t) => http.post(
-          Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId/resolve'),
-          headers: _headers(t),
-        ).timeout(const Duration(seconds: 20)),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
+  static Future<AdminActionOutcome> resolveReviewRedFlag(
+    String token,
+    String alertId, {
+    required String reason,
+  }) {
+    return _postWithReason(
+      token,
+      '/admin/reviews/red-flags/$alertId/resolve',
+      reason,
+      readResolutionRecorded: true,
+    );
   }
 
   static Future<Map<String, dynamic>> getFlaggedReviews(
@@ -461,19 +484,35 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
-  static Future<bool> overridePublishReview(String token, String reviewId) async {
-    try {
-      final res = await AdminSessionGuard.guard(
-        token,
-        (t) => http.post(
-          Uri.parse('$_baseUrl/admin/reviews/$reviewId/override-publish'),
-          headers: _headers(t),
-        ).timeout(const Duration(seconds: 20)),
-      );
-      return res.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
+  static Future<AdminActionOutcome> overridePublishReview(
+    String token,
+    String reviewId, {
+    required String reason,
+  }) {
+    return _postWithReason(
+      token,
+      '/admin/reviews/$reviewId/override-publish',
+      reason,
+    );
+  }
+
+  static Future<AdminActionOutcome> upholdReview(
+    String token,
+    String reviewId, {
+    required String reason,
+  }) {
+    return _postWithReason(token, '/admin/reviews/$reviewId/uphold', reason);
+  }
+
+  static Future<ReviewModerationDetail?> getReviewModerationDetail(
+    String token,
+    String reviewId,
+  ) {
+    return _getModerationDetail(
+      token,
+      '/admin/reviews/$reviewId/moderation',
+      isClientReview: false,
+    );
   }
 
   static Future<Map<String, dynamic>> getFlaggedClientReviews(
@@ -505,22 +544,161 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
-  static Future<bool> overridePublishClientReview(
+  static Future<AdminActionOutcome> overridePublishClientReview(
     String token,
-    String clientReviewId,
+    String clientReviewId, {
+    required String reason,
+  }) {
+    return _postWithReason(
+      token,
+      '/admin/client-reviews/$clientReviewId/override-publish',
+      reason,
+    );
+  }
+
+  static Future<AdminActionOutcome> upholdClientReview(
+    String token,
+    String clientReviewId, {
+    required String reason,
+  }) {
+    return _postWithReason(
+      token,
+      '/admin/client-reviews/$clientReviewId/uphold',
+      reason,
+    );
+  }
+
+  static Future<ReviewModerationDetail?> getClientReviewModerationDetail(
+    String token,
+    String reviewId,
+  ) {
+    return _getModerationDetail(
+      token,
+      '/admin/client-reviews/$reviewId/moderation',
+      isClientReview: true,
+    );
+  }
+
+  static Future<RedFlagDetail?> getRedFlagDetail(
+    String token,
+    String alertId,
   ) async {
     try {
       final res = await AdminSessionGuard.guard(
         token,
-        (t) => http.post(
-          Uri.parse('$_baseUrl/admin/client-reviews/$clientReviewId/override-publish'),
-          headers: _headers(t),
-        ).timeout(const Duration(seconds: 20)),
+        (t) => http
+            .get(
+              Uri.parse('$_baseUrl/admin/reviews/red-flags/$alertId'),
+              headers: _headers(t),
+            )
+            .timeout(const Duration(seconds: 20)),
       );
-      return res.statusCode == 200;
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final data =
+            (body['details'] ?? body['data'] ?? body) as Map<String, dynamic>;
+        return RedFlagDetail.fromJson(data);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Shared POST-with-reason for override-publish, uphold, and resolve. Returns
+  /// a structured outcome so callers can show 422 field errors inline and
+  /// special-case 404 ("already actioned by another admin").
+  static Future<AdminActionOutcome> _postWithReason(
+    String token,
+    String path,
+    String reason, {
+    bool readResolutionRecorded = false,
+  }) async {
+    try {
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http
+            .post(
+              Uri.parse('$_baseUrl$path'),
+              headers: _headers(t),
+              body: jsonEncode({'reason': reason}),
+            )
+            .timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        bool? resolutionRecorded;
+        if (readResolutionRecorded) {
+          try {
+            final body = jsonDecode(res.body) as Map<String, dynamic>;
+            final data = (body['details'] ?? body['data'] ?? body);
+            if (data is Map && data['resolution_recorded'] != null) {
+              resolutionRecorded = data['resolution_recorded'] == true;
+            }
+          } catch (_) {}
+        }
+        return AdminActionOutcome(
+          success: true,
+          statusCode: res.statusCode,
+          resolutionRecorded: resolutionRecorded,
+        );
+      }
+      return AdminActionOutcome(
+        success: false,
+        statusCode: res.statusCode,
+        errorMessage: res.statusCode == 404
+            ? 'This item was already actioned by another admin.'
+            : _errorMessage(res.body),
+      );
     } catch (_) {
-      return false;
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'Network error — please try again.',
+      );
     }
+  }
+
+  static Future<ReviewModerationDetail?> _getModerationDetail(
+    String token,
+    String path, {
+    required bool isClientReview,
+  }) async {
+    try {
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http
+            .get(Uri.parse('$_baseUrl$path'), headers: _headers(t))
+            .timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final data =
+            (body['details'] ?? body['data'] ?? body) as Map<String, dynamic>;
+        return ReviewModerationDetail.fromJson(
+          data,
+          isClientReview: isClientReview,
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Extracts a human-readable message from an error body. Handles the app's
+  /// `details`/`message`/`detail` string convention and raw FastAPI/Pydantic
+  /// 422 bodies where `detail` is a list of `{msg, loc}` entries.
+  static String _errorMessage(String rawBody) {
+    try {
+      final body = jsonDecode(rawBody);
+      if (body is Map<String, dynamic>) {
+        final detail = body['detail'];
+        if (detail is List && detail.isNotEmpty) {
+          final first = detail.first;
+          if (first is Map && first['msg'] != null) {
+            return first['msg'].toString();
+          }
+        }
+        final msg = body['details'] ?? body['message'] ?? body['detail'];
+        if (msg is String && msg.isNotEmpty) return msg;
+      }
+    } catch (_) {}
+    return 'Action failed — please try again.';
   }
 
   static Future<Map<String, dynamic>> getModerationItems(

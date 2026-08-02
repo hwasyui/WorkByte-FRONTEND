@@ -136,6 +136,8 @@ String ratingLabel(String category) {
       return 'Clarity of Requirements';
     case 'responsiveness':
       return 'Responsiveness';
+    case 'timeliness':
+      return 'Timeliness';
     default:
       return category.replaceAll('_', ' ');
   }
@@ -155,6 +157,8 @@ IconData ratingIcon(String category) {
       return Icons.fact_check_outlined;
     case 'responsiveness':
       return Icons.bolt_outlined;
+    case 'timeliness':
+      return Icons.schedule_outlined;
     default:
       return Icons.star_outline;
   }

@@ -520,7 +520,7 @@ class _DMChatScreenState extends State<DMChatScreen>
         _playingMessageId = null;
       });
       AppToast.error(
-        'Gagal memutar audio: ${e.toString().replaceFirst('Exception: ', '')}',
+        'Failed to play audio: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }

@@ -32,6 +32,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     'quality': 5.0,
     'professionalism': 5.0,
     'value_for_money': 5.0,
+    'timeliness': 5.0,
   };
 
   static const Map<String, String> _ratingLabels = {
@@ -39,6 +40,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     'quality': 'Work Quality',
     'professionalism': 'Professionalism',
     'value_for_money': 'Value for Money',
+    'timeliness': 'Timeliness',
   };
 
   static const Map<String, IconData> _ratingIcons = {
@@ -46,6 +48,7 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     'quality': Icons.workspace_premium_outlined,
     'professionalism': Icons.verified_outlined,
     'value_for_money': Icons.monetization_on_outlined,
+    'timeliness': Icons.schedule_outlined,
   };
 
   // Controllers

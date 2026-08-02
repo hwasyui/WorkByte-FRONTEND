@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/admin_review_moderation_model.dart';
+import '../models/admin_red_flag_detail_model.dart';
 import '../services/admin_service.dart';
 import '../services/admin_session_guard.dart';
 
@@ -68,9 +70,23 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _reviewRedFlags = [];
   List<Map<String, dynamic>> _flaggedReviews = [];
   List<Map<String, dynamic>> _flaggedClientReviews = [];
-  bool _isReviewIntegrityLoading = false;
+  // Separate loading flags so the three review-integrity sub-lists don't stomp
+  // on each other's spinner when loaded concurrently.
+  bool _isRedFlagsLoading = false;
+  bool _isFlaggedReviewsLoading = false;
+  bool _isFlaggedClientReviewsLoading = false;
+  Map<String, dynamic> _reviewRedFlagsPagination = {};
+  Map<String, dynamic> _flaggedReviewsPagination = {};
+  Map<String, dynamic> _flaggedClientReviewsPagination = {};
+  // Red flags: all | open | resolved  (maps to is_resolved query param).
+  String _reviewRedFlagsResolvedFilter = 'all';
+  String _reviewRedFlagsSortBy = 'triggered_at'; // triggered_at | severity
+  // Flagged reviews: all | flagged | suppressed  (hold level).
   String _flaggedReviewStatusFilter = 'all';
   String _flaggedClientReviewStatusFilter = 'all';
+  // created_at | authenticity | disagreement
+  String _flaggedReviewSortBy = 'created_at';
+  String _flaggedClientReviewSortBy = 'created_at';
   List<Map<String, dynamic>> _moderationItems = [];
   List<Map<String, dynamic>> _closedJobs = [];
   List<Map<String, dynamic>> _closedAccounts = [];
@@ -132,9 +148,19 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get reviewRedFlags => _reviewRedFlags;
   List<Map<String, dynamic>> get flaggedReviews => _flaggedReviews;
   List<Map<String, dynamic>> get flaggedClientReviews => _flaggedClientReviews;
-  bool get isReviewIntegrityLoading => _isReviewIntegrityLoading;
+  bool get isRedFlagsLoading => _isRedFlagsLoading;
+  bool get isFlaggedReviewsLoading => _isFlaggedReviewsLoading;
+  bool get isFlaggedClientReviewsLoading => _isFlaggedClientReviewsLoading;
+  Map<String, dynamic> get reviewRedFlagsPagination => _reviewRedFlagsPagination;
+  Map<String, dynamic> get flaggedReviewsPagination => _flaggedReviewsPagination;
+  Map<String, dynamic> get flaggedClientReviewsPagination =>
+      _flaggedClientReviewsPagination;
+  String get reviewRedFlagsResolvedFilter => _reviewRedFlagsResolvedFilter;
+  String get reviewRedFlagsSortBy => _reviewRedFlagsSortBy;
   String get flaggedReviewStatusFilter => _flaggedReviewStatusFilter;
   String get flaggedClientReviewStatusFilter => _flaggedClientReviewStatusFilter;
+  String get flaggedReviewSortBy => _flaggedReviewSortBy;
+  String get flaggedClientReviewSortBy => _flaggedClientReviewSortBy;
   List<Map<String, dynamic>> get moderationItems => _moderationItems;
   List<Map<String, dynamic>> get closedJobs => _closedJobs;
   List<Map<String, dynamic>> get closedAccounts => _closedAccounts;
@@ -582,95 +608,190 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadReviewRedFlags({bool? isResolved}) async {
+  Future<void> loadReviewRedFlags({String? resolvedFilter, int? page}) async {
     if (_token == null) return;
-    _isReviewIntegrityLoading = true;
+    if (resolvedFilter != null) _reviewRedFlagsResolvedFilter = resolvedFilter;
+    _isRedFlagsLoading = true;
     notifyListeners();
     try {
       final data = await AdminService.getReviewRedFlags(
         _token!,
-        isResolved: isResolved,
+        isResolved: _reviewRedFlagsResolvedFilter == 'all'
+            ? null
+            : _reviewRedFlagsResolvedFilter == 'resolved',
+        sortBy: _reviewRedFlagsSortBy,
+        page: page ?? 1,
       );
       _reviewRedFlags = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _reviewRedFlagsPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
     } catch (e) {
       debugPrint('AdminProvider.loadReviewRedFlags error: $e');
     }
-    _isReviewIntegrityLoading = false;
+    _isRedFlagsLoading = false;
     notifyListeners();
   }
 
-  Future<bool> resolveReviewRedFlag(String alertId) async {
-    if (_token == null) return false;
-    try {
-      final ok = await AdminService.resolveReviewRedFlag(_token!, alertId);
-      if (ok) await loadReviewRedFlags();
-      return ok;
-    } catch (_) {
-      return false;
-    }
+  void setReviewRedFlagsSort(String sortBy) {
+    _reviewRedFlagsSortBy = sortBy;
+    loadReviewRedFlags();
   }
 
-  Future<void> loadFlaggedReviews({String? status}) async {
+  Future<AdminActionOutcome> resolveReviewRedFlag(
+    String alertId, {
+    required String reason,
+  }) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.resolveReviewRedFlag(
+      _token!,
+      alertId,
+      reason: reason,
+    );
+    if (outcome.success) await loadReviewRedFlags();
+    return outcome;
+  }
+
+  Future<void> loadFlaggedReviews({String? status, int? page}) async {
     if (_token == null) return;
     if (status != null) _flaggedReviewStatusFilter = status;
-    _isReviewIntegrityLoading = true;
+    _isFlaggedReviewsLoading = true;
     notifyListeners();
     try {
       final data = await AdminService.getFlaggedReviews(
         _token!,
         status: _flaggedReviewStatusFilter,
+        sortBy: _flaggedReviewSortBy,
+        page: page ?? 1,
       );
       _flaggedReviews = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _flaggedReviewsPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
     } catch (e) {
       debugPrint('AdminProvider.loadFlaggedReviews error: $e');
     }
-    _isReviewIntegrityLoading = false;
+    _isFlaggedReviewsLoading = false;
     notifyListeners();
   }
 
-  Future<bool> overridePublishReview(String reviewId) async {
-    if (_token == null) return false;
-    try {
-      final ok = await AdminService.overridePublishReview(_token!, reviewId);
-      if (ok) await loadFlaggedReviews();
-      return ok;
-    } catch (_) {
-      return false;
-    }
+  void setFlaggedReviewSort(String sortBy) {
+    _flaggedReviewSortBy = sortBy;
+    loadFlaggedReviews();
   }
 
-  Future<void> loadFlaggedClientReviews({String? status}) async {
+  Future<AdminActionOutcome> overridePublishReview(
+    String reviewId, {
+    required String reason,
+  }) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.overridePublishReview(
+      _token!,
+      reviewId,
+      reason: reason,
+    );
+    if (outcome.success) await loadFlaggedReviews();
+    return outcome;
+  }
+
+  Future<AdminActionOutcome> upholdReview(
+    String reviewId, {
+    required String reason,
+  }) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.upholdReview(
+      _token!,
+      reviewId,
+      reason: reason,
+    );
+    if (outcome.success) await loadFlaggedReviews();
+    return outcome;
+  }
+
+  Future<void> loadFlaggedClientReviews({String? status, int? page}) async {
     if (_token == null) return;
     if (status != null) _flaggedClientReviewStatusFilter = status;
-    _isReviewIntegrityLoading = true;
+    _isFlaggedClientReviewsLoading = true;
     notifyListeners();
     try {
       final data = await AdminService.getFlaggedClientReviews(
         _token!,
         status: _flaggedClientReviewStatusFilter,
+        sortBy: _flaggedClientReviewSortBy,
+        page: page ?? 1,
       );
       _flaggedClientReviews = List<Map<String, dynamic>>.from(
         data['items'] ?? [],
       );
+      _flaggedClientReviewsPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
     } catch (e) {
       debugPrint('AdminProvider.loadFlaggedClientReviews error: $e');
     }
-    _isReviewIntegrityLoading = false;
+    _isFlaggedClientReviewsLoading = false;
     notifyListeners();
   }
 
-  Future<bool> overridePublishClientReview(String clientReviewId) async {
-    if (_token == null) return false;
-    try {
-      final ok = await AdminService.overridePublishClientReview(
-        _token!,
-        clientReviewId,
-      );
-      if (ok) await loadFlaggedClientReviews();
-      return ok;
-    } catch (_) {
-      return false;
+  void setFlaggedClientReviewSort(String sortBy) {
+    _flaggedClientReviewSortBy = sortBy;
+    loadFlaggedClientReviews();
+  }
+
+  Future<AdminActionOutcome> overridePublishClientReview(
+    String clientReviewId, {
+    required String reason,
+  }) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
     }
+    final outcome = await AdminService.overridePublishClientReview(
+      _token!,
+      clientReviewId,
+      reason: reason,
+    );
+    if (outcome.success) await loadFlaggedClientReviews();
+    return outcome;
+  }
+
+  Future<AdminActionOutcome> upholdClientReview(
+    String clientReviewId, {
+    required String reason,
+  }) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.upholdClientReview(
+      _token!,
+      clientReviewId,
+      reason: reason,
+    );
+    if (outcome.success) await loadFlaggedClientReviews();
+    return outcome;
+  }
+
+  // Detail passthroughs — screens call these once; not stored as provider state.
+  Future<ReviewModerationDetail?> fetchReviewModerationDetail(String reviewId) {
+    if (_token == null) return Future.value(null);
+    return AdminService.getReviewModerationDetail(_token!, reviewId);
+  }
+
+  Future<ReviewModerationDetail?> fetchClientReviewModerationDetail(
+    String reviewId,
+  ) {
+    if (_token == null) return Future.value(null);
+    return AdminService.getClientReviewModerationDetail(_token!, reviewId);
+  }
+
+  Future<RedFlagDetail?> fetchRedFlagDetail(String alertId) {
+    if (_token == null) return Future.value(null);
+    return AdminService.getRedFlagDetail(_token!, alertId);
   }
 
   Future<void> loadModerationItems({String? status}) async {
@@ -870,10 +991,20 @@ class AdminProvider extends ChangeNotifier {
     _reportsTypeFilter = 'all';
     _scamFlags = [];
     _reviewRedFlags = [];
+    _reviewRedFlagsPagination = {};
+    _reviewRedFlagsResolvedFilter = 'all';
+    _reviewRedFlagsSortBy = 'triggered_at';
     _flaggedReviews = [];
     _flaggedReviewStatusFilter = 'all';
+    _flaggedReviewSortBy = 'created_at';
+    _flaggedReviewsPagination = {};
     _flaggedClientReviews = [];
     _flaggedClientReviewStatusFilter = 'all';
+    _flaggedClientReviewSortBy = 'created_at';
+    _flaggedClientReviewsPagination = {};
+    _isRedFlagsLoading = false;
+    _isFlaggedReviewsLoading = false;
+    _isFlaggedClientReviewsLoading = false;
     _moderationItems = [];
     _closedJobs = [];
     _closedAccounts = [];

@@ -792,6 +792,7 @@ class CategoryRatingsCard extends StatelessWidget {
       'quality',
       'professionalism',
       'value_for_money',
+      'timeliness',
     ];
 
     return Container(
@@ -878,6 +879,8 @@ IconData ratingIconFor(String category) {
       return Icons.badge_outlined;
     case 'value_for_money':
       return Icons.payments_outlined;
+    case 'timeliness':
+      return Icons.schedule_outlined;
     default:
       return Icons.star_outline;
   }
@@ -893,6 +896,8 @@ String ratingLabelFor(String category) {
       return 'Professionalism';
     case 'value_for_money':
       return 'Value for money';
+    case 'timeliness':
+      return 'Timeliness';
     default:
       return category.replaceAll('_', ' ');
   }

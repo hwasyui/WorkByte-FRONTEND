@@ -1235,21 +1235,47 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
         await dmProvider.fetchThreads(token);
 
-        final thread = dmProvider.threads.cast<DMThreadModel?>().firstWhere(
+        var thread = dmProvider.threads.cast<DMThreadModel?>().firstWhere(
           (t) => t?.contractId == _contract.contractId,
           orElse: () => null,
         );
 
         if (thread == null) {
-          _showSnack('Chat thread not found.', isError: true);
-          return;
+          // No thread linked to this contract yet - normally the backend
+          // auto-creates/links one when the contract is created, but that
+          // step is best-effort (non-fatal on the server), so this is a
+          // fallback for that gap rather than the primary path.
+          //
+          // POST /dm/threads only allows the client to be the initiator, so
+          // a freelancer can't self-serve here - they have to wait for the
+          // client to open the conversation.
+          if (!_isClient) {
+            _showSnack(
+              'Your client hasn\'t started this conversation yet.',
+              isError: true,
+            );
+            return;
+          }
+
+          try {
+            final result = await dmProvider.startThread(
+              token: token,
+              participantId: _contract.freelancerId,
+              jobPostId: _contract.jobPostId,
+            );
+            thread = result.thread;
+          } catch (e) {
+            if (!mounted) return;
+            _showSnack('Unable to start chat. Please try again.', isError: true);
+            return;
+          }
         }
 
         if (!mounted) return;
 
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => DMChatScreen(thread: thread)),
+          MaterialPageRoute(builder: (_) => DMChatScreen(thread: thread!)),
         );
       },
       child: Container(
@@ -1893,6 +1919,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   void _showSubmitWorkSheet() {
     final noteController = TextEditingController();
     List<PlatformFile> pickedFiles = [];
+    bool isPicking = false;
 
     showModalBottomSheet(
       context: context,
@@ -1933,29 +1960,35 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () async {
-                  final result = await FilePicker.platform.pickFiles(
-                    allowMultiple: true,
-                    type: FileType.custom,
-                    allowedExtensions: [
-                      'pdf',
-                      'doc',
-                      'docx',
-                      'png',
-                      'jpg',
-                      'jpeg',
-                      'zip',
-                    ],
-                  );
-                  if (result != null) {
-                    setModal(() {
-                      final existingPaths = pickedFiles
-                          .map((e) => e.path)
-                          .toSet();
-                      final newFiles = result.files.where(
-                        (f) => !existingPaths.contains(f.path),
-                      );
-                      pickedFiles = [...pickedFiles, ...newFiles];
-                    });
+                  if (isPicking) return;
+                  isPicking = true;
+                  try {
+                    final result = await FilePicker.platform.pickFiles(
+                      allowMultiple: true,
+                      type: FileType.custom,
+                      allowedExtensions: [
+                        'pdf',
+                        'doc',
+                        'docx',
+                        'png',
+                        'jpg',
+                        'jpeg',
+                        'zip',
+                      ],
+                    );
+                    if (result != null) {
+                      setModal(() {
+                        final existingPaths = pickedFiles
+                            .map((e) => e.path)
+                            .toSet();
+                        final newFiles = result.files.where(
+                          (f) => !existingPaths.contains(f.path),
+                        );
+                        pickedFiles = [...pickedFiles, ...newFiles];
+                      });
+                    }
+                  } finally {
+                    isPicking = false;
                   }
                 },
                 child: Container(
