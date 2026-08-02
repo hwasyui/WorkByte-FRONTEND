@@ -5,8 +5,6 @@ import 'package:http/http.dart' as http;
 import '../models/review_model.dart';
 import 'session_guard.dart';
 
-/// Centralises HTTP calls for the review system; throws [ReviewServiceException]
-/// on any non-2xx response.
 class ReviewService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
@@ -15,20 +13,15 @@ class ReviewService {
 
   ReviewService();
 
-  // Shared headers
-
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
   };
 
-  // Response parser
-
   Map<String, dynamic> _parse(http.Response res, String context) {
     SessionGuard.check(res);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      // Responses are wrapped in ResponseSchema.success
       return body['details'] as Map<String, dynamic>? ?? body;
     }
     throw _buildException(res, context);
@@ -48,7 +41,6 @@ class ReviewService {
     List<String>? detectedLabels;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      // Backend puts the message under 'details', not 'message'/'detail'.
       message =
           body['details'] as String? ??
           body['message'] as String? ??
@@ -65,8 +57,6 @@ class ReviewService {
     return ReviewServiceException(message, detectedLabels: detectedLabels);
   }
 
-  // GET /reviews/contract/{contract_id}
-
   Future<Review> getReviewForContract({
     required String token,
     required String contractId,
@@ -80,9 +70,6 @@ class ReviewService {
     );
     return Review.fromJson(_parse(res, 'getReviewForContract'));
   }
-
-  // POST /reviews/{review_id}/submit
-  // Submits the completed client review. Returns a success message string.
 
   Future<String> submitReview({
     required String token,
@@ -101,9 +88,6 @@ class ReviewService {
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
 
-  // GET /reviews/{review_id}
-  // Full review detail including ratings, written content, skill tags, AI analysis.
-
   Future<Review> getReview({
     required String token,
     required String reviewId,
@@ -117,9 +101,6 @@ class ReviewService {
     );
     return Review.fromJson(_parse(res, 'getReview'));
   }
-
-  // GET /reviews/freelancer/{freelancer_id}
-  // All published reviews for a freelancer's public profile.
 
   Future<List<Review>> getFreelancerReviews({
     required String token,
@@ -136,9 +117,6 @@ class ReviewService {
     return list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // GET /reviews/trust-score/{freelancer_id}
-  // Live AI-computed trust score with component breakdown and rank.
-
   Future<TrustScore> getTrustScore({
     required String token,
     required String freelancerId,
@@ -152,9 +130,6 @@ class ReviewService {
     );
     return TrustScore.fromJson(_parse(res, 'getTrustScore'));
   }
-
-  // GET /reviews/red-flags/{freelancer_id}
-  // Unresolved red flag alerts — intended for admin dashboards.
 
   Future<List<RedFlagAlert>> getRedFlags({
     required String token,
@@ -173,8 +148,6 @@ class ReviewService {
         .toList();
   }
 }
-
-// Exception
 
 class ReviewServiceException implements Exception {
   final String message;

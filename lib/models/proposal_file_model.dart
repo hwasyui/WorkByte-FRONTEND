@@ -39,7 +39,6 @@ class ProposalFileModel {
     'created_at': createdAt,
   };
 
-  /// Human-readable file size e.g. "1.2 MB"
   String get formattedSize {
     if (fileSize == null) return '';
     if (fileSize! < 1024) return '${fileSize} B';
@@ -49,12 +48,10 @@ class ProposalFileModel {
     return '${(fileSize! / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  /// True if file is a PDF
   bool get isPdf =>
       fileType.toLowerCase() == 'pdf' ||
       fileName.toLowerCase().endsWith('.pdf');
 
-  /// True if file is an image
   bool get isImage => [
     'jpg',
     'jpeg',

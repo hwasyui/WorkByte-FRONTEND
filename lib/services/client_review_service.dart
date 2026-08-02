@@ -6,8 +6,6 @@ import '../models/client_review_model.dart';
 import '../models/review_model.dart' show RedFlagAlert;
 import 'session_guard.dart';
 
-/// Centralises HTTP calls for the freelancer-reviews-client system - mirrors
-/// review_service.dart's structure/conventions for the symmetric counterpart.
 class ClientReviewService {
   static final String _baseUrl = (dotenv.env['BACKEND'] ?? '').replaceAll(
     RegExp(r'/$'),
@@ -44,7 +42,6 @@ class ClientReviewService {
     List<String>? detectedLabels;
     try {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      // Backend puts the message under 'details', not 'message'/'detail'.
       message =
           body['details'] as String? ??
           body['message'] as String? ??
@@ -61,8 +58,6 @@ class ClientReviewService {
     return ClientReviewServiceException(message, detectedLabels: detectedLabels);
   }
 
-  // GET /client-reviews/contract/{contract_id}
-
   Future<ClientReview> getClientReviewForContract({
     required String token,
     required String contractId,
@@ -76,8 +71,6 @@ class ClientReviewService {
     );
     return ClientReview.fromJson(_parse(res, 'getClientReviewForContract'));
   }
-
-  // POST /client-reviews/{client_review_id}/submit
 
   Future<String> submitClientReview({
     required String token,
@@ -96,9 +89,6 @@ class ClientReviewService {
     return data['message'] as String? ?? 'Review submitted successfully.';
   }
 
-  // GET /client-reviews/{client_review_id}
-  // Full review detail — used to poll post-submit status.
-
   Future<ClientReview> getClientReview({
     required String token,
     required String clientReviewId,
@@ -112,9 +102,6 @@ class ClientReviewService {
     );
     return ClientReview.fromJson(_parse(res, 'getClientReview'));
   }
-
-  // GET /client-reviews/client/{client_id}
-  // All published reviews for a client's public profile.
 
   Future<List<ClientReview>> getClientReviews({
     required String token,
@@ -133,8 +120,6 @@ class ClientReviewService {
         .toList();
   }
 
-  // GET /client-reviews/trust-score/{client_id}
-
   Future<ClientTrustScore> getClientTrustScore({
     required String token,
     required String clientId,
@@ -148,10 +133,6 @@ class ClientReviewService {
     );
     return ClientTrustScore.fromJson(_parse(res, 'getClientTrustScore'));
   }
-
-  // GET /client-reviews/red-flags/{client_id}
-  // Unresolved red flag alerts - reuses RedFlagAlert (review_model.dart),
-  // same red_flag_alerts table/shape as the freelancer side.
 
   Future<List<RedFlagAlert>> getClientRedFlags({
     required String token,
@@ -170,8 +151,6 @@ class ClientReviewService {
         .toList();
   }
 }
-
-// Exception
 
 class ClientReviewServiceException implements Exception {
   final String message;

@@ -62,7 +62,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
     }
-    // auto-submit when all 6 digits are filled
     if (_otp.length == 6) {
       FocusScope.of(context).unfocus();
     }
@@ -100,7 +99,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         (route) => false,
       );
     } else {
-      // clear all boxes on wrong code
       for (final c in _controllers) {
         c.clear();
       }
@@ -155,7 +153,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // Icon
                               Container(
                                 width: 72,
                                 height: 72,
@@ -205,7 +202,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
                               const SizedBox(height: 32),
 
-                              // 6-digit OTP boxes
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(6, (i) {
@@ -225,7 +221,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
                               const SizedBox(height: 32),
 
-                              // Verify button
                               Consumer<AuthProvider>(
                                 builder: (context, auth, _) {
                                   return PrimaryButton(
@@ -241,7 +236,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
                               const SizedBox(height: 20),
 
-                              // Resend section
                               Consumer<AuthProvider>(
                                 builder: (context, auth, _) {
                                   if (_secondsLeft > 0) {
@@ -272,7 +266,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                       ),
                     ),
 
-                    // Bottom wave
                     Builder(
                       builder: (context) {
                         final bottomInset = MediaQuery.of(context).padding.bottom;

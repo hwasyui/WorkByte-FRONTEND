@@ -3,11 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/admin_colors.dart';
 import '../../services/admin_service.dart';
 
-/// Reason-required action dialog shared by all review-integrity actions
-/// (override-publish, uphold, resolve red flag). Submit stays disabled until
-/// the reason reaches [minLength] chars, and the action runs inside the dialog
-/// so a 422/other failure can be shown inline under the field instead of as a
-/// snackbar. The dialog only closes on success.
 Future<AdminActionOutcome?> showAdminReasonDialog(
   BuildContext context, {
   required String title,

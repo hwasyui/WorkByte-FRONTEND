@@ -5,9 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/admin_provider.dart';
 import 'package:workbyte_app/screens/admin/pages/admin_closed_page.dart';
 
-// ---------------------------------------------------------------------------
-// Fake provider — overrides all async/getter members so no HTTP calls are made
-// ---------------------------------------------------------------------------
 
 class _FakeAdminProvider extends AdminProvider {
   List<Map<String, dynamic>> _fakeClosedJobs = [];
@@ -108,9 +105,6 @@ class _FakeAdminProvider extends AdminProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
 
 Widget _buildTestWidget(_FakeAdminProvider provider) {
   return MaterialApp(
@@ -121,9 +115,6 @@ Widget _buildTestWidget(_FakeAdminProvider provider) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 void main() {
   setUpAll(() {
@@ -136,7 +127,6 @@ void main() {
     setUp(() => provider = _FakeAdminProvider());
     tearDown(() => provider.dispose());
 
-    // ── Page structure ──────────────────────────────────────────────────────
 
     testWidgets('renders page header with title and subtitle', (tester) async {
       await tester.pumpWidget(_buildTestWidget(provider));
@@ -164,7 +154,6 @@ void main() {
       expect(provider.loadClosedAccountsCalls, greaterThan(0));
     });
 
-    // ── Closed Jobs tab ─────────────────────────────────────────────────────
 
     group('Closed Jobs tab', () {
       testWidgets('shows loading indicator when loading and list is empty',
@@ -336,7 +325,6 @@ void main() {
       });
     });
 
-    // ── Restricted Accounts tab ─────────────────────────────────────────────
 
     group('Restricted Accounts tab', () {
       Future<void> switchToAccountsTab(WidgetTester tester) async {

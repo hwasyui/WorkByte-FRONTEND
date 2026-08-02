@@ -24,9 +24,9 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.passwordLoginEnabled = true,
-    this.isReportBanned = false, // 👈 NEW
-    this.banMessage, // 👈 NEW
-    this.reportBannedAt, // 👈 NEW
+    this.isReportBanned = false,
+    this.banMessage,
+    this.reportBannedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -43,14 +43,11 @@ class UserModel {
         ? DateTime.tryParse(json['updated_at'].toString())
         : null,
     passwordLoginEnabled: json['password_login_enabled'] as bool? ?? true,
-    isReportBanned: json['is_report_banned'] as bool? ?? false, // 👈 NEW
-    // A ban message can be generated from the moderation pipeline, so the
-    // classifier's categories are stripped before the value reaches any of the
-    // six screens that render it. See core/utils/moderation_display.dart.
+    isReportBanned: json['is_report_banned'] as bool? ?? false,
     banMessage: redactModerationLabelsOrNull(json['ban_message'] as String?),
     reportBannedAt:
         json['report_banned_at'] !=
-            null // 👈 NEW
+            null
         ? DateTime.tryParse(json['report_banned_at'].toString())
         : null,
   );

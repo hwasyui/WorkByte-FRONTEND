@@ -10,7 +10,6 @@ class ClientService {
     '',
   );
 
-  /// GET /clients/:clientId/reliability - "Responsive" | "Unresponsive".
   Future<String?> getClientReliability(String token, String clientId) async {
     try {
       final res = await SessionGuard.guard(

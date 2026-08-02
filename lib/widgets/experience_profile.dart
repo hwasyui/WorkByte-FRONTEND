@@ -89,7 +89,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
     }
   }
 
-  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -147,7 +146,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
     );
   }
 
-  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,
@@ -222,7 +220,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -246,7 +243,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                   icon: Icons.business_outlined,
                 ),
 
-                // Date row
                 Row(
                   children: [
                     _buildDateField(
@@ -264,7 +260,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                 ),
                 const SizedBox(height: 14),
 
-                // Currently working here
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -308,7 +303,6 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
 
                 const SizedBox(height: 8),
 
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   height: 54,

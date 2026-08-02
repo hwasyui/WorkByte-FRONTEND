@@ -10,10 +10,6 @@ import '../../widgets/review_card.dart';
 import '../../widgets/review_rating_helpers.dart';
 import '../../widgets/trust_score_card.dart';
 
-/// Public reviews + trust score screen for a freelancer, reached from the
-/// discovery/people-list flow (PeopleProfileScreen). Previously there was no
-/// way for a client to read a freelancer's reviews before hiring - the only
-/// place written reviews displayed was the freelancer's own self-view profile.
 class FreelancerReviewsScreen extends StatefulWidget {
   final String freelancerId;
   final String freelancerName;

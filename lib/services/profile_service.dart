@@ -32,8 +32,6 @@ class ProfileService {
     return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
   }
 
-  // Fetch profiles
-
   Future<ClientModel?> fetchClientProfile(String token, String userId) async {
     final res = await SessionGuard.guard(
       token,
@@ -108,8 +106,6 @@ class ProfileService {
         headers: _headers(token),
       ).timeout(const Duration(seconds: 20));
 
-      // Access token may have expired between screen load and this tap;
-      // silently refresh and retry once before surfacing an error.
       if (res.statusCode == 401 && onRefreshToken != null) {
         final newToken = await onRefreshToken();
         if (newToken != null) {
@@ -130,8 +126,6 @@ class ProfileService {
     }
     return null;
   }
-
-  // Update profiles
 
   Future<ClientModel> updateClientProfile(
     String token,
@@ -188,8 +182,6 @@ class ProfileService {
           'Failed to update freelancer profile',
     );
   }
-
-  // Profile picture
 
   Future<ClientModel> uploadClientProfilePicture(
     String token,
@@ -319,8 +311,6 @@ class ProfileService {
     );
   }
 
-  // Education
-
   Future<List<EducationModel>> getEducations(
     String token,
     String freelancerId,
@@ -399,8 +389,6 @@ class ProfileService {
       return false;
     }
   }
-
-  // Work experience
 
   Future<List<ExperienceModel>> getWorkExperiences(
     String token,
@@ -486,8 +474,6 @@ class ProfileService {
       return false;
     }
   }
-
-  // Skills
 
   Future<List<FreelancerSkillModel>> getFreelancerSkills(
     String token,

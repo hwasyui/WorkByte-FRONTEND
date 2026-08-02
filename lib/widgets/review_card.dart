@@ -3,7 +3,6 @@ import '../core/constants/colors.dart';
 import '../models/review_model.dart';
 import 'review_rating_helpers.dart';
 
-/// A published review with rating chips, comment text, and skill tags.
 class ReviewCard extends StatelessWidget {
   final Review review;
   final String? reviewerName;
@@ -162,9 +161,6 @@ class ReviewCard extends StatelessWidget {
   }
 }
 
-/// Small positive/neutral/negative pill backed by the review's flat
-/// `sentiment` label. Renders nothing for null (no analysis exists for this
-/// review) or an unrecognized value — never guessed or defaulted.
 class SentimentBadge extends StatelessWidget {
   final String? sentiment;
 

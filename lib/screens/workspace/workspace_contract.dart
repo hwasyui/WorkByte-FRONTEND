@@ -11,8 +11,6 @@ import '../contract/generate_contract_screen.dart';
 import 'workspace_detail.dart';
 
 class WorkspaceContractScreen extends StatefulWidget {
-  /// Provided when opened from a client's job post ("workers on this job").
-  /// Left null for the freelancer's full contract list.
   final String? jobPostId;
   final String? jobTitle;
 
@@ -40,7 +38,6 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
     'Disputed',
     'All',
   ];
-  // add to state fields
   Map<String, String> _nameCache = {};
   static const Map<String, List<String>?> _tabStatusMap = {
     'Active': ['active', 'under_review', 'revision_requested'],
@@ -84,7 +81,6 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
             ? all
             : all.where((c) => c.jobPostId == widget.jobPostId).toList();
 
-        // Resolve freelancer names
         final ids = _allContracts
             .map((c) => c.freelancerId)
             .toSet()
@@ -107,7 +103,6 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
         await contractProvider.fetchContractsByFreelancer(token, freelancerId);
         _allContracts = contractProvider.contracts;
 
-        // Resolve client names
         final ids = _allContracts
             .map((c) => c.clientId)
             .toSet()
@@ -521,10 +516,6 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // Client-side contracts with no generated PDF yet aren't
-                  // ready for the workspace - route straight to finishing
-                  // setup instead of opening a workspace that's just going
-                  // to nag them with the incomplete-contract prompt anyway.
                   final needsGeneration =
                       isClient &&
                       (contract.contractPdfUrl ?? '').trim().isEmpty;

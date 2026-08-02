@@ -10,7 +10,6 @@ class ProposalModel {
   final bool isAiGenerated;
   final String? submittedAt;
 
-  // Enriched fields — populated separately via profile fetch
   final String? freelancerName;
   final String? freelancerAvatarUrl;
 

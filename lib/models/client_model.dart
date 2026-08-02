@@ -9,10 +9,6 @@ class ClientModel {
   final int totalJobsPosted;
   final int totalProjectsCompleted;
   final double? averageRatingGiven;
-  // Review-based rating this client RECEIVED from freelancers they've worked
-  // with (client_reviews / client_trust_score.weighted_review_avg_received) -
-  // distinct from averageRatingGiven, which is the rating this client GIVES
-  // to freelancers. This is the signal that matters for browsing/discovery.
   final double? weightedReviewAvgReceived;
   final int totalReviewsReceived;
   final DateTime? createdAt;

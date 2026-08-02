@@ -14,7 +14,6 @@ import '../../../widgets/admin/admin_score_row.dart';
 import '../../../widgets/app_toast.dart';
 import 'review_moderation_detail_dialog.dart';
 
-/// Opens the red-flag diagnosis dialog for a trust-score alert.
 Future<void> showRedFlagDetailDialog(
   BuildContext context, {
   required String alertId,
@@ -159,8 +158,6 @@ class _LoadedBody extends StatelessWidget {
   }
 }
 
-// Header --------------------------------------------------------------------
-
 class _Header extends StatelessWidget {
   final RedFlagDetail detail;
   const _Header({required this.detail});
@@ -235,8 +232,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-// 1. Score history chart -----------------------------------------------------
-
 class _ScoreHistoryChart extends StatelessWidget {
   final RedFlagDetail detail;
   const _ScoreHistoryChart({required this.detail});
@@ -272,7 +267,6 @@ class _ScoreHistoryChart extends StatelessWidget {
         .map((e) => FlSpot(e.key.toDouble(), e.value.score!))
         .toList();
 
-    // Find the index range of the drop segment to highlight it.
     int? dropStart;
     int? dropEnd;
     for (var i = 0; i < points.length; i++) {
@@ -318,7 +312,6 @@ class _ScoreHistoryChart extends StatelessWidget {
       ),
     ];
 
-    // Overlay the drop segment in red.
     if (dropStart != null && dropEnd != null && dropEnd > dropStart) {
       bars.add(
         LineChartBarData(
@@ -447,8 +440,6 @@ class _DeltaBadge extends StatelessWidget {
   }
 }
 
-// 2. Components breakdown ----------------------------------------------------
-
 class _ComponentsBreakdown extends StatelessWidget {
   final RedFlagDetail detail;
   const _ComponentsBreakdown({required this.detail});
@@ -471,9 +462,6 @@ class _ComponentsBreakdown extends StatelessWidget {
       );
     }
 
-    // A trust-score drop is caused by a LOW input, so the outlier is the entry
-    // furthest BELOW the group — flag the lowest, plus anything within a small
-    // band of it.
     final entries = comps.entries.toList()
       ..sort((a, b) => a.value.compareTo(b.value));
     final lowest = entries.first.value;
@@ -520,8 +508,6 @@ class _ComponentsBreakdown extends StatelessWidget {
     );
   }
 }
-
-// 3. Recent reviews ----------------------------------------------------------
 
 class _RecentReviews extends StatelessWidget {
   final RedFlagDetail detail;
@@ -646,8 +632,6 @@ class _PassChip extends StatelessWidget {
   }
 }
 
-// 4. Held reviews CTA --------------------------------------------------------
-
 class _HeldReviewsPanel extends StatelessWidget {
   final RedFlagDetail detail;
   const _HeldReviewsPanel({required this.detail});
@@ -700,8 +684,6 @@ class _HeldReviewsPanel extends StatelessWidget {
     );
   }
 }
-
-// 5. Overridden reviews ------------------------------------------------------
 
 class _OverriddenReviewsPanel extends StatelessWidget {
   final RedFlagDetail detail;
@@ -756,8 +738,6 @@ class _OverriddenReviewsPanel extends StatelessWidget {
   }
 }
 
-/// A tappable review row that deep-links into the review moderation dialog.
-/// Closes the current red-flag dialog first so only one detail dialog is open.
 class _DeepLinkReviewRow extends StatelessWidget {
   final Map<String, dynamic> review;
   const _DeepLinkReviewRow({required this.review});
@@ -808,8 +788,6 @@ class _DeepLinkReviewRow extends StatelessWidget {
   }
 }
 
-// 6. Other open alerts -------------------------------------------------------
-
 class _OtherOpenAlerts extends StatelessWidget {
   final RedFlagDetail detail;
   const _OtherOpenAlerts({required this.detail});
@@ -856,8 +834,6 @@ class _OtherOpenAlerts extends StatelessWidget {
     );
   }
 }
-
-// Actions --------------------------------------------------------------------
 
 class _ActionsBar extends StatelessWidget {
   final RedFlagDetail detail;
@@ -950,8 +926,6 @@ class _ActionsBar extends StatelessWidget {
     );
   }
 }
-
-// Shared layout primitives ---------------------------------------------------
 
 class _Section extends StatelessWidget {
   final String title;

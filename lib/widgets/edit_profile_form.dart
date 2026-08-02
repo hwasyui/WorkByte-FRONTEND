@@ -203,7 +203,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          // Decorative dots
           Positioned(
             top: -8,
             left: -20,
@@ -234,7 +233,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
             right: -28,
             child: _dot(5, const Color(0xFFD4D0F8)),
           ),
-          // Sparkle icons
           const Positioned(
             top: -4,
             left: 2,
@@ -246,7 +244,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
             child: Icon(Icons.add, size: 14, color: Color(0xFFB8B0F0)),
           ),
 
-          // Avatar circle
           Container(
             width: 110,
             height: 110,
@@ -267,7 +264,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
                   ),
           ),
 
-          // Camera badge
           Positioned(
             bottom: 2,
             right: 2,
@@ -372,7 +368,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Drag handle
                 Center(
                   child: Container(
                     width: 40,
@@ -385,7 +380,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // Close button row
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
@@ -406,12 +400,10 @@ class _EditProfileFormState extends State<EditProfileForm> {
                   ),
                 ),
 
-                // Avatar section
                 const SizedBox(height: 8),
                 Center(child: _buildAvatar()),
                 const SizedBox(height: 16),
 
-                // Title
                 Center(
                   child: Text(
                     'Change Photo',
@@ -437,14 +429,12 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
                 const SizedBox(height: 28),
 
-                // Display Name
                 _fieldLabel('Display Name', Icons.person_outline_rounded),
                 _textField(nameCtrl, hintText: 'Your name'),
 
                 if (widget.showJobTitle) ...[
                   const SizedBox(height: 16),
 
-                  // Job Title
                   _fieldLabel('Job Title', Icons.work_outline_rounded),
                   _textField(
                     jobTitleCtrl,
@@ -455,7 +445,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
                 const SizedBox(height: 28),
 
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

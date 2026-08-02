@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import '../../screens/dashboard/notification.dart';
 
-/// Reusable top bar row used across screens.
-/// Shows a back button on the left, and a notification bell + user avatar on the right.
-/// Tapping the bell navigates to [NotificationScreen].
 class ScreenTopBar extends StatelessWidget {
   final Widget userAvatar;
   final bool hasNotification;
@@ -21,7 +18,6 @@ class ScreenTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Back button
         IconButton(
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
@@ -35,7 +31,6 @@ class ScreenTopBar extends StatelessWidget {
 
         const Spacer(),
 
-        // Notification bell with optional red dot
         GestureDetector(
           onTap:
               onNotificationTap ??
@@ -69,7 +64,6 @@ class ScreenTopBar extends StatelessWidget {
 
         const SizedBox(width: 12),
 
-        // User avatar
         CircleAvatar(
           radius: 14,
           backgroundColor: AppColors.secondary,

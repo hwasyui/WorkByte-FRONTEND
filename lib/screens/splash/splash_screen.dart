@@ -58,7 +58,6 @@ class _SplashScreenState extends State<SplashScreen> {
       MaterialPageRoute(builder: (_) => nextScreen),
     );
 
-    // Process any deep link that launched or was received before auth resolved.
     if (authProvider.isAuthenticated && authProvider.token != null) {
       final pendingLink = DeepLinkService.consumePendingLink();
       if (pendingLink != null) {

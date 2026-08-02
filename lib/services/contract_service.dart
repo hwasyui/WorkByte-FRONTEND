@@ -16,7 +16,6 @@ class ContractService {
     'Authorization': 'Bearer $token',
   };
 
-  /// GET /contracts - Get all contracts for current user
   Future<List<ContractModel>> getAllContracts(String token) async {
     final res = await SessionGuard.guard(
       token,
@@ -29,7 +28,7 @@ class ContractService {
     debugPrint('GET /contracts status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
-      final list = (details is Map && details['items'] != null) 
+      final list = (details is Map && details['items'] != null)
           ? details['items']
           : (details is List ? details : (body['data'] ?? []));
       return (list as List)
@@ -39,7 +38,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to load contracts');
   }
 
-  /// GET /contracts/client/:clientId
   Future<List<ContractModel>> getContractsByClient(
     String token,
     String clientId,
@@ -55,7 +53,7 @@ class ContractService {
     debugPrint('GET /contracts/client/$clientId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
-      final list = (details is Map && details['items'] != null) 
+      final list = (details is Map && details['items'] != null)
           ? details['items']
           : (details is List ? details : (body['data'] ?? []));
       return (list as List)
@@ -65,7 +63,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to load contracts');
   }
 
-  /// GET /contracts/freelancer/:freelancerId
   Future<List<ContractModel>> getContractsByFreelancer(
     String token,
     String freelancerId,
@@ -81,7 +78,7 @@ class ContractService {
     debugPrint('GET /contracts/freelancer/$freelancerId status: ${res.statusCode}');
     if (res.statusCode == 200) {
       final details = body['details'];
-      final list = (details is Map && details['items'] != null) 
+      final list = (details is Map && details['items'] != null)
           ? details['items']
           : (details is List ? details : (body['data'] ?? []));
       return (list as List)
@@ -91,7 +88,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to load contracts');
   }
 
-  /// GET /contracts/:contractId
   Future<ContractModel> getContractById(String token, String contractId) async {
     final res = await SessionGuard.guard(
       token,
@@ -108,7 +104,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to load contract');
   }
 
-  /// GET /contracts/:contractId/generation-data
   Future<Map<String, dynamic>> getContractGenerationData(
     String token,
     String contractId,
@@ -130,7 +125,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to load generation data');
   }
 
-  /// GET /contracts/:contractId/pdf-url
   Future<String> getContractPdfUrl(String token, String contractId) async {
     final res = await SessionGuard.guard(
       token,
@@ -153,9 +147,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to get PDF URL');
   }
 
-  // POST /contracts
-
-  /// POST /contracts - Create a new contract
   Future<ContractModel> createContract(
     String token,
     Map<String, dynamic> data,
@@ -176,7 +167,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to create contract');
   }
 
-  /// POST /contracts/:contractId/generate - Generate PDF
   Future<ContractModel> generateContractPdf(
     String token,
     String contractId,
@@ -198,9 +188,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to generate contract');
   }
 
-  // PUT /contracts/:contractId
-
-  /// PUT /contracts/:contractId - Update contract status
   Future<ContractModel> updateContract(
     String token,
     String contractId,
@@ -222,7 +209,6 @@ class ContractService {
     throw Exception(body['details'] ?? 'Failed to update contract');
   }
 
-  /// PUT /contracts/:contractId/dispute - Raise a dispute on the contract
   Future<ContractModel> raiseDispute(
     String token,
     String contractId,

@@ -55,9 +55,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool rolesLoading = true;
   String? _analyzingRoleId;
   bool _analysisCancelled = false;
-  // {usage_today, usage_limit, remaining_today} from GET /ai/job-engine/usage,
-  // refreshed locally from each analyze response so the badge stays live
-  // without an extra round trip.
   Map<String, dynamic>? _jobFitUsage;
   Map<String, List<JobRoleSkillModel>> roleSkillsMap = {};
   List<SkillModel> allSkills = [];
@@ -94,10 +91,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         fetchJobFitUsage();
       }
 
-      // Job detail itself (widget.job) is already available synchronously;
-      // gate the screen on roles + their skills, and the client's profile
-      // (incl. its picture), so nothing pops in a moment after the screen
-      // is already showing.
       await Future.wait([fetchRoles(), fetchAllSkills(), fetchClient()]);
       await _precacheClientAvatar();
       if (mounted) setState(() => _isScreenReady = true);
@@ -110,7 +103,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     try {
       await precacheImage(NetworkImage(url), context);
     } catch (_) {
-      // Fall through to the header's own errorBuilder fallback.
     }
   }
 
@@ -386,8 +378,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // Shown in the result sheet, not on the button: the quota only becomes
-  // relevant once the user has actually spent one.
   Widget buildUsageBadge() {
     final remaining = (_jobFitUsage?['remaining_today'] as num?)?.toInt();
     final limit = (_jobFitUsage?['usage_limit'] as num?)?.toInt();
@@ -569,11 +559,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  // Analysis is per-role — the backend has no job-level aggregate endpoint —
-  // so this card lives on each role card (buildRoleCard) rather than once
-  // at the top of the job post.
-  // The remaining daily quota is not shown here — it is surfaced in the result
-  // sheet, where the user has just spent one.
   Widget buildAnalyzeButton(JobRoleModel role) {
     final busy = _analyzingRoleId == role.jobRoleId;
     final disabled = _analyzingRoleId != null;
@@ -693,9 +678,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         builder: (_) => SubmitProposalScreen(job: widget.job, role: role),
       ),
     ).then((submitted) {
-      // The submit screen already refreshed ProposalProvider before popping,
-      // so just re-read it here instead of re-fetching over the network —
-      // this makes the Apply button flip to disabled immediately.
       if (submitted == true && mounted) {
         setState(() {
           myProposals = context.read<ProposalProvider>().proposals;
@@ -707,13 +689,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  /// Converts snake_case closure reason from backend into a readable label.
   String _formatClosureReason(String reason) {
     const labels = {
       'spam': 'Spam',
       'scam': 'Scam / Fraud',
-      // Matches the client view's wording - without this the badge fell through
-      // to a bare "Harmful text".
       kClosureReasonHarmfulText: 'Harmful Text',
       'inappropriate_content': 'Inappropriate Content',
       'duplicate': 'Duplicate Listing',
@@ -736,18 +715,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return role.positionsFilled >= role.positionsAvailable;
   }
 
-  // BUILD
   @override
   Widget build(BuildContext context) {
     final saved = context.watch<SavedItemsProvider>();
     final auth = context.watch<AuthProvider>();
     final proposalProvider = context.watch<ProposalProvider>();
-    // NEW: self-ownership + closed status flags
     final isOwnJob = auth.userId != null && auth.userId == widget.job.clientId;
     final isClosed = widget.job.status?.toLowerCase() == 'closed';
-    // Notes written by the automated pipeline name the classifier's raw labels,
-    // so only a human admin's note reaches the banner below.
-    // See core/utils/moderation_display.dart.
     final visibleClosureNote = viewerFacingClosureNote(
       closureReason: widget.job.closureReason,
       closureNote: widget.job.closureNote,
@@ -759,7 +733,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             JobDetailHeader(
               companyLogo: client?.profilePictureUrl != null
                   ? ClipOval(
@@ -813,10 +786,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 jobShareUrl(widget.job.jobPostId),
                 subject: widget.job.jobTitle,
               ),
-              // AI fit analysis is per-role now (no job-level aggregate on the
-              // backend) — the "Analyze My Fit" action lives on each role
-              // card below instead of once here.
-              // 👇 NEW: pass null for own jobs so flag icon is hidden
               onReport: isOwnJob
                   ? null
                   : () => ReportSheet.show(
@@ -827,7 +796,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
             ),
 
-            // 👇 Closed job appeal banner — only for the owner
             if (isClosed && isOwnJob)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -861,7 +829,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Title row with closed-at date
                             Row(
                               children: [
                                 Expanded(
@@ -885,7 +852,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ],
                             ),
 
-                            // Closure reason badge
                             if (widget.job.closureReason != null &&
                                 widget.job.closureReason!.isNotEmpty) ...[
                               const SizedBox(height: 6),
@@ -911,7 +877,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                             ],
 
-                            // Closure note (human admin's message only)
                             if (visibleClosureNote != null) ...[
                               const SizedBox(height: 6),
                               Text(
@@ -926,7 +891,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                             const SizedBox(height: 10),
 
-                            // Appeal CTA
                             GestureDetector(
                               onTap: () => AppealDialog.show(
                                 context,
@@ -972,7 +936,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: PostJobLoadingView(label: 'Loading job details...'),
               )
             else ...[
-              // Tab bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(27, 20, 27, 0),
                 child: JobDetailTabBar(
@@ -982,7 +945,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
               ),
 
-              // Tab content
               if (selectedTab == 0) buildDetailsTab(),
               if (selectedTab == 1) buildTermsTab(),
             ],
@@ -992,7 +954,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // Tab: Details
   Widget buildDetailsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 32),
@@ -1075,7 +1036,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // Tab: Terms
   Widget buildTermsTab() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(27, 20, 27, 24),
@@ -1125,7 +1085,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // Roles section
   Widget buildRolesSection() {
     if (rolesLoading) {
       return const Padding(
@@ -1337,7 +1296,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 }).toList(),
               ),
 
-            // Only freelancers see the apply button
             if (!context.read<ProfileProvider>().isClient) ...[
               const SizedBox(height: 14),
               buildAnalyzeButton(role),
@@ -1551,7 +1509,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  // Shared helpers
   Widget sectionTitle(String title) => Text(
     title,
     style: GoogleFonts.poppins(
@@ -1629,9 +1586,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
-        // "Required" is redundant under the "Required Skills" heading above
-        // this chip, so only show importance when it says something else
-        // (e.g. "Preferred").
         importance != null &&
                 importance.isNotEmpty &&
                 importance.toLowerCase() != 'required'
@@ -1685,8 +1639,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 }
-
-// Standalone widget classes (unchanged)
 
 class ScoreBadge extends StatelessWidget {
   final int score;

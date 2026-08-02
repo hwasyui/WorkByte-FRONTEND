@@ -36,8 +36,6 @@ class DMService {
     }
   }
 
-  /// The `blocked_by` flag sits at the top level of the error body next to
-  /// `details`, and _unwrap() returns only `details` - so re-read the raw body.
   bool _isModerationBlock(http.Response res) {
     try {
       return isModerationBlockedBody(jsonDecode(res.body));
@@ -58,10 +56,10 @@ class DMService {
         Uri.parse('$_baseUrl/dm/threads'),
         headers: _headers(t),
         body: jsonEncode({
-          'participant_id': participantId, // ✅ Fixed: snake_case
-          if (jobPostId != null) 'job_post_id': jobPostId, // ✅ Fixed: snake_case
+          'participant_id': participantId,
+          if (jobPostId != null) 'job_post_id': jobPostId,
           if (messageText != null && messageText.trim().isNotEmpty)
-            'message_text': messageText.trim(), // ✅ Fixed: snake_case
+            'message_text': messageText.trim(),
         }),
       ),
     );
@@ -220,7 +218,7 @@ class DMService {
         Uri.parse('$_baseUrl/dm/threads/$threadId/messages'),
         headers: _headers(t),
         body: jsonEncode({
-          'message_text': messageText.trim(), // ✅ Fixed: snake_case
+          'message_text': messageText.trim(),
         }),
       ),
     );

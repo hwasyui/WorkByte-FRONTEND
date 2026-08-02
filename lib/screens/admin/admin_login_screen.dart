@@ -60,7 +60,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (!admin.isAuthenticated) {
       AppToast.error(admin.error ?? 'Login failed');
     }
-    // AdminGate mendeteksi isAuthenticated == true dan menampilkan AdminShell
   }
 
   @override
@@ -73,7 +72,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Brand header
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -110,7 +108,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
               const SizedBox(height: 40),
 
-              // Login card
               Container(
                 width: 420,
                 margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -148,7 +145,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Email field
                     _buildLabel('Email address'),
                     const SizedBox(height: 6),
                     _buildTextField(
@@ -161,7 +157,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
                     const SizedBox(height: 18),
 
-                    // Password field
                     _buildLabel('Password'),
                     const SizedBox(height: 6),
                     _buildTextField(
@@ -185,7 +180,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
                     const SizedBox(height: 28),
 
-                    // Login button
                     Consumer<AdminProvider>(
                       builder: (context, admin, _) {
                         return SizedBox(
@@ -311,7 +305,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 }
 
-/// Fades and slides the login card up on first paint.
 class _LoginEntrance extends StatelessWidget {
   final Widget child;
   const _LoginEntrance({required this.child});

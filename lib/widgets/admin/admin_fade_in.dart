@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Staggered fade + slide-up entrance for list items. Wrap each item in a
-/// `ListView.separated`/`ListView.builder` with `AdminFadeIn(index: i, child: ...)`
-/// to get a lightweight "items arriving" feel on first load, purely via
-/// implicit animation (no extra package, no change to underlying data flow).
 class AdminFadeIn extends StatelessWidget {
   final int index;
   final Widget child;
@@ -20,14 +16,12 @@ class AdminFadeIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cap the delay so long lists don't leave late items invisible for ages.
     final delayMs = (index * stagger.inMilliseconds).clamp(0, 300);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: duration + Duration(milliseconds: delayMs),
       curve: Curves.easeOutCubic,
       builder: (_, t, c) {
-        // Hold at 0 during the per-item delay window, then animate in.
         final localT = duration.inMilliseconds == 0
             ? 1.0
             : (((t * (duration.inMilliseconds + delayMs)) - delayMs) / duration.inMilliseconds)
@@ -42,8 +36,6 @@ class AdminFadeIn extends StatelessWidget {
   }
 }
 
-/// Subtle hover lift for web/desktop cards — no-op on touch devices since
-/// hover events simply never fire there.
 class AdminHoverLift extends StatefulWidget {
   final Widget child;
   final double lift;

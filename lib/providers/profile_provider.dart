@@ -19,15 +19,12 @@ class ProfileProvider extends ChangeNotifier {
   ClientModel? _clientProfile;
   FreelancerModel? _freelancerProfile;
 
-  // Separate lists for freelancer data (no longer nested in FreelancerModel)
   List<EducationModel> _educations = const [];
   List<ExperienceModel> _experiences = const [];
   List<FreelancerSkillModel> _skills = const [];
   List<PortfolioModel> _portfolios = const [];
 
   String? _userType;
-
-  // Getters
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -39,13 +36,11 @@ class ProfileProvider extends ChangeNotifier {
   bool get isClient => _userType == 'client';
   bool get isFreelancer => _userType == 'freelancer';
 
-  // Convenience getters for external lists
   List<EducationModel> get educations => _educations;
   List<ExperienceModel> get experiences => _experiences;
   List<FreelancerSkillModel> get skills => _skills;
   List<PortfolioModel> get portfolios => _portfolios;
 
-  // Keep this the same from the service perspective
   bool get isProfileComplete {
     if (isClient) {
       final c = _clientProfile;
@@ -146,7 +141,6 @@ class ProfileProvider extends ChangeNotifier {
     return null;
   }
 
-  // Getters for both profiles (used in account switcher)
   String get freelancerDisplayName =>
       _freelancerProfile?.displayName ?? 'Freelancer Account';
   String get clientDisplayName =>
@@ -166,8 +160,6 @@ class ProfileProvider extends ChangeNotifier {
     if (isFreelancer) return _freelancerProfile?.jobTitle ?? '-';
     return '-';
   }
-
-  // Fetch
 
   Future<bool> fetchProfile({
     required String token,
@@ -204,8 +196,6 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// Reload education, experience, skills, and portfolios from the services.
-  /// Call after adding/deleting any of these items.
   Future<void> refreshFreelancerDetails(String token) async {
     final id = _freelancerProfile?.freelancerId;
     if (id == null) return;
@@ -224,7 +214,6 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Directly fetch a single client by ID.
   Future<ClientModel?> fetchClientById({
     required String token,
     required String clientId,
@@ -232,7 +221,6 @@ class ProfileProvider extends ChangeNotifier {
     return await _service.fetchClientById(token, clientId);
   }
 
-  /// Directly fetch a single freelancer by ID.
   Future<FreelancerModel?> fetchFreelancerById({
     required String token,
     required String freelancerId,
@@ -244,8 +232,6 @@ class ProfileProvider extends ChangeNotifier {
       onRefreshToken: onRefreshToken,
     );
   }
-
-  // Update profile
 
   Future<bool> updateProfile({
     required String token,
@@ -280,8 +266,6 @@ class ProfileProvider extends ChangeNotifier {
       return false;
     }
   }
-
-  // Profile picture
 
   Future<bool> uploadProfilePicture({
     required String token,
@@ -328,12 +312,6 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Don't clear the image cache before the delete request completes —
-      // the on-screen avatar is still bound to the old (soon-to-be-deleted)
-      // URL at this point, so clearing it here makes that widget immediately
-      // retry loading a URL that's being deleted server-side concurrently,
-      // producing a spurious NetworkImageLoadException (404). Clear only
-      // after the model reflects the new (null) URL below.
       if (isClient) {
         _clientProfile = await _service.deleteClientProfilePicture(
           token,
@@ -356,8 +334,6 @@ class ProfileProvider extends ChangeNotifier {
       return false;
     }
   }
-
-  // Education
 
   Future<bool> addEducation({
     required String token,
@@ -384,8 +360,6 @@ class ProfileProvider extends ChangeNotifier {
     return ok;
   }
 
-  // Work experience
-
   Future<bool> addWorkExperience({
     required String token,
     required Map<String, dynamic> data,
@@ -411,8 +385,6 @@ class ProfileProvider extends ChangeNotifier {
     return ok;
   }
 
-  // Skills
-
   Future<bool> addFreelancerSkill({
     required String token,
     required Map<String, dynamic> data,
@@ -437,8 +409,6 @@ class ProfileProvider extends ChangeNotifier {
     }
     return ok;
   }
-
-  // Portfolio
 
   Future<bool> addPortfolio({
     required String token,
@@ -474,7 +444,6 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  // Keep this as‑is, these are just pass‑through to services
   Future<List<Map<String, dynamic>>> getAllSkills(String token) =>
       _service.getAllSkills(token);
 
@@ -485,8 +454,6 @@ class ProfileProvider extends ChangeNotifier {
     String token,
     Map<String, dynamic> data,
   ) => _service.createSkill(token, data);
-
-  // Upload CV
 
   Future<bool> uploadCV({required String token, required File file}) async {
     _isLoading = true;
@@ -513,8 +480,6 @@ class ProfileProvider extends ChangeNotifier {
       return false;
     }
   }
-
-  // Local state helpers
 
   void updateJobTitle(String jobTitle) {
     if (isClient) {
@@ -574,7 +539,7 @@ class ProfileProvider extends ChangeNotifier {
     _educations = const [];
     _experiences = const [];
     _skills = const [];
-    notifyListeners(); // resets both profiles on logout
+    notifyListeners();
   }
 
   void _clearImageCache() {

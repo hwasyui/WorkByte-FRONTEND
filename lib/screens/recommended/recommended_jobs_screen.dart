@@ -201,7 +201,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App bar
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
@@ -267,7 +266,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
               ),
             ),
 
-            // Subtitle
             if (!_isLoading && !_noEmbedding && _jobs.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
@@ -282,7 +280,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
 
             const SizedBox(height: 12),
 
-            // Body
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -300,7 +297,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                   : _buildJobList(),
             ),
 
-            // Pagination bar
             if (!_isLoading && !_noEmbedding && _jobs.isNotEmpty)
               _buildPaginationBar(),
           ],
@@ -492,7 +488,6 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
   }
 }
 
-// Relevant job card
 class _RelevantJobCard extends StatelessWidget {
   final JobPostModel job;
   final VoidCallback onTap;
@@ -519,7 +514,6 @@ class _RelevantJobCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -575,7 +569,6 @@ class _RelevantJobCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Tags row
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -675,7 +668,6 @@ class _PaginationButton extends StatelessWidget {
   }
 }
 
-// Info step widget used in dialog
 class _InfoStep extends StatelessWidget {
   final String step;
   final Color color;

@@ -4,10 +4,8 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import '../core/constants/text_styles.dart';
 
-/// The three visual variants a toast can render as.
 enum AppToastType { success, error, info }
 
-/// One queued/displayed toast entry.
 class _AppToastItem {
   final int id;
   final String message;
@@ -24,9 +22,6 @@ class _AppToastItem {
   });
 }
 
-/// Global, queue-based toast controller. Only one toast is ever visible at a
-/// time — if a new one is triggered while another is showing, it waits its
-/// turn instead of stacking/overlapping on screen.
 class AppToastController extends ChangeNotifier {
   AppToastController._();
   static final AppToastController instance = AppToastController._();
@@ -67,15 +62,12 @@ class AppToastController extends ChangeNotifier {
     _timer = Timer(_current!.duration, _advance);
   }
 
-  /// Dismisses the toast currently on screen (e.g. user tapped close) and
-  /// immediately shows the next queued one, if any.
   void dismissCurrent() {
     if (_current == null) return;
     _advance();
   }
 }
 
-/// Static, context-free API for showing toasts from anywhere in the app.
 class AppToast {
   AppToast._();
 
@@ -119,8 +111,6 @@ class AppToast {
   }
 }
 
-/// Mount once near the root of the app (see [main.dart]'s `MaterialApp.builder`).
-/// Renders the currently active toast, if any, floating above [child].
 class AppToastHost extends StatefulWidget {
   final Widget child;
   const AppToastHost({super.key, required this.child});
@@ -197,9 +187,6 @@ class _AppToastHostState extends State<AppToastHost> {
   }
 }
 
-/// The reusable "rounded card" alert visual: icon + title + message + close
-/// button. Shared by [AppToastHost] and any screen that wants to render the
-/// same style inline (see login.dart).
 class AppAlertCard extends StatelessWidget {
   final String message;
   final String title;

@@ -31,17 +31,14 @@ class FreelancerCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Avatar
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.secondary,
             child: ClipOval(child: avatar),
           ),
           const SizedBox(height: 8),
-          // Stars
           _StarRating(rating: rating),
           const SizedBox(height: 6),
-          // Name
           Text(
             name,
             textAlign: TextAlign.center,
@@ -52,7 +49,6 @@ class FreelancerCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          // Username
           Text(
             username,
             textAlign: TextAlign.center,
@@ -62,7 +58,6 @@ class FreelancerCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          // Role
           Text(
             role,
             textAlign: TextAlign.center,

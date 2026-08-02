@@ -26,10 +26,6 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
 
   bool _loading = true;
 
-  /// Tracks, per draft job post id, whether that draft already has at least
-  /// one saved role. Populated in `_loadDrafts` since `JobPostProvider` only
-  /// exposes a single shared `jobRoles` list (overwritten per fetch) rather
-  /// than a per-job cache like it has for files.
   final Map<String, bool> _hasRoleByDraftId = {};
 
   @override
@@ -59,8 +55,6 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
         if (draftId.isEmpty) continue;
 
         await provider.fetchJobRoles(token, draftId);
-        // Snapshot immediately: the next iteration's fetch will overwrite
-        // provider.jobRoles.
         _hasRoleByDraftId[draftId] = provider.jobRoles.isNotEmpty;
 
         await provider.fetchJobFiles(token, draftId);
@@ -141,8 +135,6 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  /// Returns (stepNumber, label) for a draft, based on whether it already
-  /// has a saved role and/or uploaded files.
   ({int number, String label}) _stepForDraft(
     JobPostProvider provider,
     String draftId,

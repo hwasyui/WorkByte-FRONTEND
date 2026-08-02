@@ -77,8 +77,8 @@ class JobPostModel {
     updatedAt: json['updated_at'] as String?,
     postedAt: json['posted_at'] as String?,
     closedAt: json['closed_at'] as String?,
-    closureReason: json['closure_reason'] as String?, // 👈 NEW
-    closureNote: json['closure_note'] as String?, // 👈 NEW
+    closureReason: json['closure_reason'] as String?,
+    closureNote: json['closure_note'] as String?,
   );
 
   Map<String, dynamic> toJson() => {

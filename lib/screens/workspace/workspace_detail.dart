@@ -25,7 +25,7 @@ import '../../widgets/app_toast.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
-  final String viewerRole; // 'client' | 'freelancer'
+  final String viewerRole;
 
   const WorkspaceDetailScreen({
     super.key,
@@ -82,14 +82,10 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       _contract.status == 'under_review' ||
       _contract.status == 'revision_requested';
 
-  // Matches the backend's cancellable_statuses - either party, any of these
-  // three statuses. Previously only shown to the client and only while
-  // 'active', even though the API always allowed both roles and all three.
   bool get _canCancel =>
       _contract.status == 'active' ||
       _contract.status == 'under_review' ||
       _contract.status == 'revision_requested';
-
 
   Future<void> _fetchProposalDetail() async {
     if (_contract.proposalId == null) return;
@@ -124,22 +120,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
-  /// Manual refresh - the other party's actions (approve, request revision,
-  /// cancel) change contract/submission status server-side with no live push
-  /// to this screen, so there's no other way to see that update without
-  /// navigating away and back. Wired to the app bar's refresh button - the
-  /// single refresh path for this screen (previously duplicated by a
-  /// pull-to-refresh that called an overlapping, since-removed set of
-  /// helpers).
   Future<void> _refreshWorkspace() async {
     await _refreshContractStatus();
     await Future.wait([_fetchProposalDetail(), _fetchSubmissions()]);
   }
 
-  /// Re-fetches the authoritative contract from the server and syncs
-  /// `_contract` to it. Used after any action (submit, request revision,
-  /// approve) that changes the contract's status server-side, instead of
-  /// re-deriving/re-sending the status from this screen.
   Future<void> _refreshContractStatus() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
@@ -156,7 +141,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   void _maybeShowContractIncompletePrompt() {
     if (_hasContractPdf) return;
-    // No point nagging once the contract is done or dead
     if (_contract.status == 'completed' || _contract.status == 'cancelled') {
       return;
     }
@@ -179,7 +163,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   void _showContractIncompleteSheet() {
     showModalBottomSheet(
       context: context,
-      // Client should have to make a decision; freelancer can just dismiss.
       isDismissible: _isFreelancer,
       enableDrag: _isFreelancer,
       isScrollControlled: true,
@@ -303,13 +286,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      // Creating the submission already flips the contract to
-      // "under_review" server-side (see create_submission in
-      // contract_submission_functions.py) - just re-fetch to pick that up,
-      // rather than redundantly PUTting the same status again. The old
-      // redundant PUT was tolerated as a no-op by the backend, but a
-      // transient failure on it produced a false "failed to update status"
-      // toast even though the real status change had already succeeded.
       await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
@@ -331,7 +307,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       final success = await provider.requestRevisionForLatestSubmission(
         token: token,
         contractId: _contract.contractId,
-        note: note, // ← pass note
+        note: note,
       );
 
       if (!mounted) return;
@@ -344,10 +320,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      // This request also flips the contract to "revision_requested"
-      // server-side, but _contract was previously never refreshed here, so
-      // the status banner/action buttons kept showing stale state until a
-      // manual pull-to-refresh.
       await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
@@ -381,19 +353,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return;
       }
 
-      // Approving already flips the contract to "completed" server-side
-      // (see approve_latest_submission in contract_submission_functions.py)
-      // - just re-fetch to pick that up instead of redundantly PUTting the
-      // same status again.
       await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
 
       if (!mounted) return;
 
       _showSnack('Contract marked as completed!', isError: false);
-      // Navigate to review form
       await Future.delayed(
         const Duration(milliseconds: 600),
-      ); // let snack show briefly
+      );
       if (!mounted) return;
 
       Navigator.push(
@@ -576,11 +543,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
-  // The autoapprove worker (contract_autoapprove_worker.py, wired into
-  // main.py's lifespan) is restored and actually running again, so this
-  // countdown's promise is genuine - see run_autoapprove_sweep in
-  // contract_submission_functions.py for the day-3/6/7 reminder/final
-  // warning/auto-approve schedule this mirrors.
   Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
     final latest = provider.latestSubmission;
     if (latest == null || latest.status != 'submitted' || latest.submittedAt == null) {
@@ -589,7 +551,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
     final daysRemaining = _autoApproveDays - daysElapsed;
     if (daysRemaining > 3) {
-      // Not close enough to auto-approve yet - no need to nag the freelancer.
       return const SizedBox.shrink();
     }
     final isUrgent = daysRemaining <= 1;
@@ -1241,14 +1202,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         );
 
         if (thread == null) {
-          // No thread linked to this contract yet - normally the backend
-          // auto-creates/links one when the contract is created, but that
-          // step is best-effort (non-fatal on the server), so this is a
-          // fallback for that gap rather than the primary path.
-          //
-          // POST /dm/threads only allows the client to be the initiator, so
-          // a freelancer can't self-serve here - they have to wait for the
-          // client to open the conversation.
           if (!_isClient) {
             _showSnack(
               'Your client hasn\'t started this conversation yet.',
@@ -1322,11 +1275,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   Widget _buildRevisionNote(ContractSubmissionProvider provider) {
-    // revision_note is now actually persisted on the submission (see
-    // request_revision_for_latest_submission in contract_submission_functions.py)
-    // instead of only ever existing as an ephemeral DM message - show it
-    // directly when present, still pointing to Messages as a fallback/for
-    // full context otherwise.
     final note = provider.latestSubmission?.revisionNote?.trim();
     final hasNote = note != null && note.isNotEmpty;
 
@@ -1621,11 +1569,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 ),
               ],
             ),
-            // Freelancers don't take the action that completes a contract
-            // (the client approves, or auto-approve/dispute-arbitration does),
-            // so unlike the client's immediate post-approve navigation to
-            // ReviewFormScreen, this button is how a freelancer reaches their
-            // "rate this client" form whenever they next open the workspace.
             if (_isFreelancer && status == 'completed') ...[
               const SizedBox(height: 14),
               SizedBox(
@@ -1659,10 +1602,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 ),
               ),
             ],
-            // Symmetric counterpart for the client: they get auto-navigated to
-            // ReviewFormScreen right after approving (_approveLatestSubmission),
-            // but that's a one-shot push - if they back out without submitting,
-            // this is the only way back into that form.
             if (_isClient && status == 'completed') ...[
               const SizedBox(height: 14),
               SizedBox(
@@ -1714,7 +1653,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       );
     }
 
-    // freelancer sees an extra "contract pending" banner in place of the button
     final isFreelancerBlockedByContract =
         _isFreelancer &&
         !_hasContractPdf &&
@@ -1828,9 +1766,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
     if (_isClient) {
       if (status == 'active') {
-        // Cancel is now its own standalone section (_buildCancelSection,
-        // shown for both roles across all cancellable statuses) rather than
-        // bolted onto this one branch, so this is just the waiting banner.
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -2480,11 +2415,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   void _showCancelDialog() {
     final reasonCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    // Free to cancel with no reason before any work exists; once real work
-    // is in progress a reason is mandatory (mirrors the backend check in
-    // PUT /contracts/{id}/cancel) - it's the only accountability trail the
-    // other party gets, and what a later dispute against this cancellation
-    // would be responding to.
     final reasonRequired = _contract.status != 'active';
     bool isSubmitting = false;
 

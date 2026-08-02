@@ -639,16 +639,10 @@ class _ScamCardState extends State<_ScamCard> {
   }
 }
 
-// Harmful Text Detection Tab
-
 class _ModerationTab extends StatelessWidget {
   const _ModerationTab();
 
   static const _statuses = ['all', 'pending', 'approved', 'rejected'];
-  // No sort control: the queue is always ordered by the highest single label,
-  // descending, the same way the scam queue is always ordered by scam_score.
-  // The ordering lives in AdminService.getModerationItems' default.
-
 
   @override
   Widget build(BuildContext context) {
@@ -657,9 +651,6 @@ class _ModerationTab extends StatelessWidget {
         return Column(
           children: [
             FilterDropdownBar(
-              // Name the status that is actually applied rather than a generic
-              // "Filters active", and surface the item count — same contract as
-              // the scam tab so both queues read the same way.
               summaryText: admin.moderationStatusFilter == 'all'
                   ? 'All flags'
                   : '${admin.moderationStatusFilter[0].toUpperCase()}${admin.moderationStatusFilter.substring(1)}',
@@ -711,8 +702,6 @@ class _ModerationTab extends StatelessWidget {
   }
 }
 
-// Moderation Card
-
 class _ModerationCard extends StatefulWidget {
   final Map<String, dynamic> item;
   const _ModerationCard({required this.item});
@@ -726,7 +715,6 @@ class _ModerationCardState extends State<_ModerationCard> {
   bool _labelsExpanded = false;
 
   Future<void> _act(String action) async {
-    // Approving a flag closes the job; warn if it has an engaged freelancer.
     final isEngagedJob = action == 'approve'
         && (widget.item['content_type'] as String? ?? '') == 'job_post'
         && widget.item['is_engaged'] == true;
@@ -773,7 +761,6 @@ class _ModerationCardState extends State<_ModerationCard> {
       confirmColor: const Color(0xFFDC2626),
     );
   }
-
 
   void _showDetail(BuildContext ctx) {
     final item = widget.item;
@@ -967,7 +954,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     );
   }
 
-  // Label definitions matching the current five-label toxicity model.
   static const _labels = [
     {
       'key': 'toxicity',
@@ -996,9 +982,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     },
   ];
 
-  // Per-label cut-offs the served model actually uses, from bert/config.pkl ->
-  // best_thresholds. Keys match _labels above. Update these if the served model
-  // is swapped, otherwise the badge colour stops matching what the backend does.
   static const _labelThresholds = <String, double>{
     'toxicity': 0.50,
     'obscene_score': 0.38,
@@ -1007,14 +990,8 @@ class _ModerationCardState extends State<_ModerationCard> {
     'identity_hate_score': 0.38,
   };
 
-  // The 30-day auto-close sweep compares this against the highest single label
-  // score (admin_functions.py, CONTENT_AUTO_CLOSE_THRESHOLD_JOB).
   static const _autoCloseThreshold = 0.88;
 
-  /// Strongest single label. Mirrors the backend's GREATEST(...) / max()
-  /// semantics: a text is as severe as its strongest single label, never the
-  /// sum of several weak ones. Summing would rank a row scoring moderately on
-  /// three labels above a row the model is near-certain about on one.
   static Map<String, Object> _topLabel(List<Map<String, Object>> labelScores) {
     var best = labelScores.first;
     for (final e in labelScores) {
@@ -1023,9 +1000,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     return best;
   }
 
-  /// Both cut-offs are real system numbers, not display-only constants:
-  /// red = the sweep would auto-close this, amber = this label cleared its own
-  /// tuned cut-off (i.e. it is why the row was queued).
   static Color _severityColor(double topScore, String topKey) {
     if (topScore >= _autoCloseThreshold) return const Color(0xFFDC2626);
     if (topScore >= (_labelThresholds[topKey] ?? 0.5)) {
@@ -1076,7 +1050,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     const maxChips = 3;
     final shownLabels = activeLabels.take(maxChips).toList();
     final hiddenLabelCount = activeLabels.length - shownLabels.length;
-
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1187,7 +1160,6 @@ class _ModerationCardState extends State<_ModerationCard> {
             ],
           ),
 
-          // Expandable 5-label breakdown
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => setState(() => _labelsExpanded = !_labelsExpanded),
@@ -1232,7 +1204,6 @@ class _ModerationCardState extends State<_ModerationCard> {
             _LabelsBreakdown(labelScores: labelScores),
           ],
 
-          // Flagged text excerpt
           if (flaggedText.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
@@ -1256,15 +1227,6 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
           ],
 
-          // No "message shown to user" preview here. The copy lives in
-          // admin_functions.py (DEFAULT_CLOSURE_NOTE_CONTENT) and is only
-          // written at closure time, so anything rendered here would be the
-          // frontend re-typing a backend string with nothing keeping the two in
-          // sync — it had already drifted once. The admin's own note, when
-          // there is one, is real API data and is shown in the detail dialog.
-          // The scam queue has no such preview either.
-
-          // Actions
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => _showDetail(context),
@@ -1344,8 +1306,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     }
   }
 }
-
-// Label breakdown widget
 
 class _LabelsBreakdown extends StatelessWidget {
   final List<Map<String, Object?>> labelScores;
@@ -1506,8 +1466,6 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-/// A fired label plus its score, tinted by that label's own severity.
-/// Same visual language as _ScoreBadge so the queue reads consistently.
 class _LabelChip extends StatelessWidget {
   final String text;
   final Color color;
@@ -1668,8 +1626,6 @@ class _ModerationStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // approved = flag confirmed → content removed (red)
-    // rejected = flag dismissed → content stays (green)
     final color = switch (status) {
       'approved' => const Color(0xFFDC2626),
       'rejected' => const Color(0xFF059669),
@@ -1739,8 +1695,6 @@ class _Empty extends StatelessWidget {
   }
 }
 
-// Review Integrity tab
-
 class _ReviewIntegrityTab extends StatefulWidget {
   const _ReviewIntegrityTab();
 
@@ -1749,8 +1703,6 @@ class _ReviewIntegrityTab extends StatefulWidget {
 }
 
 class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
-  // 0 = red flags (freelancers + clients) | 1 = held-back freelancer reviews
-  // | 2 = held-back client reviews
   int _tabIndex = 0;
 
   @override
@@ -2441,8 +2393,6 @@ class _HoldLevelPill extends StatelessWidget {
     );
   }
 }
-
-// Helpers
 
 String _id(Map<String, dynamic> item) =>
     (item['id'] ?? item['flag_id'] ?? item['moderation_id'] ?? '').toString();

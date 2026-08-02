@@ -9,8 +9,6 @@ import '../../widgets/review_rating_helpers.dart';
 import '../../widgets/app_toast.dart';
 import 'client_review_submitted.dart';
 
-/// Freelancer-reviews-client form - mirrors review_form.dart's structure for
-/// the symmetric counterpart. Shown to a freelancer after contract completion.
 class ClientReviewFormScreen extends StatefulWidget {
   final String contractId;
   final String clientName;

@@ -231,9 +231,6 @@ class _DMChatScreenState extends State<DMChatScreen>
   void _showFailedMessageReason(DMMessageModel message) {
     final raw = message.failureReason ?? '';
 
-    // Structured flag first, message wording only as a fallback. The
-    // classifier's categories are deliberately not surfaced either way - see
-    // moderation_display.dart for why the sender only gets the outcome.
     if (message.blockedByModeration || looksLikeModerationBlock(raw)) {
       showDialog(
         context: context,
@@ -508,7 +505,6 @@ class _DMChatScreenState extends State<DMChatScreen>
 
     try {
       await _audioPlayer.setVolume(1.0);
-      // UrlSource doesn't support custom headers, so download with auth first
       final token = context.read<AuthProvider>().token;
       final tempFile = await downloadToTempFile(url, token: token);
       if (tempFile == null) throw Exception('Failed to download audio');
@@ -1351,10 +1347,6 @@ class _DMChatScreenState extends State<DMChatScreen>
         return 'Milestone approved';
       case 'revision_requested':
         return 'Revision requested';
-      // These are already full, human-readable sentences written server-side
-      // (see DMFunctions.send_system_event callers in contract_functions.py) -
-      // showing the raw text avoids a generic label that hides the actual
-      // reason/outcome from both parties.
       case 'dispute_raised':
       case 'dispute_resolved':
         return message.messageText.isNotEmpty

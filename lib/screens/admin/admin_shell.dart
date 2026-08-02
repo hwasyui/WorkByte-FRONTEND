@@ -81,7 +81,6 @@ class AdminShell extends StatelessWidget {
           );
         }
 
-        // Mobile: drawer-based layout
         return Scaffold(
           backgroundColor: const Color(0xFFF3F4F6),
           appBar: AppBar(

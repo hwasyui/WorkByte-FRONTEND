@@ -108,10 +108,6 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   ) async {
     final reportId = report['report_id'] as String;
     final label = action == 'accept' ? 'Accept' : 'Dismiss';
-    // Accepting a report on a job that already has a live contract / engaged
-    // freelancer closes it out from under active work — make the admin
-    // acknowledge that first. The backend exposes `is_engaged` on job_post
-    // reports for exactly this warning.
     final isEngagedJob = action == 'accept'
         && (report['reported_type'] as String? ?? '') == 'job_post'
         && report['is_engaged'] == true;
@@ -146,7 +142,6 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     }
   }
 }
-
 
 class _ReportCard extends StatelessWidget {
   final Map<String, dynamic> report;
@@ -239,7 +234,6 @@ class _ReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row
             Row(
               children: [
                 AdminBadge(label: _typeLabel, color: _typeColor),
@@ -259,7 +253,6 @@ class _ReportCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Reported target
             Row(
               children: [
                 const Icon(Icons.flag_rounded, size: 14, color: Color(0xFFDC2626)),
@@ -284,7 +277,6 @@ class _ReportCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // Reporter
             Row(
               children: [
                 const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF9CA3AF)),
@@ -314,7 +306,6 @@ class _ReportCard extends StatelessWidget {
               ],
             ),
 
-            // Reasons
             if (reasons.isNotEmpty) ...[
               const SizedBox(height: 10),
               Wrap(
@@ -340,7 +331,6 @@ class _ReportCard extends StatelessWidget {
               ),
             ],
 
-            // Custom reason
             if ((report['custom_reason'] as String?)?.isNotEmpty == true) ...[
               const SizedBox(height: 8),
               Container(
@@ -362,7 +352,6 @@ class _ReportCard extends StatelessWidget {
               ),
             ],
 
-            // Admin note (if actioned)
             if (!isPending && (report['admin_note'] as String?)?.isNotEmpty == true) ...[
               const SizedBox(height: 8),
               Container(
@@ -383,7 +372,6 @@ class _ReportCard extends StatelessWidget {
               ),
             ],
 
-            // Action buttons (pending only)
             if (isPending) ...[
               const SizedBox(height: 12),
               const Divider(height: 1, color: Color(0xFFF3F4F6)),

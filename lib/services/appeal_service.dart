@@ -11,8 +11,6 @@ class AppealService {
     '',
   );
 
-  /// POST /appeals
-  /// [targetType] : 'user' | 'job_post'
   Future<AppealModel> submitAppeal({
     required String token,
     required String targetType,
@@ -49,7 +47,6 @@ class AppealService {
       }
     }
 
-    // Try to parse error response - handle both JSON and plain text
     String errorMsg = 'HTTP ${response.statusCode}: Failed to submit appeal';
     try {
       if (response.body.isNotEmpty && response.body.startsWith('{')) {
@@ -59,19 +56,16 @@ class AppealService {
             body['detail'] ??
             errorMsg;
       } else {
-        // Plain text response
         errorMsg = response.body.isNotEmpty
             ? response.body
             : errorMsg;
       }
     } catch (e) {
       debugPrint('Error parsing error response: $e');
-      // Keep default errorMsg
     }
     throw Exception(errorMsg);
   }
 
-  /// GET /appeals/mine
   Future<List<AppealModel>> getMyAppeals(String token) async {
     final response = await SessionGuard.guard(
       token,
@@ -118,9 +112,6 @@ class AppealService {
     throw Exception(errorMsg);
   }
 
-  /// GET /appeals/status
-  /// Check appeal eligibility and remaining attempts for a target
-  /// Returns: {state, can_appeal, appeals_remaining, message}
   Future<Map<String, dynamic>> getAppealStatus({
     required String token,
     required String targetType,

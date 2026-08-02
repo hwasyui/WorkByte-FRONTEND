@@ -9,16 +9,9 @@ import '../core/utils/moderation_display.dart';
 import '../models/proposal_model.dart';
 import 'session_guard.dart';
 
-/// Thrown by [ProposalService.createProposal] so a harmful-text rejection is
-/// distinguishable from an ordinary failure without matching the message text.
-/// Implements Exception, so existing `catch (e)` blocks keep working, and
-/// toString() is the bare message so `replaceFirst('Exception: ', '')` callers
-/// are unaffected.
 class ProposalFailureException implements Exception {
   final String message;
 
-  /// Set from the backend's structured `blocked_by` flag - see
-  /// core/utils/moderation_display.dart.
   final bool blockedByModeration;
 
   const ProposalFailureException(
@@ -147,7 +140,6 @@ class ProposalService {
         'proposed_duration': proposedDuration,
     });
 
-    // Step 2 — upload all files in one multipart POST to /proposal-files
     if (files.isNotEmpty) {
       final dartFiles = files
           .where((f) => f.path != null)
@@ -166,7 +158,6 @@ class ProposalService {
     return proposal;
   }
 
-  /// Single multipart POST — backend handles Supabase upload + DB record creation
   Future<void> _uploadProposalFiles({
     required String token,
     required String proposalId,

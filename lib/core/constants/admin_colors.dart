@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Shared palette for the admin portal only. Mirrors the hex values already
-/// scattered across lib/screens/admin and lib/widgets/admin so new/rewritten
-/// widgets have one source of truth instead of re-typing literals.
 class AdminColors {
   AdminColors._();
 
-  // Brand
   static const Color navy = Color(0xFF1E1B4B);
   static const Color navyDeep = Color(0xFF15132F);
   static const Color primary = Color(0xFF4F46E5);
   static const Color primaryLight = Color(0xFF818CF8);
   static const Color primaryBg = Color(0xFFEEF2FF);
 
-  // Section accents
   static const Color green = Color(0xFF059669);
   static const Color greenBg = Color(0xFFECFDF5);
   static const Color cyan = Color(0xFF0891B2);
@@ -27,7 +22,6 @@ class AdminColors {
   static const Color red = Color(0xFFDC2626);
   static const Color redBg = Color(0xFFFEE2E2);
 
-  // Grayscale
   static const Color ink = Color(0xFF111827);
   static const Color body = Color(0xFF374151);
   static const Color muted = Color(0xFF6B7280);

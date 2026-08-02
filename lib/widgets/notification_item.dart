@@ -6,7 +6,6 @@ class NotificationItem extends StatelessWidget {
   final Widget avatar;
   final String message;
 
-  /// The [boldPrefix] is the name/word rendered in bold at the start of [message].
   final String boldPrefix;
   final String timestamp;
   final bool isUnread;
@@ -25,7 +24,6 @@ class NotificationItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Unread dot
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Container(
@@ -39,7 +37,6 @@ class NotificationItem extends StatelessWidget {
         ),
         const SizedBox(width: 5),
 
-        // Avatar
         CircleAvatar(
           radius: 20,
           backgroundColor: AppColors.secondary,
@@ -47,12 +44,10 @@ class NotificationItem extends StatelessWidget {
         ),
         const SizedBox(width: 14),
 
-        // Text content
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Message with bold prefix
               RichText(
                 text: TextSpan(
                   style: GoogleFonts.poppins(
@@ -76,7 +71,6 @@ class NotificationItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              // Timestamp
               Text(
                 timestamp,
                 style: GoogleFonts.poppins(

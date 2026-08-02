@@ -69,7 +69,6 @@ class _AdminUsersPageState extends State<AdminUsersPage>
       builder: (context, admin, _) {
         return Column(
           children: [
-            // Summary chips
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -96,7 +95,6 @@ class _AdminUsersPageState extends State<AdminUsersPage>
               ),
             ),
 
-            // Tab bar
             Container(
               color: Colors.white,
               child: TabBar(
@@ -116,7 +114,6 @@ class _AdminUsersPageState extends State<AdminUsersPage>
               ),
             ),
 
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -252,7 +249,6 @@ class _UsersList extends StatelessWidget {
           ),
         ),
 
-        // Pagination
         if (totalPages > 1)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

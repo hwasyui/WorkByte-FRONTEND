@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/admin_colors.dart';
 
-/// Branded spinner — thin wrapper so every page pulls the same color instead
-/// of re-typing `CircularProgressIndicator(color: Color(0xFF...))`.
 class AdminLoadingIndicator extends StatelessWidget {
   final Color color;
   const AdminLoadingIndicator({super.key, this.color = AdminColors.primary});
@@ -19,8 +17,6 @@ class AdminLoadingIndicator extends StatelessWidget {
   }
 }
 
-/// Shimmering skeleton block, used to build list/card loading placeholders
-/// without a bare spinner. Pure implicit-animation, no extra dependency.
 class AdminSkeletonBox extends StatefulWidget {
   final double height;
   final double? width;
@@ -77,8 +73,6 @@ class _AdminSkeletonBoxState extends State<AdminSkeletonBox>
   }
 }
 
-/// Ready-made skeleton row that mimics a card in a list, for use as the
-/// loading state of a `ListView` while data is fetched.
 class AdminSkeletonCard extends StatelessWidget {
   const AdminSkeletonCard({super.key});
 

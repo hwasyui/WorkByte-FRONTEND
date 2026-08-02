@@ -1,14 +1,4 @@
-// Admin review-moderation detail models.
-//
-// These back the review-moderation detail dialog. Every numeric field is parsed
-// as `num?.toDouble()` and left null when absent — a null score means "never
-// measured" and must never be shown as 0. Deeply-nested verdicts are each
-// independently nullable because a review can be analysed before judgment
-// logging existed (components == null) or fail closed on an AI outage
-// (analysis_unavailable == true), and both must be distinguishable from a
-// low-but-real score.
 
-// Per-category rating (star) entry inside the moderation payload.
 class ModerationRatingEntry {
   final String category;
   final double? score;
@@ -74,7 +64,7 @@ class LlmVerdict {
 
 class SentimentModelVerdict {
   final String? label;
-  final double? score; // -1..1
+  final double? score;
   final String? modelUsed;
 
   const SentimentModelVerdict({this.label, this.score, this.modelUsed});
@@ -86,7 +76,6 @@ class SentimentModelVerdict {
         modelUsed: json['model_used'] as String?,
       );
 
-  /// True when a weaker fallback (sbert_*) answered instead of the primary.
   bool get isFallbackModel => modelUsed?.startsWith('sbert_') ?? false;
 }
 
@@ -279,27 +268,18 @@ class DmThreadMessage {
 }
 
 class ReviewModerationDetail {
-  /// Raw review record — kept as a map because the stored blended-score keys
-  /// and the answer field name (client_answer vs freelancer_answer) differ
-  /// between the two review types. Read via [answer]/[storedAuthenticityScore].
   final Map<String, dynamic> review;
   final ModerationRatings ratings;
 
-  /// Null when [analysisUnavailable] or when the review predates judgment
-  /// logging. Distinct from a real low score.
   final ModerationComponents? components;
   final BlendWeights blendWeights;
 
-  /// Freelancer reviews: on_time/revision/responsiveness scores + contract
-  /// dates. Client reviews: engagement context only (use
-  /// [subjectLifetimeScores] for the objective strip instead).
   final Map<String, dynamic> telemetry;
 
-  /// Client reviews only — the client's lifetime aggregate trust components.
   final Map<String, dynamic>? subjectLifetimeScores;
   final ModerationReviewer reviewer;
   final List<DmThreadMessage> dmThread;
-  final String holdLevel; // "flagged" | "suppressed"
+  final String holdLevel;
   final bool analysisUnavailable;
   final bool isClientReview;
 
@@ -352,15 +332,11 @@ class ReviewModerationDetail {
 
   String? get aiQuestion => review['ai_question'] as String?;
 
-  /// The answer the reviewer gave to [aiQuestion] — the field name differs by
-  /// review type.
   String? get answer =>
       (review['client_answer'] ?? review['freelancer_answer']) as String?;
 
   String? get overallComment => review['overall_comment'] as String?;
 
-  /// Stored blended authenticity score on the review row (used as the fallback
-  /// display when [components] is null).
   double? get storedAuthenticityScore =>
       (review['authenticity_score'] as num?)?.toDouble();
 }

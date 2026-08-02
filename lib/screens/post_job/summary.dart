@@ -49,7 +49,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
       return;
     }
 
-    // Final save + publish the existing draft
     final updated = await provider.updateJobPost(
       token: token,
       jobPostId: jobPostId,
@@ -90,11 +89,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
     try {
       String filePath;
 
-      // Local draft file
       if (localPath != null && localPath.isNotEmpty) {
         filePath = localPath;
       }
-      // Uploaded file
       else if (url != null && url.isNotEmpty) {
         AppToast.info('Downloading file...', duration: const Duration(seconds: 1));
 
@@ -186,7 +183,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                   children: [
                     const SizedBox(height: 8),
 
-                    // Job detail rows
                     _buildRow(
                       'Title',
                       draft['job_title'] ?? '',
@@ -220,10 +216,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                         _capitalize(draft['experience_level'] as String),
                         Icons.bar_chart_outlined,
                       ),
-                    // if (draft['project_scope'] != null)
-                    //   _buildRow('Project Scope', _capitalize(draft['project_scope'] as String), Icons.gps_fixed),
 
-                    // Roles
                     if (roles.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
@@ -329,7 +322,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       }),
                     ],
 
-                    // Attachments
                     if (files.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(
@@ -467,7 +459,6 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
 
                     const SizedBox(height: 24),
 
-                    // Post button
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: SizedBox(

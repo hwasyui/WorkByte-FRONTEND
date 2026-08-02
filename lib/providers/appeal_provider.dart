@@ -21,7 +21,6 @@ class AppealProvider extends ChangeNotifier {
   AppealModel? get lastSubmitted => _lastSubmitted;
   Map<String, dynamic> get appealStatus => _appealStatus;
 
-  // Convenience filtered getters
   List<AppealModel> get pendingAppeals =>
       _myAppeals.where((a) => a.status == 'pending').toList();
   List<AppealModel> get resolvedAppeals =>
@@ -29,8 +28,6 @@ class AppealProvider extends ChangeNotifier {
   List<AppealModel> get accountAppeals =>
       _myAppeals.where((a) => a.targetType == 'user').toList();
 
-  /// Get appeal status for a specific target
-  /// Returns remaining appeals attempts, current state, etc.
   Future<void> fetchAppealStatus({
     required String token,
     required String targetType,
@@ -70,8 +67,6 @@ class AppealProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Submits appeal and optimistically prepends it to [myAppeals].
-  /// Returns true on success, false on failure (read [error] for the message).
   Future<bool> submitAppeal({
     required String token,
     required String targetType,
@@ -90,7 +85,6 @@ class AppealProvider extends ChangeNotifier {
         message: message,
       );
 
-      // Optimistic insert — no need for a separate fetchMyAppeals call
       _myAppeals = [_lastSubmitted!, ..._myAppeals];
 
       _isSubmitting = false;
@@ -109,7 +103,6 @@ class AppealProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reset transient state when the appeal dialog is dismissed.
   void reset() {
     _error = null;
     _lastSubmitted = null;

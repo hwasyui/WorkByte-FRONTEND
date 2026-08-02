@@ -10,26 +10,18 @@ class ApiService {
     '',
   );
 
-  // local
-  // static const String _baseUrl = 'http://10.0.2.2:8000';
-
-  /// Helper method to extract items from response
-  /// Supports both new format (details.items) and old format (details/data as list)
   static List<Map<String, dynamic>> _extractItems(Map<String, dynamic> data) {
     try {
       final details = data['details'];
 
-      // New pagination format: details.items
       if (details is Map && details['items'] != null) {
         return List<Map<String, dynamic>>.from(details['items'] as List);
       }
 
-      // Old format: details as list
       if (details is List) {
         return List<Map<String, dynamic>>.from(details);
       }
 
-      // Fallback: data field
       final dataField = data['data'];
       if (dataField is List) {
         return List<Map<String, dynamic>>.from(dataField);
@@ -42,7 +34,6 @@ class ApiService {
     }
   }
 
-  /// Helper method to extract pagination info from response
   static Map<String, dynamic>? _extractPaginationInfo(
     Map<String, dynamic> data,
   ) {
@@ -58,7 +49,6 @@ class ApiService {
     }
   }
 
-  // Job Posts API
   static Future<List<Map<String, dynamic>>> getClientPostedJobs(
     String token,
     String clientId,
@@ -119,9 +109,6 @@ class ApiService {
     }
   }
 
-  // Job Posts API
-  /// Get all job posts with pagination support
-  /// Returns list of job posts
   static Future<List<Map<String, dynamic>>> getAllJobPosts(
     String token, {
     int page = 1,
@@ -159,8 +146,6 @@ class ApiService {
     }
   }
 
-  /// Get all job posts with pagination info
-  /// Returns map with 'items' and 'pagination' keys
   static Future<Map<String, dynamic>> getAllJobPostsWithPagination(
     String token, {
     int page = 1,
@@ -208,8 +193,6 @@ class ApiService {
     }
   }
 
-  /// Get all freelancers with pagination support
-  /// Returns list of freelancers
   static Future<List<Map<String, dynamic>>> getAllFreelancers(
     String token, {
     int page = 1,
@@ -249,8 +232,6 @@ class ApiService {
     }
   }
 
-  /// Get all freelancers with pagination info
-  /// Returns map with 'items' and 'pagination' keys
   static Future<Map<String, dynamic>> getAllFreelancersWithPagination(
     String token, {
     int page = 1,
@@ -298,7 +279,6 @@ class ApiService {
     }
   }
 
-  /// Per-role analysis; on 429 returns {rate_limited: true, ...usage info}.
   static Future<Map<String, dynamic>?> analyzeRoleMatch(
     String token,
     String jobRoleId,
@@ -330,7 +310,6 @@ class ApiService {
     }
   }
 
-  /// Read-only usage lookup; doesn't spend a request against the daily cap.
   static Future<Map<String, dynamic>?> getJobFitUsage(String token) async {
     try {
       final response = await SessionGuard.guard(
@@ -354,8 +333,6 @@ class ApiService {
     }
   }
 
-  /// Get all clients with pagination support
-  /// Returns list of clients
   static Future<List<Map<String, dynamic>>> getAllClients(
     String token, {
     int page = 1,
@@ -395,8 +372,6 @@ class ApiService {
     }
   }
 
-  /// Get all clients with pagination info
-  /// Returns map with 'items' and 'pagination' keys
   static Future<Map<String, dynamic>> getAllClientsWithPagination(
     String token, {
     int page = 1,

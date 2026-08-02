@@ -1,8 +1,5 @@
-// Freelancer-reviews-client models - symmetric counterpart to review_model.dart.
 
 import 'review_model.dart' show SentimentDistribution;
-
-// ClientReviewRating
 
 class ClientReviewRating {
   final String id;
@@ -27,8 +24,6 @@ class ClientReviewRating {
 
   Map<String, dynamic> toJson() => {'category': category, 'score': score};
 }
-
-// ClientReviewWrittenContent
 
 class ClientReviewWrittenContent {
   final String id;
@@ -55,13 +50,11 @@ class ClientReviewWrittenContent {
       );
 }
 
-// ClientReview
-
 class ClientReview {
   final String id;
   final String contractId;
-  final String reviewerId; // freelancer's user_id
-  final String clientId; // client's user_id (being reviewed)
+  final String reviewerId;
+  final String clientId;
   final String status;
   final bool isAnonymous;
   final DateTime? createdAt;
@@ -70,8 +63,6 @@ class ClientReview {
   final List<ClientReviewRating> ratings;
   final ClientReviewWrittenContent? writtenContent;
 
-  /// "positive" | "neutral" | "negative" | null — null means no sentiment
-  /// analysis exists for this review, never defaulted to "neutral".
   final String? sentiment;
 
   const ClientReview({
@@ -118,8 +109,6 @@ class ClientReview {
     );
   }
 }
-
-// ClientTrustScore
 
 class ClientTrustScore {
   final String clientId;
@@ -170,8 +159,6 @@ class ClientTrustScore {
         ),
       );
 }
-
-// SubmitClientReviewRequest
 
 class SubmitClientReviewRequest {
   final List<ClientReviewRatingInput> ratings;

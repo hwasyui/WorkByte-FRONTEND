@@ -11,7 +11,6 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // App Bar
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
@@ -42,7 +41,6 @@ class AboutScreen extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    // Decorative circles
                     Positioned(
                       top: -30,
                       right: -30,
@@ -67,7 +65,6 @@ class AboutScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Content
                     Positioned.fill(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -117,7 +114,6 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // About section
                   _SectionTitle(title: 'About WorkByte'),
                   const SizedBox(height: 12),
                   _InfoCard(
@@ -152,7 +148,6 @@ class AboutScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // Signing In section
                   _SectionTitle(title: 'Signing In'),
                   const SizedBox(height: 12),
 
@@ -176,7 +171,6 @@ class AboutScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // AI Features section
                   _SectionTitle(title: 'AI-Powered Features'),
                   const SizedBox(height: 12),
 
@@ -308,7 +302,6 @@ class AboutScreen extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // Version info
                   Center(
                     child: Column(
                       children: [
@@ -350,8 +343,6 @@ class AboutScreen extends StatelessWidget {
     );
   }
 }
-
-// Reusable widgets
 
 class _SectionTitle extends StatelessWidget {
   final String title;
@@ -447,7 +438,6 @@ class _FeatureCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Card header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -506,7 +496,6 @@ class _FeatureCard extends StatelessWidget {
             ),
           ),
 
-          // Card body
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

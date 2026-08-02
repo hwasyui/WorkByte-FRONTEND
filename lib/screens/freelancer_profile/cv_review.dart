@@ -113,11 +113,9 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
       ),
       body: Column(
         children: [
-          // Score banner — update mode only
           if (!widget.isInitial && widget.analysisData != null)
             _ScoreBanner(data: widget.analysisData!),
 
-          // Hint bar
           Container(
             width: double.infinity,
             color: _secondary,
@@ -144,7 +142,6 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
             ),
           ),
 
-          // Section list
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -212,7 +209,6 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
         ],
       ),
 
-      // Bottom apply bar
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -297,8 +293,6 @@ class _CvReviewScreenState extends State<CvReviewScreen> {
     );
   }
 }
-
-// Score Banner
 
 class _ScoreBanner extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -393,8 +387,6 @@ class _BannerStat extends StatelessWidget {
     );
   }
 }
-
-// Section Card
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -525,8 +517,6 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// Skill Chip
-
 class _SkillChip extends StatelessWidget {
   final String label;
   const _SkillChip({required this.label});
@@ -550,8 +540,6 @@ class _SkillChip extends StatelessWidget {
     );
   }
 }
-
-// Experience Item
 
 class _ExperienceItem extends StatelessWidget {
   final SuggestedWorkExperience exp;
@@ -630,8 +618,6 @@ class _ExperienceItem extends StatelessWidget {
     );
   }
 }
-
-// Education Item
 
 class _EducationItem extends StatelessWidget {
   final SuggestedEducation edu;

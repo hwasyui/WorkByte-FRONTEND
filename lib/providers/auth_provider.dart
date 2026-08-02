@@ -12,14 +12,12 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _service = AuthService();
 
   AuthProvider() {
-    // Access token is short-lived (30 min); try a silent refresh before logging out.
     SessionGuard.registerRefresh(_refreshOrRetryOnce);
     SessionGuard.register(() {
       handleSessionExpired();
     });
   }
 
-  // Dedupes concurrent 401s into a single refresh attempt.
   Future<String?>? _refreshInFlight;
 
   Future<String?> _refreshOrRetryOnce() {
@@ -64,7 +62,6 @@ class AuthProvider extends ChangeNotifier {
     _backendUnavailable = false;
   }
 
-  // ban state convenience getters
   bool get isReportBanned => _currentUser?.isReportBanned ?? false;
   String? get banMessage => _currentUser?.banMessage;
   DateTime? get reportBannedAt => _currentUser?.reportBannedAt;
@@ -89,7 +86,6 @@ class AuthProvider extends ChangeNotifier {
         user = await _service.getMe(savedToken);
         _token = savedToken;
       } on SessionExpiredException {
-        // Access token expired — try the refresh token before giving up.
         final refreshed = await _refreshOrRetryOnce();
         if (refreshed == null) rethrow;
         user = await _service.getMe(refreshed);
@@ -104,7 +100,6 @@ class AuthProvider extends ChangeNotifier {
         );
       }
     } on SessionExpiredException {
-      // Token is genuinely invalid/expired — safe to clear
       await handleSessionExpired(profileProvider: profileProvider);
     } catch (e) {
       final savedToken = await _service.getSavedToken();
@@ -410,7 +405,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // call this after an appeal is approved to refresh ban state
   Future<void> refreshUser({
     ProfileProvider? profileProvider,
     NotificationProvider? notificationProvider,

@@ -55,7 +55,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final fullName = _nameController.text.trim();
 
     setState(() {
-      // Full name
       if (fullName.isEmpty) {
         _nameError = 'Full name is required';
       } else if (fullName.length < 2) {
@@ -64,7 +63,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _nameError = null;
       }
 
-      // Email
       if (email.isEmpty) {
         _emailError = 'Email is required';
       } else if (!_isValidEmail(email)) {
@@ -73,10 +71,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _emailError = null;
       }
 
-      // Password
       _passwordError = PasswordValidator.validate(password);
 
-      // Confirm password
       if (confirmPassword.isEmpty) {
         _confirmPasswordError = 'Please confirm your password';
       } else if (confirmPassword != password) {

@@ -144,8 +144,6 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
   }
 }
 
-// Stat card (Total Users / Freelancers / Jobs)
-
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -189,7 +187,6 @@ class _StatCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Left: stat info
               Expanded(
                 flex: 2,
                 child: Column(
@@ -220,7 +217,6 @@ class _StatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Right: chart
               Expanded(
                 flex: 3,
                 child: SizedBox(
@@ -237,8 +233,6 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-// Reports card
 
 class _ReportsCard extends StatelessWidget {
   final int pending;
@@ -270,7 +264,6 @@ class _ReportsCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left: big number
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -301,7 +294,6 @@ class _ReportsCard extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              // Center: donut chart
               SizedBox(
                 width: 100,
                 height: 100,
@@ -313,7 +305,6 @@ class _ReportsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 20),
-              // Right: legend
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -347,8 +338,6 @@ class _ReportsCard extends StatelessWidget {
   }
 }
 
-// Shared structural widgets
-
 class _CardShell extends StatelessWidget {
   final Widget child;
   const _CardShell({required this.child});
@@ -377,7 +366,6 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-// Animates the big stat number counting up from 0 on first paint.
 class _CountUpNumber extends StatelessWidget {
   final int value;
   final TextStyle style;
@@ -529,8 +517,6 @@ class _ReportLegend extends StatelessWidget {
     );
   }
 }
-
-// Charts
 
 class _LineChart extends StatelessWidget {
   final List<double> data;
@@ -849,8 +835,6 @@ class _DonutChart extends StatelessWidget {
     );
   }
 }
-
-// Helpers
 
 int _si(Map<String, dynamic> m, String k) =>
     (m[k] as num?)?.toInt() ?? 0;

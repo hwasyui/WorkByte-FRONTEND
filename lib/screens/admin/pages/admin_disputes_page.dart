@@ -62,8 +62,6 @@ class _AdminDisputesPageState extends State<AdminDisputesPage> {
   }
 }
 
-// Card
-
 class _DisputeCard extends StatelessWidget {
   final Map<String, dynamic> contract;
 
@@ -100,7 +98,6 @@ class _DisputeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: const BoxDecoration(
@@ -345,8 +342,6 @@ class _DisputeCard extends StatelessWidget {
     }
   }
 }
-
-// Resolve-dialog extra content (optional date picker + note field)
 
 class _ResolveDisputeExtra extends StatefulWidget {
   final String outcome;

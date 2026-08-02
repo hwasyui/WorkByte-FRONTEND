@@ -128,7 +128,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
             const Center(
               child: Text(
                 'Add Skill',
@@ -137,7 +136,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
             ),
             const SizedBox(height: 16),
 
-            // Search field
             const Text(
               "Skill",
               style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -194,7 +192,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
               ),
             ),
 
-            // Suggestions
             if (_showSuggestions)
               Consumer<SkillProvider>(
                 builder: (_, provider, __) {
@@ -309,7 +306,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                 },
               ),
 
-            // Category picker (shown when creating a new skill)
             if (_showCategoryPicker && !_isCreating) ...[
               const SizedBox(height: 14),
               Row(
@@ -405,7 +401,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
               ),
             ],
 
-            // Selected indicator
             if (_selected != null && !_showSuggestions) ...[
               const SizedBox(height: 8),
               Row(
@@ -433,7 +428,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
 
             const SizedBox(height: 16),
 
-            // Proficiency
             const Text(
               "Proficiency",
               style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -483,7 +477,6 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
             ),
             const SizedBox(height: 16),
 
-            // Save button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

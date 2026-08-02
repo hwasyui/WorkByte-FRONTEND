@@ -42,7 +42,6 @@ class JobCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: avatar + name + bookmark
           Row(
             children: [
               posterAvatar,
@@ -79,7 +78,6 @@ class JobCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          // Title
           Text(
             title,
             maxLines: 2,
@@ -90,7 +88,6 @@ class JobCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Category & biddings
           Row(
             children: [
               Text(
@@ -111,7 +108,6 @@ class JobCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          // Tags
           Row(
             children: [
               _Tag(label: salary),

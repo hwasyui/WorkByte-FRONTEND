@@ -1,12 +1,6 @@
-// Admin red-flag alert detail models.
-//
-// Back the red-flag diagnosis dialog. The alert message is only a symptom
-// ("Trust score dropped by 12.7 points"); the diagnosis is built from the
-// score history, the current trust-score components (to find WHICH input
-// fell), and the reviews in the drop window.
 
 class RedFlagSubject {
-  final String subjectType; // "freelancer" | "client"
+  final String subjectType;
   final String? subjectId;
   final String? name;
   final String? email;
@@ -83,16 +77,11 @@ class ScoreDrop {
 }
 
 class RedFlagDetail {
-  /// Raw alert record — includes alert_type, message, id, resolved_by,
-  /// resolution_note, severity, is_resolved.
   final Map<String, dynamic> alert;
   final RedFlagSubject subject;
 
-  /// Full trust-score breakdown (component name -> score). Null when the
-  /// subject has no current components stored. Kept as a generic map so the
-  /// outlier-highlight logic works for any component set.
   final Map<String, double>? currentComponents;
-  final List<ScoreHistoryPoint> scoreHistory; // oldest first
+  final List<ScoreHistoryPoint> scoreHistory;
   final ScoreDrop drop;
   final List<Map<String, dynamic>> recentReviews;
   final List<Map<String, dynamic>> heldReviewsInWindow;

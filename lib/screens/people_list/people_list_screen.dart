@@ -81,7 +81,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
     });
   }
 
-  // In _loadPeople(), after mapping, add sorting for freelancers:
   Future<void> _loadPeople() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
@@ -101,7 +100,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           ? rawItems.map((e) => ClientModel.fromJson(e)).toList()
           : rawItems.map((e) => FreelancerModel.fromJson(e)).toList();
 
-      // Sort by weighted review average, tie-broken by review count
       if (!widget.showClients) {
         (mapped as List<FreelancerModel>).sort((a, b) {
           final aScore = a.weightedReviewAvg ?? 0.0;
@@ -111,8 +109,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           return b.totalReviews.compareTo(a.totalReviews);
         });
       } else {
-        // Same idea for clients - highest review-received rating first, with
-        // review count as a tie-breaker.
         (mapped as List<ClientModel>).sort((a, b) {
           final aScore = a.weightedReviewAvgReceived ?? 0.0;
           final bScore = b.weightedReviewAvgReceived ?? 0.0;
@@ -147,7 +143,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
@@ -249,7 +244,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // Search bar
                   Container(
                     height: 48,
                     decoration: BoxDecoration(
@@ -299,7 +293,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
               ),
             ),
 
-            // Body
             Expanded(
               child: Column(
                 children: [
@@ -425,7 +418,6 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
   }
 }
 
-// Freelancer card
 class _FreelancerCard extends StatelessWidget {
   final FreelancerModel freelancer;
   final VoidCallback onTap;
@@ -464,7 +456,6 @@ class _FreelancerCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name row with optional Top Rated badge
                   Row(
                     children: [
                       Expanded(
@@ -523,7 +514,6 @@ class _FreelancerCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Star rating row
                   _StarRating(avg: avg, count: freelancer.totalReviews),
                   const SizedBox(height: 8),
                   Row(
@@ -567,7 +557,6 @@ class _FreelancerCard extends StatelessWidget {
   }
 }
 
-// Client card
 class _ClientCard extends StatelessWidget {
   final ClientModel client;
   final VoidCallback onTap;
@@ -605,7 +594,6 @@ class _ClientCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name row with optional Top Rated badge
                   Row(
                     children: [
                       Expanded(
@@ -662,7 +650,6 @@ class _ClientCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Rating this client received from freelancers
                   _StarRating(
                     avg: client.weightedReviewAvgReceived,
                     count: client.totalReviewsReceived,
@@ -709,7 +696,6 @@ class _ClientCard extends StatelessWidget {
   }
 }
 
-// Shared avatar widget
 class _Avatar extends StatelessWidget {
   final String? imageUrl;
   final String name;
@@ -754,7 +740,6 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-// Small stat chip
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -823,7 +808,6 @@ class _StarRating extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Build 5 stars
         ...List.generate(5, (i) {
           final starValue = i + 1;
           IconData icon;
@@ -866,7 +850,6 @@ class _StarRating extends StatelessWidget {
   }
 }
 
-// Profile detail screen
 class PeopleProfileScreen extends StatefulWidget {
   final bool isClient;
   final ClientModel? client;
@@ -936,13 +919,11 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     }
   }
 
-  // 👇 NEW: helper to determine target user ID for self-report guard
   String? get _targetUserId {
     if (widget.isClient) return widget.client?.userId;
     return widget.freelancer?.userId;
   }
 
-  // 👇 NEW: opens the report sheet
   void _openReportSheet() {
     ReportSheet.show(
       context,
@@ -992,13 +973,11 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               ),
             ),
             actions: [
-              // Share
               if (_targetUserId != null)
                 IconButton(
                   onPressed: () => Share.share(profileShareUrl(_targetUserId!)),
                   icon: const Icon(Icons.share_outlined, color: Colors.white, size: 22),
                 ),
-              // Bookmark
               Consumer<SavedItemsProvider>(
                 builder: (context, saved, _) {
                   final isSaved = widget.isClient
@@ -1022,7 +1001,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   );
                 },
               ),
-              // Report, hidden if viewing own profile
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (_targetUserId != null && _targetUserId == auth.userId) {
@@ -1092,7 +1070,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                     ClientReliabilityBadge(label: _clientReliability),
                     const SizedBox(height: 12),
                   ],
-                  // Stats row — unchanged
                   Row(
                     children: [
                       if (widget.isClient) ...[
@@ -1136,9 +1113,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // See Reviews — freelancers only; lets a client read the
-                  // freelancer's reviews/trust score before hiring, which
-                  // previously had no entry point from discovery/browsing.
                   if (!widget.isClient && widget.freelancer != null)
                     GestureDetector(
                       onTap: () => Navigator.push(
@@ -1189,9 +1163,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                       ),
                     ),
 
-                  // See Reviews — clients only; symmetric counterpart lets a
-                  // freelancer read what other freelancers said about this
-                  // client before taking on a job from them.
                   if (widget.isClient && widget.client != null)
                     GestureDetector(
                       onTap: () => Navigator.push(
@@ -1242,7 +1213,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                       ),
                     ),
 
-                  // About section — unchanged
                   Text(
                     'About',
                     style: GoogleFonts.poppins(
@@ -1277,7 +1247,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Details section — unchanged
                   Text(
                     'Details',
                     style: GoogleFonts.poppins(
@@ -1328,7 +1297,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                     ),
                   ),
 
-                  // Freelancer-only sections — unchanged
                   if (!widget.isClient) ...[
                     const SizedBox(height: 20),
                     if (_loadingDetails)
@@ -1472,8 +1440,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     );
   }
 }
-
-// All helper widgets below are completely unchanged
 
 class _SectionHeader extends StatelessWidget {
   final String label;
@@ -1806,7 +1772,6 @@ class _PortfolioCard extends StatelessWidget {
                     onTap: () async {
                       final uri = Uri.tryParse(portfolio.projectUrl!);
                       if (uri != null) {
-                        // ignore: deprecated_member_use
                         await launchUrl(
                           uri,
                           mode: LaunchMode.externalApplication,

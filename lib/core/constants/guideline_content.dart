@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// A single expandable topic inside a guideline section, e.g.
-/// "How to submit a proposal" with its detail steps collapsed underneath.
 class GuidelineTopic {
   final String question;
   final List<String> steps;
@@ -23,9 +21,6 @@ class GuidelineSection {
   });
 }
 
-/// Static guideline copy — mirrors the app's real navigation labels
-/// (Home / Jobs / Workspace / Messages tabs, screen titles and button text)
-/// so users can follow it step by step inside the actual UI.
 class GuidelineContent {
   static const general = GuidelineSection(
     title: 'General',

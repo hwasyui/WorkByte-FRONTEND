@@ -2,23 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/admin_colors.dart';
 
-/// A single 0–1 score rendered as a labelled bar against an optional threshold.
-///
-/// The core rule of the moderation UI: a null score, or `isMeasured == false`,
-/// is NOT zero. It renders an explicit "Not measured" state (no bar) so a blank
-/// scorecard never reads as "every model scored this badly". Pass
-/// [isMeasured] = false for the telemetry case where the platform never
-/// captured the metric (e.g. on_time_measurable == false).
 class MeasuredScoreBar extends StatelessWidget {
   final String label;
-  final double? value; // 0..1
-  final double? threshold; // 0..1, draws a marker + pass/fail tint
+  final double? value;
+  final double? threshold;
   final bool isMeasured;
 
-  /// Extra note shown after the label (e.g. "length-adjusted", revision count).
   final String? note;
 
-  /// When true, higher is worse (fake probability); tints red above threshold.
   final bool higherIsWorse;
   final Color accent;
 
@@ -41,7 +32,6 @@ class MeasuredScoreBar extends StatelessWidget {
     Color barColor = accent;
     if (measured && threshold != null) {
       final over = v >= threshold!;
-      // higherIsWorse: over threshold is bad (red); else over threshold is good.
       final good = higherIsWorse ? !over : over;
       barColor = good ? AdminColors.green : AdminColors.red;
     }
@@ -174,9 +164,6 @@ class _NotMeasuredPill extends StatelessWidget {
   }
 }
 
-/// Small chip naming the model that produced a verdict. When the model id
-/// starts with `sbert_` it flips to an amber warning chip, signalling a weaker
-/// fallback model answered.
 class ModelVerdictChip extends StatelessWidget {
   final String? modelUsed;
 

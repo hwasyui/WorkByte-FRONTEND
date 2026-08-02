@@ -31,11 +31,6 @@ class GenerateContractScreen extends StatefulWidget {
 class _GenerateContractScreenState extends State<GenerateContractScreen> {
   static const Color _primary = AppColors.primary;
 
-  // Shared by every text field and dropdown on this screen so boxes are the
-  // same height whether or not they carry a prefixIcon — previously fields
-  // with an icon used a different (icon-only, no horizontal) padding than
-  // fields without one, which is why paired fields (Duration/Unit, Payment
-  // Structure/Payment Timing) didn't line up.
   static const EdgeInsets _fieldPadding = EdgeInsets.symmetric(
     horizontal: 14,
     vertical: 14,
@@ -162,15 +157,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
         _hydrateDuration(_contract!.agreedDuration ?? '');
 
-        // contract_terms (termination notice, dispute resolution,
-        // confidentiality, late payment penalty, revision rounds, additional
-        // clauses, payment schedule/milestones) lives in a separate table —
-        // GET /contracts/:id (above) never returns it. This screen never
-        // fetched .../generation-data either, so every one of those fields
-        // silently reset to its hardcoded default each time the screen
-        // reopened, even after a PDF had already been generated with
-        // different values — re-generating would then quietly overwrite the
-        // real saved terms with those defaults.
         await _hydrateContractTerms(token);
       }
 
@@ -229,15 +215,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       _hydratePaymentSchedule(terms['payment_schedule'] as String? ?? '');
     } catch (e) {
-      // Non-fatal: worst case the screen falls back to defaults, same as
-      // before this fix — it must not block the rest of the contract from
-      // loading.
       debugPrint('Failed to hydrate contract terms: $e');
     }
   }
 
-  /// Reverses [_buildPaymentScheduleString]'s output back into form state —
-  /// either the milestone list or the full-payment timing selection.
   void _hydratePaymentSchedule(String scheduleText) {
     if (scheduleText.trim().isEmpty) return;
 
@@ -471,10 +452,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       'governing_law': 'Indonesian Law',
       'confidentiality': _confidentiality,
       'confidentiality_text': _confidentialityTextController.text.trim(),
-      // Backend expects a penalty *percentage* (Optional[float], DB column
-      // is DECIMAL) here, not a yes/no flag - sending the raw checkbox bool
-      // used to silently coerce to 0.0/1.0, hard-coding a phantom 1% late
-      // fee whenever the box was checked with no way to actually set a rate.
       'late_payment_penalty': _latepaymentPenalty
           ? double.tryParse(_latePaymentPenaltyController.text.trim())
           : null,
@@ -486,11 +463,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     };
   }
 
-  /// Shared by both _generateContract and _sendToFreelancer - previously
-  /// _sendToFreelancer only ran _validateMilestones, so editing the end
-  /// date/duration/custom-payment-text blank and pressing "Send to
-  /// Freelancer" (shown once a PDF already exists) could silently ship a
-  /// contract with an empty end date or payment schedule to the freelancer.
   bool _validateBeforeGenerate() {
     if (_endDateController.text.isEmpty) {
       _showError('Please set an end date');
@@ -601,11 +573,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       final fileName = 'contract_${widget.contractId}.pdf';
 
-      // Lets the user pick the destination via the system's native "Save As"
-      // picker (Storage Access Framework on Android) instead of silently
-      // writing to a hardcoded path - the latter also has no chance of
-      // working on a real device since this app declares no storage
-      // permission in AndroidManifest.xml.
       final savedPath = await FilePicker.platform.saveFile(
         dialogTitle: 'Save Contract PDF',
         fileName: fileName,
@@ -616,7 +583,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
       if (!mounted) return;
 
-      if (savedPath == null) return; // user cancelled the picker
+      if (savedPath == null) return;
 
       AppToast.success('Contract saved successfully');
     } catch (e) {
@@ -1249,11 +1216,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Paired the same way as "Agreed Budget" + "Currency" above: each
-        // side carries its own label via the shared field builders, so both
-        // boxes get identical height/padding and line up correctly — the
-        // previous version put one shared label above a bare TextField next
-        // to a fully self-labeled dropdown, which threw off the alignment.
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

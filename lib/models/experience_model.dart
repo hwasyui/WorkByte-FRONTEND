@@ -1,4 +1,3 @@
-// experience_model.dart
 class ExperienceModel {
   final String workExperienceId;
   final String freelancerId;

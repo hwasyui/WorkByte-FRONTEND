@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/admin_colors.dart';
 
-/// Centered, width-capped confirm dialog. Replaces bare `AlertDialog` calls
-/// across the admin pages, which stretch edge-to-edge on wide/web viewports
-/// because AlertDialog has no intrinsic max width of its own.
 Future<bool?> showAdminConfirmDialog(
   BuildContext context, {
   required String title,
@@ -100,9 +97,6 @@ Future<bool?> showAdminConfirmDialog(
   );
 }
 
-/// Width-capped shell for the larger detail-sheet dialogs (user/job detail,
-/// AI flag detail, etc). Keeps the existing scrollable content untouched —
-/// callers pass their current sheet body in as [child].
 class AdminDetailDialogShell extends StatelessWidget {
   final Widget child;
   final double maxWidth;
@@ -141,7 +135,6 @@ class AdminDetailDialogShell extends StatelessWidget {
   }
 }
 
-/// Subtle scale + fade entrance so dialogs feel less like an abrupt pop-in.
 class _AdminDialogPop extends StatelessWidget {
   final Widget child;
   const _AdminDialogPop({required this.child});

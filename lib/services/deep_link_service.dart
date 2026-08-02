@@ -24,15 +24,12 @@ class DeepLinkService {
     return link;
   }
 
-  // Returns (type, id) — e.g. ('job', '123') or ('profile', '456').
   static (String?, String?) parseLink(Uri uri) {
     if (uri.scheme == 'workbyte') {
-      // workbyte://job/123  or  workbyte://profile/123
       final id = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
       return (uri.host, id);
     }
     if (uri.scheme == 'https') {
-      // https://workbyte.angelica-whiharto.com/share/job/123
       final segs = uri.pathSegments;
       if (segs.length >= 3 && segs[0] == 'share') {
         return (segs[1], segs[2]);

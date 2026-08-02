@@ -1,4 +1,3 @@
-// education_model.dart
 class EducationModel {
   final String educationId;
   final String freelancerId;

@@ -643,7 +643,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           final identifier =
               profile.clientProfile?.clientId ?? auth.currentUser!.userId;
 
-          // New local image selected, upload it
           if (data['image'] != null &&
               data['image'].toString().isNotEmpty &&
               data['image'] != profile.profilePictureUrl &&
@@ -667,7 +666,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               return;
             }
           }
-          // Image deleted
           else if (data['imageDeleted'] == true) {
             final success = await profile.deleteProfilePicture(
               token: auth.token!,
@@ -682,10 +680,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // Update other fields
-          // Note: clients don't have a job_title concept on the backend
-          // (ClientUpdate has no such field) — only full_name is editable
-          // here.
           final fields = <String, dynamic>{
             if (data['name'] != null) 'full_name': data['name'],
           };
@@ -703,15 +697,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // Done
           await _refreshProfile();
           profile.forceRefreshProfilePicture();
 
-          // Note: the edit sheet already closes itself (see EditProfileForm's
-          // own _submit), so no Navigator.pop here — this `context` is the
-          // profile screen's, and popping it would kick the user back to
-          // whatever screen is beneath Profile (e.g. Home) instead of just
-          // refreshing this screen in place.
           if (mounted) {
             AppToast.success('Profile updated successfully');
           }
@@ -1038,10 +1026,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
-                          // A stale/expired URL (e.g. a picture that was just
-                          // deleted) failing to load is expected — handle it
-                          // silently instead of letting it surface as an
-                          // uncaught NetworkImageLoadException.
                           onBackgroundImageError: profileImage != null
                               ? (_, _) {}
                               : null,
@@ -1113,17 +1097,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           Consumer<ClientReviewProvider>(
             builder: (context, reviewProvider, _) {
-              // Ratings RECEIVED from freelancers (this client's own
-              // reputation) — distinct from `averageRatingGiven`, which is
-              // the rating this client gives to freelancers. Fetched via
-              // loadTrustScore in _loadReviews, so this can briefly be null
-              // while it's still loading, not just when there are no reviews.
               final trustScore = reviewProvider.trustScore;
               final rawRating = trustScore?.weightedReviewAvgReceived;
               final totalReviews = trustScore?.totalReviewsReceived ?? 0;
 
               if (rawRating == null || totalReviews == 0) {
-                // Self-explanatory as-is, so no tooltip needed here.
                 return Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -1248,7 +1226,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
 
-          // 👇 NEW: ban notice banner — only shown when account is restricted
           if (auth.isReportBanned) ...[
             const SizedBox(height: 12),
             Padding(
@@ -1313,8 +1290,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                   targetLabel: 'Account Restriction',
                                   closureNote: auth.banMessage,
                                 ).then((_) {
-                                  // 👇 refresh user after appeal submitted
-                                  // so banner disappears if appeal approved
                                   context.read<AuthProvider>().refreshUser();
                                 }),
                             child: Container(
@@ -1347,7 +1322,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           const SizedBox(height: 12),
 
-          // Tab bar
           Container(
             color: Colors.white,
             child: TabBar(
@@ -1814,7 +1788,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       },
     );
   }
-
 
   Widget _buildOwnReviewCard(dynamic review) {
     final displayName = review.isAnonymous == true

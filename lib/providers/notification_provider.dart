@@ -19,8 +19,6 @@ class NotificationProvider extends ChangeNotifier {
   bool get hasMore => _hasMore;
   String? get error => _error;
 
-  // Fetch
-
   Future<void> fetchNotifications({bool refresh = false}) async {
     if (_isLoading) return;
     if (!refresh && !_hasMore) return;
@@ -55,8 +53,6 @@ class NotificationProvider extends ChangeNotifier {
       notifyListeners();
     } catch (_) {}
   }
-
-  // Mark read
 
   Future<void> markAsRead(String notificationId) async {
     try {

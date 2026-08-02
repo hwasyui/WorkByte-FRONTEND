@@ -7,7 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/guideline_provider.dart';
 
 class GuidelinesScreen extends StatefulWidget {
-  final String activeRole; // 'freelancer' | 'client'
+  final String activeRole;
 
   const GuidelinesScreen({super.key, required this.activeRole});
 
@@ -185,10 +185,6 @@ class _GuidelineSectionCard extends StatelessWidget {
   }
 }
 
-/// A single collapsed-by-default "question" row that expands to reveal its
-/// detail steps, marked with a dot bullet only (no numbering) to avoid
-/// double markers. The leading circle shows the topic's position within its
-/// section, tinted with the section's accent color.
 class _GuidelineTopicTile extends StatelessWidget {
   final int index;
   final GuidelineTopic topic;

@@ -43,7 +43,6 @@ class JobFileModel {
     };
   }
 
-  /// Human-readable file size e.g. "2.4 MB"
   String get fileSizeFormatted {
     if (fileSize == null) return '';
     if (fileSize! < 1024) return '$fileSize B';
@@ -53,11 +52,9 @@ class JobFileModel {
     return '${(fileSize! / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  /// Extract extension automatically if backend doesn’t provide file_type
   String get resolvedFileType {
     final type = fileType.toLowerCase();
 
-    // Ignore generic mime types
     if (type.isNotEmpty &&
         type != 'application/octet-stream' &&
         !type.contains('/')) {
@@ -68,7 +65,6 @@ class JobFileModel {
       return fileName.split('.').last.toLowerCase();
     }
 
-    // Handle MIME types
     switch (type) {
       case 'application/pdf':
         return 'pdf';
@@ -102,7 +98,6 @@ class JobFileModel {
     }
   }
 
-  /// Icon lookup based on file type
   String get fileTypeIcon {
     switch (resolvedFileType) {
       case 'pdf':

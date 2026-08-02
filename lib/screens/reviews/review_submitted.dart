@@ -6,11 +6,6 @@ import '../../core/constants/text_styles.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/review_provider.dart';
 
-/// Shown right after a client submits a freelancer review. The backend
-/// pipeline moderates the review asynchronously, so this screen polls
-/// GET /reviews/{review_id} until the status leaves "pending" and shows
-/// copy matching what actually happened, rather than a static congratulatory
-/// message that implies the review is already live.
 class ReviewSubmittedScreen extends StatefulWidget {
   final String reviewId;
   final String freelancerName;

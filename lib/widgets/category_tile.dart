@@ -28,10 +28,8 @@ class CategoryTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          // Icon
           icon,
           const SizedBox(width: 12),
-          // Text column
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,7 +55,6 @@ class CategoryTile extends StatelessWidget {
               ],
             ),
           ),
-          // Job count
           Text(
             '$jobCount jobs',
             style: AppText.caption.copyWith(color: const Color(0xFF7D7D7D)),

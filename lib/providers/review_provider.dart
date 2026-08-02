@@ -2,16 +2,10 @@ import 'package:flutter/foundation.dart';
 import '../models/review_model.dart';
 import '../services/review_service.dart';
 
-// Load states
-
 enum ReviewLoadState { idle, loading, loaded, error }
-
-// Provider
 
 class ReviewProvider extends ChangeNotifier {
   final ReviewService _service = ReviewService();
-
-  // Review form (pending review for a contract)
 
   ReviewLoadState _formState = ReviewLoadState.idle;
   ReviewLoadState get formState => _formState;
@@ -19,12 +13,8 @@ class ReviewProvider extends ChangeNotifier {
   Review? _pendingReview;
   Review? get pendingReview => _pendingReview;
 
-  // Submission state
-
   bool _submitting = false;
   bool get submitting => _submitting;
-
-  // Freelancer reviews list
 
   ReviewLoadState _reviewsState = ReviewLoadState.idle;
   ReviewLoadState get reviewsState => _reviewsState;
@@ -32,15 +22,11 @@ class ReviewProvider extends ChangeNotifier {
   List<Review> _reviews = [];
   List<Review> get reviews => List.unmodifiable(_reviews);
 
-  // Trust score
-
   ReviewLoadState _trustState = ReviewLoadState.idle;
   ReviewLoadState get trustState => _trustState;
 
   TrustScore? _trustScore;
   TrustScore? get trustScore => _trustScore;
-
-  // Red flags
 
   ReviewLoadState _flagsState = ReviewLoadState.idle;
   ReviewLoadState get flagsState => _flagsState;
@@ -48,22 +34,12 @@ class ReviewProvider extends ChangeNotifier {
   List<RedFlagAlert> _redFlags = [];
   List<RedFlagAlert> get redFlags => List.unmodifiable(_redFlags);
 
-  // Error
-
   String? _error;
   String? get error => _error;
 
-  // Raw moderation labels (e.g. "toxic", "obscene") from the harmful-content
-  // gate on submitReview - null unless the last submit attempt was rejected
-  // for that specific reason, so the UI can special-case that error state.
   List<String>? _flaggedLabels;
   List<String>? get flaggedLabels => _flaggedLabels;
 
-  // Actions
-
-  /// Called when the review form screen initialises.
-  /// Fetches the pending review shell (AI question + suggested skill tags)
-  /// created by the post-completion pipeline.
   Future<void> loadReviewForm({
     required String token,
     required String contractId,
@@ -88,13 +64,10 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Called when the client taps "Submit Review".
-  /// Maps the screen's rating map + text fields into a [SubmitReviewRequest]
-  /// and posts it to the backend. Returns true on success.
   Future<bool> submitReview({
     required String token,
     required String reviewId,
-    required Map<String, double> ratingsMap, // {'communication': 4.5, ...}
+    required Map<String, double> ratingsMap,
     required String clientAnswer,
     required String overallComment,
     required List<String> extraSkillTags,
@@ -137,7 +110,6 @@ class ReviewProvider extends ChangeNotifier {
     }
   }
 
-  /// Loads all published reviews for a freelancer profile page.
   Future<void> loadFreelancerReviews({
     required String token,
     required String freelancerId,
@@ -162,7 +134,6 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads the AI-computed trust score for a freelancer.
   Future<void> loadTrustScore({
     required String token,
     required String freelancerId,
@@ -187,7 +158,6 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads unresolved red flag alerts (admin use).
   Future<void> loadRedFlags({
     required String token,
     required String freelancerId,
@@ -212,8 +182,6 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Plain passthrough fetch (no state mutation) used by the post-submit
-  /// status screen to poll a review's status without disturbing formState.
   Future<Review?> fetchReviewById({
     required String token,
     required String reviewId,
@@ -224,8 +192,6 @@ class ReviewProvider extends ChangeNotifier {
       return null;
     }
   }
-
-  // Reset
 
   void resetForm() {
     _pendingReview = null;

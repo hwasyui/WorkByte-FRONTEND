@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
-/// A reusable card showing a single job role with title, description,
-/// salary, and an Apply button.
 class RoleCard extends StatelessWidget {
   final String roleTitle;
   final String roleDescription;
@@ -31,7 +29,6 @@ class RoleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + salary row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -56,7 +53,6 @@ class RoleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          // Description
           Text(
             roleDescription,
             style: GoogleFonts.poppins(
@@ -67,7 +63,6 @@ class RoleCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Apply button
           SizedBox(
             width: double.infinity,
             height: 33,

@@ -10,8 +10,6 @@ import 'package:workbyte_app/services/session_guard.dart';
 String get _backendBase =>
     (dotenv.env['BACKEND'] ?? '').replaceAll(RegExp(r'/$'), '');
 
-/// Downloads [url] with an optional JWT [token] to a temp file and returns it.
-/// Returns null if the download fails.
 bool isOurBackendUrl(String url) =>
     _backendBase.isNotEmpty && url.startsWith(_backendBase);
 

@@ -41,8 +41,6 @@ class CvAnalysisService {
     );
   }
 
-  /// Upload CV via /cv_upload — returns the full response body.
-  /// Check [is_initial] in the result to decide which screen to show next.
   Future<Map<String, dynamic>> uploadCV(String token, File cvFile) async {
     final uri = Uri.parse('$_baseUrl/cv_upload');
 
@@ -69,7 +67,6 @@ class CvAnalysisService {
     );
   }
 
-  /// Apply confirmed CV suggestions to the freelancer's profile.
   Future<Map<String, dynamic>> applyProfile({
     required String token,
     required CvSuggestedProfile profile,

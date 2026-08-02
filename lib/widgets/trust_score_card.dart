@@ -3,14 +3,9 @@ import '../core/constants/colors.dart';
 import '../models/review_model.dart';
 import '../models/client_review_model.dart';
 
-/// Trust score card - every sub-score shown here is a named, weighted input
-/// to the backend's calculate_trust_score, not just a decorative breakdown.
-/// See ai_related/review_analysis/review_ai_functions.py on the backend.
 class TrustScoreCard extends StatelessWidget {
   final TrustScore trustScore;
 
-  /// When true (the subject viewing their own profile), null components show
-  /// actionable copy on how to earn that signal instead of a generic message.
   final bool isOwnProfile;
 
   const TrustScoreCard({
@@ -189,10 +184,6 @@ class TrustScoreCard extends StatelessWidget {
   }
 }
 
-/// Client-side counterpart to [TrustScoreCard] for [ClientTrustScore] - clients
-/// have no on-time/revision-rate signals and dispute_fairness_score is only
-/// surfaced when it's actually below perfect (otherwise it's noise on every
-/// profile, since nearly every client scores 1.0 or has no disputes at all).
 class ClientTrustScoreCard extends StatelessWidget {
   final ClientTrustScore trustScore;
   final bool isOwnProfile;
@@ -339,11 +330,6 @@ class ClientTrustScoreCard extends StatelessWidget {
   }
 }
 
-/// AI-generated blurb summarising a freelancer/client's review history -
-/// backed by ai_review_summary on freelancer_trust_scores / client_trust_score
-/// (see generate_freelancer_review_summary / generate_client_review_summary
-/// on the backend). Styled distinctly (gradient + sparkle) from the plain
-/// white cards around it to read as generated content, not a raw stat.
 class AiReviewSummaryCard extends StatelessWidget {
   final String? summary;
 
@@ -420,10 +406,6 @@ class AiReviewSummaryCard extends StatelessWidget {
   }
 }
 
-/// Small pill making the sample size behind a score visible at a glance -
-/// "new" (0-2 reviews) is called out explicitly rather than shown as a bare
-/// number, since a single 5-star review shouldn't read as an established
-/// track record.
 class ConfidenceBadge extends StatelessWidget {
   final String confidence;
   final int totalReviews;
@@ -472,11 +454,6 @@ class ConfidenceBadge extends StatelessWidget {
   }
 }
 
-/// Profile-level sentiment mix from a trust score's `sentiment_distribution`.
-/// Below the "new" confidence threshold (0-2 reviews) a proportional bar would
-/// misrepresent a tiny sample as a verdict (e.g. "50% negative" from one bad
-/// review out of two) - raw counts are shown instead, and nothing at all when
-/// there are no reviews yet.
 class SentimentDistributionCard extends StatelessWidget {
   final SentimentDistribution distribution;
   final String confidence;
@@ -592,8 +569,6 @@ class ScoreBar extends StatelessWidget {
   final IconData icon;
   final double? value;
 
-  /// Shown in place of the bar when [value] is null. Nulls are always
-  /// meaningful ("not enough data"), never coerced to a 0%-filled bar.
   final String? nullLabel;
 
   const ScoreBar({
@@ -690,8 +665,6 @@ class RatingSummaryCard extends StatelessWidget {
   final double averageRating;
   final int totalReviews;
 
-  /// Optional — when supplied, a [ConfidenceBadge] is shown next to the
-  /// title so the headline rating never appears without its sample size.
   final String? confidence;
 
   const RatingSummaryCard({
@@ -866,9 +839,6 @@ class CategoryRatingsCard extends StatelessWidget {
   }
 }
 
-// Re-exported under local names to avoid a circular naming clash with
-// review_rating_helpers.dart's top-level ratingIcon/ratingLabel when both
-// are imported into the same file.
 IconData ratingIconFor(String category) {
   switch (category) {
     case 'communication':

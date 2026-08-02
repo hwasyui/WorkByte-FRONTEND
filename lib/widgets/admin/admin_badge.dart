@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Small pill/chip used for status, type, and reason labels across the
-/// admin pages. Consolidates the half-dozen near-identical private badge
-/// widgets each page used to define on its own.
 class AdminBadge extends StatelessWidget {
   final String label;
   final Color color;

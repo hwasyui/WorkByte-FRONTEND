@@ -36,15 +36,12 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
 
   List<PlatformFile> _attachedFiles = [];
   bool _isSubmitting = false;
-  
+
   String _durationNumber = '1';
   String _durationUnit = 'day';
 
-  // Helpers
-
   String get _currency => widget.role.budgetCurrency;
 
-  /// True if the client locked the budget (budget_type = 'fixed')
   bool get _isFixedBudget => widget.role.budgetType == 'fixed';
 
   String get _roleBudgetHint {
@@ -57,7 +54,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill and lock budget field if fixed
     if (_isFixedBudget && widget.role.roleBudget != null) {
       _budgetController.text = widget.role.roleBudget!.toStringAsFixed(0);
     }
@@ -71,7 +67,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     super.dispose();
   }
 
-  // File picker
   Future<void> _pickFiles() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -93,7 +88,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     setState(() => _attachedFiles.removeAt(index));
   }
 
-  // Submit
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -111,14 +105,13 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         return;
       }
 
-      // If fixed budget, always use role's budget; ignore whatever is in the field
       final double proposedBudget =
           _isFixedBudget && widget.role.roleBudget != null
           ? widget.role.roleBudget!
           : double.parse(_budgetController.text.trim());
 
       final proposedDuration = '$_durationNumber $_durationUnit${_durationNumber != '1' ? 's' : ''}';
-      
+
       await ProposalService().submitProposal(
         token: token,
         jobPostId: widget.job.jobPostId,
@@ -130,9 +123,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
         files: _attachedFiles,
       );
 
-      // Refresh the freelancer's proposals before popping back, so the job
-      // detail screen's "Apply" button reads the up-to-date list the moment
-      // it regains focus instead of showing stale (still-enabled) state.
       if (mounted) {
         await context.read<ProposalProvider>().fetchProposalsByFreelancer(
           token: token,
@@ -155,9 +145,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
   }
 
   void _showError(String message, {bool blockedByModeration = false}) {
-    // Structured flag first, message wording only as a fallback. The
-    // classifier's categories are deliberately not surfaced either way - see
-    // moderation_display.dart for why the freelancer only gets the outcome.
     if (blockedByModeration || looksLikeModerationBlock(message)) {
       showDialog(
         context: context,
@@ -199,7 +186,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     AppToast.error(message);
   }
 
-  // Build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -240,7 +226,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
               const SizedBox(height: 20),
               _buildLabel('Proposed Budget'),
               const SizedBox(height: 8),
-              _buildBudgetSection(), // ← replaces bare _buildBudgetField()
+              _buildBudgetSection(),
               const SizedBox(height: 20),
               _buildLabel('Estimated Duration'),
               const SizedBox(height: 8),
@@ -256,8 +242,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       bottomNavigationBar: _buildSubmitButton(),
     );
   }
-
-  // Widgets
 
   Widget _buildJobContext() {
     return Container(
@@ -371,14 +355,11 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     );
   }
 
-  /// Shows a locked info banner for fixed budget,
-  /// or an editable field for negotiable budget.
   Widget _buildBudgetSection() {
     if (_isFixedBudget) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Locked info banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -421,7 +402,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
       );
     }
 
-    // Negotiable: show editable field
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -474,7 +454,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
   Widget _buildDurationField() {
     return Row(
       children: [
-        // Number dropdown (1-31)
         Expanded(
           flex: 1,
           child: _buildStyledDropdown<String>(
@@ -487,7 +466,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        // Unit dropdown (day, week, month) — label reflects the chosen count
         Expanded(
           flex: 1,
           child: _buildStyledDropdown<String>(
@@ -609,7 +587,6 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
             color: const Color(0xFF7D7D7D),
           ),
         ),
-        // Soft nudge, only shown when no files attached
         if (_attachedFiles.isEmpty) ...[
           const SizedBox(height: 6),
           Row(

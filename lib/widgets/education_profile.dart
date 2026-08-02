@@ -92,7 +92,6 @@ class _EducationProfileState extends State<EducationProfile> {
     }
   }
 
-  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -151,7 +150,6 @@ class _EducationProfileState extends State<EducationProfile> {
     );
   }
 
-  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,
@@ -226,7 +224,6 @@ class _EducationProfileState extends State<EducationProfile> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -255,7 +252,6 @@ class _EducationProfileState extends State<EducationProfile> {
                   icon: Icons.menu_book_outlined,
                 ),
 
-                // Date row
                 Row(
                   children: [
                     _buildDateField(
@@ -273,7 +269,6 @@ class _EducationProfileState extends State<EducationProfile> {
                 ),
                 const SizedBox(height: 14),
 
-                // Currently studying here
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -319,7 +314,6 @@ class _EducationProfileState extends State<EducationProfile> {
 
                 const SizedBox(height: 8),
 
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   height: 54,

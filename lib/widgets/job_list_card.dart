@@ -52,7 +52,6 @@ class JobListCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Company logo container
             Container(
               width: 56,
               height: 56,
@@ -64,12 +63,10 @@ class JobListCard extends StatelessWidget {
             ),
             const SizedBox(width: 14),
 
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name + bookmark
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -100,7 +97,6 @@ class JobListCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
 
-                  // Job title
                   Text(
                     title,
                     style: GoogleFonts.poppins(
@@ -112,7 +108,6 @@ class JobListCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // Tags row: scope badge + people count
                   Row(
                     children: [
                       Container(

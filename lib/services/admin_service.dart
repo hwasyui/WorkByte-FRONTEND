@@ -7,16 +7,11 @@ import '../models/admin_review_moderation_model.dart';
 import '../models/admin_red_flag_detail_model.dart';
 import 'admin_session_guard.dart';
 
-/// Result of an admin action that requires a reason. Carries the failure
-/// message (including a field-level 422 validation message) so the UI can
-/// surface it inline rather than as a generic snackbar.
 class AdminActionOutcome {
   final bool success;
   final int? statusCode;
   final String? errorMessage;
 
-  /// For red-flag resolve: false means the note was NOT persisted because the
-  /// DB migration is pending. Null when the response didn't report it.
   final bool? resolutionRecorded;
 
   const AdminActionOutcome({
@@ -26,7 +21,6 @@ class AdminActionOutcome {
     this.resolutionRecorded,
   });
 
-  /// True on 404 — the item was already actioned by another admin.
   bool get alreadyActioned => statusCode == 404;
 }
 
@@ -603,9 +597,6 @@ class AdminService {
     return null;
   }
 
-  /// Shared POST-with-reason for override-publish, uphold, and resolve. Returns
-  /// a structured outcome so callers can show 422 field errors inline and
-  /// special-case 404 ("already actioned by another admin").
   static Future<AdminActionOutcome> _postWithReason(
     String token,
     String path,
@@ -680,9 +671,6 @@ class AdminService {
     return null;
   }
 
-  /// Extracts a human-readable message from an error body. Handles the app's
-  /// `details`/`message`/`detail` string convention and raw FastAPI/Pydantic
-  /// 422 bodies where `detail` is a list of `{msg, loc}` entries.
   static String _errorMessage(String rawBody) {
     try {
       final body = jsonDecode(rawBody);
@@ -704,8 +692,6 @@ class AdminService {
   static Future<Map<String, dynamic>> getModerationItems(
     String token, {
     String status = 'pending',
-    // Highest single label, not the sum of all five — same number the card
-    // badge and the auto-close sweep use.
     String sortBy = 'max_score',
     String sortDir = 'desc',
     int page = 1,

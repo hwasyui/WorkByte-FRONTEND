@@ -16,7 +16,6 @@ class SkillProvider extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> fetchAllSkills(String token) async {
-    // If already loaded, just make sure searchResults is in sync
     if (_skills.isNotEmpty) {
       if (_searchResults.isEmpty) {
         _searchResults = List.from(_skills);
@@ -53,7 +52,6 @@ class SkillProvider extends ChangeNotifier {
     try {
       _searchResults = await _service.searchSkills(token, term.trim());
     } catch (e) {
-      // Fallback to local filter on network error
       _searchResults = _skills
           .where((s) => s.skillName.toLowerCase().contains(term.toLowerCase()))
           .toList();

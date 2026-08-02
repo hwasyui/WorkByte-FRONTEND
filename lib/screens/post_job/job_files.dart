@@ -26,8 +26,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
   static const Color _danger = Color(0xFFE11D48);
   static const Color _warning = Color(0xFFF59E0B);
 
-  // Each entry: { file_name, file_type, file_size, local_path, file_url,
-  //               job_file_id, status: 'uploading' | 'uploaded' | 'error' }
   final List<Map<String, dynamic>> _files = [];
   bool _isHydrating = false;
   bool _isScreenReady = false;
@@ -48,7 +46,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
 
     final restored = <Map<String, dynamic>>[];
 
-    // 1. Pull anything already persisted on the backend for this job post.
     if (jobPostId != null &&
         jobPostId.isNotEmpty &&
         token != null &&
@@ -67,8 +64,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       }
     }
 
-    // 2. Merge in any locally-picked entries not yet uploaded (e.g. an
-    // upload that failed or never completed before leaving the screen).
     for (final f in provider.draftFiles) {
       final alreadyUploaded = f['job_file_id'] != null;
       final alreadyRestored = restored.any(
@@ -304,7 +299,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // Header
   Widget _buildHeader() {
     return Container(
       color: _primary,
@@ -393,7 +387,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // Step progress
   Widget _buildStepProgress() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -429,7 +422,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // Section helpers
   Widget _buildSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, bottom: 4, top: 4),
@@ -483,7 +475,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // Upload card
   Widget _buildUploadCard() {
     return GestureDetector(
       onTap: _pickFiles,
@@ -542,7 +533,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // File list
   Widget _buildFileCountLabel() {
     final uploadedCount = _files.where((f) => f['status'] == 'uploaded').length;
     return Padding(
@@ -749,7 +739,6 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
     );
   }
 
-  // Bottom bar
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),

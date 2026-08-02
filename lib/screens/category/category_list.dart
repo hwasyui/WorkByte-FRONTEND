@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 
-// Category definition (now with colors matching dashboard)
 class CategoryInfo {
   final String label;
   final String categoryKey;
@@ -93,7 +92,6 @@ const List<CategoryInfo> kJobCategories = [
   ),
 ];
 
-// Screen
 class CategoryListScreen extends StatelessWidget {
   const CategoryListScreen({super.key});
 
@@ -105,7 +103,6 @@ class CategoryListScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
@@ -156,7 +153,6 @@ class CategoryListScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // Grid
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -189,7 +185,6 @@ class CategoryListScreen extends StatelessWidget {
   }
 }
 
-// Card
 class _CategoryCard extends StatelessWidget {
   final CategoryInfo category;
   final VoidCallback onTap;
@@ -226,7 +221,7 @@ class _CategoryCard extends StatelessWidget {
               child: Icon(
                 category.icon,
                 size: 22,
-                color: category.iconColor, // ← per-category color
+                color: category.iconColor,
               ),
             ),
             Column(
@@ -247,7 +242,7 @@ class _CategoryCard extends StatelessWidget {
                       'View jobs',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: category.iconColor, // ← matches icon color
+                        color: category.iconColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -255,7 +250,7 @@ class _CategoryCard extends StatelessWidget {
                     Icon(
                       Icons.arrow_forward_ios_rounded,
                       size: 10,
-                      color: category.iconColor, // ← matches icon color
+                      color: category.iconColor,
                     ),
                   ],
                 ),

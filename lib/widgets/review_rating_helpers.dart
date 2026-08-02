@@ -3,10 +3,6 @@ import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../models/review_model.dart';
 
-/// Mirrors the backend's _REVIEW_LABEL_NAMES map (review_routes.py /
-/// client_review_routes.py) so the raw ML labels in
-/// ReviewServiceException.detectedLabels display the same human wording
-/// the backend already puts in its error message.
 String moderationLabel(String raw) {
   switch (raw) {
     case 'toxic':
@@ -25,11 +21,6 @@ String moderationLabel(String raw) {
   }
 }
 
-/// Shown instead of a plain error snackbar when a review submission is
-/// rejected by the harmful-content gate (_reject_review_text_if_harmful /
-/// _reject_client_review_text_if_harmful) - the flagged categories are
-/// surfaced as chips so the client/freelancer knows exactly what to revise,
-/// rather than reading a raw "submitReview failed (400): ..." string.
 Future<void> showReviewFlaggedDialog(
   BuildContext context, {
   required List<String> rawLabels,

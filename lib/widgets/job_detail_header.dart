@@ -13,7 +13,7 @@ class JobDetailHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
-  final VoidCallback? onReport; // 👈 NEW
+  final VoidCallback? onReport;
   final Widget? titleTrailing;
 
   const JobDetailHeader({
@@ -28,7 +28,7 @@ class JobDetailHeader extends StatelessWidget {
     this.onBack,
     this.onShare,
     this.onBookmark,
-    this.onReport, // 👈 NEW
+    this.onReport,
     this.titleTrailing,
   });
 
@@ -37,7 +37,6 @@ class JobDetailHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Teal section
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -55,7 +54,6 @@ class JobDetailHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Action icons row
               Row(
                 children: [
                   GestureDetector(
@@ -150,7 +148,6 @@ class JobDetailHeader extends StatelessWidget {
           ),
         ),
 
-        // White rounded card section
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(

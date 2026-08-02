@@ -6,19 +6,10 @@ import '../providers/report_provider.dart';
 import '../providers/auth_provider.dart';
 import 'app_toast.dart';
 
-/// Shows the report bottom sheet.
-///
-/// Usage:
-///   ReportSheet.show(
-///     context,
-///     reportedType: 'freelancer',
-///     reportedUserId: freelancer.userId,
-///     targetName: freelancer.displayName,
-///   );
 class ReportSheet {
   static Future<void> show(
     BuildContext context, {
-    required String reportedType, // 'freelancer' | 'client' | 'job_post'
+    required String reportedType,
     String? reportedUserId,
     String? jobPostId,
     String? targetName,
@@ -182,7 +173,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // drag handle
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -195,7 +185,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               ),
             ),
 
-            // header
             Row(
               children: [
                 Container(
@@ -258,7 +247,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
             ),
             const SizedBox(height: 16),
 
-            // reason tiles
             Consumer<ReportProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
@@ -295,7 +283,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               },
             ),
 
-            // custom reason field (animates in when 'other' selected)
             FadeTransition(
               opacity: _fadeAnim,
               child: SizeTransition(
@@ -343,7 +330,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
 
             const SizedBox(height: 20),
 
-            // error banner
             Consumer<ReportProvider>(
               builder: (_, provider, __) {
                 if (provider.error == null) return const SizedBox.shrink();
@@ -380,7 +366,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
               },
             ),
 
-            // submit button
             Consumer<ReportProvider>(
               builder: (_, provider, __) {
                 return SizedBox(
@@ -441,7 +426,6 @@ class _ReportSheetBodyState extends State<_ReportSheetBody>
   }
 }
 
-// Reason Tile
 class _ReasonTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -542,7 +526,6 @@ class _ReasonTile extends StatelessWidget {
   }
 }
 
-// Internal data class
 class _ReasonMeta {
   final IconData icon;
   final String label;

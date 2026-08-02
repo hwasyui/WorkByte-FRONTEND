@@ -15,10 +15,6 @@ class ContractModel {
   final String? endDate;
   final String? agreedDuration;
   final String? actualCompletionDate;
-  // Backend column is DECIMAL(8,2) / Optional[float] - `int?` here used to
-  // hard-cast-crash the moment this was ever non-null (e.g. 12.5, or even
-  // 12.0 since JSON decodes that as a Dart double). Nothing currently
-  // populates this field, which is why it's never been hit in practice.
   final double? totalHoursWorked;
   final double? totalPaid;
   final String? contractPdfUrl;
@@ -26,7 +22,6 @@ class ContractModel {
   final String? createdAt;
   final String? updatedAt;
 
-  // Enriched fields
   final String? freelancerName;
   final String? clientName;
 

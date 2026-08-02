@@ -5,9 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/admin_provider.dart';
 import 'package:workbyte_app/screens/admin/pages/admin_appeals_page.dart';
 
-// ---------------------------------------------------------------------------
-// Fake provider — no HTTP calls
-// ---------------------------------------------------------------------------
 
 class _FakeAdminProvider extends AdminProvider {
   List<Map<String, dynamic>> _fakeAppeals = [];
@@ -54,9 +51,6 @@ class _FakeAdminProvider extends AdminProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
 
 Widget _buildTestWidget(_FakeAdminProvider provider) {
   return MaterialApp(
@@ -67,9 +61,6 @@ Widget _buildTestWidget(_FakeAdminProvider provider) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Test data
-// ---------------------------------------------------------------------------
 
 const _pendingJobAppeal = <String, dynamic>{
   'appeal_id': 'appeal-job-1',
@@ -127,9 +118,6 @@ const _rejectedAppeal = <String, dynamic>{
   'appeal_attempt': 2,
 };
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 void main() {
   setUpAll(() {
@@ -142,7 +130,6 @@ void main() {
     setUp(() => provider = _FakeAdminProvider());
     tearDown(() => provider.dispose());
 
-    // ── Page structure ──────────────────────────────────────────────────────
 
     testWidgets('renders Pending and Resolved tabs', (tester) async {
       await tester.pumpWidget(_buildTestWidget(provider));
@@ -185,7 +172,6 @@ void main() {
       expect(find.text('Resolved (2)'), findsOneWidget);
     });
 
-    // ── Pending tab ─────────────────────────────────────────────────────────
 
     group('Pending tab', () {
       testWidgets('shows empty state when there are no pending appeals',
@@ -252,7 +238,6 @@ void main() {
       });
     });
 
-    // ── Resolved tab ────────────────────────────────────────────────────────
 
     group('Resolved tab', () {
       testWidgets('shows empty state when there are no resolved appeals',
@@ -329,7 +314,6 @@ void main() {
         await tester.pumpWidget(_buildTestWidget(provider));
         await tester.pumpAndSettle();
 
-        // Pending tab is active — pending appeals visible
         expect(find.text('Alice User'), findsOneWidget);
         expect(find.text('Bob User'), findsOneWidget);
         expect(find.text('Carol User'), findsNothing);
@@ -337,7 +321,6 @@ void main() {
       });
     });
 
-    // ── Resolve dialog ──────────────────────────────────────────────────────
 
     group('Approve/Reject dialog', () {
       testWidgets('approve dialog title and job-restore text for job appeal',
@@ -578,7 +561,6 @@ void main() {
         await tester.tap(find.text('Approve'));
         await tester.pumpAndSettle();
 
-        // Leave note field empty and confirm
         await tester.tap(
           find.descendant(
             of: find.byType(AlertDialog),

@@ -4,10 +4,6 @@ import '../../core/constants/admin_colors.dart';
 
 enum AdminActionStyle { filled, outlined }
 
-/// Unified action button (Accept/Dismiss/Approve/Reject/etc.) with a subtle
-/// web hover lift and press scale-down. Replaces the duplicate
-/// `_ActionButton` classes previously defined separately in the AI and
-/// Appeals pages.
 class AdminActionButton extends StatefulWidget {
   final String label;
   final IconData icon;

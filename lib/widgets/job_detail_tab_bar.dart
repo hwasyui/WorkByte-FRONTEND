@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
-/// Reusable tab bar for job detail screens (Details / Terms / Bidding).
 class JobDetailTabBar extends StatelessWidget {
   final List<String> tabs;
   final int selectedIndex;
@@ -44,7 +43,6 @@ class JobDetailTabBar extends StatelessWidget {
             );
           }),
         ),
-        // Underline indicator row
         Row(
           children: List.generate(tabs.length, (i) {
             final isSelected = i == selectedIndex;

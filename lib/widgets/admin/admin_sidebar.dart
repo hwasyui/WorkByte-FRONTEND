@@ -20,7 +20,6 @@ class AdminSidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo / Header
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
                   child: Row(
@@ -186,7 +185,6 @@ class AdminSidebar extends StatelessWidget {
                   ),
                 ),
 
-                // Logout
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
                   child: InkWell(
@@ -201,7 +199,6 @@ class AdminSidebar extends StatelessWidget {
                       );
                       if (confirmed == true) {
                         await admin.logout();
-                        // AdminGate otomatis menampilkan AdminLoginScreen
                       }
                     },
                     borderRadius: BorderRadius.circular(10),

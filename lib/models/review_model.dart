@@ -1,4 +1,3 @@
-// ReviewRating
 
 class ReviewRating {
   final String id;
@@ -22,8 +21,6 @@ class ReviewRating {
 
   Map<String, dynamic> toJson() => {'category': category, 'score': score};
 }
-
-// ReviewWrittenContent
 
 class ReviewWrittenContent {
   final String id;
@@ -50,8 +47,6 @@ class ReviewWrittenContent {
       );
 }
 
-// ReviewSkillTag
-
 class ReviewSkillTag {
   final String id;
   final String reviewId;
@@ -73,8 +68,6 @@ class ReviewSkillTag {
   );
 }
 
-// Review (matches ReviewResponse)
-
 class Review {
   final String id;
   final String contractId;
@@ -86,15 +79,11 @@ class Review {
   final DateTime? createdAt;
   final DateTime? publishedAt;
 
-  // DetailResponse extras
   final List<ReviewRating> ratings;
   final ReviewWrittenContent? writtenContent;
   final List<ReviewSkillTag> skillTags;
   final List<String> suggestedSkillTags;
 
-  /// "positive" | "neutral" | "negative" | null. Null means no sentiment
-  /// analysis exists for this review (AI outage at submit time, or an older
-  /// row) — distinct from a measured "neutral", so it must never be defaulted.
   final String? sentiment;
 
   const Review({
@@ -154,11 +143,6 @@ class Review {
   }
 }
 
-// SentimentDistribution (matches SentimentDistributionResponse)
-//
-// Shared between the freelancer and client trust-score responses - counts
-// cover published reviews only, and the four categories always sum to total.
-
 class SentimentDistribution {
   final int positive;
   final int neutral;
@@ -174,8 +158,6 @@ class SentimentDistribution {
     required this.total,
   });
 
-  /// Handles both the full trust-score shape and the "no reviews yet" shape
-  /// (where sentiment_distribution is still present, every count just 0).
   factory SentimentDistribution.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
       return const SentimentDistribution(
@@ -195,8 +177,6 @@ class SentimentDistribution {
     );
   }
 }
-
-// TrustScore (matches TrustScoreResponse)
 
 class TrustScore {
   final String freelancerId;
@@ -256,16 +236,12 @@ class TrustScore {
     ),
   );
 
-  /// e.g. "Top 6%" string from category_rank_pct (percentile from bottom).
-  /// Backend returns what % of freelancers score BELOW this freelancer.
   String get rankLabel {
     if (categoryRankPct == null) return '';
     final topPct = (100 - categoryRankPct!).round();
     return 'Top $topPct%';
   }
 }
-
-// RedFlagAlert (matches RedFlagAlertResponse)
 
 class RedFlagAlert {
   final String id;
@@ -298,8 +274,6 @@ class RedFlagAlert {
         : null,
   );
 }
-
-// SubmitReviewRequest
 
 class SubmitReviewRequest {
   final List<ReviewRatingInput> ratings;

@@ -24,10 +24,6 @@ class NotificationModel {
         id: json['id'] as String,
         type: json['type'] as String,
         title: json['title'] as String,
-        // Notification bodies are written by the backend and rendered verbatim.
-        // Stripping any classifier category here rather than at each render site
-        // means no screen can surface one by accident, even if the backend copy
-        // regresses. See core/utils/moderation_display.dart.
         body: redactModerationLabels(json['body'] as String),
         data: (json['data'] is Map)
             ? Map<String, dynamic>.from(json['data'] as Map)

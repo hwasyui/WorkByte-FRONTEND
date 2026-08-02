@@ -29,7 +29,6 @@ class Frame1State extends State<Frame1> {
         backgroundColor: Colors.white,
         body: Column(
           children: [
-            // Top indigo section
             Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
@@ -41,7 +40,6 @@ class Frame1State extends State<Frame1> {
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // Decorative circle top-right
                       Positioned(
                         right: -50,
                         top: -30,
@@ -54,7 +52,6 @@ class Frame1State extends State<Frame1> {
                           ),
                         ),
                       ),
-                      // Decorative circle bottom-left
                       Positioned(
                         left: -30,
                         bottom: 40,
@@ -67,12 +64,10 @@ class Frame1State extends State<Frame1> {
                           ),
                         ),
                       ),
-                      // Dot grid top-right
                       Positioned(right: 28, top: 60, child: _buildDotGrid()),
                     ],
                   ),
                 ),
-                // Success icon circle — overlaps the boundary
                 Positioned(
                   bottom: -52,
                   child: Container(
@@ -106,7 +101,6 @@ class Frame1State extends State<Frame1> {
               ],
             ),
 
-            // Bottom content section
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
@@ -172,7 +166,6 @@ class Frame1State extends State<Frame1> {
                       ),
                       const SizedBox(height: 24),
 
-                      // View Jobs button
                       SizedBox(
                         width: double.infinity,
                         height: 52,
@@ -205,7 +198,6 @@ class Frame1State extends State<Frame1> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Post another job button (outlined)
                       SizedBox(
                         width: double.infinity,
                         height: 52,

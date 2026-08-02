@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/text_styles.dart';
 
-/// Small chip showing a client's reliability label ("Responsif" / "Kurang
-/// Responsif"), fetched from GET /clients/{id}/reliability. Renders nothing
-/// while loading or if the label is unavailable, so it never blocks the
-/// surrounding layout.
 class ClientReliabilityBadge extends StatelessWidget {
   final String? label;
 
@@ -14,10 +10,6 @@ class ClientReliabilityBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (label == null || label!.isEmpty) return const SizedBox.shrink();
 
-    // Backend returns "Responsif" / "Kurang Responsif" (see
-    // ContractFunctions.get_client_reliability_label) - the original version
-    // of this widget compared against the English "Responsive", which could
-    // never match, so every client rendered as "bad" regardless of standing.
     final isGood = label == 'Responsif';
     final color = isGood ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
     final bg = isGood ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);

@@ -6,9 +6,6 @@ import '../../core/constants/text_styles.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/client_review_provider.dart';
 
-/// Mirrors review_submitted.dart for the freelancer-reviews-client
-/// counterpart — polls GET /client-reviews/{client_review_id} until the
-/// review leaves "pending" and shows copy matching the real status.
 class ClientReviewSubmittedScreen extends StatefulWidget {
   final String clientReviewId;
   final String clientName;

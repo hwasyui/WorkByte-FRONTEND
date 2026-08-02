@@ -105,7 +105,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
                       child: Row(
@@ -157,7 +156,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
 
                     const SizedBox(height: 20),
 
-                    // Overall Assessment
                     if (widget.overallAssessment.isNotEmpty) ...[
                       _buildSectionHeader('Overall Assessment', Icons.summarize_rounded),
                       const SizedBox(height: 12),
@@ -165,7 +163,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                       const SizedBox(height: 20),
                     ],
 
-                    // Profile Match Analysis
                     if (widget.profileMatchAnalysis.isNotEmpty) ...[
                       _buildSectionHeader('Profile Match', Icons.person_search_rounded),
                       const SizedBox(height: 12),
@@ -173,7 +170,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                       const SizedBox(height: 20),
                     ],
 
-                    // Per-section recommendations
                     _buildSectionHeader('Recommendations', Icons.tips_and_updates_rounded),
                     const SizedBox(height: 12),
                     if (widget.sections.isNotEmpty)
@@ -278,7 +274,6 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section title bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(

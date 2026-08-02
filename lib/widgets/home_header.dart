@@ -21,14 +21,12 @@ class HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Avatar
         CircleAvatar(
           radius: 16,
           backgroundColor: AppColors.secondary,
           child: ClipOval(child: userAvatar),
         ),
         const SizedBox(width: 10),
-        // Greeting
         Text(
           '$userName!',
           style: AppText.h3.copyWith(
@@ -37,7 +35,6 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        // Notification bell
         GestureDetector(
           onTap:
               onNotificationTap ??

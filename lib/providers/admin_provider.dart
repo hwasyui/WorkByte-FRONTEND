@@ -70,21 +70,16 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _reviewRedFlags = [];
   List<Map<String, dynamic>> _flaggedReviews = [];
   List<Map<String, dynamic>> _flaggedClientReviews = [];
-  // Separate loading flags so the three review-integrity sub-lists don't stomp
-  // on each other's spinner when loaded concurrently.
   bool _isRedFlagsLoading = false;
   bool _isFlaggedReviewsLoading = false;
   bool _isFlaggedClientReviewsLoading = false;
   Map<String, dynamic> _reviewRedFlagsPagination = {};
   Map<String, dynamic> _flaggedReviewsPagination = {};
   Map<String, dynamic> _flaggedClientReviewsPagination = {};
-  // Red flags: all | open | resolved  (maps to is_resolved query param).
   String _reviewRedFlagsResolvedFilter = 'all';
-  String _reviewRedFlagsSortBy = 'triggered_at'; // triggered_at | severity
-  // Flagged reviews: all | flagged | suppressed  (hold level).
+  String _reviewRedFlagsSortBy = 'triggered_at';
   String _flaggedReviewStatusFilter = 'all';
   String _flaggedClientReviewStatusFilter = 'all';
-  // created_at | authenticity | disagreement
   String _flaggedReviewSortBy = 'created_at';
   String _flaggedClientReviewSortBy = 'created_at';
   List<Map<String, dynamic>> _moderationItems = [];
@@ -94,9 +89,6 @@ class AdminProvider extends ChangeNotifier {
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
   String _moderationStatusFilter = 'all';
-  // No sort state: the queue is always ordered by the highest single label,
-  // descending, set once in AdminService.getModerationItems — same shape as the
-  // scam queue, which is always ordered by scam_score.
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
   String _closedAccountReasonFilter = 'all';
@@ -354,16 +346,13 @@ class AdminProvider extends ChangeNotifier {
       _totalJobs =
           (_jobPagination['total'] as num?)?.toInt() ?? _recentJobs.length;
 
-      // Pre-populate pending appeals for the sidebar badge
       final pendingItems = List<Map<String, dynamic>>.from(
         appealsResult['items'] ?? [],
       );
       if (pendingItems.isNotEmpty) {
-        // Merge into _appeals without overwriting if appeals page already loaded
         if (_appeals.isEmpty) _appeals = pendingItems;
       }
 
-      // Pre-populate disputed contracts for the sidebar badge
       if (_disputedContracts.isEmpty) {
         _disputedContracts = List<Map<String, dynamic>>.from(
           disputesResult['items'] ?? [],
@@ -386,7 +375,6 @@ class AdminProvider extends ChangeNotifier {
     try {
       Map<String, dynamic> data;
       if (search != null && search.trim().isNotEmpty) {
-        // /admin/users supports search; /freelancers/browse/all does not
         final raw = await AdminService.getAdminUsers(
           _token!,
           role: 'freelancer',
@@ -399,7 +387,6 @@ class AdminProvider extends ChangeNotifier {
         data = {
           'items': rawItems.map((u) {
             final m = Map<String, dynamic>.from(u);
-            // /admin/users returns freelancer_name instead of full_name
             m['full_name'] = (u['freelancer_name'] as String?)?.isNotEmpty == true
                 ? u['freelancer_name']
                 : u['full_name'] ?? '';
@@ -429,7 +416,6 @@ class AdminProvider extends ChangeNotifier {
     try {
       Map<String, dynamic> data;
       if (search != null && search.trim().isNotEmpty) {
-        // /admin/users supports search; /clients/browse/all does not
         final raw = await AdminService.getAdminUsers(
           _token!,
           role: 'client',
@@ -442,7 +428,6 @@ class AdminProvider extends ChangeNotifier {
         data = {
           'items': rawItems.map((u) {
             final m = Map<String, dynamic>.from(u);
-            // /admin/users returns client_name instead of full_name
             m['full_name'] = (u['client_name'] as String?)?.isNotEmpty == true
                 ? u['client_name']
                 : u['full_name'] ?? '';
@@ -776,7 +761,6 @@ class AdminProvider extends ChangeNotifier {
     return outcome;
   }
 
-  // Detail passthroughs — screens call these once; not stored as provider state.
   Future<ReviewModerationDetail?> fetchReviewModerationDetail(String reviewId) {
     if (_token == null) return Future.value(null);
     return AdminService.getReviewModerationDetail(_token!, reviewId);
@@ -800,9 +784,6 @@ class AdminProvider extends ChangeNotifier {
     _isAiLoading = true;
     notifyListeners();
     try {
-      // Job posts are the only content the backend scans, so the queue is
-      // single-type and no content-type filter is sent. Ordering is fixed in
-      // the service default, so no sortBy is passed either.
       final data = await AdminService.getModerationItems(
         _token!,
         status: _moderationStatusFilter,

@@ -223,7 +223,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                               const SizedBox(height: 28),
 
-                              // OTP boxes
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(6, (i) {

@@ -76,7 +76,6 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
     }
   }
 
-  // Reusable styled text field
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -135,7 +134,6 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
     );
   }
 
-  // Date picker field
   Widget _buildDateField({
     required String hint,
     required DateTime? date,
@@ -212,7 +210,6 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -257,7 +254,6 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
 
                 const SizedBox(height: 8),
 
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   height: 54,

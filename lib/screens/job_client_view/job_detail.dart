@@ -52,8 +52,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String? _selectedRoleFilter;
 
   final Set<String> _expandedProposalIds = {};
-  // Local-only shortlist: not persisted server-side (no backend support yet),
-  // so this resets whenever the app restarts.
   final Set<String> _pinnedProposalIds = {};
 
   ClientModel? _client;
@@ -74,7 +72,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   List<JobFileModel> _jobFiles = [];
   bool _filesLoading = true;
 
-  // â”€â”€ Live job state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   late JobPostModel _job;
 
   List<String> get _tabs => [
@@ -101,8 +98,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ? _proposals
         : _proposals.where((p) => p.jobRoleId == _selectedRoleFilter).toList();
 
-    // Pinned proposals float to the top; relative order within each group
-    // (pinned / unpinned) is otherwise preserved.
     final pinned = base
         .where((p) => _pinnedProposalIds.contains(p.proposalId))
         .toList();
@@ -494,8 +489,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       ),
     );
   }
-
-  // â”€â”€ Proposal actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _acceptBid(ProposalModel proposal) async {
     final token = context.read<AuthProvider>().token!;
@@ -929,9 +922,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
       if (!mounted) return;
 
-      // Starting a thread that already exists just returns the existing one —
-      // the message just typed was never sent, so say so instead of a
-      // misleading "success" toast.
       if (result.alreadyExists) {
         final isPending = result.thread.status == 'request';
         AppToast.info(
@@ -968,8 +958,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -978,15 +966,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isClosed = _job.status.toLowerCase() == 'closed';
     final isDraft = _job.status.toLowerCase() == 'draft';
     final isOwnJob = auth.currentUser?.clientId == _job.clientId;
-    // Closure reason drives the banner's title and colour. The backend closes a job
-    // for one of four reasons (scam, harmful_text, community_reports,
-    // admin_override).
     final closureReason = (_job.closureReason ?? '').toLowerCase();
     final closureNote = _job.closureNote?.trim();
     final isAiClosure = isAutomatedClosure(closureReason);
-    // Notes on an automated closure are generated from the classifier's raw
-    // labels, so the owner gets the banner's own copy instead - only a human
-    // admin's note survives this. See core/utils/moderation_display.dart.
     final visibleClosureNote = viewerFacingClosureNote(
       closureReason: closureReason,
       closureNote: closureNote,
@@ -994,8 +976,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final closureTitle = _closureTitle(closureReason);
     final hasClosureDetails =
         closureReason.isNotEmpty || (closureNote?.isNotEmpty ?? false);
-    // Appeal is hidden when the client closed the job themselves — appealing
-    // your own closure decision doesn't make sense.
     const ownerClosureReasons = {
       'owner_closed',
       'manual_close',
@@ -1030,7 +1010,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      // â”€â”€ Floating action bar for owners â”€â”€
       bottomNavigationBar: isOwnJob
           ? _buildOwnerActionBar(isClosed: isClosed, isDraft: isDraft)
           : null,
@@ -1058,7 +1037,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               onReport: null,
             ),
 
-            // â”€â”€ Closed job banner â”€â”€
             if (isClosed && isOwnJob && hasClosureDetails)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -1239,15 +1217,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
             if (_selectedTab == 1) _buildWorkersTab(),
             if (_selectedTab == 2) _buildDetailsTab(),
 
-            // Extra bottom padding so FAB doesn't cover last content
             if (isOwnJob) const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
-
-  // â”€â”€ Owner action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildOwnerActionBar({required bool isClosed, required bool isDraft}) {
     return SafeArea(
@@ -1360,8 +1335,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     ),
     child: const Icon(Icons.business, size: 32, color: AppColors.primary),
   );
-
-  // â”€â”€ Bidding tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildBiddingTab() {
     if (_proposalsLoading) {
@@ -2178,8 +2151,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     child: const Icon(Icons.person, color: Color(0xFF7D7D7D), size: 24),
   );
 
-  // â”€â”€ Workers tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   Widget _buildWorkersTab() {
     if (_workersLoading) {
       return const Padding(
@@ -2243,7 +2214,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       ),
     );
   }
-  // â”€â”€ Details tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildDetailsTab() {
     return Padding(

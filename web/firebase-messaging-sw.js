@@ -1,5 +1,3 @@
-// Firebase Messaging service worker stub for admin web panel.
-// Full FCM push is mobile-only; this file prevents 404 errors on web.
 importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js');
 

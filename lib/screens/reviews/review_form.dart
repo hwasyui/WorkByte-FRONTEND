@@ -26,7 +26,6 @@ class ReviewFormScreen extends StatefulWidget {
 }
 
 class _ReviewFormScreenState extends State<ReviewFormScreen> {
-  // Rating values
   final Map<String, double> _ratings = {
     'communication': 5.0,
     'quality': 5.0,
@@ -51,15 +50,11 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     'timeliness': Icons.schedule_outlined,
   };
 
-  // Controllers
   final TextEditingController _answerController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _tagController = TextEditingController();
 
-  // Skill tags
-  // Tracks which AI-suggested tags the client has confirmed (toggled on/off).
   final Set<String> _confirmedTags = {};
-  // Extra tags manually typed by the client.
   final List<String> _extraTags = [];
 
   @override
@@ -80,7 +75,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     if (!mounted) return;
     final review = context.read<ReviewProvider>().pendingReview;
     if (review != null) {
-      // Pre-confirm all AI-suggested tags so client can deselect individually.
       setState(() => _confirmedTags.addAll(review.suggestedSkillTags));
     }
   }
@@ -102,9 +96,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
 
-    // Combine confirmed AI tags + extra tags into extraSkillTags.
-    // The backend saves confirmed AI-suggested tags separately via
-    // get_suggested_skill_tags(contract_id) — we only need to send extras.
     final success = await provider.submitReview(
       token: token,
       reviewId: reviewId,
@@ -154,8 +145,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
     _tagController.dispose();
     super.dispose();
   }
-
-  // Build
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +196,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               _buildProjectHeader(),
               const SizedBox(height: 20),
 
-              // Star ratings
               _buildCard(
                 title: 'Rate Your Experience',
                 child: Column(
@@ -216,7 +204,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // AI targeted question
               _buildCard(
                 title: 'Quick Question',
                 subtitle: 'AI-generated based on your project type',
@@ -263,7 +250,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Overall comment
               _buildCard(
                 title: 'Overall Review',
                 child: _buildTextField(
@@ -275,7 +261,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Skill tags
               _buildSkillTagsCard(review.suggestedSkillTags),
               const SizedBox(height: 16),
 
@@ -284,7 +269,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
           ),
         ),
 
-        // Sticky submit
         Positioned(
           bottom: 0,
           left: 0,
@@ -327,8 +311,6 @@ class _ReviewFormScreenState extends State<ReviewFormScreen> {
       ],
     );
   }
-
-  // Sub-widgets
 
   Widget _buildProjectHeader() {
     return Container(

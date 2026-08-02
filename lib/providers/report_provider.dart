@@ -17,7 +17,6 @@ class ReportProvider extends ChangeNotifier {
   List<String> get reasons => _reasons;
   ReportModel? get lastSubmitted => _lastSubmitted;
 
-  /// Fetches predefined reasons. Skips the network call if already loaded.
   Future<void> fetchReasons(String token) async {
     if (_reasons.isNotEmpty) return;
 
@@ -35,7 +34,6 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns true on success, false on failure (read [error] for the message).
   Future<bool> submitReport({
     required String token,
     required String reportedType,
@@ -74,7 +72,6 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reset transient state when the report sheet is dismissed.
   void reset() {
     _error = null;
     _lastSubmitted = null;

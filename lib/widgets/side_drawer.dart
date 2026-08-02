@@ -14,7 +14,7 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/about/about_screen.dart';
 import '../screens/contact/contact_us_screen.dart';
 import '../screens/auth/login.dart';
-import '../screens/appeals/my_appeals_screen.dart'; // 👈 NEW
+import '../screens/appeals/my_appeals_screen.dart';
 import '../screens/guidelines/guidelines_screen.dart';
 import '../widgets/guideline_prompt_dialog.dart';
 
@@ -58,7 +58,6 @@ class SideDrawer extends StatelessWidget {
     );
   }
 
-  // 👇 NEW
   void _navigateToMyAppeals(BuildContext context) {
     Navigator.pop(context);
     Navigator.push(
@@ -380,7 +379,6 @@ class SideDrawer extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
 
-                          // NEW: ban badge under email
                           if (auth.isReportBanned) ...[
                             const SizedBox(height: 8),
                             GestureDetector(
@@ -420,7 +418,6 @@ class SideDrawer extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            // 👇 Submit Appeal button — compact
                             const SizedBox(height: 8),
                             GestureDetector(
                               onTap: () {
@@ -532,13 +529,11 @@ class SideDrawer extends StatelessWidget {
               onTap: () => _navigateToGuidelines(context),
             ),
 
-            // 👇 NEW: My Appeals — always visible so users can track status
             Consumer<AuthProvider>(
               builder: (context, auth, _) => _DrawerItem(
                 icon: Icons.policy_outlined,
                 label: 'My Appeals',
                 onTap: () => _navigateToMyAppeals(context),
-                // 👇 shows a red dot badge when account is banned
                 badge: auth.isReportBanned ? '!' : null,
               ),
             ),
@@ -568,8 +563,6 @@ class SideDrawer extends StatelessWidget {
     );
   }
 }
-
-// _AccountTile
 
 class _AccountTile extends StatelessWidget {
   final String name;
@@ -676,21 +669,19 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
-// _DrawerItem
-
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Color? color;
-  final String? badge; // 👈 NEW
+  final String? badge;
 
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.color,
-    this.badge, // 👈 NEW
+    this.badge,
   });
 
   @override
@@ -725,7 +716,6 @@ class _DrawerItem extends StatelessWidget {
                 ),
               ),
             ),
-            // 👇 NEW: red badge dot for urgent items
             if (badge != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

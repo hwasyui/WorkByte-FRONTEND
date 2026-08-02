@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 
-/// Shared loading state for the job post flow screens (Job Detail, Roles,
-/// Attachments). Shown in place of the screen's content while its draft
-/// data (step progress, saved roles, saved files) is being fetched, so the
-/// screen never flashes stale/default content before swapping to the real
-/// data a moment later.
 class PostJobLoadingView extends StatelessWidget {
   final String label;
 

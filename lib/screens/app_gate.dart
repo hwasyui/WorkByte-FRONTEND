@@ -28,7 +28,6 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // Refresh ban/user state every time app comes back to foreground
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {

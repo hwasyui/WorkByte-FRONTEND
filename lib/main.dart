@@ -44,15 +44,12 @@ void main() async {
   } catch (_) {}
   await NotificationService.initialize(navigatorKey: navigatorKey);
 
-  // Register navigator key so DeepLinkService can push routes.
   DeepLinkService.init(navigatorKey);
 
-  // Capture the link that cold-started the app (if any).
   final appLinks = AppLinks();
   final initialLink = await appLinks.getInitialLink();
   DeepLinkService.setPendingLink(initialLink);
 
-  // Handle links received while the app is already running.
   appLinks.uriLinkStream.listen(DeepLinkService.setPendingLink);
 
   runApp(const WorkByteApp());

@@ -131,7 +131,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       ),
       body: Stack(
         children: [
-          // Background decoration
           _buildBackgroundDecorations(context),
 
           SafeArea(
@@ -141,7 +140,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
                 children: [
                   const SizedBox(height: 32),
 
-                  // AI Animation
                   _buildAIAnimation(),
 
                   const SizedBox(height: 32),
@@ -166,7 +164,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
 
                   const SizedBox(height: 32),
 
-                  // Progress Steps Card
                   _buildStepsCard(),
 
                   const SizedBox(height: 32),
@@ -183,7 +180,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
     final width = MediaQuery.of(context).size.width;
     return Stack(
       children: [
-        // Wavy top background
         Positioned(
           top: 0,
           left: 0,
@@ -193,7 +189,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
             painter: _WavePainter(),
           ),
         ),
-        // Large circle top center-right
         Positioned(
           top: -20,
           right: width * 0.15,
@@ -206,7 +201,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
             ),
           ),
         ),
-        // Dots grid top-right
         Positioned(
           top: 8,
           right: 8,
@@ -245,7 +239,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer rotating arc
           RotationTransition(
             turns: _rotationController,
             child: CustomPaint(
@@ -253,7 +246,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
               painter: _ArcPainter(color: _primaryColor),
             ),
           ),
-          // Outer light circle bg
           Container(
             width: 130,
             height: 130,
@@ -262,17 +254,13 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
               color: const Color(0xFFE0E7FF),
             ),
           ),
-          // Inner sparkle icon
           const Icon(
             Icons.auto_awesome,
             size: 52,
             color: _primaryColor,
           ),
-          // Floating sparkle top-left
           _buildFloatingSparkle(top: 12, left: 16, size: 14),
-          // Floating sparkle top-right
           _buildFloatingSparkle(top: 16, right: 12, size: 10),
-          // Floating sparkle bottom-right
           _buildFloatingSparkle(bottom: 20, right: 20, size: 12),
         ],
       ),
@@ -387,7 +375,6 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
       );
     }
 
-    // Pending
     return Container(
       width: 28,
       height: 28,

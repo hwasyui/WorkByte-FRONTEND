@@ -32,7 +32,6 @@ class JobListScreenState extends State<JobListScreen> {
   bool _isLoading = true;
   String _sortOption = 'Latest';
 
-  // 👇 NEW: active status filter tab
   String _statusFilter = 'all';
 
   static const List<_StatusTab> _statusTabs = [
@@ -77,7 +76,6 @@ class JobListScreenState extends State<JobListScreen> {
       await _loadTeamPositionCounts(token);
       _fetchProposalAvatars(token);
     } catch (_) {
-      // ignore
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -149,8 +147,6 @@ class JobListScreenState extends State<JobListScreen> {
     }
   }
 
-  // 👇 NEW: drafts have nothing to view yet — prompt to resume editing instead
-  // of opening the read-only job detail screen.
   Future<void> _promptContinueDraft(String draftId) async {
     if (draftId.isEmpty) return;
 
@@ -184,7 +180,6 @@ class JobListScreenState extends State<JobListScreen> {
     );
   }
 
-  // 👇 NEW: unified filter — combines search query + status tab
   void _applyFilters() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -212,7 +207,6 @@ class JobListScreenState extends State<JobListScreen> {
     });
   }
 
-  // 👇 NEW: count jobs per status for badge numbers
   int _countForStatus(String key) {
     if (key == 'all') return _allJobs.length;
     return _allJobs.where((j) => (j['status'] as String? ?? '') == key).length;
@@ -228,7 +222,6 @@ class JobListScreenState extends State<JobListScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 12),
-            // Search bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -269,7 +262,6 @@ class JobListScreenState extends State<JobListScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 👇 NEW: Status filter tab bar
             SizedBox(
               height: 38,
               child: ListView.separated(
@@ -349,7 +341,6 @@ class JobListScreenState extends State<JobListScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Job list
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -868,7 +859,6 @@ class JobListScreenState extends State<JobListScreen> {
   }
 }
 
-// 👇 NEW: simple data class for tab definitions
 class _StatusTab {
   final String key;
   final String label;

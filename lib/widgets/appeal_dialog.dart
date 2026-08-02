@@ -6,29 +6,10 @@ import '../../providers/appeal_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/appeals/my_appeals_screen.dart';
 
-/// Shows the appeal submission bottom sheet.
-///
-/// Usage (closed job post):
-///   AppealDialog.show(
-///     context,
-///     targetType: 'job_post',
-///     targetId: job.jobPostId,
-///     targetLabel: job.jobTitle,
-///     closureNote: job.closureNote,
-///   );
-///
-/// Usage (banned account):
-///   AppealDialog.show(
-///     context,
-///     targetType: 'user',
-///     targetId: auth.userId!,
-///     targetLabel: 'Your Account',
-///     closureNote: auth.currentUser!.banMessage,
-///   );
 class AppealDialog {
   static Future<void> show(
     BuildContext context, {
-    required String targetType, // 'user' | 'job_post'
+    required String targetType,
     required String targetId,
     String? targetLabel,
     String? closureNote,
@@ -73,7 +54,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
   @override
   void initState() {
     super.initState();
-    // Fetch appeal status when dialog opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       if (auth.token != null) {
@@ -126,7 +106,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
     );
   }
 
-  // Success state
   Widget _buildSuccess() {
     return Column(
       key: const ValueKey('success'),
@@ -215,7 +194,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
     );
   }
 
-  // Form state
   Widget _buildForm() {
     return SingleChildScrollView(
       child: Column(
@@ -225,7 +203,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
         children: [
           _DragHandle(),
 
-          // header
           Row(
             children: [
               Container(
@@ -275,7 +252,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ],
           ),
 
-          // closure note banner
           if (widget.closureNote != null) ...[
             const SizedBox(height: 14),
             Container(
@@ -311,17 +287,16 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ),
           ],
 
-          // appeal status banner
           Consumer<AppealProvider>(
             builder: (_, provider, __) {
               if (provider.isCheckingStatus || provider.appealStatus.isEmpty) {
                 return const SizedBox.shrink();
               }
-              
+
               final status = provider.appealStatus;
               final appealsRemaining = status['appeals_remaining'] as int? ?? 2;
               final currentState = status['state'] as String? ?? 'unknown';
-              
+
               if (appealsRemaining <= 0) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 14, bottom: 14),
@@ -358,7 +333,7 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
                   ),
                 );
               }
-              
+
               return Padding(
                 padding: const EdgeInsets.only(top: 14, bottom: 14),
                 child: Container(
@@ -442,7 +417,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             ),
           ),
 
-          // char hint
           if (_msgCtrl.text.trim().isNotEmpty &&
               _msgCtrl.text.trim().length < 20)
             Padding(
@@ -458,7 +432,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
 
           const SizedBox(height: 16),
 
-          // error banner
           Consumer<AppealProvider>(
             builder: (_, provider, __) {
               if (provider.error == null) return const SizedBox.shrink();
@@ -495,7 +468,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
             },
           ),
 
-          // submit button
           Consumer<AppealProvider>(
             builder: (_, provider, __) => SizedBox(
               width: double.infinity,
@@ -540,7 +512,6 @@ class _AppealDialogBodyState extends State<_AppealDialogBody> {
   }
 }
 
-// Shared drag handle
 class _DragHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(

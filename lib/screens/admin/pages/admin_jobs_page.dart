@@ -63,7 +63,6 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
 
         return Column(
           children: [
-            // Search bar
             Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -76,7 +75,6 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                 hint: 'Search jobs by title…',
               ),
             ),
-            // Filter dropdown
             FilterDropdownBar(
               summaryText: _statusFilter == 'all' ? 'All jobs' : _label(_statusFilter),
               hasActiveFilter: _statusFilter != 'all',
@@ -103,7 +101,6 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
               ],
             ),
 
-            // Jobs list
             Expanded(
               child: admin.isTableLoading
                   ? const AdminSkeletonList()
@@ -131,7 +128,6 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                     ),
             ),
 
-            // Pagination
             if (totalPages > 1)
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -474,7 +470,6 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // close button row
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
             child: Row(

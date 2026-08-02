@@ -23,7 +23,6 @@ class GuidelineService {
     }
   }
 
-  /// GET /users/{user_id}/guidelines-ack
   Future<GuidelineAckStatus> getAckStatus({
     required String token,
     required String userId,
@@ -50,7 +49,6 @@ class GuidelineService {
     throw Exception(_extractError(response, 'Failed to load guidelines status'));
   }
 
-  /// POST /users/{user_id}/guidelines-ack
   Future<GuidelineAckStatus> ackSection({
     required String token,
     required String userId,

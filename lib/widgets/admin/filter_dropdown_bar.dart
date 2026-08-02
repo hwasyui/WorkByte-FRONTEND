@@ -46,7 +46,6 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
   @override
   void didUpdateWidget(FilterDropdownBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Defer markNeedsBuild to avoid calling it during a parent build phase.
     if (_isOpen && _overlayEntry != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _isOpen) _overlayEntry?.markNeedsBuild();
@@ -114,7 +113,6 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              // IntrinsicHeight prevents the Row from expanding to screen height.
               child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,8 +147,6 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
                                 return GestureDetector(
                                   onTap: () {
                                     widget.groups[i].onSelect(opt);
-                                    // setState is deferred via didUpdateWidget +
-                                    // addPostFrameCallback, so no direct call here.
                                   },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 120),

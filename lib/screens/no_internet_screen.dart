@@ -178,7 +178,6 @@ class NoInternetScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                // Replace the button + bottom text with this:
                 const SizedBox(height: 28),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

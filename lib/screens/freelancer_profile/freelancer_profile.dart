@@ -507,7 +507,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               profile.freelancerProfile?.freelancerId ??
               auth.currentUser!.userId;
 
-          // Case 1: New local image selected → upload via multipart endpoint
           if (data['image'] != null &&
               data['image'].toString().isNotEmpty &&
               data['image'] != profile.profilePictureUrl &&
@@ -529,7 +528,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               return;
             }
           }
-          // Case 2: Image deleted
           else if (data['imageDeleted'] == true) {
             await profile.deleteProfilePicture(
               token: auth.token!,
@@ -537,7 +535,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             );
           }
 
-          // Update name/job title fields
           final fields = <String, dynamic>{
             "full_name": data['name'],
             if ((data['job'] as String?)?.isNotEmpty == true &&
@@ -866,7 +863,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -919,7 +915,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // Rate type selector
                       Text(
                         'Rate Period',
                         style: GoogleFonts.poppins(
@@ -975,7 +970,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // Amount + currency row
                       Text(
                         'Amount & Currency',
                         style: GoogleFonts.poppins(
@@ -1021,7 +1015,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 ),
                               ),
                             ),
-                            // Currency picker button
                             GestureDetector(
                               onTap: pickCurrency,
                               child: Container(
@@ -1062,7 +1055,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const Divider(color: Color(0xFFF0F0F1)),
                       const SizedBox(height: 16),
 
-                      // Buttons
                       Row(
                         children: [
                           Expanded(
@@ -1495,7 +1487,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           ? FileImage(File(profileImage))
                                           : null))
                               : null,
-                          // Suppress errors from a stale/deleted image URL.
                           onBackgroundImageError: profileImage != null
                               ? (_, _) {}
                               : null,
@@ -1652,7 +1643,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
 
-          // Ban notice banner
           Consumer<AuthProvider>(
             builder: (context, auth, child) {
               if (!auth.isReportBanned) return const SizedBox.shrink();
@@ -1749,7 +1739,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 12),
 
-          // Tab bar
           Container(
             color: Colors.white,
             child: TabBar(
@@ -3097,7 +3086,6 @@ class _SkillChip extends StatelessWidget {
   }
 }
 
-// Thousands separator formatter
 class ThousandsSeparatorFormatter extends TextInputFormatter {
   static final _intFmt = NumberFormat('#,##0', 'en');
 
@@ -3106,21 +3094,17 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Allow only digits and one period (decimal point)
     String raw = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
 
-    // Keep only the first period
     final dotIndex = raw.indexOf('.');
     if (dotIndex != -1) {
       final afterDot = raw.substring(dotIndex + 1).replaceAll('.', '');
-      // Limit decimal places to 2
       final dec = afterDot.length > 2 ? afterDot.substring(0, 2) : afterDot;
       raw = '${raw.substring(0, dotIndex)}.$dec';
     }
 
     if (raw.isEmpty) return newValue.copyWith(text: '');
 
-    // Format integer part with comma separators
     final parts = raw.split('.');
     final intDigits = parts[0].replaceAll(',', '');
     final intFormatted = intDigits.isEmpty
@@ -3128,7 +3112,7 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
         : _intFmt.format(int.parse(intDigits));
 
     final formatted = parts.length > 1
-        ? '$intFormatted.${parts[1]}' // preserve decimal as typed
+        ? '$intFormatted.${parts[1]}'
         : intFormatted;
 
     return TextEditingValue(
@@ -3137,19 +3121,16 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
     );
   }
 
-  /// Strip commas and parse as double (returns null for empty/invalid).
   static double? parse(String text) {
     final clean = text.replaceAll(',', '');
     if (clean.isEmpty) return null;
     return double.tryParse(clean);
   }
 
-  /// Format a double for display in the field.
   static String format(double value) {
     if (value == value.truncateToDouble()) {
       return _intFmt.format(value.toInt());
     }
-    // Show up to 2 decimal places, strip trailing zeros
     final dec = value
         .toStringAsFixed(2)
         .split('.')[1]
@@ -3158,7 +3139,6 @@ class ThousandsSeparatorFormatter extends TextInputFormatter {
   }
 }
 
-// Currency picker bottom sheet
 class _CurrencyPickerSheet extends StatefulWidget {
   final List<Map<String, String>> currencies;
 
@@ -3210,7 +3190,6 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
       ),
       child: Column(
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
@@ -3222,7 +3201,6 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
               ),
             ),
           ),
-          // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
@@ -3235,7 +3213,6 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          // Search
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -3264,7 +3241,6 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          // List
           Expanded(
             child: ListView.builder(
               itemCount: _filtered.length,

@@ -20,18 +20,18 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width ?? double.infinity,
-      height: height + 6, 
+      height: height + 6,
       child: GestureDetector(
         onTap: onPressed,
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient( 
+            gradient: LinearGradient(
               colors: [
                 AppColors.primary,
                 const Color(0xFF6366F1),
               ],
             ),
-            borderRadius: BorderRadius.circular(30), 
+            borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withOpacity(0.25),
@@ -41,23 +41,18 @@ class PrimaryButton extends StatelessWidget {
             ],
           ),
           child: Center(
-            child: Row( 
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   label,
                   style: AppText.captionSemiBold.copyWith(
                     color: Colors.white,
-                    fontSize: 16, 
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(width: 8),
-                // const Icon(
-                //   Icons.arrow_forward, 
-                //   color: Colors.white,
-                //   size: 18,
-                // ),
               ],
             ),
           ),

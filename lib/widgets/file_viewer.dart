@@ -328,11 +328,6 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     try {
       final bytes = await File(widget.filePath).readAsBytes();
 
-      // Lets the user pick the destination via the system's native "Save As"
-      // picker (Storage Access Framework on Android) instead of silently
-      // writing to a hardcoded path - the latter also has no chance of
-      // working on a real device since this app declares no storage
-      // permission in AndroidManifest.xml.
       final savedPath = await FilePicker.platform.saveFile(
         dialogTitle: 'Save File',
         fileName: _displayName,
@@ -340,7 +335,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       );
 
       if (!mounted) return;
-      if (savedPath == null) return; // user cancelled the picker
+      if (savedPath == null) return;
 
       AppToast.success('File saved successfully');
     } catch (e) {

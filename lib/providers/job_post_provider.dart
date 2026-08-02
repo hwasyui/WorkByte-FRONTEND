@@ -610,9 +610,6 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
-  /// Upload a single file immediately for per-file autosave on the Files step.
-  /// Reuses the existing multipart upload, but returns the created model
-  /// directly so the UI can track status per-file.
   Future<JobFileModel?> uploadSingleJobFile(
     String token,
     String jobPostId,

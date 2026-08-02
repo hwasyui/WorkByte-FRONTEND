@@ -93,8 +93,6 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     if (mounted) setState(() => _isScreenReady = true);
   }
 
-  /// Mirrors `_stepForDraft` in [JobDraftsScreen] so the progress shown here
-  /// matches the progress shown on the Drafts list for the same draft.
   Future<void> _refreshStepProgress() async {
     final provider = context.read<JobPostProvider>();
     final token = context.read<AuthProvider>().token;
@@ -210,8 +208,6 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   void _scheduleAutosave() {
     if (_isHydratingDraft) return;
 
-    // Don't start autosaving until the user has entered
-    // at least a title or description.
     if (!_hasDraftTriggerFields) return;
 
     _autosaveTimer?.cancel();
@@ -260,7 +256,6 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   Future<void> _saveDraftSilently() async {
     if (_isHydratingDraft || !mounted) return;
 
-    // Prevent creating/saving empty drafts.
     if (!_hasDraftTriggerFields) return;
 
     final token = context.read<AuthProvider>().token;

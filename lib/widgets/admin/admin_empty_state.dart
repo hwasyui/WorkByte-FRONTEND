@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/admin_colors.dart';
 
-/// Shared empty-state placeholder (icon + title + subtitle) with a gentle
-/// fade/scale entrance, used wherever a list/table has nothing to show.
 class AdminEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;

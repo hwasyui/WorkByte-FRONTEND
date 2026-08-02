@@ -92,8 +92,6 @@ class _AdminAppealsPageState extends State<AdminAppealsPage>
   }
 }
 
-// List
-
 class _AppealsList extends StatelessWidget {
   final List<Map<String, dynamic>> appeals;
   final bool showActions;
@@ -133,8 +131,6 @@ class _AppealsList extends StatelessWidget {
     );
   }
 }
-
-// Card
 
 class _AppealCard extends StatelessWidget {
   final Map<String, dynamic> appeal;
@@ -184,7 +180,6 @@ class _AppealCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -282,7 +277,6 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
-          // message
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Column(
@@ -312,7 +306,6 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
-          // auto-approve history link (account appeals only)
           if (isAccount) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
@@ -342,7 +335,6 @@ class _AppealCard extends StatelessWidget {
             ),
           ],
 
-          // admin note (resolved)
           if (adminNote != null && adminNote.isNotEmpty) ...[
             const SizedBox(height: 8),
             Padding(
@@ -376,7 +368,6 @@ class _AppealCard extends StatelessWidget {
             ),
           ],
 
-          // dates
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
             child: Row(
@@ -398,7 +389,6 @@ class _AppealCard extends StatelessWidget {
             ),
           ),
 
-          // actions
           if (showActions && appealId.isNotEmpty) ...[
             const SizedBox(height: 10),
             Padding(

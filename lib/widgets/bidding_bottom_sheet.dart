@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
-/// Reusable bidding bottom sheet shown when the user taps Apply on any job.
-/// Displays Bid amount, Subject, and Message fields with a "Bidding Job" button.
 void showBiddingBottomSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -50,7 +48,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Container(
               width: 170,
@@ -63,7 +60,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
           ),
           const SizedBox(height: 24),
 
-          // Bid field
           _FieldLabel(label: 'Bid'),
           const SizedBox(height: 8),
           _InputBox(
@@ -77,7 +73,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Subject field
           _FieldLabel(label: 'Subject'),
           const SizedBox(height: 8),
           _InputBox(
@@ -86,7 +81,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Messages field
           _FieldLabel(label: 'Messages'),
           const SizedBox(height: 8),
           _InputBox(
@@ -97,7 +91,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
           ),
           const SizedBox(height: 24),
 
-          // Bidding Job button
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -126,7 +119,6 @@ class _BiddingBottomSheetState extends State<_BiddingBottomSheet> {
   }
 }
 
-// Field label
 class _FieldLabel extends StatelessWidget {
   final String label;
   const _FieldLabel({required this.label});
@@ -144,7 +136,6 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-// Input box
 class _InputBox extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;

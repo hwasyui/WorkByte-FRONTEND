@@ -24,7 +24,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _sortOption = 'Latest';
-  // add to state fields
   Map<String, String> _freelancerNames = {};
 
   List<JobPostModel> _jobsWithContracts = [];
@@ -67,7 +66,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           .where((j) => grouped.containsKey(j.jobPostId))
           .toList();
 
-      // Resolve freelancer names for avatar initials
       final uniqueFreelancerIds = contracts.map((c) => c.freelancerId).toSet();
       final missingIds = uniqueFreelancerIds
           .where((id) => id.isNotEmpty && !_freelancerNames.containsKey(id))
@@ -123,7 +121,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       case 'Fewest Workers':
         base.sort((a, b) => workerCount(a).compareTo(workerCount(b)));
         break;
-      default: // Latest
+      default:
         base.sort(
           (a, b) => (b.postedAt ?? b.createdAt ?? '').compareTo(
             a.postedAt ?? a.createdAt ?? '',

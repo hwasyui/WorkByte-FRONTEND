@@ -5,12 +5,8 @@ import '../services/client_review_service.dart';
 
 enum ClientReviewLoadState { idle, loading, loaded, error }
 
-/// Freelancer-reviews-client provider - mirrors ReviewProvider's structure
-/// for the symmetric counterpart.
 class ClientReviewProvider extends ChangeNotifier {
   final ClientReviewService _service = ClientReviewService();
-
-  // Review form (pending review for a contract)
 
   ClientReviewLoadState _formState = ClientReviewLoadState.idle;
   ClientReviewLoadState get formState => _formState;
@@ -21,23 +17,17 @@ class ClientReviewProvider extends ChangeNotifier {
   bool _submitting = false;
   bool get submitting => _submitting;
 
-  // Client reviews list
-
   ClientReviewLoadState _reviewsState = ClientReviewLoadState.idle;
   ClientReviewLoadState get reviewsState => _reviewsState;
 
   List<ClientReview> _reviews = [];
   List<ClientReview> get reviews => List.unmodifiable(_reviews);
 
-  // Trust score
-
   ClientReviewLoadState _trustState = ClientReviewLoadState.idle;
   ClientReviewLoadState get trustState => _trustState;
 
   ClientTrustScore? _trustScore;
   ClientTrustScore? get trustScore => _trustScore;
-
-  // Red flags
 
   ClientReviewLoadState _flagsState = ClientReviewLoadState.idle;
   ClientReviewLoadState get flagsState => _flagsState;
@@ -48,13 +38,8 @@ class ClientReviewProvider extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  // Raw moderation labels (e.g. "toxic", "obscene") from the harmful-content
-  // gate on submitReview - null unless the last submit attempt was rejected
-  // for that specific reason, so the UI can special-case that error state.
   List<String>? _flaggedLabels;
   List<String>? get flaggedLabels => _flaggedLabels;
-
-  // Actions
 
   Future<void> loadReviewForm({
     required String token,
@@ -198,8 +183,6 @@ class ClientReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Plain passthrough fetch (no state mutation) used by the post-submit
-  /// status screen to poll a review's status without disturbing formState.
   Future<ClientReview?> fetchClientReviewById({
     required String token,
     required String clientReviewId,

@@ -46,7 +46,7 @@ class _LoginTextFieldState extends State<LoginTextField> {
           child: Container(
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white, 
+              color: Colors.white,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: hasError
@@ -54,7 +54,7 @@ class _LoginTextFieldState extends State<LoginTextField> {
                     : const Color(0xFFE5E7EB),
               ),
               boxShadow: [
-                BoxShadow( 
+                BoxShadow(
                   color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
@@ -63,13 +63,12 @@ class _LoginTextFieldState extends State<LoginTextField> {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 18), 
+                const SizedBox(width: 18),
 
-                // ICON
                 SizedBox(
                   width: 24,
                   height: 24,
-                  child: IconTheme( 
+                  child: IconTheme(
                     data: const IconThemeData(
                       color: Color(0xFF4F46E5),
                       size: 22,
@@ -80,7 +79,6 @@ class _LoginTextFieldState extends State<LoginTextField> {
 
                 const SizedBox(width: 12),
 
-                // TEXTFIELD
                 Expanded(
                   child: TextField(
                     focusNode: _focusNode,
@@ -89,7 +87,7 @@ class _LoginTextFieldState extends State<LoginTextField> {
                     keyboardType: widget.keyboardType,
                     style: AppText.caption.copyWith(
                       color: const Color(0xFF111827),
-                      fontSize: 14, 
+                      fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: widget.hintText,
@@ -100,13 +98,12 @@ class _LoginTextFieldState extends State<LoginTextField> {
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
-                        vertical: 16, 
+                        vertical: 16,
                       ),
                     ),
                   ),
                 ),
 
-                // PASSWORD ICON
                 if (widget.isPassword) ...[
                   GestureDetector(
                     onTap: () => setState(() => _obscure = !_obscure),
@@ -114,10 +111,10 @@ class _LoginTextFieldState extends State<LoginTextField> {
                       padding: const EdgeInsets.only(right: 16),
                       child: Icon(
                         _obscure
-                            ? Icons.visibility_outlined 
+                            ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                         size: 22,
-                        color: const Color(0xFF4F46E5), 
+                        color: const Color(0xFF4F46E5),
                       ),
                     ),
                   ),
@@ -128,10 +125,9 @@ class _LoginTextFieldState extends State<LoginTextField> {
           ),
         ),
 
-        // ERROR TEXT
         if (hasError)
           Padding(
-            padding: const EdgeInsets.only(top: 6, left: 18), 
+            padding: const EdgeInsets.only(top: 6, left: 18),
             child: Text(
               widget.errorText!,
               style: const TextStyle(

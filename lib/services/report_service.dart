@@ -11,7 +11,6 @@ class ReportService {
     '',
   );
 
-  /// GET /reports/reasons
   Future<List<String>> getReportReasons(String token) async {
     final response = await SessionGuard.guard(
       token,
@@ -42,10 +41,6 @@ class ReportService {
     );
   }
 
-  /// POST /reports
-  /// [reportedType]   : 'freelancer' | 'client' | 'job_post'
-  /// [reportedUserId] : required for freelancer / client reports
-  /// [jobPostId]      : required for job_post reports
   Future<ReportModel> createReport({
     required String token,
     required String reportedType,

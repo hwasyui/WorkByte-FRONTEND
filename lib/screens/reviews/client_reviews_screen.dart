@@ -10,10 +10,6 @@ import '../../widgets/review_card.dart' show SentimentBadge;
 import '../../widgets/review_rating_helpers.dart';
 import '../../widgets/trust_score_card.dart';
 
-/// Public reviews + trust score screen for a client, reached from the
-/// discovery/people-list flow. Symmetric counterpart to
-/// FreelancerReviewsScreen, backed by ClientReviewProvider/ClientReview types
-/// instead of the freelancer-side widgets (which are typed to Review/TrustScore).
 class ClientReviewsScreen extends StatefulWidget {
   final String clientId;
   final String clientName;

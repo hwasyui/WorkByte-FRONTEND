@@ -8,10 +8,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/notification_model.dart';
 import 'session_guard.dart';
 
-// Top-level background handler — must be outside any class
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Firebase is already initialized in main.dart
   debugPrint('Background message: ${message.messageId}');
 }
 
@@ -37,22 +35,17 @@ class NotificationService {
     importance: Importance.high,
   );
 
-  // Init
-
   static Future<void> initialize({
     required GlobalKey<NavigatorState> navigatorKey,
   }) async {
-    // Register background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // Request permission
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // Set up local notifications for foreground display
     await _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -72,7 +65,6 @@ class NotificationService {
       },
     );
 
-    // Foreground messages — show local notification
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       if (notification == null) return;
@@ -96,19 +88,15 @@ class NotificationService {
       );
     });
 
-    // Background tap — app was in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _navigate(navigatorKey, message.data);
     });
 
-    // Terminated tap — app was closed
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       _navigate(navigatorKey, initialMessage.data);
     }
   }
-
-  // Deep link navigation on tap
 
   static void _navigate(
     GlobalKey<NavigatorState> navigatorKey,
@@ -153,8 +141,6 @@ class NotificationService {
     }
   }
 
-  // FCM Token
-
   static Future<void> saveTokenToBackend() async {
     try {
       final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -170,7 +156,6 @@ class NotificationService {
         body: jsonEncode({'token': fcmToken}),
       ).timeout(const Duration(seconds: 20));
 
-      // Refresh token listener
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
         final token = await _storage.read(key: _tokenKey);
         if (token == null) return;
@@ -187,8 +172,6 @@ class NotificationService {
       debugPrint('Failed to save FCM token (non-fatal): $e');
     }
   }
-
-  // API calls
 
   Future<List<NotificationModel>> getNotifications({
     int limit = 20,

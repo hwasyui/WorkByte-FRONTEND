@@ -168,8 +168,6 @@ class DMProvider extends ChangeNotifier {
         status: 'failed',
         metadata: {
           'failure_reason': e.toString().replaceFirst('Exception: ', ''),
-          // Structured flag from the backend, carried alongside the text so the
-          // chat screen doesn't have to infer the block from the wording.
           if (e is DMFailureException && e.blockedByModeration)
             'blocked_by': kModerationBlockedBy,
         },

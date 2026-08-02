@@ -15,7 +15,6 @@ class ProposalFileService {
     'Authorization': 'Bearer $token',
   };
 
-  /// Fetch all files for a single proposal
   Future<List<ProposalFileModel>> getFilesByProposalId(
     String token,
     String proposalId,
@@ -36,7 +35,6 @@ class ProposalFileService {
     return [];
   }
 
-  /// Create a proposal file record
   Future<ProposalFileModel?> createProposalFile({
     required String token,
     required String proposalId,
@@ -68,7 +66,6 @@ class ProposalFileService {
     return null;
   }
 
-  /// Delete a proposal file
   Future<bool> deleteProposalFile(String token, String proposalFileId) async {
     final uri = Uri.parse('$_baseUrl/proposal-files/$proposalFileId');
     final res = await SessionGuard.guard(

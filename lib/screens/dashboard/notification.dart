@@ -25,7 +25,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<NotificationProvider>();
       provider.fetchNotifications(refresh: true);
-      provider.markAllRead(); // mark all read when screen opens
+      provider.markAllRead();
     });
   }
 
@@ -105,10 +105,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Job-closure notifications (harmful text, scam, admin, reports, and the
-  // engaged-freelancer heads-up) and urgent contract-lifecycle events
-  // (dispute, overdue, imminent/actual auto-approve) render in red so both
-  // sides see them as distinct from ordinary activity.
   Color _colorForType(String type) {
     switch (type) {
       case kNotifJobClosedHarmfulText:
@@ -169,7 +165,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App bar
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
               child: Row(
@@ -212,16 +207,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
             ),
 
-            // List
             Expanded(
               child: Consumer<NotificationProvider>(
                 builder: (context, provider, _) {
-                  // Loading initial
                   if (provider.isLoading && provider.notifications.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  // Error
                   if (provider.error != null &&
                       provider.notifications.isEmpty) {
                     return Center(
@@ -253,7 +245,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     );
                   }
 
-                  // Empty
                   if (provider.notifications.isEmpty) {
                     return Center(
                       child: Column(
@@ -286,16 +277,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     );
                   }
 
-                  // List
                   return RefreshIndicator(
                     onRefresh: () => provider.fetchNotifications(refresh: true),
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(13, 20, 16, 16),
                       itemCount:
-                          provider.notifications.length + 1, // +1 for load more
+                          provider.notifications.length + 1,
                       separatorBuilder: (_, __) => const SizedBox(height: 24),
                       itemBuilder: (context, index) {
-                        // Load more button at the bottom
                         if (index == provider.notifications.length) {
                           if (!provider.hasMore) return const SizedBox.shrink();
                           return Center(

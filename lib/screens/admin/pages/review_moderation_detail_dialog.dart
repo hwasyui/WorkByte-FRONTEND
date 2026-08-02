@@ -13,8 +13,6 @@ import '../../../widgets/admin/admin_score_row.dart';
 import '../../../widgets/app_toast.dart';
 import '../../../widgets/review_rating_helpers.dart';
 
-/// Opens the review-moderation detail dialog for a held review. [isClientReview]
-/// selects the client-vs-freelancer endpoints and 4-vs-5 category layout.
 Future<void> showReviewModerationDialog(
   BuildContext context, {
   required String id,
@@ -186,8 +184,6 @@ class _LoadedBody extends StatelessWidget {
   }
 }
 
-// Header --------------------------------------------------------------------
-
 class _Header extends StatelessWidget {
   final String title;
   final String holdLevel;
@@ -297,8 +293,6 @@ class _AnalysisUnavailableBanner extends StatelessWidget {
     );
   }
 }
-
-// 1. Contradiction pane -----------------------------------------------------
 
 class _ContradictionPane extends StatelessWidget {
   final ReviewModerationDetail detail;
@@ -550,8 +544,6 @@ class _SentimentChip extends StatelessWidget {
   }
 }
 
-// 2. Question & answer -------------------------------------------------------
-
 class _QuestionAnswerPane extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _QuestionAnswerPane({required this.detail});
@@ -561,7 +553,6 @@ class _QuestionAnswerPane extends StatelessWidget {
     final question = detail.aiQuestion;
     final answer = detail.answer;
     final groundedness = detail.components?.llm?.answerGroundedness;
-    // All three together or none — the score is meaningless without its pair.
     if (question == null || question.isEmpty || answer == null || answer.isEmpty) {
       return _Section(
         title: 'Question & answer',
@@ -634,15 +625,12 @@ class _QaBlock extends StatelessWidget {
   }
 }
 
-// 3. Objective contract record ----------------------------------------------
-
 class _ContractRecordStrip extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _ContractRecordStrip({required this.detail});
 
   @override
   Widget build(BuildContext context) {
-    // Client reviews carry lifetime aggregates instead of per-contract telemetry.
     final source = detail.isClientReview
         ? (detail.subjectLifetimeScores ?? const {})
         : detail.telemetry;
@@ -652,8 +640,6 @@ class _ContractRecordStrip extends StatelessWidget {
     final revisionRate = num2('revision_rate_score');
     final responsiveness = num2('responsiveness_score');
     final revisionCount = (source['revision_count'] as num?)?.toInt();
-    // For freelancer reviews, on_time_measurable distinguishes "measured as 0"
-    // from "never measured".
     final onTimeMeasurable = detail.isClientReview
         ? onTime != null
         : (detail.telemetry['on_time_measurable'] == true);
@@ -687,8 +673,6 @@ class _ContractRecordStrip extends StatelessWidget {
   }
 }
 
-// 4. Per-component verdicts --------------------------------------------------
-
 class _ComponentVerdicts extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _ComponentVerdicts({required this.detail});
@@ -707,7 +691,6 @@ class _ComponentVerdicts extends StatelessWidget {
 
     final c = detail.components;
     if (c == null) {
-      // Analysed before judgment logging shipped: only the stored blended score.
       return _Section(
         title: 'Per-model verdicts',
         child: Column(
@@ -909,8 +892,6 @@ class _AuthenticityCard extends StatelessWidget {
       title: 'Authenticity classifier',
       trailing: ModelVerdictChip(modelUsed: v.modelUsed),
       children: [
-        // Prefer the length-adjusted (calibrated) probability; the raw score
-        // over-penalises short reviews ~7x more often.
         MeasuredScoreBar(
           label: 'Fake probability',
           note: 'length-adjusted',
@@ -981,7 +962,6 @@ class _BlendReconciliation extends StatelessWidget {
     final blended =
         w.llm! * llmScore + w.authenticityModel! * authTerm + w.answerGroundedness! * grounded;
 
-    // Trim trailing zeros so weights read as "0.4" not "0.400".
     String f(double d) {
       var s = d.toStringAsFixed(3);
       if (s.contains('.')) {
@@ -1046,8 +1026,6 @@ class _FlagChip extends StatelessWidget {
     );
   }
 }
-
-// 5. Flag reasons ------------------------------------------------------------
 
 class _FlagReasons extends StatelessWidget {
   final ReviewModerationDetail detail;
@@ -1135,8 +1113,6 @@ class _AttributedReason {
   const _AttributedReason({required this.source, required this.text});
 }
 
-// 6. Reviewer context --------------------------------------------------------
-
 class _ReviewerContext extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _ReviewerContext({required this.detail});
@@ -1223,8 +1199,6 @@ class _ReviewerContext extends StatelessWidget {
   }
 }
 
-// 7. DM thread ---------------------------------------------------------------
-
 class _DmThread extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _DmThread({required this.detail});
@@ -1299,8 +1273,6 @@ class _DmThread extends StatelessWidget {
     );
   }
 }
-
-// Actions --------------------------------------------------------------------
 
 class _ActionsBar extends StatelessWidget {
   final ReviewModerationDetail detail;
@@ -1381,8 +1353,6 @@ class _ActionsBar extends StatelessWidget {
     );
   }
 }
-
-// Shared layout primitives ---------------------------------------------------
 
 class _Section extends StatelessWidget {
   final String title;

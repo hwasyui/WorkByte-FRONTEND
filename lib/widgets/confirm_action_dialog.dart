@@ -3,8 +3,6 @@ import '../core/constants/colors.dart';
 
 enum ConfirmDialogTone { primary, warning, destructive }
 
-/// Shared confirmation dialog used across the job post flow (and reusable
-/// anywhere else) so every "are you sure?" prompt looks and behaves the same.
 class ConfirmActionDialog extends StatelessWidget {
   static const Color _textDark = Color(0xFF1F2937);
   static const Color _textMuted = Color(0xFF6B7280);
@@ -29,7 +27,6 @@ class ConfirmActionDialog extends StatelessWidget {
     this.tone = ConfirmDialogTone.destructive,
   });
 
-  /// Shows the dialog and resolves to `true` only if the user confirmed.
   static Future<bool> show(
     BuildContext context, {
     required IconData icon,
