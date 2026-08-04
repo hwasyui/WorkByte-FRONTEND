@@ -971,6 +971,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               height: 20 / 13,
             ),
           ),
+          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            sectionTitle('Attachments (${_jobFiles.length})'),
+            const SizedBox(height: 12),
+            ..._jobFiles.map((f) => buildJobFileRow(f)),
+          ],
           if (client != null) ...[
             const SizedBox(height: 28),
             Row(
@@ -1025,12 +1031,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           sectionTitle(isTeam ? 'Roles & Skills' : 'Role & Skills'),
           const SizedBox(height: 12),
           buildRolesSection(),
-          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            sectionTitle('Attachments (${_jobFiles.length})'),
-            const SizedBox(height: 12),
-            ..._jobFiles.map((f) => buildJobFileRow(f)),
-          ],
         ],
       ),
     );

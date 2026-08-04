@@ -116,6 +116,15 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
+  String _roleCurrency(String? jobRoleId) {
+    if (jobRoleId == null) return 'IDR';
+    try {
+      return _roles.firstWhere((r) => r.jobRoleId == jobRoleId).budgetCurrency;
+    } catch (_) {
+      return 'IDR';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -533,7 +542,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     AppToast.success('Bid accepted. Continue with contract setup.');
 
-    _createAndNavigateToContract(proposal);
+    _openContractSetup(proposal, reuseExisting: false);
   }
 
   Future<void> _rejectBid(ProposalModel proposal) async {
@@ -580,50 +589,65 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     AppToast.success('Bid rejected.');
   }
 
-  Future<void> _createAndNavigateToContract(ProposalModel proposal) async {
+  /// Opens contract setup for an accepted proposal. A contract is always
+  /// complete once it exists, so finding one means the bid is already
+  /// contracted and it should simply be opened.
+  Future<void> _openContractSetup(
+    ProposalModel proposal, {
+    bool reuseExisting = true,
+  }) async {
     final token = context.read<AuthProvider>().token!;
-    final contractProvider = context.read<ContractProvider>();
 
-    try {
-      final contractData = {
-        'job_post_id': _job.jobPostId,
-        'job_role_id': proposal.jobRoleId,
-        'proposal_id': proposal.proposalId,
-        'freelancer_id': proposal.freelancerId,
-        'client_id': _job.clientId,
-        'contract_title': 'Contract for ${_job.jobTitle}',
-        'role_title': _roleTitle(proposal.jobRoleId),
-        'agreed_budget': proposal.proposedBudget,
-        'budget_currency': 'IDR',
-        'payment_structure': 'full_payment',
-        'status': 'active',
-        'start_date': DateTime.now().toString().substring(0, 10),
-      };
+    // A bid that was just accepted can't have a contract yet, so skip the
+    // lookup and go straight to the setup form.
+    final existing = reuseExisting
+        ? await context.read<ContractProvider>().fetchContractByProposal(
+            token,
+            proposal.proposalId,
+          )
+        : null;
 
-      final contract = await contractProvider.createContract(
-        token,
-        contractData,
-      );
+    if (!mounted) return;
 
-      if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => existing != null
+            ? GenerateContractScreen(
+                contractId: existing.contractId,
+                initialContract: existing,
+              )
+            : GenerateContractScreen.draft(
+                draftContractData: {
+                  'job_post_id': _job.jobPostId,
+                  'job_role_id': proposal.jobRoleId,
+                  'proposal_id': proposal.proposalId,
+                  'freelancer_id': proposal.freelancerId,
+                  'client_id': _job.clientId,
+                  'contract_title': 'Contract for ${_job.jobTitle}',
+                  'role_title': _roleTitle(proposal.jobRoleId),
+                  'agreed_budget': proposal.proposedBudget,
+                  // Locked to the role: the proposal carries a bare number
+                  // with no currency of its own.
+                  'budget_currency': _roleCurrency(proposal.jobRoleId),
+                  // Null when the freelancer bid without proposing a duration,
+                  // in which case the client sets it freely.
+                  'proposed_duration': proposal.proposedDuration,
+                  'payment_structure': 'full_payment',
+                  'start_date': DateTime.now().toString().substring(0, 10),
+                },
+              ),
+      ),
+    ).then((_) {
+      if (mounted) _fetchWorkers();
+    });
+  }
 
-      if (contract != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GenerateContractScreen(
-              contractId: contract.contractId,
-              initialContract: contract,
-            ),
-          ),
-        );
-      } else {
-        AppToast.error('Failed to create contract: ${contractProvider.error}');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      AppToast.error('Error: ${e.toString()}');
-    }
+  ContractModel? _contractForProposal(String proposalId) {
+    final matches = _workers
+        .where((contract) => contract.proposalId == proposalId)
+        .toList();
+    return matches.isEmpty ? null : matches.first;
   }
 
   Future<void> _viewFreelancerProfile(ProposalModel proposal) async {
@@ -1788,7 +1812,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                 ],
               )
-            else
+            else ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1811,6 +1835,35 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   ),
                 ),
               ),
+              if (isAccepted) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openContractSetup(proposal),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      backgroundColor: _primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.description_outlined, size: 18),
+                    label: Text(
+                      _contractForProposal(proposal.proposalId) == null
+                          ? 'Set up contract'
+                          : 'Open contract setup',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),
@@ -2231,6 +2284,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               height: 20 / 13,
             ),
           ),
+          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            _sectionTitle('Attachments (${_jobFiles.length})'),
+            const SizedBox(height: 12),
+            ..._jobFiles.map((f) => _buildJobFileRow(f)),
+          ],
           const SizedBox(height: 28),
           _sectionTitle('Terms'),
           const SizedBox(height: 12),
@@ -2261,12 +2320,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           ),
           const SizedBox(height: 12),
           _buildRolesSection(),
-          if (!_filesLoading && _jobFiles.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            _sectionTitle('Attachments (${_jobFiles.length})'),
-            const SizedBox(height: 12),
-            ..._jobFiles.map((f) => _buildJobFileRow(f)),
-          ],
         ],
       ),
     );

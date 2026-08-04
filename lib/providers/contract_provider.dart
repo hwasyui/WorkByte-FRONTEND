@@ -101,16 +101,12 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  Future<ContractModel?> createContract(
+  Future<ContractModel?> fetchContractByProposal(
     String token,
-    Map<String, dynamic> data,
+    String proposalId,
   ) async {
     try {
-      final contract = await _service.createContract(token, data);
-      _currentContract = contract;
-      _contracts.add(contract);
-      notifyListeners();
-      return contract;
+      return await _service.getContractByProposal(token, proposalId);
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
@@ -118,16 +114,38 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> generateContractPdf(
+  /// Rethrows [ContractServiceException] so callers can act on the status —
+  /// a 409 means the bid is already contracted and should be opened instead.
+  Future<ContractModel> createContract(
     String token,
-    String contractId,
-    Map<String, dynamic> generationData,
+    Map<String, dynamic> data,
   ) async {
     try {
-      final updated = await _service.generateContractPdf(
+      final contract = await _service.createContract(token, data);
+      _currentContract = contract;
+      _contracts.add(contract);
+      _error = null;
+      notifyListeners();
+      return contract;
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<ContractModel?> sendContract(
+    String token,
+    String contractId, {
+    String? notificationMessage,
+    bool saveMessageAsTemplate = false,
+  }) async {
+    try {
+      final updated = await _service.sendContract(
         token,
         contractId,
-        generationData,
+        notificationMessage: notificationMessage,
+        saveMessageAsTemplate: saveMessageAsTemplate,
       );
       if (_currentContract?.contractId == contractId) {
         _currentContract = updated;
@@ -135,12 +153,13 @@ class ContractProvider extends ChangeNotifier {
       _contracts = _contracts
           .map((c) => c.contractId == contractId ? updated : c)
           .toList();
+      _error = null;
       notifyListeners();
-      return true;
+      return updated;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
-      return false;
+      return null;
     }
   }
 

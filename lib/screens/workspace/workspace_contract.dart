@@ -7,7 +7,6 @@ import '../../models/contract_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/contract_provider.dart';
-import '../contract/generate_contract_screen.dart';
 import 'workspace_detail.dart';
 
 class WorkspaceContractScreen extends StatefulWidget {
@@ -516,22 +515,13 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  final needsGeneration =
-                      isClient &&
-                      (contract.contractPdfUrl ?? '').trim().isEmpty;
-
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => needsGeneration
-                          ? GenerateContractScreen(
-                              contractId: contract.contractId,
-                              initialContract: contract,
-                            )
-                          : WorkspaceDetailScreen(
-                              contract: contract,
-                              viewerRole: isClient ? 'client' : 'freelancer',
-                            ),
+                      builder: (_) => WorkspaceDetailScreen(
+                        contract: contract,
+                        viewerRole: isClient ? 'client' : 'freelancer',
+                      ),
                     ),
                   ).then((_) => _loadContracts());
                 },
@@ -544,9 +534,7 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text(
-                  isClient && (contract.contractPdfUrl ?? '').trim().isEmpty
-                      ? 'Complete Contract Setup'
-                      : 'View Details',
+                  'View Details',
                   style: AppText.bodySemiBold.copyWith(color: Colors.white),
                 ),
               ),

@@ -243,6 +243,21 @@ class JobPostService {
     throw Exception(_extractError(body, 'Failed to load job roles'));
   }
 
+  Future<JobRoleModel> getJobRole(String token, String jobRoleId) async {
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/job-roles/$jobRoleId'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
+    final body = await _decodeResponse(res);
+    if (res.statusCode == 200) {
+      return JobRoleModel.fromJson(_extractBody(body));
+    }
+    throw Exception(_extractError(body, 'Failed to load job role'));
+  }
+
   Future<JobRoleModel> createJobRole(
     String token,
     Map<String, dynamic> data,

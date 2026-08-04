@@ -6,14 +6,14 @@ class NotificationItem extends StatelessWidget {
   final Widget avatar;
   final String message;
 
-  final String boldPrefix;
+  final String title;
   final String timestamp;
   final bool isUnread;
 
   const NotificationItem({
     super.key,
     required this.avatar,
-    required this.boldPrefix,
+    required this.title,
     required this.message,
     required this.timestamp,
     this.isUnread = true,
@@ -48,28 +48,27 @@ class NotificationItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                    height: 1.4,
-                  ),
-                  children: [
-                    TextSpan(text: '$boldPrefix '),
-                    TextSpan(
-                      text: message,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF333333),
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                  height: 1.4,
                 ),
               ),
+              if (message.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF333333),
+                    height: 1.45,
+                  ),
+                ),
+              ],
               const SizedBox(height: 6),
               Text(
                 timestamp,

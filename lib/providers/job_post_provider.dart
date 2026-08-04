@@ -467,6 +467,25 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
+  /// One-off lookup used by notification routing; leaves the list state alone.
+  Future<JobPostModel?> fetchJobPostById(String token, String jobPostId) async {
+    try {
+      return await _jobPostService.getJobPost(token, jobPostId);
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      return null;
+    }
+  }
+
+  Future<JobRoleModel?> fetchJobRoleById(String token, String jobRoleId) async {
+    try {
+      return await _jobPostService.getJobRole(token, jobRoleId);
+    } catch (e) {
+      _error = e.toString().replaceFirst('Exception: ', '');
+      return null;
+    }
+  }
+
   Future<void> fetchJobRoles(String token, String jobPostId) async {
     try {
       _jobRoles = await _jobPostService.getJobRoles(token, jobPostId);

@@ -6,16 +6,20 @@ import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dm_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../models/dm_model.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/moderation_display.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/report_sheet.dart';
+import '../people_list/people_list_screen.dart';
 import 'dm_thread_list.dart';
 
 class DMChatScreen extends StatefulWidget {
@@ -37,6 +41,11 @@ class _DMChatScreenState extends State<DMChatScreen>
   bool _isRecording = false;
   bool _isLoadingMessages = true;
   bool _isPickingFile = false;
+  bool _isAcceptingRequest = false;
+  bool _requestAccepted = false;
+  bool _isLoadingOlder = false;
+
+  static const double _olderMessagesThreshold = 240;
 
   PlatformFile? _selectedFile;
   String? _selectedFilePath;
@@ -69,6 +78,7 @@ class _DMChatScreenState extends State<DMChatScreen>
     );
 
     _messageController.addListener(() => setState(() {}));
+    _scrollController.addListener(_onScroll);
 
     _recordingController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -85,6 +95,7 @@ class _DMChatScreenState extends State<DMChatScreen>
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _focusNode.dispose();
     _sendButtonController.dispose();
@@ -116,14 +127,35 @@ class _DMChatScreenState extends State<DMChatScreen>
     _scrollToBottom();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    final position = _scrollController.position;
+    // The list is reversed, so maxScrollExtent is the oldest message.
+    if (position.pixels >= position.maxScrollExtent - _olderMessagesThreshold) {
+      _loadOlderMessages();
+    }
+  }
+
   Future<void> _loadOlderMessages() async {
+    if (_isLoadingOlder) return;
+
+    final dm = context.read<DMProvider>();
+    final cursor = dm.nextCursorFor(widget.thread.threadId);
+    if (cursor == null || cursor.isEmpty) return;
+
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
 
-    await context.read<DMProvider>().fetchOlderMessages(
-      token,
-      widget.thread.threadId,
-    );
+    setState(() => _isLoadingOlder = true);
+
+    try {
+      await dm.fetchOlderMessages(token, widget.thread.threadId);
+    } catch (_) {
+      if (mounted) AppToast.error('Could not load older messages.');
+    } finally {
+      if (mounted) setState(() => _isLoadingOlder = false);
+    }
   }
 
   void _scrollToBottom() {
@@ -534,6 +566,153 @@ class _DMChatScreenState extends State<DMChatScreen>
     );
   }
 
+  bool _prefersFreelancerProfile(DMUserPreview other) {
+    if (other.role == 'freelancer') return true;
+    if (other.role == 'client') return false;
+    return other.freelancerId != null;
+  }
+
+  Future<void> _openOtherUserProfile() async {
+    final other = widget.thread.otherUser;
+    if (other == null) return;
+
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final profileProvider = context.read<ProfileProvider>();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    Future<String?> refreshToken() async {
+      final auth = context.read<AuthProvider>();
+      final ok = await auth.tryRefresh();
+      if (!mounted) return null;
+      return ok ? auth.token : null;
+    }
+
+    try {
+      Widget? profileScreen;
+
+      if (_prefersFreelancerProfile(other)) {
+        final freelancer = await profileProvider.fetchFreelancerById(
+          token: token,
+          freelancerId: other.freelancerId ?? other.userId,
+          onRefreshToken: refreshToken,
+        );
+        if (freelancer != null) {
+          profileScreen = PeopleProfileScreen(
+            isClient: false,
+            freelancer: freelancer,
+          );
+        }
+      }
+
+      profileScreen ??= await () async {
+        final client = await profileProvider.fetchClientById(
+          token: token,
+          clientId: other.clientId ?? other.userId,
+        );
+        return client == null
+            ? null
+            : PeopleProfileScreen(isClient: true, client: client);
+      }();
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (profileScreen == null) {
+        AppToast.error('Could not load profile.');
+        return;
+      }
+
+      final screen = profileScreen;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      AppToast.error('Could not load profile.');
+    }
+  }
+
+  Future<void> _acceptRequest() async {
+    if (_isAcceptingRequest) return;
+
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    setState(() => _isAcceptingRequest = true);
+
+    try {
+      await context.read<DMProvider>().acceptThread(
+        token: token,
+        threadId: widget.thread.threadId,
+      );
+
+      if (!mounted) return;
+      setState(() => _requestAccepted = true);
+      AppToast.success('Message request accepted.');
+
+      await _loadMessages();
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.error('Failed to accept request.');
+    } finally {
+      if (mounted) setState(() => _isAcceptingRequest = false);
+    }
+  }
+
+  Future<void> _copyMessageText(DMMessageModel message) async {
+    await Clipboard.setData(ClipboardData(text: message.messageText.trim()));
+    if (!mounted) return;
+    AppToast.success('Copied to clipboard');
+  }
+
+  Future<void> _downloadAttachment(DMAttachmentModel attachment) async {
+    final token = context.read<AuthProvider>().token;
+
+    AppToast.info('Downloading file...', duration: const Duration(seconds: 1));
+
+    try {
+      final file = await downloadToTempFile(attachment.fileUrl, token: token);
+      if (file == null) throw Exception('Could not download the file');
+
+      final bytes = await file.readAsBytes();
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save File',
+        fileName: attachment.fileName,
+        bytes: bytes,
+      );
+
+      if (!mounted || savedPath == null) return;
+      AppToast.success('File saved successfully');
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(
+        'Failed to download: ${e.toString().replaceFirst('Exception: ', '')}',
+      );
+    }
+  }
+
+  void _openReportSheet() {
+    final other = widget.thread.otherUser;
+    if (other == null) return;
+
+    ReportSheet.show(
+      context,
+      reportedType: _prefersFreelancerProfile(other) ? 'freelancer' : 'client',
+      reportedUserId: other.userId,
+      targetName: other.fullName?.trim().isNotEmpty == true
+          ? other.fullName!.trim()
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = context.read<AuthProvider>().userId ?? '';
@@ -568,8 +747,7 @@ class _DMChatScreenState extends State<DMChatScreen>
         ? other!.fullName!.trim()
         : 'Unknown User';
     final role = other?.role ?? 'user';
-    final avatarUrl = other?.profilePictureUrl;
-    final isRequest = widget.thread.status == 'request';
+    final isRequest = widget.thread.status == 'request' && !_requestAccepted;
     final isIncomingRequest =
         isRequest && widget.thread.initiatorId != currentUserId;
 
@@ -588,41 +766,72 @@ class _DMChatScreenState extends State<DMChatScreen>
           ),
         ),
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            style: GoogleFonts.poppins(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A1A2E),
-            ),
+      titleSpacing: 0,
+      title: InkWell(
+        onTap: other == null ? null : _openOtherUserProfile,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                name,
+                style: GoogleFonts.poppins(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1A1A2E),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                _roleLabel(role),
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF7D7D7D),
+                ),
+              ),
+            ],
           ),
-          Text(
-            _roleLabel(role),
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: const Color(0xFF7D7D7D),
-            ),
-          ),
-        ],
+        ),
       ),
       actions: [
         if (isIncomingRequest)
-          Container(
-            margin: const EdgeInsets.only(right: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Accept Request',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: Center(
+              child: Material(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: _isAcceptingRequest ? null : _acceptRequest,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: _isAcceptingRequest
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Accept Request',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
               ),
             ),
           )
@@ -633,12 +842,30 @@ class _DMChatScreenState extends State<DMChatScreen>
               color: Color(0xFF7D7D7D),
               size: 20,
             ),
+            onSelected: (value) {
+              switch (value) {
+                case 'profile':
+                  _openOtherUserProfile();
+                  break;
+                case 'report':
+                  _openReportSheet();
+                  break;
+              }
+            },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'block', child: Text('Block')),
-              const PopupMenuItem(value: 'report', child: Text('Report')),
-              const PopupMenuItem(
-                value: 'mute',
-                child: Text('Mute notifications'),
+              PopupMenuItem(
+                value: 'profile',
+                child: Text(
+                  'View profile',
+                  style: GoogleFonts.poppins(fontSize: 13),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'report',
+                child: Text(
+                  'Report',
+                  style: GoogleFonts.poppins(fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -664,8 +891,13 @@ class _DMChatScreenState extends State<DMChatScreen>
                 controller: _scrollController,
                 reverse: true,
                 padding: const EdgeInsets.fromLTRB(18, 14, 18, 90),
-                itemCount: displayMessages.length,
+                itemCount: displayMessages.length + 1,
                 itemBuilder: (context, index) {
+                  // Last item in a reversed list renders at the top.
+                  if (index == displayMessages.length) {
+                    return _buildOlderMessagesLoader();
+                  }
+
                   final message = displayMessages[index];
                   final isOwn = message.senderId == currentUserId;
                   return _buildMessageBubble(message, isOwn);
@@ -674,6 +906,24 @@ class _DMChatScreenState extends State<DMChatScreen>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildOlderMessagesLoader() {
+    if (!_isLoadingOlder) return const SizedBox(height: 4);
+
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 14),
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1265,44 +1515,40 @@ class _DMChatScreenState extends State<DMChatScreen>
   }
 
   void _showMessageActions(DMMessageModel message) {
+    final hasText = message.messageText.trim().isNotEmpty;
+    final attachment = message.attachments.isNotEmpty
+        ? message.attachments.first
+        : null;
+
+    if (!hasText && attachment == null) return;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.reply_rounded,
-                  color: AppColors.primary,
+              if (hasText)
+                ListTile(
+                  leading: const Icon(
+                    Icons.copy_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Copy',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _copyMessageText(message);
+                  },
                 ),
-                title: Text(
-                  'Reply',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.copy_rounded,
-                  color: AppColors.primary,
-                ),
-                title: Text(
-                  'Copy',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              if (message.attachments.isNotEmpty)
+              if (attachment != null)
                 ListTile(
                   leading: const Icon(
                     Icons.download_rounded,
@@ -1313,7 +1559,8 @@ class _DMChatScreenState extends State<DMChatScreen>
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
+                    _downloadAttachment(attachment);
                   },
                 ),
             ],

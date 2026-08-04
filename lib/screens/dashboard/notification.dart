@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../core/utils/moderation_display.dart';
+import '../../core/utils/notification_display.dart';
+import '../../core/utils/notification_router.dart';
 import '../../providers/notification_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/contract_provider.dart';
-import '../../providers/profile_provider.dart';
 import '../../models/notification_model.dart';
 import '../../widgets/notification_item.dart';
 import '../../widgets/load_more_button.dart';
-import '../workspace/workspace_detail.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -33,11 +30,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
-    if (diff.inHours < 24) return '${diff.inHours} hours ago';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    if (diff.inMinutes < 60) return _ago(diff.inMinutes, 'minute');
+    if (diff.inHours < 24) return _ago(diff.inHours, 'hour');
+    if (diff.inDays < 7) return _ago(diff.inDays, 'day');
     return '${dt.day} ${_month(dt.month)} ${dt.year}';
   }
+
+  String _ago(int value, String unit) =>
+      '$value $unit${value == 1 ? '' : 's'} ago';
 
   String _month(int m) => const [
     '',
@@ -55,105 +55,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     'Dec',
   ][m];
 
-  IconData _iconForType(String type) {
-    switch (type) {
-      case 'new_message':
-        return Icons.chat_bubble_outline;
-      case 'new_proposal':
-        return Icons.description_outlined;
-      case 'proposal_accepted':
-        return Icons.check_circle_outline;
-      case 'proposal_rejected':
-        return Icons.cancel_outlined;
-      case 'contract_started':
-        return Icons.handshake_outlined;
-      case 'contract_cancelled':
-        return Icons.block_outlined;
-      case 'contract_completed':
-        return Icons.task_alt_outlined;
-      case 'work_submitted':
-        return Icons.upload_file_outlined;
-      case 'revision_requested':
-        return Icons.edit_outlined;
-      case kNotifJobClosedHarmfulText:
-      case 'job_closed_scam':
-      case 'job_closed_admin':
-      case 'job_closed_reports':
-      case 'job_closed_admin_contract':
-        return Icons.gpp_bad_rounded;
-      case 'review_published':
-        return Icons.star_outline_rounded;
-      case 'review_publish_confirmed':
-        return Icons.rate_review_outlined;
-      case 'review_suppressed':
-        return Icons.visibility_off_outlined;
-      case 'review_flagged':
-        return Icons.hourglass_top_outlined;
-      case 'contract_disputed':
-        return Icons.gavel_outlined;
-      case 'dispute_resolved':
-        return Icons.balance_outlined;
-      case 'contract_overdue':
-        return Icons.event_busy_outlined;
-      case 'contract_autoapprove_reminder':
-      case 'contract_autoapprove_final_warning':
-        return Icons.timer_outlined;
-      case 'contract_auto_approved':
-        return Icons.auto_mode_outlined;
-      default:
-        return Icons.notifications_outlined;
-    }
-  }
-
-  Color _colorForType(String type) {
-    switch (type) {
-      case kNotifJobClosedHarmfulText:
-      case 'job_closed_scam':
-      case 'job_closed_admin':
-      case 'job_closed_reports':
-      case 'job_closed_admin_contract':
-      case 'contract_disputed':
-      case 'dispute_resolved':
-      case 'contract_overdue':
-      case 'contract_autoapprove_final_warning':
-      case 'contract_auto_approved':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF6E6BF8);
-    }
-  }
-
   Future<void> _openNotification(NotificationModel notif) async {
     context.read<NotificationProvider>().markAsRead(notif.id);
-
-    final contractId = notif.data['contract_id']?.toString();
-    if (contractId == null || contractId.isEmpty) return;
-
-    final auth = context.read<AuthProvider>();
-    final token = auth.token;
-    if (token == null) return;
-
-    final contractProvider = context.read<ContractProvider>();
-    await contractProvider.fetchContractById(token, contractId);
-    if (!mounted) return;
-
-    final contract = contractProvider.currentContract;
-    if (contract == null || contract.contractId != contractId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open this contract.')),
-      );
-      return;
-    }
-
-    final isFreelancer = context.read<ProfileProvider>().isFreelancer;
-    Navigator.push(
+    await openNotificationTarget(
       context,
-      MaterialPageRoute(
-        builder: (_) => WorkspaceDetailScreen(
-          contract: contract,
-          viewerRole: isFreelancer ? 'freelancer' : 'client',
-        ),
-      ),
+      type: notif.type,
+      data: notif.data,
     );
   }
 
@@ -298,17 +205,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
                         final NotificationModel notif =
                             provider.notifications[index];
+                        final presentation = notificationPresentation(
+                          notif.type,
+                          apiTitle: notif.title,
+                        );
                         return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () => _openNotification(notif),
                           child: NotificationItem(
-                            boldPrefix: notif.title,
-                            message: notif.body,
+                            title: presentation.title,
+                            message: notificationBody(
+                              type: notif.type,
+                              apiTitle: notif.title,
+                              apiBody: notif.body,
+                            ),
                             timestamp: _formatTime(notif.createdAt),
                             isUnread: !notif.isRead,
                             avatar: Icon(
-                              _iconForType(notif.type),
+                              presentation.icon,
                               size: 22,
-                              color: _colorForType(notif.type),
+                              color: presentation.color,
                             ),
                           ),
                         );

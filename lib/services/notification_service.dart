@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../core/utils/notification_router.dart';
 import '../models/notification_model.dart';
 import 'session_guard.dart';
 
@@ -98,6 +99,8 @@ class NotificationService {
     }
   }
 
+  /// Opening a push notification lands on the same screen as tapping the
+  /// matching row in the in-app notification list.
   static void _navigate(
     GlobalKey<NavigatorState> navigatorKey,
     Map<String, dynamic> data,
@@ -106,39 +109,7 @@ class NotificationService {
     final context = navigatorKey.currentContext;
     if (type == null || context == null) return;
 
-    switch (type) {
-      case 'new_message':
-        navigatorKey.currentState?.pushNamed(
-          '/workspace',
-          arguments: data['thread_id'],
-        );
-        break;
-      case 'new_proposal':
-        navigatorKey.currentState?.pushNamed(
-          '/proposals',
-          arguments: data['job_post_id'],
-        );
-        break;
-      case 'proposal_accepted':
-      case 'proposal_rejected':
-        navigatorKey.currentState?.pushNamed(
-          '/proposals',
-          arguments: data['proposal_id'],
-        );
-        break;
-      case 'contract_started':
-      case 'contract_cancelled':
-      case 'contract_completed':
-      case 'work_submitted':
-      case 'revision_requested':
-        navigatorKey.currentState?.pushNamed(
-          '/contract',
-          arguments: data['contract_id'],
-        );
-        break;
-      default:
-        navigatorKey.currentState?.pushNamed('/notifications');
-    }
+    openNotificationTarget(context, type: type, data: data);
   }
 
   static Future<void> saveTokenToBackend() async {

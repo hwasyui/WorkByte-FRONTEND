@@ -582,36 +582,30 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 11),
-                      Row(
-                        children: [
-                          if (thread.jobPost != null)
-                            _contextChip(
-                              icon: Icons.work_outline_rounded,
-                              label: 'Job context',
+                      if (thread.unreadCount > 0 && !isIncomingRequest) ...[
+                        const SizedBox(height: 11),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
                             ),
-                          if (thread.jobPost != null) const SizedBox(width: 8),
-                          if (thread.unreadCount > 0 && !isIncomingRequest)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Text(
-                                '${thread.unreadCount} unread',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              '${thread.unreadCount} unread',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -779,31 +773,6 @@ class _DMThreadListScreenState extends State<DMThreadListScreen>
           fontWeight: FontWeight.w600,
           color: textColor,
         ),
-      ),
-    );
-  }
-
-  Widget _contextChip({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F7FB),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: AppColors.primary),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF6C6C76),
-            ),
-          ),
-        ],
       ),
     );
   }
