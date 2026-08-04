@@ -144,12 +144,16 @@ class AdminService {
     int page = 1,
     int pageSize = 20,
     String? search,
+    String? createdFrom,
+    String? createdTo,
   }) async {
     final uri = Uri.parse('$_baseUrl/freelancers/browse/all').replace(
       queryParameters: {
         'page': page.toString(),
         'page_size': pageSize.toString(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (createdFrom != null) 'created_from': createdFrom,
+        if (createdTo != null) 'created_to': createdTo,
       },
     );
     final response = await AdminSessionGuard.guard(
@@ -167,12 +171,16 @@ class AdminService {
     int page = 1,
     int pageSize = 20,
     String? search,
+    String? createdFrom,
+    String? createdTo,
   }) async {
     final uri = Uri.parse('$_baseUrl/clients/browse/all').replace(
       queryParameters: {
         'page': page.toString(),
         'page_size': pageSize.toString(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (createdFrom != null) 'created_from': createdFrom,
+        if (createdTo != null) 'created_to': createdTo,
       },
     );
     final response = await AdminSessionGuard.guard(
@@ -217,6 +225,10 @@ class AdminService {
     bool? isAiGenerated,
     String? clientId,
     String? search,
+    String? createdFrom,
+    String? createdTo,
+    String? closedFrom,
+    String? closedTo,
     String sortBy = 'created_at',
     String sortDir = 'desc',
     int page = 1,
@@ -237,6 +249,10 @@ class AdminService {
       if (isAiGenerated != null) 'is_ai_generated': isAiGenerated.toString(),
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (createdFrom != null) 'created_from': createdFrom,
+      if (createdTo != null) 'created_to': createdTo,
+      if (closedFrom != null) 'closed_from': closedFrom,
+      if (closedTo != null) 'closed_to': closedTo,
       'sort_by': sortBy,
       'sort_dir': sortDir,
       'page': page.toString(),
@@ -263,6 +279,10 @@ class AdminService {
     bool? emailVerified,
     String? banReason,
     String? search,
+    String? createdFrom,
+    String? createdTo,
+    String? bannedFrom,
+    String? bannedTo,
     String sortBy = 'created_at',
     String sortDir = 'desc',
     int page = 1,
@@ -274,6 +294,10 @@ class AdminService {
       if (emailVerified != null) 'email_verified': emailVerified.toString(),
       if (banReason != null && banReason.isNotEmpty) 'ban_reason': banReason,
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (createdFrom != null) 'created_from': createdFrom,
+      if (createdTo != null) 'created_to': createdTo,
+      if (bannedFrom != null) 'banned_from': bannedFrom,
+      if (bannedTo != null) 'banned_to': bannedTo,
       'sort_by': sortBy,
       'sort_dir': sortDir,
       'page': page.toString(),
@@ -315,6 +339,8 @@ class AdminService {
     String token, {
     String status = 'all',
     String reportedType = 'all',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 50,
   }) async {
@@ -322,6 +348,8 @@ class AdminService {
       queryParameters: {
         'status': status,
         'reported_type': reportedType,
+        if (startDate != null) 'start_date': startDate,
+        if (endDate != null) 'end_date': endDate,
         'page': page.toString(),
         'page_size': pageSize.toString(),
       },
@@ -362,6 +390,8 @@ class AdminService {
     String status = 'pending',
     String sortBy = 'scam_score',
     String sortDir = 'desc',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -371,6 +401,8 @@ class AdminService {
           'status': status,
           'sort_by': sortBy,
           'sort_dir': sortDir,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -412,6 +444,8 @@ class AdminService {
     bool? isResolved,
     String sortBy = 'triggered_at',
     String sortDir = 'desc',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -421,6 +455,8 @@ class AdminService {
           if (isResolved != null) 'is_resolved': isResolved.toString(),
           'sort_by': sortBy,
           'sort_dir': sortDir,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -454,6 +490,8 @@ class AdminService {
     String status = 'all',
     String sortBy = 'created_at',
     String sortDir = 'desc',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -463,6 +501,8 @@ class AdminService {
           'status': status,
           'sort_by': sortBy,
           'sort_dir': sortDir,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -514,6 +554,8 @@ class AdminService {
     String status = 'all',
     String sortBy = 'created_at',
     String sortDir = 'desc',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -523,6 +565,8 @@ class AdminService {
           'status': status,
           'sort_by': sortBy,
           'sort_dir': sortDir,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -694,6 +738,8 @@ class AdminService {
     String status = 'pending',
     String sortBy = 'max_score',
     String sortDir = 'desc',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -703,6 +749,8 @@ class AdminService {
           'status': status,
           'sort_by': sortBy,
           'sort_dir': sortDir,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -801,6 +849,8 @@ class AdminService {
   static Future<Map<String, dynamic>> getAppeals(
     String token, {
     String status = 'all',
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 30,
   }) async {
@@ -808,6 +858,8 @@ class AdminService {
       final uri = Uri.parse('$_baseUrl/admin/appeals').replace(
         queryParameters: {
           'status': status,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -869,6 +921,8 @@ class AdminService {
   static Future<Map<String, dynamic>> getDisputedContracts(
     String token, {
     String? search,
+    String? startDate,
+    String? endDate,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -876,6 +930,8 @@ class AdminService {
       final uri = Uri.parse('$_baseUrl/admin/contracts/disputed').replace(
         queryParameters: {
           if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
           'page': page.toString(),
           'page_size': pageSize.toString(),
         },
@@ -909,27 +965,6 @@ class AdminService {
             if (note != null && note.isNotEmpty) 'note': note,
             if (newDeadline != null) 'new_deadline': newDeadline,
           }),
-        ),
-      );
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body) as Map<String, dynamic>;
-        final details = body['details'] ?? body['data'] ?? body;
-        if (details is Map) return Map<String, dynamic>.from(details);
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  static Future<Map<String, dynamic>?> getClientAutoapproveHistory(
-    String token,
-    String clientId,
-  ) async {
-    try {
-      final res = await AdminSessionGuard.guard(
-        token,
-        (t) => http.get(
-          Uri.parse('$_baseUrl/admin/clients/$clientId/autoapprove-history'),
-          headers: _headers(t),
         ),
       );
       if (res.statusCode == 200) {

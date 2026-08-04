@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'providers/admin_provider.dart';
 import 'screens/admin/admin_gate.dart';
+import 'widgets/app_toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +30,7 @@ class AdminWebApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
           useMaterial3: true,
         ),
-        home: const AdminGate(),
+        home: const AppToastHost(child: AdminGate()),
       ),
     );
   }

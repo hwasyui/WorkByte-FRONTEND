@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/admin_service.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
@@ -21,21 +23,40 @@ class AdminJobsPage extends StatefulWidget {
 class _AdminJobsPageState extends State<AdminJobsPage> {
   int _currentPage = 1;
   String _statusFilter = 'all';
+  DateTimeRange? _dateRange;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
 
   final List<String> _statuses = ['all', 'draft', 'active', 'closed', 'filled'];
 
+  String? _isoDate(DateTime? d) => d == null
+      ? null
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  void _load(int page) {
+    context.read<AdminProvider>().loadJobsPage(
+      page,
+      status: _statusFilter == 'all' ? null : _statusFilter,
+      search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
+      createdFrom: _isoDate(_dateRange?.start),
+      createdTo: _isoDate(_dateRange?.end),
+    );
+  }
+
   void _onSearchChanged(String q) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() => _currentPage = 1);
-      context.read<AdminProvider>().loadJobsPage(
-        1,
-        status: _statusFilter == 'all' ? null : _statusFilter,
-        search: q.isEmpty ? null : q,
-      );
+      _load(1);
     });
+  }
+
+  void _onDateRangeChanged(DateTimeRange? range) {
+    setState(() {
+      _dateRange = range;
+      _currentPage = 1;
+    });
+    _load(1);
   }
 
   @override
@@ -69,10 +90,21 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                 border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
               ),
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: _SearchField(
-                controller: _searchCtrl,
-                onChanged: _onSearchChanged,
-                hint: 'Search jobs by title…',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _SearchField(
+                      controller: _searchCtrl,
+                      onChanged: _onSearchChanged,
+                      hint: 'Search jobs by title…',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  DateRangeFilterButton(
+                    range: _dateRange,
+                    onChanged: _onDateRangeChanged,
+                  ),
+                ],
               ),
             ),
             FilterDropdownBar(
@@ -91,11 +123,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                       _statusFilter = status;
                       _currentPage = 1;
                     });
-                    admin.loadJobsPage(
-                      1,
-                      status: status == 'all' ? null : status,
-                      search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-                    );
+                    _load(1);
                   },
                 ),
               ],
@@ -111,11 +139,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF4F46E5),
-                      onRefresh: () => admin.loadJobsPage(
-                        _currentPage,
-                        status: _statusFilter == 'all' ? null : _statusFilter,
-                        search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-                      ),
+                      onRefresh: () async => _load(_currentPage),
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: admin.tableJobs.length,
@@ -152,11 +176,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                           onPressed: _currentPage > 1
                               ? () {
                                   setState(() => _currentPage--);
-                                  admin.loadJobsPage(
-                                    _currentPage,
-                                    status: _statusFilter == 'all' ? null : _statusFilter,
-                                    search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-                                  );
+                                  _load(_currentPage);
                                 }
                               : null,
                           color: const Color(0xFF4F46E5),
@@ -167,11 +187,7 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
                           onPressed: _currentPage < totalPages
                               ? () {
                                   setState(() => _currentPage++);
-                                  admin.loadJobsPage(
-                                    _currentPage,
-                                    status: _statusFilter == 'all' ? null : _statusFilter,
-                                    search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-                                  );
+                                  _load(_currentPage);
                                 }
                               : null,
                           color: const Color(0xFF4F46E5),
@@ -315,9 +331,37 @@ class _JobDetailSheet extends StatefulWidget {
 
 class _JobDetailSheetState extends State<_JobDetailSheet> {
   bool _closing = false;
+  bool _loadingDetail = true;
+  Map<String, dynamic>? _detail;
+  List<Map<String, dynamic>> _roles = [];
 
   String get _jobPostId =>
       (widget.job['job_post_id'] ?? widget.job['id'])?.toString() ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFullDetail();
+  }
+
+  Future<void> _fetchFullDetail() async {
+    final token = context.read<AdminProvider>().token;
+    if (token == null || _jobPostId.isEmpty) {
+      setState(() => _loadingDetail = false);
+      return;
+    }
+    final results = await Future.wait([
+      AdminService.getJobDetail(token, _jobPostId),
+      AdminService.getJobRoles(token, _jobPostId),
+    ]);
+    if (mounted) {
+      setState(() {
+        _detail = results[0] as Map<String, dynamic>?;
+        _roles = results[1] as List<Map<String, dynamic>>;
+        _loadingDetail = false;
+      });
+    }
+  }
 
   Future<void> _handleClose() async {
     if (_jobPostId.isEmpty) return;
@@ -454,7 +498,7 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final job = widget.job;
+    final job = {...widget.job, if (_detail != null) ..._detail!};
     final status = job['status'] as String? ?? 'draft';
     final color = _statusColor(status);
     final category = (job['project_category'] as String? ?? '').replaceAll('_', ' ');
@@ -563,9 +607,71 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
                   Text(
                     job['description'] as String? ?? job['job_description'] as String? ?? '',
                     style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151), height: 1.5),
-                    maxLines: 5,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+                if (_loadingDetail) ...[
+                  const SizedBox(height: 20),
+                  const Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4F46E5)),
+                    ),
+                  ),
+                ] else if (_roles.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SheetSectionLabel('ROLES (${_roles.length})'),
+                  const SizedBox(height: 8),
+                  ..._roles.map((role) {
+                    final rTitle = role['role_title']?.toString() ?? 'Untitled Role';
+                    final budget = role['role_budget'];
+                    final currency = role['budget_currency']?.toString() ?? 'USD';
+                    final budgetType = role['budget_type']?.toString() ?? '';
+                    final positions = role['positions_available']?.toString() ?? '1';
+                    final rDesc = role['role_description']?.toString() ?? '';
+                    String budgetStr = '';
+                    if (budget != null) {
+                      budgetStr = '$currency $budget';
+                      if (budgetType.isNotEmpty) budgetStr += ' / $budgetType';
+                    }
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  rTitle,
+                                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12)),
+                                child: Text('$positions slot(s)', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF4F46E5), fontWeight: FontWeight.w500)),
+                              ),
+                            ],
+                          ),
+                          if (budgetStr.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(budgetStr, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF059669), fontWeight: FontWeight.w500)),
+                          ],
+                          if (rDesc.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(rDesc, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4)),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
                 ],
                 if (canClose) ...[
                   const SizedBox(height: 24),

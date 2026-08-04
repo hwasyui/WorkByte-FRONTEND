@@ -9,6 +9,7 @@ import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -22,10 +23,15 @@ class _AdminUsersPageState extends State<AdminUsersPage>
   late TabController _tabController;
   int _freelancerPage = 1;
   int _clientPage = 1;
+  DateTimeRange? _dateRange;
 
   final _freelancerSearchCtrl = TextEditingController();
   final _clientSearchCtrl = TextEditingController();
   Timer? _debounce;
+
+  String? _isoDate(DateTime? d) => d == null
+      ? null
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   @override
   void initState() {
@@ -42,7 +48,12 @@ class _AdminUsersPageState extends State<AdminUsersPage>
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() => _freelancerPage = 1);
-      context.read<AdminProvider>().loadFreelancersPage(1, search: q.isEmpty ? null : q);
+      context.read<AdminProvider>().loadFreelancersPage(
+        1,
+        search: q.isEmpty ? null : q,
+        createdFrom: _isoDate(_dateRange?.start),
+        createdTo: _isoDate(_dateRange?.end),
+      );
     });
   }
 
@@ -50,8 +61,34 @@ class _AdminUsersPageState extends State<AdminUsersPage>
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() => _clientPage = 1);
-      context.read<AdminProvider>().loadClientsPage(1, search: q.isEmpty ? null : q);
+      context.read<AdminProvider>().loadClientsPage(
+        1,
+        search: q.isEmpty ? null : q,
+        createdFrom: _isoDate(_dateRange?.start),
+        createdTo: _isoDate(_dateRange?.end),
+      );
     });
+  }
+
+  void _onDateRangeChanged(DateTimeRange? range) {
+    setState(() {
+      _dateRange = range;
+      _freelancerPage = 1;
+      _clientPage = 1;
+    });
+    final admin = context.read<AdminProvider>();
+    admin.loadFreelancersPage(
+      1,
+      search: _freelancerSearchCtrl.text.isEmpty ? null : _freelancerSearchCtrl.text,
+      createdFrom: _isoDate(range?.start),
+      createdTo: _isoDate(range?.end),
+    );
+    admin.loadClientsPage(
+      1,
+      search: _clientSearchCtrl.text.isEmpty ? null : _clientSearchCtrl.text,
+      createdFrom: _isoDate(range?.start),
+      createdTo: _isoDate(range?.end),
+    );
   }
 
   @override
@@ -90,6 +127,11 @@ class _AdminUsersPageState extends State<AdminUsersPage>
                     label: 'Clients',
                     value: admin.totalClients.toString(),
                     color: const Color(0xFF0891B2),
+                  ),
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: _dateRange,
+                    onChanged: _onDateRangeChanged,
                   ),
                 ],
               ),
@@ -138,6 +180,8 @@ class _AdminUsersPageState extends State<AdminUsersPage>
                             admin.loadFreelancersPage(
                               p,
                               search: _freelancerSearchCtrl.text.isEmpty ? null : _freelancerSearchCtrl.text,
+                              createdFrom: _isoDate(_dateRange?.start),
+                              createdTo: _isoDate(_dateRange?.end),
                             );
                           },
                           subtitleBuilder: (u) {
@@ -171,6 +215,8 @@ class _AdminUsersPageState extends State<AdminUsersPage>
                             admin.loadClientsPage(
                               p,
                               search: _clientSearchCtrl.text.isEmpty ? null : _clientSearchCtrl.text,
+                              createdFrom: _isoDate(_dateRange?.start),
+                              createdTo: _isoDate(_dateRange?.end),
                             );
                           },
                           subtitleBuilder: (u) {

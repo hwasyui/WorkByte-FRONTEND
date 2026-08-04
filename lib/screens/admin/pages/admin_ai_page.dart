@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_reason_dialog.dart';
@@ -134,6 +135,20 @@ class _ScamTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: admin.scamDateRange,
+                    onChanged: admin.setScamDateRange,
+                    accentColor: const Color(0xFFDC2626),
+                  ),
+                ],
+              ),
+            ),
             FilterDropdownBar(
               summaryText: admin.scamStatusFilter == 'all'
                   ? 'All flags'
@@ -650,6 +665,19 @@ class _ModerationTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: admin.moderationDateRange,
+                    onChanged: admin.setModerationDateRange,
+                  ),
+                ],
+              ),
+            ),
             FilterDropdownBar(
               summaryText: admin.moderationStatusFilter == 'all'
                   ? 'All flags'
@@ -1828,6 +1856,20 @@ class _RedFlagsList extends StatelessWidget {
         final totalPages = _totalPages(admin.reviewRedFlagsPagination);
         return Column(
           children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: admin.reviewRedFlagsDateRange,
+                    onChanged: admin.setReviewRedFlagsDateRange,
+                    accentColor: const Color(0xFFDC2626),
+                  ),
+                ],
+              ),
+            ),
             FilterDropdownBar(
               summaryText: admin.reviewRedFlagsResolvedFilter == 'all'
                   ? 'All alerts'
@@ -2056,6 +2098,8 @@ class _FlaggedReviewsList extends StatelessWidget {
           pagination: admin.flaggedReviewsPagination,
           holdFilter: admin.flaggedReviewStatusFilter,
           sortBy: admin.flaggedReviewSortBy,
+          dateRange: admin.flaggedReviewsDateRange,
+          onDateRangeChanged: admin.setFlaggedReviewsDateRange,
           onHoldSelect: (s) => admin.loadFlaggedReviews(status: s),
           onSortSelect: admin.setFlaggedReviewSort,
           onPageChange: (p) => admin.loadFlaggedReviews(page: p),
@@ -2080,6 +2124,8 @@ class _FlaggedClientReviewsList extends StatelessWidget {
           pagination: admin.flaggedClientReviewsPagination,
           holdFilter: admin.flaggedClientReviewStatusFilter,
           sortBy: admin.flaggedClientReviewSortBy,
+          dateRange: admin.flaggedClientReviewsDateRange,
+          onDateRangeChanged: admin.setFlaggedClientReviewsDateRange,
           onHoldSelect: (s) => admin.loadFlaggedClientReviews(status: s),
           onSortSelect: admin.setFlaggedClientReviewSort,
           onPageChange: (p) => admin.loadFlaggedClientReviews(page: p),
@@ -2097,6 +2143,8 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
   final Map<String, dynamic> pagination;
   final String holdFilter;
   final String sortBy;
+  final DateTimeRange? dateRange;
+  final ValueChanged<DateTimeRange?> onDateRangeChanged;
   final ValueChanged<String> onHoldSelect;
   final ValueChanged<String> onSortSelect;
   final ValueChanged<int> onPageChange;
@@ -2109,6 +2157,8 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
     required this.pagination,
     required this.holdFilter,
     required this.sortBy,
+    required this.dateRange,
+    required this.onDateRangeChanged,
     required this.onHoldSelect,
     required this.onSortSelect,
     required this.onPageChange,
@@ -2120,6 +2170,20 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
     final total = _totalCount(pagination, items.length);
     return Column(
       children: [
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: Row(
+            children: [
+              const Spacer(),
+              DateRangeFilterButton(
+                range: dateRange,
+                onChanged: onDateRangeChanged,
+                accentColor: const Color(0xFF7C3AED),
+              ),
+            ],
+          ),
+        ),
         FilterDropdownBar(
           summaryText:
               holdFilter == 'all' ? 'All holds' : _holdLevelLabel(holdFilter),

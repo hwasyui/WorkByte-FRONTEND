@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/filter_dropdown_bar.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
@@ -19,6 +20,12 @@ class AdminReportsPage extends StatefulWidget {
 }
 
 class _AdminReportsPageState extends State<AdminReportsPage> {
+  DateTimeRange? _dateRange;
+
+  String? _isoDate(DateTime? d) => d == null
+      ? null
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   @override
   void initState() {
     super.initState();
@@ -27,12 +34,35 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     });
   }
 
+  void _onDateRangeChanged(DateTimeRange? range) {
+    setState(() => _dateRange = range);
+    context.read<AdminProvider>().loadReports(
+      startDate: _isoDate(range?.start),
+      endDate: _isoDate(range?.end),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
+        final startDate = _isoDate(_dateRange?.start);
+        final endDate = _isoDate(_dateRange?.end);
         return Column(
           children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: _dateRange,
+                    onChanged: _onDateRangeChanged,
+                  ),
+                ],
+              ),
+            ),
             FilterDropdownBar(
               summaryText: admin.reportsStatusFilter != 'all' || admin.reportsTypeFilter != 'all'
                   ? 'Filters active'
@@ -46,7 +76,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                   options: const ['all', 'pending', 'accepted', 'dismissed'],
                   labelFor: (s) => s == 'all' ? 'All' : '${s[0].toUpperCase()}${s.substring(1)}',
                   selected: admin.reportsStatusFilter,
-                  onSelect: (s) => admin.loadReports(status: s),
+                  onSelect: (s) => admin.loadReports(status: s, startDate: startDate, endDate: endDate),
                 ),
                 FilterGroupData(
                   label: 'TYPE',
@@ -59,7 +89,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     }
                   },
                   selected: admin.reportsTypeFilter,
-                  onSelect: (t) => admin.loadReports(reportedType: t),
+                  onSelect: (t) => admin.loadReports(reportedType: t, startDate: startDate, endDate: endDate),
                 ),
               ],
             ),
@@ -78,7 +108,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                         )
                       : RefreshIndicator(
                           color: const Color(0xFF4F46E5),
-                          onRefresh: () => admin.loadReports(),
+                          onRefresh: () => admin.loadReports(startDate: startDate, endDate: endDate),
                           child: ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                             itemCount: admin.reports.length,

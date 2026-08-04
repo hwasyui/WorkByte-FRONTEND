@@ -22,6 +22,10 @@ class AdminProvider extends ChangeNotifier {
     });
   }
 
+  String? _isoDate(DateTime? d) => d == null
+      ? null
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   Future<String?> _attemptRefresh() async {
     try {
       final newToken = await AdminService.refreshAccessToken();
@@ -82,6 +86,9 @@ class AdminProvider extends ChangeNotifier {
   String _flaggedClientReviewStatusFilter = 'all';
   String _flaggedReviewSortBy = 'created_at';
   String _flaggedClientReviewSortBy = 'created_at';
+  DateTimeRange? _reviewRedFlagsDateRange;
+  DateTimeRange? _flaggedReviewsDateRange;
+  DateTimeRange? _flaggedClientReviewsDateRange;
   List<Map<String, dynamic>> _moderationItems = [];
   List<Map<String, dynamic>> _closedJobs = [];
   List<Map<String, dynamic>> _closedAccounts = [];
@@ -89,6 +96,8 @@ class AdminProvider extends ChangeNotifier {
   bool _isClosedLoading = false;
   String _scamStatusFilter = 'all';
   String _moderationStatusFilter = 'all';
+  DateTimeRange? _scamDateRange;
+  DateTimeRange? _moderationDateRange;
   String _closedJobReasonFilter = 'all';
   String _closedAccountRoleFilter = 'all';
   String _closedAccountReasonFilter = 'all';
@@ -98,10 +107,12 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _appeals = [];
   bool _isAppealsLoading = false;
   String _appealsStatusFilter = 'all';
+  DateTimeRange? _appealsDateRange;
   Map<String, dynamic> _appealsPagination = {};
 
   List<Map<String, dynamic>> _disputedContracts = [];
   bool _isDisputesLoading = false;
+  DateTimeRange? _disputesDateRange;
   Map<String, dynamic> _disputesPagination = {};
 
   String? get token => _token;
@@ -153,6 +164,10 @@ class AdminProvider extends ChangeNotifier {
   String get flaggedClientReviewStatusFilter => _flaggedClientReviewStatusFilter;
   String get flaggedReviewSortBy => _flaggedReviewSortBy;
   String get flaggedClientReviewSortBy => _flaggedClientReviewSortBy;
+  DateTimeRange? get reviewRedFlagsDateRange => _reviewRedFlagsDateRange;
+  DateTimeRange? get flaggedReviewsDateRange => _flaggedReviewsDateRange;
+  DateTimeRange? get flaggedClientReviewsDateRange =>
+      _flaggedClientReviewsDateRange;
   List<Map<String, dynamic>> get moderationItems => _moderationItems;
   List<Map<String, dynamic>> get closedJobs => _closedJobs;
   List<Map<String, dynamic>> get closedAccounts => _closedAccounts;
@@ -160,6 +175,8 @@ class AdminProvider extends ChangeNotifier {
   bool get isClosedLoading => _isClosedLoading;
   String get scamStatusFilter => _scamStatusFilter;
   String get moderationStatusFilter => _moderationStatusFilter;
+  DateTimeRange? get scamDateRange => _scamDateRange;
+  DateTimeRange? get moderationDateRange => _moderationDateRange;
   String get closedJobReasonFilter => _closedJobReasonFilter;
   String get closedAccountRoleFilter => _closedAccountRoleFilter;
   String get closedAccountReasonFilter => _closedAccountReasonFilter;
@@ -169,10 +186,12 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get appeals => _appeals;
   bool get isAppealsLoading => _isAppealsLoading;
   String get appealsStatusFilter => _appealsStatusFilter;
+  DateTimeRange? get appealsDateRange => _appealsDateRange;
   Map<String, dynamic> get appealsPagination => _appealsPagination;
 
   List<Map<String, dynamic>> get disputedContracts => _disputedContracts;
   bool get isDisputesLoading => _isDisputesLoading;
+  DateTimeRange? get disputesDateRange => _disputesDateRange;
   Map<String, dynamic> get disputesPagination => _disputesPagination;
   int get pendingDisputesCount =>
       (_disputesPagination['total'] as num?)?.toInt() ??
@@ -266,7 +285,12 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadReports({String? status, String? reportedType}) async {
+  Future<void> loadReports({
+    String? status,
+    String? reportedType,
+    String? startDate,
+    String? endDate,
+  }) async {
     if (_token == null) return;
     if (status != null) _reportsStatusFilter = status;
     if (reportedType != null) _reportsTypeFilter = reportedType;
@@ -277,6 +301,8 @@ class AdminProvider extends ChangeNotifier {
         _token!,
         status: _reportsStatusFilter,
         reportedType: _reportsTypeFilter,
+        startDate: startDate,
+        endDate: endDate,
       );
       _reports = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
@@ -368,7 +394,12 @@ class AdminProvider extends ChangeNotifier {
     loadDashboardStats();
   }
 
-  Future<void> loadFreelancersPage(int page, {String? search}) async {
+  Future<void> loadFreelancersPage(
+    int page, {
+    String? search,
+    String? createdFrom,
+    String? createdTo,
+  }) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
@@ -380,6 +411,8 @@ class AdminProvider extends ChangeNotifier {
           role: 'freelancer',
           isBanned: false,
           search: search,
+          createdFrom: createdFrom,
+          createdTo: createdTo,
           page: page,
           pageSize: 20,
         );
@@ -395,7 +428,13 @@ class AdminProvider extends ChangeNotifier {
           'pagination': raw['pagination'] ?? {},
         };
       } else {
-        data = await AdminService.getFreelancers(_token!, page: page, pageSize: 20);
+        data = await AdminService.getFreelancers(
+          _token!,
+          page: page,
+          pageSize: 20,
+          createdFrom: createdFrom,
+          createdTo: createdTo,
+        );
       }
       _tableFreelancers = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _freelancerPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
@@ -409,7 +448,12 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadClientsPage(int page, {String? search}) async {
+  Future<void> loadClientsPage(
+    int page, {
+    String? search,
+    String? createdFrom,
+    String? createdTo,
+  }) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
@@ -421,6 +465,8 @@ class AdminProvider extends ChangeNotifier {
           role: 'client',
           isBanned: false,
           search: search,
+          createdFrom: createdFrom,
+          createdTo: createdTo,
           page: page,
           pageSize: 20,
         );
@@ -436,7 +482,13 @@ class AdminProvider extends ChangeNotifier {
           'pagination': raw['pagination'] ?? {},
         };
       } else {
-        data = await AdminService.getClients(_token!, page: page, pageSize: 20);
+        data = await AdminService.getClients(
+          _token!,
+          page: page,
+          pageSize: 20,
+          createdFrom: createdFrom,
+          createdTo: createdTo,
+        );
       }
       _tableClients = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _clientPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
@@ -449,7 +501,13 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadJobsPage(int page, {String? status, String? search}) async {
+  Future<void> loadJobsPage(
+    int page, {
+    String? status,
+    String? search,
+    String? createdFrom,
+    String? createdTo,
+  }) async {
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
@@ -460,6 +518,8 @@ class AdminProvider extends ChangeNotifier {
         page: page,
         pageSize: 20,
         search: search,
+        createdFrom: createdFrom,
+        createdTo: createdTo,
       );
       _tableJobs = List<Map<String, dynamic>>.from(data['items'] ?? []);
       _jobPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
@@ -492,6 +552,8 @@ class AdminProvider extends ChangeNotifier {
   Future<void> loadClosedJobs({
     String? closureReason,
     String? search,
+    String? closedFrom,
+    String? closedTo,
     int page = 1,
   }) async {
     if (_token == null) return;
@@ -506,6 +568,8 @@ class AdminProvider extends ChangeNotifier {
             ? null
             : _closedJobReasonFilter,
         search: search,
+        closedFrom: closedFrom,
+        closedTo: closedTo,
         sortBy: 'closed_at',
         sortDir: 'desc',
         page: page,
@@ -526,6 +590,8 @@ class AdminProvider extends ChangeNotifier {
     String? role,
     String? banReason,
     String? search,
+    String? bannedFrom,
+    String? bannedTo,
     int page = 1,
   }) async {
     if (_token == null) return;
@@ -544,6 +610,8 @@ class AdminProvider extends ChangeNotifier {
             ? null
             : _closedAccountReasonFilter,
         search: search,
+        bannedFrom: bannedFrom,
+        bannedTo: bannedTo,
         sortBy: 'report_banned_at',
         sortDir: 'desc',
         page: page,
@@ -569,6 +637,8 @@ class AdminProvider extends ChangeNotifier {
       final data = await AdminService.getScamFlags(
         _token!,
         status: _scamStatusFilter,
+        startDate: _isoDate(_scamDateRange?.start),
+        endDate: _isoDate(_scamDateRange?.end),
       );
       _scamFlags = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
@@ -576,6 +646,11 @@ class AdminProvider extends ChangeNotifier {
     }
     _isAiLoading = false;
     notifyListeners();
+  }
+
+  void setScamDateRange(DateTimeRange? range) {
+    _scamDateRange = range;
+    loadScamFlags();
   }
 
   Future<bool> actionScamFlag(String flagId, String action) async {
@@ -605,6 +680,8 @@ class AdminProvider extends ChangeNotifier {
             ? null
             : _reviewRedFlagsResolvedFilter == 'resolved',
         sortBy: _reviewRedFlagsSortBy,
+        startDate: _isoDate(_reviewRedFlagsDateRange?.start),
+        endDate: _isoDate(_reviewRedFlagsDateRange?.end),
         page: page ?? 1,
       );
       _reviewRedFlags = List<Map<String, dynamic>>.from(data['items'] ?? []);
@@ -620,6 +697,11 @@ class AdminProvider extends ChangeNotifier {
 
   void setReviewRedFlagsSort(String sortBy) {
     _reviewRedFlagsSortBy = sortBy;
+    loadReviewRedFlags();
+  }
+
+  void setReviewRedFlagsDateRange(DateTimeRange? range) {
+    _reviewRedFlagsDateRange = range;
     loadReviewRedFlags();
   }
 
@@ -649,6 +731,8 @@ class AdminProvider extends ChangeNotifier {
         _token!,
         status: _flaggedReviewStatusFilter,
         sortBy: _flaggedReviewSortBy,
+        startDate: _isoDate(_flaggedReviewsDateRange?.start),
+        endDate: _isoDate(_flaggedReviewsDateRange?.end),
         page: page ?? 1,
       );
       _flaggedReviews = List<Map<String, dynamic>>.from(data['items'] ?? []);
@@ -664,6 +748,11 @@ class AdminProvider extends ChangeNotifier {
 
   void setFlaggedReviewSort(String sortBy) {
     _flaggedReviewSortBy = sortBy;
+    loadFlaggedReviews();
+  }
+
+  void setFlaggedReviewsDateRange(DateTimeRange? range) {
+    _flaggedReviewsDateRange = range;
     loadFlaggedReviews();
   }
 
@@ -709,6 +798,8 @@ class AdminProvider extends ChangeNotifier {
         _token!,
         status: _flaggedClientReviewStatusFilter,
         sortBy: _flaggedClientReviewSortBy,
+        startDate: _isoDate(_flaggedClientReviewsDateRange?.start),
+        endDate: _isoDate(_flaggedClientReviewsDateRange?.end),
         page: page ?? 1,
       );
       _flaggedClientReviews = List<Map<String, dynamic>>.from(
@@ -726,6 +817,11 @@ class AdminProvider extends ChangeNotifier {
 
   void setFlaggedClientReviewSort(String sortBy) {
     _flaggedClientReviewSortBy = sortBy;
+    loadFlaggedClientReviews();
+  }
+
+  void setFlaggedClientReviewsDateRange(DateTimeRange? range) {
+    _flaggedClientReviewsDateRange = range;
     loadFlaggedClientReviews();
   }
 
@@ -787,6 +883,8 @@ class AdminProvider extends ChangeNotifier {
       final data = await AdminService.getModerationItems(
         _token!,
         status: _moderationStatusFilter,
+        startDate: _isoDate(_moderationDateRange?.start),
+        endDate: _isoDate(_moderationDateRange?.end),
       );
       _moderationItems = List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
@@ -794,6 +892,11 @@ class AdminProvider extends ChangeNotifier {
     }
     _isAiLoading = false;
     notifyListeners();
+  }
+
+  void setModerationDateRange(DateTimeRange? range) {
+    _moderationDateRange = range;
+    loadModerationItems();
   }
 
   Future<bool> actionModerationItem(String moderationId, String action) async {
@@ -851,6 +954,8 @@ class AdminProvider extends ChangeNotifier {
       final data = await AdminService.getAppeals(
         _token!,
         status: _appealsStatusFilter,
+        startDate: _isoDate(_appealsDateRange?.start),
+        endDate: _isoDate(_appealsDateRange?.end),
         page: page,
         pageSize: 30,
       );
@@ -861,6 +966,11 @@ class AdminProvider extends ChangeNotifier {
     }
     _isAppealsLoading = false;
     notifyListeners();
+  }
+
+  void setAppealsDateRange(DateTimeRange? range) {
+    _appealsDateRange = range;
+    loadAppeals();
   }
 
   Future<bool> resolveAppeal(String appealId, String action, {String? adminNote}) async {
@@ -887,6 +997,8 @@ class AdminProvider extends ChangeNotifier {
       final data = await AdminService.getDisputedContracts(
         _token!,
         search: search,
+        startDate: _isoDate(_disputesDateRange?.start),
+        endDate: _isoDate(_disputesDateRange?.end),
         page: page,
         pageSize: 30,
       );
@@ -897,6 +1009,11 @@ class AdminProvider extends ChangeNotifier {
     }
     _isDisputesLoading = false;
     notifyListeners();
+  }
+
+  void setDisputesDateRange(DateTimeRange? range) {
+    _disputesDateRange = range;
+    loadDisputedContracts();
   }
 
   Future<bool> arbitrateDispute(
@@ -921,13 +1038,6 @@ class AdminProvider extends ChangeNotifier {
     } catch (_) {
       return false;
     }
-  }
-
-  Future<Map<String, dynamic>?> getClientAutoapproveHistory(
-    String clientId,
-  ) async {
-    if (_token == null) return null;
-    return AdminService.getClientAutoapproveHistory(_token!, clientId);
   }
 
   void initWithToken(String token) {

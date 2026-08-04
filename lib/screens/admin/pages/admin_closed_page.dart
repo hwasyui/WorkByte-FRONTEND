@@ -9,6 +9,7 @@ import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/admin_badge.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 
 class AdminClosedPage extends StatefulWidget {
   const AdminClosedPage({super.key});
@@ -22,6 +23,7 @@ class _AdminClosedPageState extends State<AdminClosedPage>
   late TabController _tab;
   int _jobPage = 1;
   int _accountPage = 1;
+  DateTimeRange? _dateRange;
 
   static const _jobReasons = [
     'all',
@@ -32,6 +34,25 @@ class _AdminClosedPageState extends State<AdminClosedPage>
   ];
   static const _accountRoles = ['all', 'freelancer', 'client', 'admin'];
   static const _accountReasons = ['all', 'community_reports', 'admin_override'];
+
+  void _onDateRangeChanged(DateTimeRange? range) {
+    setState(() {
+      _dateRange = range;
+      _jobPage = 1;
+      _accountPage = 1;
+    });
+    final admin = context.read<AdminProvider>();
+    admin.loadClosedJobs(
+      page: 1,
+      closedFrom: _isoDate(range?.start),
+      closedTo: _isoDate(range?.end),
+    );
+    admin.loadClosedAccounts(
+      page: 1,
+      bannedFrom: _isoDate(range?.start),
+      bannedTo: _isoDate(range?.end),
+    );
+  }
 
   @override
   void initState() {
@@ -79,25 +100,32 @@ class _AdminClosedPageState extends State<AdminClosedPage>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Closed Items',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF111827),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Closed Items',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF111827),
+                              ),
                             ),
-                          ),
-                          Text(
-                            'Closed jobs and restricted accounts',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: const Color(0xFF9CA3AF),
+                            Text(
+                              'Closed jobs and restricted accounts',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF9CA3AF),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      DateRangeFilterButton(
+                        range: _dateRange,
+                        onChanged: _onDateRangeChanged,
+                        accentColor: const Color(0xFFD97706),
                       ),
                     ],
                   ),
@@ -128,20 +156,30 @@ class _AdminClosedPageState extends State<AdminClosedPage>
                   _ClosedJobsTab(
                     reasons: _jobReasons,
                     page: _jobPage,
+                    dateRange: _dateRange,
                     onResetPage: () => setState(() => _jobPage = 1),
                     onPageChange: (page) {
                       setState(() => _jobPage = page);
-                      admin.loadClosedJobs(page: page);
+                      admin.loadClosedJobs(
+                        page: page,
+                        closedFrom: _isoDate(_dateRange?.start),
+                        closedTo: _isoDate(_dateRange?.end),
+                      );
                     },
                   ),
                   _ClosedAccountsTab(
                     roles: _accountRoles,
                     reasons: _accountReasons,
                     page: _accountPage,
+                    dateRange: _dateRange,
                     onResetPage: () => setState(() => _accountPage = 1),
                     onPageChange: (page) {
                       setState(() => _accountPage = page);
-                      admin.loadClosedAccounts(page: page);
+                      admin.loadClosedAccounts(
+                        page: page,
+                        bannedFrom: _isoDate(_dateRange?.start),
+                        bannedTo: _isoDate(_dateRange?.end),
+                      );
                     },
                   ),
                 ],
@@ -157,12 +195,14 @@ class _AdminClosedPageState extends State<AdminClosedPage>
 class _ClosedJobsTab extends StatelessWidget {
   final List<String> reasons;
   final int page;
+  final DateTimeRange? dateRange;
   final VoidCallback onResetPage;
   final ValueChanged<int> onPageChange;
 
   const _ClosedJobsTab({
     required this.reasons,
     required this.page,
+    required this.dateRange,
     required this.onResetPage,
     required this.onPageChange,
   });
@@ -175,6 +215,8 @@ class _ClosedJobsTab extends StatelessWidget {
             (admin.closedJobPagination['total'] as num?)?.toInt() ?? 0;
         final totalPages =
             (admin.closedJobPagination['total_pages'] as num?)?.toInt() ?? 1;
+        final closedFrom = _isoDate(dateRange?.start);
+        final closedTo = _isoDate(dateRange?.end);
 
         return Column(
           children: [
@@ -193,7 +235,12 @@ class _ClosedJobsTab extends StatelessWidget {
                   selected: admin.closedJobReasonFilter,
                   onSelect: (value) {
                     onResetPage();
-                    admin.loadClosedJobs(closureReason: value, page: 1);
+                    admin.loadClosedJobs(
+                      closureReason: value,
+                      page: 1,
+                      closedFrom: closedFrom,
+                      closedTo: closedTo,
+                    );
                   },
                 ),
               ],
@@ -209,7 +256,11 @@ class _ClosedJobsTab extends StatelessWidget {
                     )
                   : RefreshIndicator(
                       color: const Color(0xFFD97706),
-                      onRefresh: () => admin.loadClosedJobs(page: page),
+                      onRefresh: () => admin.loadClosedJobs(
+                        page: page,
+                        closedFrom: closedFrom,
+                        closedTo: closedTo,
+                      ),
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: admin.closedJobs.length,
@@ -238,6 +289,7 @@ class _ClosedAccountsTab extends StatelessWidget {
   final List<String> roles;
   final List<String> reasons;
   final int page;
+  final DateTimeRange? dateRange;
   final VoidCallback onResetPage;
   final ValueChanged<int> onPageChange;
 
@@ -245,6 +297,7 @@ class _ClosedAccountsTab extends StatelessWidget {
     required this.roles,
     required this.reasons,
     required this.page,
+    required this.dateRange,
     required this.onResetPage,
     required this.onPageChange,
   });
@@ -258,6 +311,8 @@ class _ClosedAccountsTab extends StatelessWidget {
         final totalPages =
             (admin.closedAccountPagination['total_pages'] as num?)?.toInt() ??
             1;
+        final bannedFrom = _isoDate(dateRange?.start);
+        final bannedTo = _isoDate(dateRange?.end);
 
         return Column(
           children: [
@@ -276,7 +331,12 @@ class _ClosedAccountsTab extends StatelessWidget {
                   selected: admin.closedAccountRoleFilter,
                   onSelect: (value) {
                     onResetPage();
-                    admin.loadClosedAccounts(role: value, page: 1);
+                    admin.loadClosedAccounts(
+                      role: value,
+                      page: 1,
+                      bannedFrom: bannedFrom,
+                      bannedTo: bannedTo,
+                    );
                   },
                 ),
                 FilterGroupData(
@@ -286,7 +346,12 @@ class _ClosedAccountsTab extends StatelessWidget {
                   selected: admin.closedAccountReasonFilter,
                   onSelect: (value) {
                     onResetPage();
-                    admin.loadClosedAccounts(banReason: value, page: 1);
+                    admin.loadClosedAccounts(
+                      banReason: value,
+                      page: 1,
+                      bannedFrom: bannedFrom,
+                      bannedTo: bannedTo,
+                    );
                   },
                 ),
               ],
@@ -302,7 +367,11 @@ class _ClosedAccountsTab extends StatelessWidget {
                     )
                   : RefreshIndicator(
                       color: const Color(0xFFD97706),
-                      onRefresh: () => admin.loadClosedAccounts(page: page),
+                      onRefresh: () => admin.loadClosedAccounts(
+                        page: page,
+                        bannedFrom: bannedFrom,
+                        bannedTo: bannedTo,
+                      ),
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: admin.closedAccounts.length,
@@ -337,6 +406,7 @@ class _ClosedJobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final reason = job['closure_reason']?.toString() ?? 'closed';
     final note = job['closure_note']?.toString() ?? '';
+    final meta = _reasonMeta(reason);
     return _RecordCard(
       icon: Icons.work_outline_rounded,
       title: job['job_title']?.toString() ?? 'Untitled job',
@@ -344,7 +414,8 @@ class _ClosedJobCard extends StatelessWidget {
           job['client_email']?.toString() ??
           job['client_name']?.toString() ??
           'Unknown client',
-      badge: _label(reason),
+      badge: meta.label,
+      badgeColor: meta.color,
       date: _formatDate(job['closed_at']?.toString()),
       body: note,
     );
@@ -367,12 +438,14 @@ class _ClosedAccountCard extends StatelessWidget {
         : account['email']?.toString() ?? 'Unknown account';
     final reason = account['ban_reason']?.toString() ?? 'restricted';
     final message = account['ban_message']?.toString() ?? '';
+    final meta = _reasonMeta(reason);
 
     return _RecordCard(
       icon: Icons.person_outline_rounded,
       title: name,
       subtitle: '${account['email'] ?? ''} - ${_label(role)}',
-      badge: _label(reason),
+      badge: meta.label,
+      badgeColor: meta.color,
       date: _formatDate(account['report_banned_at']?.toString()),
       body: message,
     );
@@ -384,6 +457,7 @@ class _RecordCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String badge;
+  final Color badgeColor;
   final String date;
   final String body;
 
@@ -392,6 +466,7 @@ class _RecordCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.badge,
+    required this.badgeColor,
     required this.date,
     required this.body,
   });
@@ -445,7 +520,7 @@ class _RecordCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                AdminBadge(label: badge, color: const Color(0xFFD97706), outlined: true),
+                AdminBadge(label: badge, color: badgeColor, outlined: true),
               ],
             ),
             if (body.isNotEmpty) ...[
@@ -526,6 +601,25 @@ class _Pagination extends StatelessWidget {
     );
   }
 }
+
+({String label, Color color}) _reasonMeta(String reason) {
+  switch (reason) {
+    case 'scam':
+      return (label: 'Job Scam Detection', color: const Color(0xFFC2410C));
+    case kClosureReasonHarmfulText:
+      return (label: 'Harmful Text Detection', color: const Color(0xFFDB2777));
+    case 'community_reports':
+      return (label: 'Community Reports', color: const Color(0xFFEA580C));
+    case 'admin_override':
+      return (label: 'Admin Override', color: const Color(0xFF4F46E5));
+    default:
+      return (label: _label(reason), color: const Color(0xFFDC2626));
+  }
+}
+
+String? _isoDate(DateTime? d) => d == null
+    ? null
+    : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 String _label(String value) {
   if (value.isEmpty) return '-';

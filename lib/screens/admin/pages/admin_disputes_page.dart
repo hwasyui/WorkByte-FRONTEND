@@ -10,6 +10,7 @@ import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/admin_loading.dart';
+import '../../../widgets/admin/date_range_filter_button.dart';
 
 class AdminDisputesPage extends StatefulWidget {
   const AdminDisputesPage({super.key});
@@ -31,31 +32,49 @@ class _AdminDisputesPageState extends State<AdminDisputesPage> {
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
-        if (admin.isDisputesLoading && admin.disputedContracts.isEmpty) {
-          return const AdminSkeletonList();
-        }
-
-        if (admin.disputedContracts.isEmpty) {
-          return const AdminEmptyState(
-            icon: Icons.balance_rounded,
-            title: 'No disputed contracts',
-            subtitle: 'Contracts raised for admin review will show up here.',
-            accent: AdminColors.primary,
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: () => admin.loadDisputedContracts(),
-          color: AdminColors.primary,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: admin.disputedContracts.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, i) => AdminFadeIn(
-              index: i,
-              child: _DisputeCard(contract: admin.disputedContracts[i]),
+        return Column(
+          children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
+              ),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  DateRangeFilterButton(
+                    range: admin.disputesDateRange,
+                    onChanged: admin.setDisputesDateRange,
+                  ),
+                ],
+              ),
             ),
-          ),
+            Expanded(
+              child: admin.isDisputesLoading && admin.disputedContracts.isEmpty
+                  ? const AdminSkeletonList()
+                  : admin.disputedContracts.isEmpty
+                      ? const AdminEmptyState(
+                          icon: Icons.balance_rounded,
+                          title: 'No disputed contracts',
+                          subtitle: 'Contracts raised for admin review will show up here.',
+                          accent: AdminColors.primary,
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => admin.loadDisputedContracts(),
+                          color: AdminColors.primary,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: admin.disputedContracts.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) => AdminFadeIn(
+                              index: i,
+                              child: _DisputeCard(contract: admin.disputedContracts[i]),
+                            ),
+                          ),
+                        ),
+            ),
+          ],
         );
       },
     );
