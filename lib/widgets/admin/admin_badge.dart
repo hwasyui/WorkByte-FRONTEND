@@ -32,7 +32,7 @@ class AdminBadge extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Text(
-            label,
+            label.toUpperCase(),
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,

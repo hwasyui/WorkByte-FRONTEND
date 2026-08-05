@@ -43,6 +43,9 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
         final disputes = admin.disputedContracts.length;
         final activityItems = _buildActivityItems(admin);
 
+        final usersSeries = admin.growthSeriesFor('users');
+        final jobsSeries = admin.growthSeriesFor('jobs');
+
         return RefreshIndicator(
           color: const Color(0xFF4F46E5),
           onRefresh: () => admin.loadOverviewData(),
@@ -66,6 +69,8 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
                       : null,
                   chartColor: const Color(0xFF4F46E5),
                   useBarChart: false,
+                  series: usersSeries,
+                  valueField: 'cumulative',
                   footer: _UserSplitBar(
                     freelancers: admin.totalFreelancers,
                     clients: admin.totalClients,
@@ -88,6 +93,8 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
                   growthText: null,
                   chartColor: const Color(0xFF0891B2),
                   useBarChart: true,
+                  series: jobsSeries,
+                  valueField: 'new',
                 );
                 final reportsCard = _ReportsCard(
                   pending: pending,
@@ -226,7 +233,7 @@ class _HeroBanner extends StatelessWidget {
     final chips = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _BannerChip(icon: Icons.flag_rounded, label: 'Reports', count: pendingReports),
+        _BannerChip(icon: Icons.report_problem_rounded, label: 'Reports', count: pendingReports),
         const SizedBox(width: 8),
         _BannerChip(icon: Icons.gavel_rounded, label: 'Appeals', count: pendingAppeals),
         const SizedBox(width: 8),
@@ -449,7 +456,7 @@ class _AttentionCard extends StatelessWidget {
             icon: Icons.priority_high_rounded,
             iconColor: const Color(0xFFDC2626),
             iconBg: const Color(0xFFFEF2F2),
-            title: 'Needs Attention',
+            title: 'Appeals & Disputes',
             subtitle: 'Appeals and disputes awaiting review',
           ),
           const SizedBox(height: 20),
@@ -549,7 +556,7 @@ class _AttentionStat extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatCard extends StatefulWidget {
   final IconData icon;
   final Color iconColor;
   final Color iconBg;
@@ -557,6 +564,8 @@ class _StatCard extends StatelessWidget {
   final String subtitle;
   final int value;
   final String label;
+  final List<Map<String, dynamic>> series;
+  final String valueField;
   final String? growthText;
   final Color chartColor;
   final bool useBarChart;
@@ -573,22 +582,97 @@ class _StatCard extends StatelessWidget {
     required this.growthText,
     required this.chartColor,
     required this.useBarChart,
+    this.series = const [],
+    this.valueField = 'value',
     this.footer,
   });
 
   @override
+  State<_StatCard> createState() => _StatCardState();
+}
+
+class _StatCardState extends State<_StatCard> {
+  String? _selectedYear;
+
+  List<String> get _years {
+    final years = widget.series
+        .map((e) => (e['label'] as String? ?? '').split(' '))
+        .where((parts) => parts.length >= 2)
+        .map((parts) => parts.last)
+        .toSet()
+        .toList();
+    years.sort();
+    return years;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncSelectedYear();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.series, widget.series)) _syncSelectedYear();
+  }
+
+  void _syncSelectedYear() {
+    final years = _years;
+    if (years.isEmpty) {
+      _selectedYear = null;
+    } else if (_selectedYear == null || !years.contains(_selectedYear)) {
+      _selectedYear = years.last;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final data = _trend(value);
+    final years = _years;
+    final filtered = _selectedYear == null
+        ? widget.series
+        : widget.series.where((e) {
+            final parts = (e['label'] as String? ?? '').split(' ');
+            return parts.length >= 2 && parts.last == _selectedYear;
+          }).toList();
+
+    final data = filtered.length >= 2
+        ? filtered
+            .map((e) => ((e[widget.valueField] as num?) ?? 0).toDouble())
+            .toList()
+        : _trend(widget.value);
+    final labels = filtered.length >= 2
+        ? filtered
+            .map((e) => (e['label'] as String? ?? '').split(' ').first)
+            .toList()
+        : data.map((_) => '').toList();
+
     return _CardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardHeader(
-            icon: icon,
-            iconColor: iconColor,
-            iconBg: iconBg,
-            title: title,
-            subtitle: subtitle,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _CardHeader(
+                  icon: widget.icon,
+                  iconColor: widget.iconColor,
+                  iconBg: widget.iconBg,
+                  title: widget.title,
+                  subtitle: widget.subtitle,
+                ),
+              ),
+              if (years.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _YearDropdown(
+                  years: years,
+                  selected: _selectedYear!,
+                  color: widget.chartColor,
+                  onChanged: (y) => setState(() => _selectedYear = y),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 20),
           Row(
@@ -600,7 +684,7 @@ class _StatCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _CountUpNumber(
-                      value: value,
+                      value: widget.value,
                       style: GoogleFonts.poppins(
                         fontSize: 42,
                         fontWeight: FontWeight.w700,
@@ -610,15 +694,15 @@ class _StatCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      label,
+                      widget.label,
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         color: const Color(0xFF6B7280),
                       ),
                     ),
-                    if (growthText != null) ...[
+                    if (widget.growthText != null) ...[
                       const SizedBox(height: 12),
-                      _GrowthBadge(text: growthText!, color: chartColor),
+                      _GrowthBadge(text: widget.growthText!, color: widget.chartColor),
                     ],
                   ],
                 ),
@@ -628,18 +712,81 @@ class _StatCard extends StatelessWidget {
                 flex: 3,
                 child: SizedBox(
                   height: 110,
-                  child: useBarChart
-                      ? _BarChart(data: data, color: chartColor)
-                      : _LineChart(data: data, color: chartColor),
+                  child: widget.useBarChart
+                      ? _BarChart(data: data, labels: labels, color: widget.chartColor)
+                      : _LineChart(data: data, labels: labels, color: widget.chartColor),
                 ),
               ),
             ],
           ),
-          if (footer != null) ...[
+          if (widget.footer != null) ...[
             const SizedBox(height: 16),
-            footer!,
+            widget.footer!,
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _YearDropdown extends StatelessWidget {
+  final List<String> years;
+  final String selected;
+  final Color color;
+  final ValueChanged<String> onChanged;
+
+  const _YearDropdown({
+    required this.years,
+    required this.selected,
+    required this.color,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      initialValue: selected,
+      onSelected: onChanged,
+      offset: const Offset(0, 34),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      itemBuilder: (context) => years
+          .map(
+            (y) => PopupMenuItem<String>(
+              value: y,
+              height: 36,
+              child: Text(
+                y,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: y == selected ? FontWeight.w600 : FontWeight.w400,
+                  color: y == selected ? color : const Color(0xFF374151),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              selected,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: color),
+          ],
+        ),
       ),
     );
   }
@@ -660,6 +807,76 @@ class _ReportsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statsColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _CountUpNumber(
+          value: total,
+          style: GoogleFonts.poppins(
+            fontSize: 42,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF111827),
+            height: 1.0,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Total Reports',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: const Color(0xFF6B7280),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _GrowthBadge(
+          text: pending > 0 ? '+$pending pending' : '0 pending',
+          color: const Color(0xFFDC2626),
+        ),
+      ],
+    );
+
+    final donutAndLegend = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 100,
+          height: 100,
+          child: _DonutChart(
+            pending: pending,
+            accepted: accepted,
+            dismissed: dismissed,
+            total: total,
+          ),
+        ),
+        const SizedBox(width: 20),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ReportLegend(
+              color: const Color(0xFFDC2626),
+              label: 'Pending',
+              count: pending,
+            ),
+            const SizedBox(height: 12),
+            _ReportLegend(
+              color: const Color(0xFFEAB308),
+              label: 'Confirmed',
+              count: accepted,
+            ),
+            const SizedBox(height: 12),
+            _ReportLegend(
+              color: const Color(0xFF059669),
+              label: 'Dismissed',
+              count: dismissed,
+            ),
+          ],
+        ),
+      ],
+    );
+
     return _CardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,73 +889,11 @@ class _ReportsCard extends StatelessWidget {
             subtitle: 'Overview of system reports',
           ),
           const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _CountUpNumber(
-                    value: total,
-                    style: GoogleFonts.poppins(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827),
-                      height: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Total Reports',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _GrowthBadge(
-                    text: pending > 0
-                        ? '+$pending pending'
-                        : '0 pending',
-                    color: const Color(0xFFD97706),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              SizedBox(
-                width: 100,
-                height: 100,
-                child: _DonutChart(
-                  pending: pending,
-                  accepted: accepted,
-                  dismissed: dismissed,
-                  total: total,
-                ),
-              ),
-              const SizedBox(width: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ReportLegend(
-                    color: const Color(0xFFEA580C),
-                    label: 'Pending',
-                    count: pending,
-                  ),
-                  const SizedBox(height: 12),
-                  _ReportLegend(
-                    color: const Color(0xFFF59E0B),
-                    label: 'Confirmed',
-                    count: accepted,
-                  ),
-                  const SizedBox(height: 12),
-                  _ReportLegend(
-                    color: const Color(0xFF059669),
-                    label: 'Dismissed',
-                    count: dismissed,
-                  ),
-                ],
-              ),
-            ],
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [statsColumn, donutAndLegend],
           ),
         ],
       ),
@@ -923,8 +1078,9 @@ class _ReportLegend extends StatelessWidget {
 
 class _LineChart extends StatelessWidget {
   final List<double> data;
+  final List<String> labels;
   final Color color;
-  const _LineChart({required this.data, required this.color});
+  const _LineChart({required this.data, required this.labels, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -996,14 +1152,8 @@ class _LineChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 22,
+              interval: 1,
               getTitlesWidget: (value, meta) {
-                const labels = [
-                  'May 1',
-                  'May 8',
-                  'May 15',
-                  'May 22',
-                  'May 29'
-                ];
                 final i = value.toInt();
                 if (i < 0 || i >= labels.length) {
                   return const SizedBox.shrink();
@@ -1062,8 +1212,9 @@ class _LineChart extends StatelessWidget {
 
 class _BarChart extends StatelessWidget {
   final List<double> data;
+  final List<String> labels;
   final Color color;
-  const _BarChart({required this.data, required this.color});
+  const _BarChart({required this.data, required this.labels, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -1110,13 +1261,6 @@ class _BarChart extends StatelessWidget {
               showTitles: true,
               reservedSize: 22,
               getTitlesWidget: (value, meta) {
-                const labels = [
-                  'May 1',
-                  'May 8',
-                  'May 15',
-                  'May 22',
-                  'May 29'
-                ];
                 final i = value.toInt();
                 if (i < 0 || i >= labels.length) {
                   return const SizedBox.shrink();
@@ -1212,14 +1356,14 @@ class _DonutChart extends StatelessWidget {
           if (pending > 0)
             PieChartSectionData(
               value: pending.toDouble(),
-              color: const Color(0xFFEA580C),
+              color: const Color(0xFFDC2626),
               showTitle: false,
               radius: 20,
             ),
           if (accepted > 0)
             PieChartSectionData(
               value: accepted.toDouble(),
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFFEAB308),
               showTitle: false,
               radius: 20,
             ),
@@ -1532,7 +1676,7 @@ class _ActivityBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w600,

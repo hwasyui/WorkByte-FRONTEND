@@ -156,6 +156,7 @@ class AdminService {
         if (createdTo != null) 'created_to': createdTo,
       },
     );
+    debugPrint('[DEBUG] getFreelancers createdFrom=$createdFrom createdTo=$createdTo uri=$uri');
     final response = await AdminSessionGuard.guard(
       token,
       (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
@@ -183,6 +184,7 @@ class AdminService {
         if (createdTo != null) 'created_to': createdTo,
       },
     );
+    debugPrint('[DEBUG] getClients createdFrom=$createdFrom createdTo=$createdTo uri=$uri');
     final response = await AdminSessionGuard.guard(
       token,
       (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
@@ -317,12 +319,18 @@ class AdminService {
     return {'items': [], 'pagination': {}};
   }
 
-  static Future<Map<String, dynamic>> getDashboardStats(String token) async {
+  static Future<Map<String, dynamic>> getDashboardStats(
+    String token, {
+    String? granularity,
+  }) async {
     try {
+      final uri = Uri.parse('$_baseUrl/admin/dashboard').replace(
+        queryParameters: granularity != null ? {'granularity': granularity} : null,
+      );
       final res = await AdminSessionGuard.guard(
         token,
         (t) => http.get(
-          Uri.parse('$_baseUrl/admin/dashboard'),
+          uri,
           headers: _headers(t),
         ).timeout(const Duration(seconds: 20)),
       );

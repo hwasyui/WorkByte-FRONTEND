@@ -83,28 +83,73 @@ class _AdminJobsPageState extends State<AdminJobsPage> {
             (admin.jobPagination['total_pages'] as num?)?.toInt() ?? 1;
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Container(
+              width: double.infinity,
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFEFF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.work_rounded,
+                          color: Color(0xFF0891B2),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Job Management',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                            Text(
+                              'All job postings on the platform',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DateRangeFilterButton(
+                        range: _dateRange,
+                        onChanged: _onDateRangeChanged,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
             Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
               ),
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _SearchField(
-                      controller: _searchCtrl,
-                      onChanged: _onSearchChanged,
-                      hint: 'Search jobs by title…',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  DateRangeFilterButton(
-                    range: _dateRange,
-                    onChanged: _onDateRangeChanged,
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: _SearchField(
+                controller: _searchCtrl,
+                onChanged: _onSearchChanged,
+                hint: 'Search jobs by title…',
               ),
             ),
             FilterDropdownBar(

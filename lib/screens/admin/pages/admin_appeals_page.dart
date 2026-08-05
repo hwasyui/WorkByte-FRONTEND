@@ -48,23 +48,60 @@ class _AdminAppealsPageState extends State<AdminAppealsPage>
             .toList();
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
+              width: double.infinity,
               color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                    child: Row(
-                      children: [
-                        const Spacer(),
-                        DateRangeFilterButton(
-                          range: admin.appealsDateRange,
-                          onChanged: admin.setAppealsDateRange,
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: Color(0xFF4F46E5),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Appeals',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                            Text(
+                              'Appeals submitted against moderation actions',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DateRangeFilterButton(
+                        range: admin.appealsDateRange,
+                        onChanged: admin.setAppealsDateRange,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
                   TabBar(
                     controller: _tabCtrl,
                     labelColor: const Color(0xFF4F46E5),
@@ -282,7 +319,7 @@ class _AppealCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    status[0].toUpperCase() + status.substring(1),
+                    status.toUpperCase(),
                     style: GoogleFonts.poppins(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,

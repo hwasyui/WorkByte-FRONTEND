@@ -142,6 +142,10 @@ class AdminProvider extends ChangeNotifier {
   Map<String, dynamic> get jobPagination => _jobPagination;
 
   Map<String, dynamic> get dashboardStats => _dashboardStats;
+  List<Map<String, dynamic>> growthSeriesFor(String source) =>
+      ((_dashboardStats['series'] as Map?)?[source] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const [];
   List<Map<String, dynamic>> get reports => _reports;
   int get pendingReports => _pendingReports;
   String get reportsStatusFilter => _reportsStatusFilter;
@@ -276,7 +280,8 @@ class AdminProvider extends ChangeNotifier {
   Future<void> loadDashboardStats() async {
     if (_token == null) return;
     try {
-      _dashboardStats = await AdminService.getDashboardStats(_token!);
+      _dashboardStats =
+          await AdminService.getDashboardStats(_token!, granularity: 'month');
       _pendingReports =
           (_dashboardStats['pending_reports'] as num?)?.toInt() ?? 0;
     } catch (e) {
@@ -400,6 +405,7 @@ class AdminProvider extends ChangeNotifier {
     String? createdFrom,
     String? createdTo,
   }) async {
+    debugPrint('[DEBUG] loadFreelancersPage page=$page search=$search createdFrom=$createdFrom createdTo=$createdTo');
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();

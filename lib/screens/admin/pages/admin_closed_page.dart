@@ -76,6 +76,7 @@ class _AdminClosedPageState extends State<AdminClosedPage>
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               width: double.infinity,

@@ -193,6 +193,7 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
     return CompositedTransformTarget(
       link: _layerLink,
       child: Container(
+        width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
           border: const Border(
@@ -244,14 +245,18 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                Text(
-                  widget.summaryText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: widget.hasActiveFilter
-                        ? widget.accentColor
-                        : const Color(0xFF6B7280),
+                Flexible(
+                  child: Text(
+                    widget.summaryText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: widget.hasActiveFilter
+                          ? widget.accentColor
+                          : const Color(0xFF6B7280),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const Spacer(),
