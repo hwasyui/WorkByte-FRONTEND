@@ -160,20 +160,27 @@ class _AdminUsersPageState extends State<AdminUsersPage>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: const Color(0xFF4F46E5),
-                    unselectedLabelColor: const Color(0xFF6B7280),
-                    indicatorColor: const Color(0xFF4F46E5),
-                    labelStyle: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-                    tabs: [
-                      Tab(text: 'Freelancers (${admin.totalFreelancers})'),
-                      Tab(text: 'Clients (${admin.totalClients})'),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final narrow = c.maxWidth < 340;
+                      return TabBar(
+                        controller: _tabController,
+                        isScrollable: narrow,
+                        tabAlignment: narrow ? TabAlignment.start : TabAlignment.fill,
+                        labelColor: const Color(0xFF4F46E5),
+                        unselectedLabelColor: const Color(0xFF6B7280),
+                        indicatorColor: const Color(0xFF4F46E5),
+                        labelStyle: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+                        tabs: [
+                          Tab(text: 'Freelancers (${admin.totalFreelancers})'),
+                          Tab(text: 'Clients (${admin.totalClients})'),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

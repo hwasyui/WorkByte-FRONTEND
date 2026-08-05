@@ -1495,7 +1495,7 @@ List<_ActivityItem> _buildActivityItems(AdminProvider admin) {
   }
 
   items.sort((a, b) => b.time.compareTo(a.time));
-  return items.take(8).toList();
+  return items.take(10).toList();
 }
 
 String _timeAgo(DateTime dt) {

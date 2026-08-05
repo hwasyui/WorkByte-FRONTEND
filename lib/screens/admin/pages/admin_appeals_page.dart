@@ -102,20 +102,27 @@ class _AdminAppealsPageState extends State<AdminAppealsPage>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  TabBar(
-                    controller: _tabCtrl,
-                    labelColor: const Color(0xFF4F46E5),
-                    unselectedLabelColor: const Color(0xFF6B7280),
-                    indicatorColor: const Color(0xFF4F46E5),
-                    labelStyle: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-                    tabs: [
-                      Tab(text: 'Pending (${pending.length})'),
-                      Tab(text: 'Resolved (${resolved.length})'),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final narrow = c.maxWidth < 320;
+                      return TabBar(
+                        controller: _tabCtrl,
+                        isScrollable: narrow,
+                        tabAlignment: narrow ? TabAlignment.start : TabAlignment.fill,
+                        labelColor: const Color(0xFF4F46E5),
+                        unselectedLabelColor: const Color(0xFF6B7280),
+                        indicatorColor: const Color(0xFF4F46E5),
+                        labelStyle: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+                        tabs: [
+                          Tab(text: 'Pending (${pending.length})'),
+                          Tab(text: 'Resolved (${resolved.length})'),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

@@ -131,21 +131,28 @@ class _AdminClosedPageState extends State<AdminClosedPage>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  TabBar(
-                    controller: _tab,
-                    labelStyle: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-                    labelColor: const Color(0xFFD97706),
-                    unselectedLabelColor: const Color(0xFF6B7280),
-                    indicatorColor: const Color(0xFFD97706),
-                    indicatorWeight: 2.5,
-                    tabs: const [
-                      Tab(text: 'Closed Jobs'),
-                      Tab(text: 'Restricted Accounts'),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final narrow = c.maxWidth < 360;
+                      return TabBar(
+                        controller: _tab,
+                        isScrollable: narrow,
+                        tabAlignment: narrow ? TabAlignment.start : TabAlignment.fill,
+                        labelStyle: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+                        labelColor: const Color(0xFFD97706),
+                        unselectedLabelColor: const Color(0xFF6B7280),
+                        indicatorColor: const Color(0xFFD97706),
+                        indicatorWeight: 2.5,
+                        tabs: const [
+                          Tab(text: 'Closed Jobs'),
+                          Tab(text: 'Restricted Accounts'),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

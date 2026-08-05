@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -43,102 +42,128 @@ class AdminShell extends StatelessWidget {
     'Disputes',
   ];
 
+  // Breakpoints: below [_tabletBreakpoint] we fall back to an AppBar +
+  // drawer (phones, narrow browser windows). Between that and
+  // [_desktopBreakpoint] the sidebar collapses to an icon-only rail
+  // (tablets, split-screen). At or above [_desktopBreakpoint] the full
+  // labelled sidebar is shown. These are evaluated against the actual
+  // available width, not the platform, so resizing a browser window
+  // reflows the layout live instead of only ever showing the desktop shell.
+  static const double _tabletBreakpoint = 700;
+  static const double _desktopBreakpoint = 1100;
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         final idx = admin.currentPage.index;
 
-        if (kIsWeb) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF3F4F6),
-            body: Row(
-              children: [
-                const AdminSidebar(),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, animation) => FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    ),
-                    child: KeyedSubtree(
-                      key: ValueKey(idx),
-                      child: _pages[idx],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final isDesktop = width >= _desktopBreakpoint;
+            final isTablet = width >= _tabletBreakpoint && !isDesktop;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF3F4F6),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF1E1B4B),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            title: Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.shield_rounded,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            if (isDesktop || isTablet) {
+              return Scaffold(
+                backgroundColor: const Color(0xFFF3F4F6),
+                body: Row(
                   children: [
-                    Text(
-                      _titles[idx],
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'WorkByte Admin',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: const Color(0xFF818CF8),
+                    AdminSidebar(collapsed: isTablet),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.02),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        ),
+                        child: KeyedSubtree(
+                          key: ValueKey(idx),
+                          child: _pages[idx],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh_rounded, size: 20),
-                onPressed: () =>
-                    context.read<AdminProvider>().loadOverviewData(),
-                tooltip: 'Refresh',
+              );
+            }
+
+            return Scaffold(
+              backgroundColor: const Color(0xFFF3F4F6),
+              appBar: AppBar(
+                backgroundColor: const Color(0xFF1E1B4B),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                titleSpacing: 0,
+                title: Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.shield_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _titles[idx],
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'WorkByte Admin',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: const Color(0xFF818CF8),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    onPressed: () =>
+                        context.read<AdminProvider>().loadOverviewData(),
+                    tooltip: 'Refresh',
+                  ),
+                ],
               ),
-            ],
-          ),
-          drawer: _MobileDrawer(
-            selectedIndex: idx,
-            onSelect: (i) => admin.setPage(AdminPage.values[i]),
-          ),
-          body: IndexedStack(index: idx, children: _pages),
+              drawer: _MobileDrawer(
+                selectedIndex: idx,
+                onSelect: (i) => admin.setPage(AdminPage.values[i]),
+              ),
+              body: IndexedStack(index: idx, children: _pages),
+            );
+          },
         );
       },
     );

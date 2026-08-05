@@ -245,7 +245,7 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                Flexible(
+                Expanded(
                   child: Text(
                     widget.summaryText,
                     style: GoogleFonts.poppins(
@@ -259,7 +259,6 @@ class _FilterDropdownBarState extends State<FilterDropdownBar> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(
