@@ -228,7 +228,11 @@ class JobPostProvider extends ChangeNotifier {
     bool notify = true,
   }) async {
     try {
-      final posts = await _jobPostService.getJobPostsByClient(token, clientId);
+      final posts = await _jobPostService.getJobPostsByClient(
+        token,
+        clientId,
+        includeDrafts: true,
+      );
 
       _jobPosts = posts;
 
@@ -467,7 +471,6 @@ class JobPostProvider extends ChangeNotifier {
     }
   }
 
-  /// One-off lookup used by notification routing; leaves the list state alone.
   Future<JobPostModel?> fetchJobPostById(String token, String jobPostId) async {
     try {
       return await _jobPostService.getJobPost(token, jobPostId);

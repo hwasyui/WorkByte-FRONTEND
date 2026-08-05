@@ -129,14 +129,15 @@ class JobPostService {
 
   Future<List<JobPostModel>> getJobPostsByClient(
     String token,
-    String clientId,
-  ) async {
+    String clientId, {
+    bool includeDrafts = false,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/job-posts/client/$clientId').replace(
+      queryParameters: includeDrafts ? {'include_drafts': 'true'} : null,
+    );
     final res = await SessionGuard.guard(
       token,
-      (t) => http.get(
-        Uri.parse('$_baseUrl/job-posts/client/$clientId'),
-        headers: _headers(t),
-      ).timeout(const Duration(seconds: 20)),
+      (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
     );
     final body = await _decodeResponse(res);
     if (res.statusCode == 200) {

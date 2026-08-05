@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/profile_provider.dart';
 import '../../core/constants/colors.dart';
-import '../../../../providers/auth_provider.dart';
-import '../../../../providers/job_post_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/job_post_provider.dart';
 import '../dashboard/dashboard.dart';
 import 'job_detail.dart';
 import '../../widgets/confirm_action_dialog.dart';
@@ -39,8 +39,23 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
   Future<void> _loadDrafts() async {
     setState(() => _loading = true);
 
-    final token = context.read<AuthProvider>().token;
-    final clientId = context.read<ProfileProvider>().clientProfile?.clientId;
+    final authProvider = context.read<AuthProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final token = authProvider.token;
+
+    var clientId = profileProvider.clientProfile?.clientId;
+
+    if ((clientId == null || clientId.isEmpty) &&
+        token != null &&
+        token.isNotEmpty &&
+        authProvider.userId != null) {
+      await profileProvider.fetchProfile(
+        token: token,
+        userId: authProvider.userId!,
+        userType: authProvider.currentUser?.type ?? 'client',
+      );
+      clientId = profileProvider.clientProfile?.clientId;
+    }
 
     if (token != null &&
         token.isNotEmpty &&

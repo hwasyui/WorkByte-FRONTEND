@@ -5,11 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../widgets/file_viewer.dart';
-import '../../../widgets/app_toast.dart';
+import '../../widgets/file_viewer.dart';
+import '../../widgets/app_toast.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/job_post_provider.dart';
 import 'success.dart';
+import 'job_drafts_screen.dart';
 import '../../widgets/post_job_loading_view.dart';
 
 class PostNewJobSummary extends StatefulWidget {
@@ -22,8 +23,38 @@ class PostNewJobSummary extends StatefulWidget {
 class PostNewJobSummaryState extends State<PostNewJobSummary> {
   static const Color _primary = AppColors.primary;
   bool _isSubmitting = false;
+  bool _isSavingDraft = false;
   String _submitStatus = '';
   bool _isScreenReady = false;
+
+  Future<void> _onSaveAsDraft() async {
+    final provider = context.read<JobPostProvider>();
+    final token = context.read<AuthProvider>().token;
+
+    if (token == null || token.isEmpty) {
+      AppToast.error('Missing auth token');
+      return;
+    }
+
+    setState(() => _isSavingDraft = true);
+
+    final saved = await provider.saveDraftJob(token);
+
+    if (!mounted) return;
+    setState(() => _isSavingDraft = false);
+
+    if (saved == null) {
+      AppToast.error(provider.error ?? 'Failed to save draft.');
+      return;
+    }
+
+    AppToast.success('Saved as draft');
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const JobDraftsScreen()),
+    );
+  }
 
   Future<void> _onPostJob() async {
     setState(() {
@@ -464,8 +495,48 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       child: SizedBox(
                         width: double.infinity,
                         height: 54,
+                        child: OutlinedButton.icon(
+                          onPressed: (_isSubmitting || _isSavingDraft)
+                              ? null
+                              : _onSaveAsDraft,
+                          icon: _isSavingDraft
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    color: _primary,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined, size: 18),
+                          label: Text(
+                            _isSavingDraft ? 'Saving draft...' : 'Save as Draft',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _primary,
+                            side: const BorderSide(color: _primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 54,
                         child: ElevatedButton.icon(
-                          onPressed: _isSubmitting ? null : _onPostJob,
+                          onPressed: (_isSubmitting || _isSavingDraft)
+                              ? null
+                              : _onPostJob,
                           icon: _isSubmitting
                               ? const SizedBox(
                                   height: 18,

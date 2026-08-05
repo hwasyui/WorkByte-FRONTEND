@@ -3,9 +3,9 @@ import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../../providers/auth_provider.dart';
-import '../../../../providers/job_post_provider.dart';
-import '../../../../models/job_file_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/job_post_provider.dart';
+import '../../models/job_file_model.dart';
 import 'summary.dart';
 import '../../widgets/post_job_loading_view.dart';
 
