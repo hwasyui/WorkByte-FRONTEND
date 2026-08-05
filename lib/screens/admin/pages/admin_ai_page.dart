@@ -829,6 +829,10 @@ class _ModerationCardState extends State<_ModerationCard> {
         item['flagged_text_excerpt'] as String? ??
         item['flagged_text'] as String? ??
         '';
+    // Which field scored highest, e.g. "[ROLE] Frontend Developer". The backend
+    // derives it from a marker it stores ahead of the snapshot, so it is null for
+    // rows written before that marker existed - hence the empty-string fallback.
+    final flaggedSource = (item['flagged_source'] as String?)?.trim() ?? '';
     final createdAt = item['created_at']?.toString() ?? '';
     final adminNote = item['admin_note']?.toString() ?? '';
     final status = item['status'] as String? ?? 'pending';
@@ -944,6 +948,51 @@ class _ModerationCardState extends State<_ModerationCard> {
             ),
             const SizedBox(height: 8),
             _LabelsBreakdown(labelScores: labelScores),
+            if (flaggedSource.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'TRIGGERED BY',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF9CA3AF),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFED7AA)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.my_location_rounded,
+                      size: 14,
+                      color: Color(0xFFC2410C),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        flaggedSource,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF9A3412),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (flaggedText.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -1073,10 +1122,6 @@ class _ModerationCardState extends State<_ModerationCard> {
     final item = widget.item;
     final contentType = item['content_type'] as String? ?? '';
     final status = item['status'] as String? ?? 'pending';
-    final flaggedText =
-        item['flagged_text_excerpt'] as String? ??
-        item['flagged_text'] as String? ??
-        '';
 
     final jobTitle = (item['job_title'] as String?)?.trim() ?? '';
     final userEmail = (item['user_email'] as String?)?.trim() ?? '';
@@ -1264,28 +1309,11 @@ class _ModerationCardState extends State<_ModerationCard> {
             _LabelsBreakdown(labelScores: labelScores),
           ],
 
-          if (flaggedText.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: Text(
-                '"$flaggedText"',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: const Color(0xFF991B1B),
-                  fontStyle: FontStyle.italic,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+          // The flagged snapshot lives in the detail dialog only. A job post's
+          // snapshot carries its title, description and every role, so even three
+          // lines of it here were mostly the title repeated from the headline above
+          // plus clean description - the part that actually triggered the flag sat
+          // below the fold. The card ranks by severity; the detail explains why.
 
           const SizedBox(height: 10),
           GestureDetector(
