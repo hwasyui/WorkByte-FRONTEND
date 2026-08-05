@@ -815,7 +815,7 @@ class _JobListScreenState extends State<JobListScreen> {
                       child: Center(
                         child: Text(
                           '$_activeFilterCount',
-                          style: const TextStyle(
+                          style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,

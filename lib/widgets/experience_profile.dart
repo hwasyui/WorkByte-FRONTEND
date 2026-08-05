@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 import 'app_toast.dart';
 
@@ -125,12 +126,12 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
               controller: controller,
               maxLines: maxLines,
               validator: validator ?? (v) => (v == null || v.isEmpty) ? 'Required' : null,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+              style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1A1A2E)),
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: const TextStyle(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 14,
-                  color: Color(0xFFADAEC0),
+                  color: const Color(0xFFADAEC0),
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
@@ -180,7 +181,7 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
               Expanded(
                 child: Text(
                   date == null ? hint : _formatDate(date),
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     color: date == null
                         ? const Color(0xFFADAEC0)
@@ -263,12 +264,12 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Currently working here',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                     SizedBox(
@@ -325,9 +326,9 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Save',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,

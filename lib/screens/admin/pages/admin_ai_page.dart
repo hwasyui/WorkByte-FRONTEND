@@ -328,9 +328,6 @@ class _ScamCardState extends State<_ScamCard> {
   void _showDetail(BuildContext ctx) {
     final f = widget.flag;
     final score = (f['scam_score'] as num?)?.toDouble() ?? 0.0;
-    final keywords =
-        (f['detected_keywords'] as List?)?.map((e) => e.toString()).toList() ??
-        [];
     final flaggedText = f['flagged_text']?.toString() ?? '';
     final confirmed = (f['total_scam_confirmed'] as num?)?.toInt() ?? 0;
     final isBanned = f['is_banned'] as bool? ?? false;
@@ -479,14 +476,6 @@ class _ScamCardState extends State<_ScamCard> {
                   ),
               ],
             ),
-            if (keywords.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: keywords.map((kw) => _KeywordChip(text: kw)).toList(),
-              ),
-            ],
             if (flaggedText.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
@@ -542,9 +531,6 @@ class _ScamCardState extends State<_ScamCard> {
     final f = widget.flag;
     final score = (f['scam_score'] as num?)?.toDouble() ?? 0.0;
     final status = f['status'] as String? ?? 'pending';
-    final keywords =
-        (f['detected_keywords'] as List?)?.map((e) => e.toString()).toList() ??
-        [];
     final confirmed = (f['total_scam_confirmed'] as num?)?.toInt() ?? 0;
     final isBanned = f['is_banned'] as bool? ?? false;
 
@@ -630,18 +616,6 @@ class _ScamCardState extends State<_ScamCard> {
               ],
             ],
           ),
-
-          if (keywords.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: keywords
-                  .take(6)
-                  .map((kw) => _KeywordChip(text: kw))
-                  .toList(),
-            ),
-          ],
 
           const SizedBox(height: 10),
           GestureDetector(
@@ -1581,29 +1555,6 @@ class _LabelChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _KeywordChip extends StatelessWidget {
-  final String text;
-  const _KeywordChip({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.poppins(
-          fontSize: 11,
-          color: const Color(0xFF374151),
         ),
       ),
     );

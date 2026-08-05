@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import '../../screens/dashboard/dashboard.dart';
 import '../../screens/job_client_view/job_list.dart';
@@ -107,10 +108,10 @@ class Frame1State extends State<Frame1> {
                   padding: const EdgeInsets.fromLTRB(28, 76, 28, 32),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         'Your job has been\nposted!',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: Colors.black87,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -118,11 +119,11 @@ class Frame1State extends State<Frame1> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const Text(
+                      Text(
                         'Your job is posted successfully. You can view your jobs or post another one.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF9CA3AF),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF9CA3AF),
                           fontSize: 13,
                           height: 1.6,
                         ),
@@ -140,20 +141,20 @@ class Frame1State extends State<Frame1> {
                             color: AppColors.primary.withValues(alpha: 0.08),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.info_outline,
                               color: AppColors.primary,
                               size: 16,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Your job is already live and visible to freelancers. We also run automated safety checks in the background — you\'ll get a notification if it ever needs your attention.',
                                 textAlign: TextAlign.left,
-                                style: TextStyle(
+                                style: GoogleFonts.poppins(
                                   color: AppColors.primary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -187,9 +188,9 @@ class Frame1State extends State<Frame1> {
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'View Jobs',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -221,9 +222,9 @@ class Frame1State extends State<Frame1> {
                             ),
                             backgroundColor: AppColors.secondary,
                           ),
-                          child: const Text(
+                          child: Text(
                             'Post Another Job',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),

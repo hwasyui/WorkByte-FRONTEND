@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../core/constants/colors.dart';
@@ -340,8 +341,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
                                                             .center,
-                                                    children: const [
-                                                      SizedBox(
+                                                    children: [
+                                                      const SizedBox(
                                                         width: 18,
                                                         height: 18,
                                                         child: CircularProgressIndicator(
@@ -352,10 +353,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                                               >(Colors.white),
                                                         ),
                                                       ),
-                                                      SizedBox(width: 12),
+                                                      const SizedBox(width: 12),
                                                       Text(
                                                         'Logging in...',
-                                                        style: TextStyle(
+                                                        style: GoogleFonts.poppins(
                                                           color: Colors.white,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -364,9 +365,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                                       ),
                                                     ],
                                                   )
-                                                : const Text(
+                                                : Text(
                                                     'Login',
-                                                    style: TextStyle(
+                                                    style: GoogleFonts.poppins(
                                                       color: Colors.white,
                                                       fontWeight:
                                                           FontWeight.bold,

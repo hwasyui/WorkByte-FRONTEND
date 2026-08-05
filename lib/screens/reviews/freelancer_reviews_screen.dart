@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
@@ -82,7 +83,10 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Reviews for ${widget.freelancerName}'),
+        title: Text(
+          'Reviews for ${widget.freelancerName}',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
       ),
       body: Consumer<ReviewProvider>(
         builder: (context, reviewProvider, _) {
@@ -113,7 +117,7 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'No reviews yet',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.grey[600],
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -163,16 +167,16 @@ class _FreelancerReviewsScreenState extends State<FreelancerReviewsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Reviews',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             '$totalReviews total',
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               color: Colors.grey,
                               fontSize: 13,
                             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../models/review_model.dart';
+import '../core/utils/text_format.dart';
 
 String moderationLabel(String raw) {
   switch (raw) {
@@ -17,7 +18,7 @@ String moderationLabel(String raw) {
     case 'identity_hate':
       return 'Identity-based hate speech';
     default:
-      return raw.replaceAll('_', ' ');
+      return toTitleCase(raw);
   }
 }
 
@@ -130,7 +131,7 @@ String ratingLabel(String category) {
     case 'timeliness':
       return 'Timeliness';
     default:
-      return category.replaceAll('_', ' ');
+      return toTitleCase(category);
   }
 }
 

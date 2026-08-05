@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
 class PortfolioProfile extends StatefulWidget {
@@ -113,12 +114,12 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
               maxLines: maxLines,
               validator: validator ??
                   (v) => (v == null || v.isEmpty) ? 'Required' : null,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+              style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1A1A2E)),
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: const TextStyle(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 14,
-                  color: Color(0xFFADAEC0),
+                  color: const Color(0xFFADAEC0),
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
@@ -170,7 +171,7 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
               Expanded(
                 child: Text(
                   date == null ? hint : _formatDate(date),
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: date == null
                         ? const Color(0xFFADAEC0)
@@ -277,9 +278,9 @@ class _PortfolioProfileState extends State<PortfolioProfile> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Save',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,

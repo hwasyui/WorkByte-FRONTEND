@@ -594,24 +594,35 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
       ),
       child: Row(
         children: const [
-          _StepPill(
-            index: 1,
-            label: 'Job detail',
-            active: false,
-            completed: true,
+          const Flexible(
+            child: _StepPill(
+              index: 1,
+              label: 'Job detail',
+              active: false,
+              completed: true,
+            ),
           ),
           SizedBox(width: 8),
           Expanded(child: Divider(color: _border, thickness: 1)),
           SizedBox(width: 8),
-          _StepPill(index: 2, label: 'Role', active: true, completed: false),
+          const Flexible(
+            child: _StepPill(
+              index: 2,
+              label: 'Role',
+              active: true,
+              completed: false,
+            ),
+          ),
           SizedBox(width: 8),
           Expanded(child: Divider(color: _border, thickness: 1)),
           SizedBox(width: 8),
-          _StepPill(
-            index: 3,
-            label: 'Attachment',
-            active: false,
-            completed: false,
+          const Flexible(
+            child: _StepPill(
+              index: 3,
+              label: 'Attachment',
+              active: false,
+              completed: false,
+            ),
           ),
         ],
       ),
@@ -639,7 +650,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
         children: [
           Text(
             'Project type',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: _textDark,
@@ -648,7 +659,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
           const SizedBox(height: 6),
           Text(
             'Choose whether this job is for one freelancer or a team.',
-            style: TextStyle(fontSize: 12.5, color: _textMuted, height: 1.4),
+            style: GoogleFonts.poppins(fontSize: 12.5, color: _textMuted, height: 1.4),
           ),
           const SizedBox(height: 12),
           Container(
@@ -681,7 +692,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
                     _isIndividual
                         ? 'Individual: completed by 1 freelancer.'
                         : 'Team: completed by 2 or more freelancers.',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 12.5,
                       color: _primary,
                       fontWeight: FontWeight.w600,
@@ -721,7 +732,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: selected ? Colors.white : const Color(0xFF1F2937),
                   fontSize: 13,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
@@ -768,11 +779,11 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Post new job',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -781,11 +792,11 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Role & Skills',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                 ],
@@ -852,7 +863,7 @@ class _PostNewJobRolesState extends State<PostNewJobRoles> {
               : const Icon(Icons.arrow_forward_rounded, size: 18),
           label: Text(
             _isSavingAll ? 'Saving roles...' : 'Next: Attachment',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: _primary,
@@ -915,7 +926,7 @@ class _StepPill extends StatelessWidget {
                 ? const Icon(Icons.check, color: Colors.white, size: 13)
                 : Text(
                     '$index',
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -923,12 +934,16 @@ class _StepPill extends StatelessWidget {
                   ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                color: fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -1078,7 +1093,7 @@ class _RoleCardState extends State<_RoleCard> {
                         child: Center(
                           child: Text(
                             '${widget.index + 1}',
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               color: _primary,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -1090,7 +1105,7 @@ class _RoleCardState extends State<_RoleCard> {
                       Expanded(
                         child: Text(
                           d.roleTitle.isEmpty ? 'Untitled Role' : d.roleTitle,
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: d.roleTitle.isEmpty
@@ -1134,7 +1149,7 @@ class _RoleCardState extends State<_RoleCard> {
                         const SizedBox(width: 5),
                         Text(
                           widget.statusText,
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 11.5,
                             color: widget.statusAccent,
                             fontWeight: FontWeight.w600,
@@ -1200,7 +1215,7 @@ class _RoleCardState extends State<_RoleCard> {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Text(
         text,
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 14,
           fontWeight: FontWeight.w700,
           color: const Color(0xFF1F2937),
@@ -1235,14 +1250,14 @@ class _RoleCardState extends State<_RoleCard> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: const TextStyle(fontSize: 13.5, color: Color(0xFF1F2937)),
+        style: GoogleFonts.poppins(fontSize: 13.5, color: const Color(0xFF1F2937)),
         inputFormatters:
             keyboardType == TextInputType.number && controller == _budgetCtrl
             ? [ThousandsSeparatorFormatter()]
             : null,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+          hintStyle: GoogleFonts.poppins(color: const Color(0xFF9CA3AF), fontSize: 13),
           prefixIcon: prefixIcon != null
               ? Icon(prefixIcon, color: _primary, size: 20)
               : null,
@@ -1294,7 +1309,7 @@ class _RoleCardState extends State<_RoleCard> {
           child: Center(
             child: Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: selected ? Colors.white : const Color(0xFF374151),
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
@@ -1344,9 +1359,9 @@ class _RoleCardState extends State<_RoleCard> {
                     value: currency,
                     child: Text(
                       currency,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: Color(0xFF333333),
+                        color: const Color(0xFF333333),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1371,7 +1386,7 @@ class _RoleCardState extends State<_RoleCard> {
         Expanded(
           child: Text(
             'Required role',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF111827),
@@ -1411,7 +1426,7 @@ class _RoleCardState extends State<_RoleCard> {
               ),
               deleteIconColor: const Color(0xFFE11D48),
               backgroundColor: AppColors.secondary,
-              labelStyle: const TextStyle(
+              labelStyle: GoogleFonts.poppins(
                 color: _primary,
                 fontWeight: FontWeight.w600,
                 fontSize: 12.5,
@@ -1442,11 +1457,11 @@ class _RoleCardState extends State<_RoleCard> {
           ),
         ],
         if (!hasSkills)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
               'No skills selected yet.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
             ),
           ),
       ],
@@ -1488,16 +1503,16 @@ class _SkillPicker extends StatelessWidget {
             child: TextField(
               controller: searchController,
               onChanged: onSearchChanged,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
-              decoration: const InputDecoration(
+              style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF1F2937)),
+              decoration: InputDecoration(
                 hintText: 'Search skills...',
-                hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
-                prefixIcon: Icon(
+                hintStyle: GoogleFonts.poppins(color: const Color(0xFF9CA3AF), fontSize: 13),
+                prefixIcon: const Icon(
                   Icons.search,
                   color: Color(0xFFB5B4B4),
                   size: 18,
                 ),
-                contentPadding: EdgeInsets.symmetric(
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 10,
                 ),
@@ -1526,8 +1541,8 @@ class _SkillPicker extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   child: Text(
                     provider.error!,
-                    style: const TextStyle(
-                      color: Color(0xFFFF5C5C),
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFFFF5C5C),
                       fontSize: 12,
                     ),
                   ),
@@ -1535,11 +1550,11 @@ class _SkillPicker extends StatelessWidget {
               }
               final list = provider.searchResults;
               if (list.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(12),
+                return Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Text(
                     'No skills found',
-                    style: TextStyle(color: Color(0xFFB5B4B4), fontSize: 12),
+                    style: GoogleFonts.poppins(color: const Color(0xFFB5B4B4), fontSize: 12),
                   ),
                 );
               }
@@ -1567,7 +1582,7 @@ class _SkillPicker extends StatelessWidget {
                       ),
                       child: Text(
                         skill.skillName,
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: selected
                               ? Colors.white

@@ -10,6 +10,7 @@ import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_badge.dart';
 import '../../../widgets/admin/admin_action_button.dart';
+import '../../../core/utils/text_format.dart';
 import '../../../widgets/app_toast.dart';
 
 class AdminReportsPage extends StatefulWidget {
@@ -377,7 +378,7 @@ class _ReportCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 4,
                 children: reasons.map((r) {
-                  final label = r.replaceAll('_', ' ');
+                  final label = toTitleCase(r);
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(

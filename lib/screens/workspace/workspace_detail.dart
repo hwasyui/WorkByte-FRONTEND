@@ -20,6 +20,7 @@ import '../reviews/review_form.dart';
 import '../reviews/client_review_form.dart';
 import '../dm/dm_chat_screen.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/text_format.dart';
 import '../../widgets/app_toast.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
@@ -2338,7 +2339,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       case 'superseded':
         return 'Superseded';
       default:
-        return status.replaceAll('_', ' ');
+        return toTitleCase(status);
     }
   }
 

@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13),
             ),
             const SizedBox(height: 8),
             GestureDetector(
@@ -827,7 +827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           ),
                                           child: Text(
                                             count > 99 ? '99+' : '$count',
-                                            style: const TextStyle(
+                                            style: GoogleFonts.poppins(
                                               color: Colors.white,
                                               fontSize: 9,
                                               fontWeight: FontWeight.w700,

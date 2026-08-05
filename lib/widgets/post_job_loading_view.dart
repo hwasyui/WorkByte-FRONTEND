@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
 class PostJobLoadingView extends StatelessWidget {
@@ -23,8 +24,8 @@ class PostJobLoadingView extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
+            style: GoogleFonts.poppins(
+              color: const Color(0xFF6B7280),
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),

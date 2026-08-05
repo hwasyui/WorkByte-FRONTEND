@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -460,7 +461,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                             : const Icon(Icons.arrow_forward_rounded, size: 18),
                         label: Text(
                           _savingDraft ? 'Saving draft...' : 'Next: Roles',
-                          style: const TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -497,29 +498,35 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       ),
       child: Row(
         children: [
-          _StepPill(
-            index: 1,
-            label: 'Job detail',
-            active: current == 1,
-            completed: current > 1,
+          Flexible(
+            child: _StepPill(
+              index: 1,
+              label: 'Job detail',
+              active: current == 1,
+              completed: current > 1,
+            ),
           ),
           const SizedBox(width: 8),
           const Expanded(child: Divider(color: _border, thickness: 1)),
           const SizedBox(width: 8),
-          _StepPill(
-            index: 2,
-            label: 'Role',
-            active: current == 2,
-            completed: current > 2,
+          Flexible(
+            child: _StepPill(
+              index: 2,
+              label: 'Role',
+              active: current == 2,
+              completed: current > 2,
+            ),
           ),
           const SizedBox(width: 8),
           const Expanded(child: Divider(color: _border, thickness: 1)),
           const SizedBox(width: 8),
-          _StepPill(
-            index: 3,
-            label: 'Attachment',
-            active: current == 3,
-            completed: false,
+          Flexible(
+            child: _StepPill(
+              index: 3,
+              label: 'Attachment',
+              active: current == 3,
+              completed: false,
+            ),
           ),
         ],
       ),
@@ -576,7 +583,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
               children: [
                 Text(
                   _draftStatusTitle(provider),
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     color: _textDark,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -585,7 +592,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                 const SizedBox(height: 4),
                 Text(
                   _draftStatusSubtitle(provider),
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     color: _textMuted,
                     fontSize: 12.5,
                     height: 1.45,
@@ -655,9 +662,9 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                         ),
                       ),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
-                      label: const Text(
+                      label: Text(
                         'Clear draft',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -685,7 +692,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               color: _textDark,
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
@@ -733,11 +740,11 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                       MaterialPageRoute(builder: (_) => const HomeScreen()),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Post new job',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -746,11 +753,11 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Job Detail',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                 ],
@@ -803,7 +810,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: _primary,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
@@ -821,7 +828,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       padding: const EdgeInsets.only(left: 20, bottom: 8, top: 12),
       child: Text(
         text,
-        style: const TextStyle(
+        style: GoogleFonts.poppins(
           color: _textDark,
           fontSize: 14,
           fontWeight: FontWeight.w700,
@@ -842,7 +849,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
             alignment: Alignment.centerRight,
             child: Text(
               '$count / $_minDescriptionWords words',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: met ? _success : _warning,
@@ -879,10 +886,10 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: const TextStyle(color: _textDark, fontSize: 13.5),
+        style: GoogleFonts.poppins(color: _textDark, fontSize: 13.5),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+          hintStyle: GoogleFonts.poppins(color: const Color(0xFF9CA3AF), fontSize: 13),
           prefixIcon: prefixIcon != null
               ? Icon(prefixIcon, color: _primary, size: 20)
               : null,
@@ -932,7 +939,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                   Icons.keyboard_arrow_down_rounded,
                   color: _primary,
                 ),
-                style: const TextStyle(color: _textDark, fontSize: 13.5),
+                style: GoogleFonts.poppins(color: _textDark, fontSize: 13.5),
                 padding: EdgeInsets.only(
                   left: prefixIcon != null ? 10 : 16,
                   right: 6,
@@ -981,7 +988,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
             child: TextField(
               controller: _durationController,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: _textDark, fontSize: 13.5),
+              style: GoogleFonts.poppins(color: _textDark, fontSize: 13.5),
               decoration: const InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
@@ -1004,7 +1011,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                   Icons.keyboard_arrow_down_rounded,
                   color: _primary,
                 ),
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   color: _primary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1062,7 +1069,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
             Expanded(
               child: Text(
                 _deadlineDisplay,
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: _deadline == null
                       ? const Color(0xFF9CA3AF)
                       : _textDark,
@@ -1130,7 +1137,7 @@ class _StepPill extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               '$index',
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -1138,12 +1145,16 @@ class _StepPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                color: fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

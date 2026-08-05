@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/file_viewer.dart';
 import '../../widgets/app_toast.dart';
@@ -249,11 +250,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                       ),
 
                     if (roles.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20, top: 20, bottom: 10),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
                         child: Text(
                           'Roles',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -290,7 +291,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                   backgroundColor: AppColors.primary,
                                   child: Text(
                                     initials,
-                                    style: const TextStyle(
+                                    style: GoogleFonts.poppins(
                                       color: AppColors.secondary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
@@ -305,7 +306,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                     children: [
                                       Text(
                                         title,
-                                        style: const TextStyle(
+                                        style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
                                           color: Colors.black87,
@@ -316,9 +317,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                         skillNames.isNotEmpty
                                             ? skillNames.join(', ')
                                             : 'No skills specified',
-                                        style: const TextStyle(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 12,
-                                          color: Color(0xFF9CA3AF),
+                                          color: const Color(0xFF9CA3AF),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -338,7 +339,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                     ),
                                     child: Text(
                                       '${role['budget_currency'] ?? 'IDR'} ${((role['role_budget'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
-                                      style: const TextStyle(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 11,
                                         color: AppColors.primary,
                                         fontWeight: FontWeight.w700,
@@ -370,7 +371,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                             const SizedBox(width: 8),
                             Text(
                               "Attachments (${files.length})",
-                              style: const TextStyle(
+                              style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -415,7 +416,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                     children: [
                                       Text(
                                         file.fileName,
-                                        style: const TextStyle(
+                                        style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.w600,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -425,7 +426,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
 
                                       Text(
                                         file.fileSizeFormatted,
-                                        style: const TextStyle(
+                                        style: GoogleFonts.poppins(
                                           color: Colors.grey,
                                           fontSize: 12,
                                         ),
@@ -445,7 +446,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                   ),
                                   child: Text(
                                     file.resolvedFileType.toUpperCase(),
-                                    style: const TextStyle(
+                                    style: GoogleFonts.poppins(
                                       color: AppColors.primary,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -460,9 +461,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                     url: file.fileUrl,
                                     fileName: file.fileName,
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     "View",
-                                    style: TextStyle(
+                                    style: GoogleFonts.poppins(
                                       color: AppColors.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -480,7 +481,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                         child: Center(
                           child: Text(
                             _submitStatus,
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               color: AppColors.primary,
                               fontSize: 12,
                             ),
@@ -511,7 +512,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                               : const Icon(Icons.save_outlined, size: 18),
                           label: Text(
                             _isSavingDraft ? 'Saving draft...' : 'Save as Draft',
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -547,9 +548,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                                   ),
                                 )
                               : const Icon(Icons.send_outlined, size: 18),
-                          label: const Text(
+                          label: Text(
                             'Post new job',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -609,11 +610,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Post new job',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -622,11 +623,11 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Summary',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                 ],
@@ -686,7 +687,7 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: Colors.black87,
@@ -695,9 +696,9 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
                     const SizedBox(height: 2),
                     Text(
                       value,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: Color(0xFF9CA3AF),
+                        color: const Color(0xFF9CA3AF),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 2,

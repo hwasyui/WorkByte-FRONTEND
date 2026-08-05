@@ -663,7 +663,7 @@ class JobListScreenState extends State<JobListScreen> {
       ),
       child: Text(
         _capitalize(status),
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: colors.$1,
@@ -709,8 +709,8 @@ class JobListScreenState extends State<JobListScreen> {
           const SizedBox(height: 16),
           Text(
             isFiltered ? 'No matching jobs' : 'No jobs posted yet',
-            style: const TextStyle(
-              color: Color(0xFF7D7D7D),
+            style: GoogleFonts.poppins(
+              color: const Color(0xFF7D7D7D),
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -720,7 +720,7 @@ class JobListScreenState extends State<JobListScreen> {
             isFiltered
                 ? 'Try a different filter or search term.'
                 : 'Your posted jobs will appear here.',
-            style: const TextStyle(color: Color(0xFFB5B4B4), fontSize: 12),
+            style: GoogleFonts.poppins(color: const Color(0xFFB5B4B4), fontSize: 12),
           ),
           if (isFiltered) ...[
             const SizedBox(height: 16),

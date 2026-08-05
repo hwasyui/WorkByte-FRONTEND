@@ -207,10 +207,10 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(fmt(_audioPosition),
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                           color: Colors.white54, fontSize: 12)),
                   Text(fmt(_audioDuration),
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                           color: Colors.white54, fontSize: 12)),
                 ],
               ),

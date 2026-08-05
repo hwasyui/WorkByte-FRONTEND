@@ -111,34 +111,34 @@ class SideDrawer extends StatelessWidget {
                         size: 36,
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       left: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 14,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       right: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
-                          color: Color(0xFFB8B0F0),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFB8B0F0),
                           fontSize: 10,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       bottom: 8,
                       right: 8,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 12,
                         ),

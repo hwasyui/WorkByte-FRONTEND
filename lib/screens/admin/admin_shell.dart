@@ -42,13 +42,6 @@ class AdminShell extends StatelessWidget {
     'Disputes',
   ];
 
-  // Breakpoints: below [_tabletBreakpoint] we fall back to an AppBar +
-  // drawer (phones, narrow browser windows). Between that and
-  // [_desktopBreakpoint] the sidebar collapses to an icon-only rail
-  // (tablets, split-screen). At or above [_desktopBreakpoint] the full
-  // labelled sidebar is shown. These are evaluated against the actual
-  // available width, not the platform, so resizing a browser window
-  // reflows the layout live instead of only ever showing the desktop shell.
   static const double _tabletBreakpoint = 700;
   static const double _desktopBreakpoint = 1100;
 
@@ -480,7 +473,7 @@ class _DrawerItem extends StatelessWidget {
                 ),
                 child: Text(
                   badge! > 99 ? '99+' : badge.toString(),
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 10,
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

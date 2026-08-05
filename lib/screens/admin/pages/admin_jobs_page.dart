@@ -12,6 +12,8 @@ import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/admin_badge.dart';
 import '../../../widgets/app_toast.dart';
+import '../../../core/constants/job_categories.dart';
+import '../../../core/utils/text_format.dart';
 
 class AdminJobsPage extends StatefulWidget {
   const AdminJobsPage({super.key});
@@ -284,7 +286,7 @@ class _JobCard extends StatelessWidget {
     final color = _statusColor;
     final proposals = job['proposal_count'] ?? 0;
     final views = job['view_count'] ?? 0;
-    final category = (job['project_category'] as String? ?? '').replaceAll('_', ' ');
+    final category = categoryLabel(job['project_category'] as String?);
     final postedAt = _formatDate(job['posted_at'] as String? ?? job['created_at'] as String?);
 
     return GestureDetector(
@@ -546,7 +548,7 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
     final job = {...widget.job, if (_detail != null) ..._detail!};
     final status = job['status'] as String? ?? 'draft';
     final color = _statusColor(status);
-    final category = (job['project_category'] as String? ?? '').replaceAll('_', ' ');
+    final category = categoryLabel(job['project_category'] as String?);
     final proposals = job['proposal_count'] ?? 0;
     final views = job['view_count'] ?? 0;
     final postedAt = _fmt(job['posted_at'] as String? ?? job['created_at'] as String?);
@@ -637,13 +639,13 @@ class _JobDetailSheetState extends State<_JobDetailSheet> {
                   const SizedBox(height: 16),
                   _SheetSectionLabel('PROJECT TYPE'),
                   const SizedBox(height: 4),
-                  Text((job['project_type'] as String).replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
+                  Text(toTitleCase(job['project_type'] as String?), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
                 ],
                 if ((job['experience_level'] as String?)?.isNotEmpty == true) ...[
                   const SizedBox(height: 16),
                   _SheetSectionLabel('EXPERIENCE LEVEL'),
                   const SizedBox(height: 4),
-                  Text((job['experience_level'] as String).replaceAll('_', ' '), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
+                  Text(toTitleCase(job['experience_level'] as String?), style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF374151))),
                 ],
                 if (((job['description'] ?? job['job_description']) as String?)?.isNotEmpty == true) ...[
                   const SizedBox(height: 16),

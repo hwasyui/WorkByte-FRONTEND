@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:async';
@@ -120,9 +121,9 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
           icon: const Icon(Icons.arrow_back, color: _primaryColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Analyzing CV',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             color: _primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -144,9 +145,9 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
 
                   const SizedBox(height: 32),
 
-                  const Text(
+                  Text(
                     'AI is analyzing your CV',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -158,7 +159,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
 
                   Text(
                     'This will take a few moments',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
                     textAlign: TextAlign.center,
                   ),
 
@@ -335,7 +336,7 @@ class _AnalyzingCVScreenState extends State<AnalyzingCVScreen>
           const SizedBox(width: 14),
           Text(
             _steps[index],
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               color: textColor,
               fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,

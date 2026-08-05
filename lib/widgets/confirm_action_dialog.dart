@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 
 enum ConfirmDialogTone { primary, warning, destructive }
@@ -85,7 +86,7 @@ class ConfirmActionDialog extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _textDark,
@@ -95,7 +96,7 @@ class ConfirmActionDialog extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 13.5,
                 color: _textMuted,
                 height: 1.5,
@@ -117,7 +118,7 @@ class ConfirmActionDialog extends StatelessWidget {
                     ),
                     child: Text(
                       cancelLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -136,7 +137,7 @@ class ConfirmActionDialog extends StatelessWidget {
                     ),
                     child: Text(
                       confirmLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),

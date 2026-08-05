@@ -10,6 +10,7 @@ import '../../../widgets/admin/admin_dialog.dart';
 import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_reason_dialog.dart';
 import '../../../widgets/admin/admin_score_row.dart';
+import '../../../core/utils/text_format.dart';
 import '../../../widgets/app_toast.dart';
 import '../../../widgets/review_rating_helpers.dart';
 
@@ -531,7 +532,7 @@ class _SentimentChip extends StatelessWidget {
           Icon(Icons.sentiment_neutral_rounded, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
-            label,
+            toTitleCase(label),
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -859,7 +860,7 @@ class _SentimentCard extends StatelessWidget {
         Row(
           children: [
             Text(
-              v.label ?? 'unknown',
+              toTitleCase(v.label, fallback: 'Unknown'),
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -1079,7 +1080,7 @@ class _FlagReasons extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          r.source,
+                          toTitleCase(r.source),
                           style: GoogleFonts.poppins(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
@@ -1248,7 +1249,7 @@ class _DmThread extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              m.senderId ?? 'unknown',
+                              m.senderId ?? 'Unknown',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,

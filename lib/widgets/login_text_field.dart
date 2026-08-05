@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 
@@ -130,7 +131,7 @@ class _LoginTextFieldState extends State<LoginTextField> {
             padding: const EdgeInsets.only(top: 6, left: 18),
             child: Text(
               widget.errorText!,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.red,
                 fontSize: 12,
               ),

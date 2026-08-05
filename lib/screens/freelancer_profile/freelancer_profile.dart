@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/text_format.dart';
 import '../../models/education_model.dart';
 import '../../models/experience_model.dart';
 import '../../models/freelancer_skill_model.dart';
@@ -335,34 +336,34 @@ class _ProfileScreenState extends State<ProfileScreen>
                         size: 36,
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       left: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 14,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       right: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
-                          color: Color(0xFFB8B0F0),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFB8B0F0),
                           fontSize: 10,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       bottom: 8,
                       right: 8,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 12,
                         ),
@@ -668,13 +669,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Edit About',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                   ),
@@ -697,19 +698,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Tell us about yourself',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: aboutController,
                 maxLines: 7,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1A1A2E)),
                 decoration: InputDecoration(
                   hintText: 'Tell us about yourself...',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  hintStyle: GoogleFonts.poppins(
+                    color: const Color(0xFF9CA3AF),
                     fontSize: 14,
                   ),
                   filled: true,
@@ -740,10 +741,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text(
+                      child: Text(
                         'Cancel',
-                        style: TextStyle(
-                          color: Color(0xFF4F46E5),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF4F46E5),
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -799,9 +800,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Save',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -1368,7 +1369,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(width: 6),
           Text(
             safeRating.toStringAsFixed(1),
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: size * 0.75,
               fontWeight: FontWeight.w600,
               color: color ?? Colors.grey[600],
@@ -1442,13 +1443,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         profileShareUrl(auth.userId!),
                                       ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.bookmarks_outlined,
-                                color: AppColors.primary,
-                              ),
-                              onPressed: () => _tabController.animateTo(2),
                             ),
                           ],
                         ),
@@ -1892,9 +1886,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Upload CV',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1903,7 +1897,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const SizedBox(height: 3),
                             Text(
                               cvDisplayName,
-                              style: const TextStyle(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: Colors.grey,
                               ),
@@ -1932,9 +1926,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Preview',
-                              style: TextStyle(fontSize: 12),
+                              style: GoogleFonts.poppins(fontSize: 12),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1979,9 +1973,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   color: primaryColor,
                                 ),
                               )
-                            : const Text(
+                            : Text(
                                 'Upload',
-                                style: TextStyle(fontSize: 12),
+                                style: GoogleFonts.poppins(fontSize: 12),
                               ),
                       ),
                   ],
@@ -1993,11 +1987,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 icon: Icons.star_outline,
                 actionButton: _buildAddButton('Add Skill', _showSkillForm),
                 child: skills.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Text(
                           'No skills added yet',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                         ),
                       )
                     : Padding(
@@ -2028,11 +2022,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                   _showExperienceForm,
                 ),
                 child: experiences.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Text(
                           'No experiences added yet',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                         ),
                       )
                     : Column(
@@ -2060,11 +2054,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                   _showEducationForm,
                 ),
                 child: educations.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Text(
                           'No education added yet',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                         ),
                       )
                     : Column(
@@ -2092,11 +2086,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                   _showPortfolioForm,
                 ),
                 child: portfolios.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Text(
                           'No portfolio items yet',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                         ),
                       )
                     : Column(
@@ -2282,7 +2276,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         const SizedBox(height: 12),
                         Text(
                           'No reviews yet',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             color: Colors.grey[600],
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -2298,16 +2292,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Reviews',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '$totalReviews total',
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -2354,7 +2348,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 14),
                   Text(
                     'No saved items yet',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.grey[500],
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -2363,7 +2357,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 6),
                   Text(
                     'Save jobs or clients to see them here.',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
               ),
@@ -2382,16 +2376,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Saved Jobs',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '${jobs.length}',
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -2437,7 +2431,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               children: [
                                 Text(
                                   job.jobTitle,
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -2447,7 +2441,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 const SizedBox(height: 3),
                                 Text(
                                   job.clientName ?? 'Client',
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                     color: Colors.grey,
                                     fontSize: 12,
                                   ),
@@ -2475,16 +2469,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Saved Clients',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '${clients.length}',
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -2540,7 +2534,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               children: [
                                 Text(
                                   c.displayName,
-                                  style: const TextStyle(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -2548,9 +2542,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 3),
-                                const Text(
+                                Text(
                                   'Client',
-                                  style: TextStyle(
+                                  style: GoogleFonts.poppins(
                                     color: Colors.grey,
                                     fontSize: 12,
                                   ),
@@ -2623,7 +2617,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 children: [
                   Text(
                     'Add your bio',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -2632,7 +2626,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 3),
                   Text(
                     'Tell clients about yourself, your skills, and experience.',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: Colors.grey[500],
                       height: 1.4,
@@ -2744,7 +2738,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        textStyle: const TextStyle(fontSize: 12),
+        textStyle: GoogleFonts.poppins(fontSize: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
     );
@@ -2776,7 +2770,7 @@ class _ExperienceItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -2784,14 +2778,14 @@ class _ExperienceItem extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   company,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
           ),
           Text(
             period,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
           ),
           if (onDelete != null) ...[
             const SizedBox(width: 8),
@@ -2835,7 +2829,7 @@ class _EducationItem extends StatelessWidget {
               children: [
                 Text(
                   degree,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -2843,14 +2837,14 @@ class _EducationItem extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   school,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
           ),
           Text(
             period,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
           ),
           if (onDelete != null) ...[
             const SizedBox(width: 8),
@@ -2910,10 +2904,10 @@ class _PortfolioItem extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.projectTitle,
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: Color(0xFF1A1A2E),
+                      color: const Color(0xFF1A1A2E),
                     ),
                   ),
                 ),
@@ -2928,9 +2922,9 @@ class _PortfolioItem extends StatelessWidget {
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: Text(
                       'From Contract',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -2955,7 +2949,7 @@ class _PortfolioItem extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 item.projectDescription!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -2973,7 +2967,7 @@ class _PortfolioItem extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       _formatDate(item.completionDate!),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                   if (item.projectUrl != null &&
@@ -2984,7 +2978,7 @@ class _PortfolioItem extends StatelessWidget {
                     Expanded(
                       child: Text(
                         item.projectUrl!,
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: AppColors.primary,
                         ),
@@ -3021,7 +3015,7 @@ class _SkillChip extends StatelessWidget {
       'hard_skill' => 'Hard Skill',
       'soft_skill' => 'Soft Skill',
       'tool' => 'Tool',
-      _ => cat?.replaceAll('_', ' ') ?? '',
+      _ => toTitleCase(cat),
     };
   }
 
@@ -3055,7 +3049,7 @@ class _SkillChip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   color: AppColors.primary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -3065,7 +3059,7 @@ class _SkillChip extends StatelessWidget {
                 catLabel.isNotEmpty
                     ? '$catLabel · ${_toTitleCase(proficiency)}'
                     : _toTitleCase(proficiency),
-                style: const TextStyle(color: AppColors.primary, fontSize: 10),
+                style: GoogleFonts.poppins(color: AppColors.primary, fontSize: 10),
               ),
             ],
           ),

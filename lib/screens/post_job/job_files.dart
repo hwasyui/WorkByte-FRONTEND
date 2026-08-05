@@ -1,6 +1,7 @@
 import 'dart:io';
 import '../../core/constants/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
@@ -333,11 +334,11 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
                     ),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Post new job',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -346,11 +347,11 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       'Attachments (Optional)',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
                     ),
                   ),
                 ],
@@ -398,24 +399,35 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       ),
       child: Row(
         children: const [
-          _StepPill(
-            index: 1,
-            label: 'Job detail',
-            active: false,
-            completed: true,
+          const Flexible(
+            child: _StepPill(
+              index: 1,
+              label: 'Job detail',
+              active: false,
+              completed: true,
+            ),
           ),
           SizedBox(width: 8),
           Expanded(child: Divider(color: _border, thickness: 1)),
           SizedBox(width: 8),
-          _StepPill(index: 2, label: 'Role', active: false, completed: true),
+          const Flexible(
+            child: _StepPill(
+              index: 2,
+              label: 'Role',
+              active: false,
+              completed: true,
+            ),
+          ),
           SizedBox(width: 8),
           Expanded(child: Divider(color: _border, thickness: 1)),
           SizedBox(width: 8),
-          _StepPill(
-            index: 3,
-            label: 'Attachment',
-            active: true,
-            completed: false,
+          const Flexible(
+            child: _StepPill(
+              index: 3,
+              label: 'Attachment',
+              active: true,
+              completed: false,
+            ),
           ),
         ],
       ),
@@ -427,7 +439,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       padding: const EdgeInsets.only(left: 20, bottom: 4, top: 4),
       child: Text(
         text,
-        style: const TextStyle(
+        style: GoogleFonts.poppins(
           color: _textDark,
           fontSize: 14,
           fontWeight: FontWeight.w700,
@@ -441,7 +453,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       padding: const EdgeInsets.only(left: 20, right: 20),
       child: Text(
         text,
-        style: const TextStyle(color: _textMuted, fontSize: 12.5, height: 1.4),
+        style: GoogleFonts.poppins(color: _textMuted, fontSize: 12.5, height: 1.4),
       ),
     );
   }
@@ -462,7 +474,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: _primary,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
@@ -510,21 +522,21 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Tap to attach files',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: _textDark,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 'You can select multiple files at once',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11.5),
+                style: GoogleFonts.poppins(color: const Color(0xFF9CA3AF), fontSize: 11.5),
               ),
             ),
           ],
@@ -539,7 +551,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
       padding: const EdgeInsets.only(left: 20, right: 20),
       child: Text(
         '${_files.length} file${_files.length == 1 ? '' : 's'} selected · $uploadedCount uploaded',
-        style: const TextStyle(
+        style: GoogleFonts.poppins(
           color: _textMuted,
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -623,7 +635,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
               children: [
                 Text(
                   f['file_name'] as String,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 12.5,
                     color: _textDark,
                     fontWeight: FontWeight.w600,
@@ -661,7 +673,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
                         size != null
                             ? '${_statusLabel(status)} · ${_formatSize(size)}'
                             : _statusLabel(status),
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 10.5,
                           color: _statusColor(status),
                           fontWeight: FontWeight.w600,
@@ -683,7 +695,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
             ),
             child: Text(
               type.toUpperCase(),
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 9,
                 color: _textMuted,
                 fontWeight: FontWeight.w700,
@@ -728,10 +740,10 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
             size: 20,
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'No files attached yet. You can skip this step and add files later.',
-              style: TextStyle(color: _textMuted, fontSize: 12, height: 1.4),
+              style: GoogleFonts.poppins(color: _textMuted, fontSize: 12, height: 1.4),
             ),
           ),
         ],
@@ -771,7 +783,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
                   : const Icon(Icons.arrow_forward_rounded, size: 18),
               label: Text(
                 _isAnyUploading ? 'Uploading files...' : 'Next: Summary',
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -792,9 +804,9 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
             height: 44,
             child: TextButton(
               onPressed: _onSkip,
-              child: const Text(
+              child: Text(
                 'Skip this step',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: _textMuted,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -852,7 +864,7 @@ class _StepPill extends StatelessWidget {
                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 13)
                 : Text(
                     '$index',
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -860,12 +872,16 @@ class _StepPill extends StatelessWidget {
                   ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                color: fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

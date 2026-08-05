@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/colors.dart';
@@ -80,7 +81,10 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text('Reviews for ${widget.clientName}'),
+        title: Text(
+          'Reviews for ${widget.clientName}',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
       ),
       body: Consumer<ClientReviewProvider>(
         builder: (context, provider, _) {
@@ -110,7 +114,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'No reviews yet',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: Colors.grey[600],
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -156,16 +160,16 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Reviews',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             '$totalReviews total',
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               color: Colors.grey,
                               fontSize: 13,
                             ),
@@ -245,7 +249,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                         review.isAnonymous
                             ? '?'
                             : displayName.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -258,14 +262,14 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     Text(
                       timeAgo,
-                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                      style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
                     ),
                   ],
                 ),
@@ -276,7 +280,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                   const SizedBox(width: 3),
                   Text(
                     avg.toStringAsFixed(1),
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -316,7 +320,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                       const SizedBox(width: 6),
                       Text(
                         ratingLabel(rating.category),
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -330,7 +334,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                       const SizedBox(width: 2),
                       Text(
                         rating.score.toStringAsFixed(1),
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -345,7 +349,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
             const SizedBox(height: 10),
             Text(
               comment,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.black87,
                 fontSize: 13,
                 height: 1.45,

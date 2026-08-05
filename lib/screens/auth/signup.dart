@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
@@ -272,7 +273,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             alignment: Alignment.center,
                                             child: Text(
                                               'Freelancer',
-                                              style: TextStyle(
+                                              style: GoogleFonts.poppins(
                                                 color: _selectedRole == 'Freelancer'
                                                     ? Colors.white
                                                     : const Color(0xFF7D7D7D),
@@ -296,7 +297,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             alignment: Alignment.center,
                                             child: Text(
                                               'Client',
-                                              style: TextStyle(
+                                              style: GoogleFonts.poppins(
                                                 color: _selectedRole == 'Client'
                                                     ? Colors.white
                                                     : const Color(0xFF7D7D7D),

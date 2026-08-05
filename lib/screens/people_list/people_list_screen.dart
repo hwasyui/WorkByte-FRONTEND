@@ -20,6 +20,7 @@ import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../screens/reviews/freelancer_reviews_screen.dart';
 import '../../screens/reviews/client_reviews_screen.dart';
+import 'client_jobs_list_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/client_service.dart';
 import '../../services/portfolio_service.dart';
@@ -1078,6 +1079,17 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                             label: 'Jobs Posted',
                             value: '${widget.client?.totalJobsPosted ?? 0}',
                             icon: Icons.work_outline_rounded,
+                            onViewAll: widget.client == null
+                                ? null
+                                : () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ClientJobsListScreen(
+                                        clientId: widget.client!.clientId,
+                                        clientName: name,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1430,7 +1442,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
       child: provider == null
           ? Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
@@ -1591,11 +1603,13 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final VoidCallback? onViewAll;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.icon,
+    this.onViewAll,
   });
 
   @override
@@ -1641,6 +1655,32 @@ class _StatCard extends StatelessWidget {
               color: const Color(0xFF9CA3AF),
             ),
           ),
+          if (onViewAll != null) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onViewAll,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View all',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

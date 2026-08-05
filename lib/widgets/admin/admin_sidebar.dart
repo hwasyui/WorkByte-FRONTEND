@@ -6,8 +6,6 @@ import '../../core/constants/admin_colors.dart';
 import 'admin_dialog.dart';
 
 class AdminSidebar extends StatelessWidget {
-  /// When true, renders a narrow icon-only rail (for tablet-width screens)
-  /// instead of the full 240px sidebar with text labels.
   final bool collapsed;
 
   const AdminSidebar({super.key, this.collapsed = false});
@@ -333,9 +331,6 @@ class _NavItemState extends State<_NavItem> {
           : Colors.white.withOpacity(0.6),
     );
 
-    // Only the collapsed rail needs a badge stacked on the icon itself
-    // (there's no room for the full pill there); the expanded sidebar
-    // already shows the count as a trailing pill, so don't double it up.
     final iconWithBadge = Stack(
       clipBehavior: Clip.none,
       children: [
@@ -355,7 +350,7 @@ class _NavItemState extends State<_NavItem> {
               child: Text(
                 badge! > 9 ? '9+' : badge.toString(),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 9,
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -397,7 +392,7 @@ class _NavItemState extends State<_NavItem> {
                   ),
                   child: Text(
                     badge > 99 ? '99+' : badge.toString(),
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 10,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,

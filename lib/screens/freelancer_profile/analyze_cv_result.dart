@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 
 class CVAnalysisResultScreen extends StatefulWidget {
@@ -109,11 +110,11 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                       padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
                       child: Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Center(
                               child: Text(
                                 'CV SCORE',
-                                style: TextStyle(
+                                style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   color: Colors.grey,
                                   letterSpacing: 1.5,
@@ -197,10 +198,10 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: const Color(0xFF1A1A2E),
             ),
           ),
         ],
@@ -221,10 +222,10 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
         ),
         child: Text(
           text,
-          style: const TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 14,
             height: 1.6,
-            color: Color(0xFF374151),
+            color: const Color(0xFF374151),
           ),
         ),
       ),
@@ -286,7 +287,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                   const SizedBox(width: 8),
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: _primaryColor,
@@ -304,7 +305,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                   if (analysis.isNotEmpty) ...[
                     Text(
                       analysis,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
                         height: 1.55,
                         color: Colors.grey[700],
@@ -313,12 +314,12 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                     if (recs.isNotEmpty) const SizedBox(height: 12),
                   ],
                   if (recs.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'Recommendations',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -347,11 +348,11 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
           children: [
             Icon(Icons.info_outline_rounded, size: 18, color: _primaryColor.withOpacity(0.6)),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Detailed section analysis could not be generated. '
                 'Try re-uploading your CV to get per-section recommendations.',
-                style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF6B7280)),
+                style: GoogleFonts.poppins(fontSize: 13, height: 1.5, color: const Color(0xFF6B7280)),
               ),
             ),
           ],
@@ -381,10 +382,10 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 13,
                 height: 1.5,
-                color: Color(0xFF374151),
+                color: const Color(0xFF374151),
               ),
             ),
           ),
@@ -426,15 +427,15 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                             children: [
                               TextSpan(
                                 text: '${_animation.value.toInt()}',
-                                style: const TextStyle(
+                                style: GoogleFonts.poppins(
                                   fontSize: 54,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
                                 ),
                               ),
-                              const TextSpan(
+                              TextSpan(
                                 text: '/100',
-                                style: TextStyle(
+                                style: GoogleFonts.poppins(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black54,
@@ -443,9 +444,9 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                             ],
                           ),
                         ),
-                        const Text(
+                        Text(
                           'Overall Score',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: Colors.grey,
                           ),
@@ -490,7 +491,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                 children: [
                   Text(
                     _getGradeLabel(),
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: _getGradeColor(),
@@ -499,7 +500,7 @@ class _CVAnalysisResultScreenState extends State<CVAnalysisResultScreen>
                   const SizedBox(height: 2),
                   Text(
                     _getStatusDescription(),
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ],
               ),

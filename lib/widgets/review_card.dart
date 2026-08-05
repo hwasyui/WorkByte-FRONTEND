@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 import '../models/review_model.dart';
 import 'review_rating_helpers.dart';
@@ -79,7 +80,7 @@ class ReviewCard extends StatelessWidget {
                         review.isAnonymous
                             ? '?'
                             : displayName.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -92,14 +93,14 @@ class ReviewCard extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
                     Text(
                       timeAgo,
-                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                      style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
                     ),
                   ],
                 ),
@@ -110,7 +111,7 @@ class ReviewCard extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     avg.toStringAsFixed(1),
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -149,7 +150,7 @@ class ReviewCard extends StatelessWidget {
                   ),
                   child: Text(
                     tag,
-                    style: const TextStyle(fontSize: 10, color: Colors.black54),
+                    style: GoogleFonts.poppins(fontSize: 10, color: Colors.black54),
                   ),
                 );
               }).toList(),
@@ -205,7 +206,7 @@ class SentimentBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: color,
@@ -248,7 +249,7 @@ class ReviewRatingsWrap extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 ratingLabel(rating.category),
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -258,7 +259,7 @@ class ReviewRatingsWrap extends StatelessWidget {
               const SizedBox(width: 2),
               Text(
                 rating.score.toStringAsFixed(1),
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -297,7 +298,7 @@ class _ExpandableReviewTextState extends State<ExpandableReviewText> {
       children: [
         Text(
           widget.text,
-          style: const TextStyle(
+          style: GoogleFonts.poppins(
             color: Colors.black87,
             fontSize: 13,
             height: 1.45,
@@ -311,7 +312,7 @@ class _ExpandableReviewTextState extends State<ExpandableReviewText> {
             onTap: () => setState(() => _expanded = !_expanded),
             child: Text(
               _expanded ? 'Read less' : 'Read more',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: widget.primaryColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 
@@ -141,7 +142,7 @@ class _MatchBadge extends StatelessWidget {
       ),
       child: Text(
         '$score%',
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: _color,

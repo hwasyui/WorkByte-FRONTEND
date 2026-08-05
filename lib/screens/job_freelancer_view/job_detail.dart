@@ -1660,7 +1660,7 @@ class ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         '$score%',
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: color,
@@ -1707,7 +1707,7 @@ class RecommendationChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,
@@ -1734,7 +1734,7 @@ class SkillChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: color,

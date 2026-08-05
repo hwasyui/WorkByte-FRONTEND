@@ -218,13 +218,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Edit About',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: const Color(0xFF1A1A2E),
                       ),
                     ),
                   ),
@@ -247,19 +247,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Tell us about your company',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF6B7280)),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: bioController,
                 maxLines: 7,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF1A1A2E)),
                 decoration: InputDecoration(
                   hintText: 'Tell us about your company...',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  hintStyle: GoogleFonts.poppins(
+                    color: const Color(0xFF9CA3AF),
                     fontSize: 14,
                   ),
                   filled: true,
@@ -290,10 +290,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text(
+                      child: Text(
                         'Cancel',
-                        style: TextStyle(
-                          color: Color(0xFF4F46E5),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF4F46E5),
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -348,9 +348,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Save',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -400,21 +400,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Edit Website',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                            color: const Color(0xFF1A1A2E),
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Update your portfolio or website link.',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: Color(0xFF6B7280),
+                            color: const Color(0xFF6B7280),
                           ),
                         ),
                       ],
@@ -439,12 +439,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Website Address',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151),
+                  color: const Color(0xFF374151),
                 ),
               ),
               const SizedBox(height: 8),
@@ -452,15 +452,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 builder: (context, setLocal) => TextField(
                   controller: websiteController,
                   keyboardType: TextInputType.url,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Color(0xFF1A1A2E),
+                    color: const Color(0xFF1A1A2E),
                   ),
                   onChanged: (_) => setLocal(() {}),
                   decoration: InputDecoration(
                     hintText: 'https://yourwebsite.com',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF),
+                    hintStyle: GoogleFonts.poppins(
+                      color: const Color(0xFF9CA3AF),
                       fontSize: 14,
                     ),
                     prefixIcon: const Icon(
@@ -513,17 +513,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ),
               const SizedBox(height: 10),
               Row(
-                children: const [
-                  Icon(
+                children: [
+                  const Icon(
                     Icons.info_outline_rounded,
                     size: 14,
                     color: Color(0xFF9CA3AF),
                   ),
-                  SizedBox(width: 6),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Enter a valid website URL (e.g., https://yourwebsite.com)',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                      style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
                     ),
                   ),
                 ],
@@ -547,10 +547,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             borderRadius: BorderRadius.circular(50),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Cancel',
-                          style: TextStyle(
-                            color: Color(0xFF4F46E5),
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF4F46E5),
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -606,9 +606,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             borderRadius: BorderRadius.circular(50),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Save',
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -739,34 +739,34 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         size: 36,
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       left: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 14,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       top: 6,
                       right: 10,
                       child: Text(
                         '✦',
-                        style: TextStyle(
-                          color: Color(0xFFB8B0F0),
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFB8B0F0),
                           fontSize: 10,
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       bottom: 8,
                       right: 8,
                       child: Text(
                         '✦',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           color: AppColors.primary,
                           fontSize: 12,
                         ),
@@ -981,13 +981,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                         profileShareUrl(auth.userId!),
                                       ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.bookmarks_outlined,
-                                color: AppColors.primary,
-                              ),
-                              onPressed: () => _tabController.animateTo(2),
                             ),
                           ],
                         ),
@@ -1845,7 +1838,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               Expanded(
                 child: Text(
                   displayName,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -1862,7 +1855,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             const SizedBox(height: 10),
             Text(
               comment,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.black87,
                 fontSize: 13,
                 height: 1.45,
@@ -1896,7 +1889,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       const SizedBox(width: 5),
                       Text(
                         '${ratingLabel(rating.category as String)} ${(rating.score as double).toStringAsFixed(1)}',
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1932,7 +1925,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   const SizedBox(height: 14),
                   Text(
                     'No saved freelancers yet',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.grey[500],
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1941,7 +1934,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   const SizedBox(height: 6),
                   Text(
                     'Save freelancers to see them here.',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
               ),
@@ -1960,16 +1953,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Saved Freelancers',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         '${freelancers.length}',
-                        style: const TextStyle(
+                        style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -2035,7 +2028,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                 children: [
                                   Text(
                                     f.displayName,
-                                    style: const TextStyle(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -2102,9 +2095,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Add your bio',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
@@ -2113,7 +2106,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   const SizedBox(height: 3),
                   Text(
                     'Tell freelancers about your company and what you are looking for.',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: Colors.grey[500],
                       height: 1.4,

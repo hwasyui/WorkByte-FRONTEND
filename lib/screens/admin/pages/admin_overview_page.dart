@@ -187,13 +187,13 @@ class _HeroBanner extends StatelessWidget {
   String get _summary {
     final clauses = <String>[];
     if (pendingReports > 0) {
-      clauses.add('$pendingReports report${pendingReports == 1 ? '' : 's'}');
+      clauses.add('$pendingReports Report${pendingReports == 1 ? '' : 's'}');
     }
     if (pendingAppeals > 0) {
-      clauses.add('$pendingAppeals appeal${pendingAppeals == 1 ? '' : 's'}');
+      clauses.add('$pendingAppeals Appeal${pendingAppeals == 1 ? '' : 's'}');
     }
     if (disputes > 0) {
-      clauses.add('$disputes dispute${disputes == 1 ? '' : 's'}');
+      clauses.add('$disputes Dispute${disputes == 1 ? '' : 's'}');
     }
     if (clauses.isEmpty) {
       return "Everything's running smoothly — no items need attention right now.";

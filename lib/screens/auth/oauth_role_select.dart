@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/screens/freelancer_profile/freelancer_profile_setup.dart';
 import '../../core/constants/colors.dart';
@@ -158,7 +159,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                               alignment: Alignment.center,
                               child: Text(
                                 'Freelancer',
-                                style: TextStyle(
+                                style: GoogleFonts.poppins(
                                   color: _selectedRole == 'Freelancer'
                                       ? Colors.white
                                       : const Color(0xFF7D7D7D),
@@ -183,7 +184,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                               alignment: Alignment.center,
                               child: Text(
                                 'Client',
-                                style: TextStyle(
+                                style: GoogleFonts.poppins(
                                   color: _selectedRole == 'Client'
                                       ? Colors.white
                                       : const Color(0xFF7D7D7D),
@@ -220,7 +221,7 @@ class _OAuthRoleSelectScreenState extends State<OAuthRoleSelectScreen> {
                               authProvider.isLoading
                                   ? 'Setting up...'
                                   : 'Continue',
-                              style: const TextStyle(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,

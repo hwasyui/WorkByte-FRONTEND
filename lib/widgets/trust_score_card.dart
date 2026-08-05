@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 import '../models/review_model.dart';
 import '../models/client_review_model.dart';
+import '../core/utils/text_format.dart';
 
 class TrustScoreCard extends StatelessWidget {
   final TrustScore trustScore;
@@ -18,7 +20,7 @@ class TrustScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = trustScore.overallScore;
     final rankPct = trustScore.categoryRankPct;
-    final category = trustScore.category?.replaceAll('_', ' ') ?? '';
+    final category = toTitleCase(trustScore.category);
 
     Color scoreColor;
     String scoreLabel;
@@ -72,7 +74,7 @@ class TrustScoreCard extends StatelessWidget {
                   ),
                   child: Text(
                     'Top ${(100 - rankPct).toStringAsFixed(0)}% in $category',
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 10,
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -103,7 +105,7 @@ class TrustScoreCard extends StatelessWidget {
                         children: [
                           Text(
                             score.toStringAsFixed(0),
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: scoreColor,
@@ -111,7 +113,7 @@ class TrustScoreCard extends StatelessWidget {
                           ),
                           Text(
                             '/100',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: Colors.grey[500],
                             ),
@@ -129,7 +131,7 @@ class TrustScoreCard extends StatelessWidget {
                   children: [
                     Text(
                       scoreLabel,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: scoreColor,
@@ -138,7 +140,7 @@ class TrustScoreCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Based on ${trustScore.totalReviews} review${trustScore.totalReviews == 1 ? '' : 's'}, delivery record & communication',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -259,7 +261,7 @@ class ClientTrustScoreCard extends StatelessWidget {
                         children: [
                           Text(
                             score.toStringAsFixed(0),
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: scoreColor,
@@ -267,7 +269,7 @@ class ClientTrustScoreCard extends StatelessWidget {
                           ),
                           Text(
                             '/100',
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: Colors.grey[500],
                             ),
@@ -285,7 +287,7 @@ class ClientTrustScoreCard extends StatelessWidget {
                   children: [
                     Text(
                       scoreLabel,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: scoreColor,
@@ -294,7 +296,7 @@ class ClientTrustScoreCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Based on ${trustScore.totalReviewsReceived} review${trustScore.totalReviewsReceived == 1 ? '' : 's'} from freelancers',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -380,9 +382,9 @@ class AiReviewSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'AI Summary',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -394,7 +396,7 @@ class AiReviewSummaryCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             text,
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               height: 1.5,
               color: AppColors.textDark.withOpacity(0.85),
@@ -444,7 +446,7 @@ class ConfidenceBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: color,
@@ -520,9 +522,9 @@ class SentimentDistributionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Review Sentiment',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (showChart) ...[
@@ -558,7 +560,7 @@ class SentimentDistributionCard extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
       ],
     );
   }
@@ -593,14 +595,14 @@ class ScoreBar extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+              style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
             ),
           ),
           Expanded(
             child: v == null
                 ? Text(
                     nullLabel ?? 'Not enough data yet',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 10.5,
                       color: Colors.grey[400],
                       fontStyle: FontStyle.italic,
@@ -622,7 +624,7 @@ class ScoreBar extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               '${(v.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Colors.black54,
@@ -704,7 +706,7 @@ class RatingSummaryCard extends StatelessWidget {
             child: Center(
               child: Text(
                 rating.toStringAsFixed(1),
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -719,9 +721,9 @@ class RatingSummaryCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Average Rating',
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -740,7 +742,7 @@ class RatingSummaryCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Based on $totalReviews review${totalReviews == 1 ? '' : 's'}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -785,9 +787,9 @@ class CategoryRatingsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Rating Breakdown',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 14),
           ...orderedKeys.where(categoryAverages.containsKey).map((key) {
@@ -802,7 +804,7 @@ class CategoryRatingsCard extends StatelessWidget {
                     width: 110,
                     child: Text(
                       ratingLabelFor(key),
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.black87,
                       ),
@@ -824,7 +826,7 @@ class CategoryRatingsCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     value.toStringAsFixed(1),
-                    style: const TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -869,6 +871,6 @@ String ratingLabelFor(String category) {
     case 'timeliness':
       return 'Timeliness';
     default:
-      return category.replaceAll('_', ' ');
+      return toTitleCase(category);
   }
 }

@@ -10,6 +10,8 @@ import '../../../widgets/admin/admin_loading.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/date_range_filter_button.dart';
+import '../../../core/constants/job_categories.dart';
+import '../../../core/utils/text_format.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -281,7 +283,7 @@ class _AdminUsersPageState extends State<AdminUsersPage>
                           subtitleBuilder: (u) {
                             final posted = u['total_jobs_posted'] ?? 0;
                             final completed = u['total_projects_completed'] ?? 0;
-                            return '$posted jobs posted · $completed completed';
+                            return '$posted Jobs Posted · $completed Completed';
                           },
                         ),
                       ),
@@ -1156,10 +1158,10 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _row('Project Type', d['project_type']?.toString() ?? ''),
-                      _row('Scope', d['project_scope']?.toString() ?? ''),
-                      _row('Experience', d['experience_level']?.toString() ?? ''),
-                      _row('Category', d['project_category']?.toString() ?? ''),
+                      _row('Project Type', toTitleCase(d['project_type']?.toString())),
+                      _row('Scope', toTitleCase(d['project_scope']?.toString())),
+                      _row('Experience', toTitleCase(d['experience_level']?.toString())),
+                      _row('Category', categoryLabel(d['project_category']?.toString())),
                       _row('Created', _fmt(d['created_at']?.toString())),
                       _row('Posted', _fmt(d['posted_at']?.toString())),
                       if ((d['closure_reason']?.toString() ?? '').isNotEmpty)
@@ -1186,7 +1188,7 @@ class _JobDetailDialogState extends State<_JobDetailDialog> {
                           String budgetStr = '';
                           if (budget != null) {
                             budgetStr = '$currency $budget';
-                            if (budgetType.isNotEmpty) budgetStr += ' / $budgetType';
+                            if (budgetType.isNotEmpty) budgetStr += ' / ${toTitleCase(budgetType)}';
                           }
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),

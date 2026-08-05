@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/providers/profile_provider.dart';
 import '../../core/constants/colors.dart';
@@ -222,11 +223,11 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                   MaterialPageRoute(builder: (_) => const HomeScreen()),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 20),
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
                 child: Text(
                   'Your drafts',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -237,7 +238,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                 padding: const EdgeInsets.only(left: 20, top: 4),
                 child: Text(
                   '$count unfinished job post${count == 1 ? '' : 's'}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
                 ),
               ),
             ],
@@ -273,16 +274,16 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
               children: [
                 Text(
                   '$count saved draft${count == 1 ? '' : 's'}',
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     color: _textDark,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Continue any unfinished post or start a new one without losing the others.',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     color: _textMuted,
                     fontSize: 12.5,
                     height: 1.4,
@@ -348,7 +349,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         color: _textDark,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -358,7 +359,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Last edited ${_formatRelative(updatedAt)}',
-                      style: const TextStyle(color: _textMuted, fontSize: 12.5),
+                      style: GoogleFonts.poppins(color: _textMuted, fontSize: 12.5),
                     ),
                   ],
                 ),
@@ -453,7 +454,7 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               color: _textDark,
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
@@ -492,19 +493,19 @@ class _JobDraftsScreenState extends State<JobDraftsScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'No drafts yet',
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: _textDark,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Start a new job post and we will save your progress here automatically across Job Detail, Role, and Attachment.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: _textMuted,
                   fontSize: 13.5,
                   height: 1.5,

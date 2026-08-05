@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
@@ -414,10 +415,10 @@ class _OtpBox extends StatelessWidget {
           maxLength: 1,
           onChanged: onChanged,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF333333),
+            color: const Color(0xFF333333),
           ),
           decoration: InputDecoration(
             counterText: '',

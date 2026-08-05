@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/skill_provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/skill_model.dart';
+import '../core/utils/text_format.dart';
 
 class AddSkillWidget extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
@@ -128,17 +130,17 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: Text(
                 'Add Skill',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 16),
 
-            const Text(
+            Text(
               "Skill",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 6),
             Container(
@@ -150,10 +152,10 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
               child: TextField(
                 controller: _searchCtrl,
                 onChanged: _onChanged,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Type to search skills...',
-                  hintStyle: const TextStyle(
+                  hintStyle: GoogleFonts.poppins(
                     color: Colors.grey,
                     fontSize: 13,
                   ),
@@ -265,14 +267,14 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                                     child: Text.rich(
                                       TextSpan(
                                         text: 'Add "',
-                                        style: const TextStyle(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 13,
                                           color: Colors.grey,
                                         ),
                                         children: [
                                           TextSpan(
                                             text: query,
-                                            style: const TextStyle(
+                                            style: GoogleFonts.poppins(
                                               color: AppColors.primary,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -290,11 +292,11 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                           ),
                         ],
                         if (list.isEmpty && !showCreate)
-                          const Padding(
-                            padding: EdgeInsets.all(14),
+                          Padding(
+                            padding: const EdgeInsets.all(14),
                             child: Text(
                               'No skills found',
-                              style: TextStyle(
+                              style: GoogleFonts.poppins(
                                 color: Colors.grey,
                                 fontSize: 13,
                               ),
@@ -319,7 +321,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                   Expanded(
                     child: Text(
                       'Creating "$_pendingNewSkillName" — choose type:',
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -361,7 +363,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                         child: Center(
                           child: Text(
                             label,
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               color: isSelected
                                   ? Colors.white
                                   : Colors.grey[700],
@@ -393,9 +395,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Create Skill',
-                    style: TextStyle(fontSize: 13, color: Colors.white),
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white),
                   ),
                 ),
               ),
@@ -414,7 +416,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                   Expanded(
                     child: Text(
                       _selected!.skillName,
-                      style: const TextStyle(
+                      style: GoogleFonts.poppins(
                         color: AppColors.primary,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -428,9 +430,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
 
             const SizedBox(height: 16),
 
-            const Text(
+            Text(
               "Proficiency",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 8),
             Row(
@@ -459,7 +461,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                       child: Center(
                         child: Text(
                           entry.value,
-                          style: TextStyle(
+                          style: GoogleFonts.poppins(
                             color: isSelected
                                 ? Colors.white
                                 : Colors.grey[700],
@@ -505,9 +507,9 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                           ),
                         ),
                       )
-                    : const Text(
+                    : Text(
                         "Save",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
                       ),
               ),
             ),
@@ -534,7 +536,7 @@ class _SkillItem extends StatelessWidget {
       'hard_skill' => 'Hard Skill',
       'soft_skill' => 'Soft Skill',
       'tool' => 'Tool',
-      _ => cat.replaceAll('_', ' '),
+      _ => toTitleCase(cat),
     };
   }
 
@@ -557,7 +559,7 @@ class _SkillItem extends StatelessWidget {
             Expanded(
               child: Text(
                 skill.skillName,
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   color: isSelected ? AppColors.primary : Colors.black87,
                   fontWeight:
@@ -577,7 +579,7 @@ class _SkillItem extends StatelessWidget {
                 ),
                 child: Text(
                   _formatCategory(skill.skillCategory!),
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 10,
                     color: AppColors.primary,
                   ),
