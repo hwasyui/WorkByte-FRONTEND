@@ -71,6 +71,7 @@ class _AdminUsersPageState extends State<AdminUsersPage>
   }
 
   void _onDateRangeChanged(DateTimeRange? range) {
+    debugPrint('[DEBUG] _onDateRangeChanged range=$range isoFrom=${_isoDate(range?.start)} isoTo=${_isoDate(range?.end)}');
     setState(() {
       _dateRange = range;
       _freelancerPage = 1;
@@ -105,33 +106,74 @@ class _AdminUsersPageState extends State<AdminUsersPage>
     return Consumer<AdminProvider>(
       builder: (context, admin, _) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
+              width: double.infinity,
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SummaryChip(
-                    label: 'Total',
-                    value: admin.totalUsers.toString(),
-                    color: const Color(0xFF4F46E5),
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.people_rounded,
+                          color: Color(0xFF4F46E5),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'User Management',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF111827),
+                              ),
+                            ),
+                            Text(
+                              'Freelancers and clients registered on the platform',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DateRangeFilterButton(
+                        range: _dateRange,
+                        onChanged: _onDateRangeChanged,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _SummaryChip(
-                    label: 'Freelancers',
-                    value: admin.totalFreelancers.toString(),
-                    color: const Color(0xFF059669),
-                  ),
-                  const SizedBox(width: 8),
-                  _SummaryChip(
-                    label: 'Clients',
-                    value: admin.totalClients.toString(),
-                    color: const Color(0xFF0891B2),
-                  ),
-                  const Spacer(),
-                  DateRangeFilterButton(
-                    range: _dateRange,
-                    onChanged: _onDateRangeChanged,
+                  const SizedBox(height: 16),
+                  TabBar(
+                    controller: _tabController,
+                    labelColor: const Color(0xFF4F46E5),
+                    unselectedLabelColor: const Color(0xFF6B7280),
+                    indicatorColor: const Color(0xFF4F46E5),
+                    labelStyle: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+                    tabs: [
+                      Tab(text: 'Freelancers (${admin.totalFreelancers})'),
+                      Tab(text: 'Clients (${admin.totalClients})'),
+                    ],
                   ),
                 ],
               ),
@@ -139,20 +181,30 @@ class _AdminUsersPageState extends State<AdminUsersPage>
 
             Container(
               color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: const Color(0xFF4F46E5),
-                unselectedLabelColor: const Color(0xFF6B7280),
-                indicatorColor: const Color(0xFF4F46E5),
-                labelStyle: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _SummaryChip(
+                      label: 'Total',
+                      value: admin.totalUsers.toString(),
+                      color: const Color(0xFF4F46E5),
+                    ),
+                    const SizedBox(width: 8),
+                    _SummaryChip(
+                      label: 'Freelancers',
+                      value: admin.totalFreelancers.toString(),
+                      color: const Color(0xFF059669),
+                    ),
+                    const SizedBox(width: 8),
+                    _SummaryChip(
+                      label: 'Clients',
+                      value: admin.totalClients.toString(),
+                      color: const Color(0xFF0891B2),
+                    ),
+                  ],
                 ),
-                unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
-                tabs: [
-                  Tab(text: 'Freelancers (${admin.totalFreelancers})'),
-                  Tab(text: 'Clients (${admin.totalClients})'),
-                ],
               ),
             ),
 
@@ -910,7 +962,7 @@ class _UserDetailSheetState extends State<_UserDetailSheet> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    status,
+                                    status.toUpperCase(),
                                     style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600,
                                       color: status == 'open' ? const Color(0xFF16A34A) : status == 'closed' ? const Color(0xFFDC2626) : const Color(0xFF6B7280)),
                                   ),

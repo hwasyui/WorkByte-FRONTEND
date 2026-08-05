@@ -49,13 +49,50 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         final startDate = _isoDate(_dateRange?.start);
         final endDate = _isoDate(_dateRange?.end);
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
+              width: double.infinity,
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
               child: Row(
                 children: [
-                  const Spacer(),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.report_problem_rounded,
+                      color: Color(0xFFD97706),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Reports',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                        Text(
+                          'User-submitted reports awaiting review',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   DateRangeFilterButton(
                     range: _dateRange,
                     onChanged: _onDateRangeChanged,
@@ -285,8 +322,6 @@ class _ReportCard extends StatelessWidget {
 
             Row(
               children: [
-                const Icon(Icons.flag_rounded, size: 14, color: Color(0xFFDC2626)),
-                const SizedBox(width: 6),
                 Text(
                   'Reported:',
                   style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),

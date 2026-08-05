@@ -78,12 +78,16 @@ class _AdminActionButtonState extends State<AdminActionButton> {
                   color: disabled ? AdminColors.faint : (filled ? Colors.white : widget.color),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  widget.label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: disabled ? AdminColors.faint : (filled ? Colors.white : widget.color),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: disabled ? AdminColors.faint : (filled ? Colors.white : widget.color),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

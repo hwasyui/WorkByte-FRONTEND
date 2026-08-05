@@ -208,123 +208,133 @@ class _MobileDrawer extends StatelessWidget {
                   height: 24,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 4,
-                ),
-                child: Text(
-                  'NAVIGATION',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF818CF8),
-                    letterSpacing: 1.2,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'NAVIGATION',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF818CF8),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _DrawerItem(
+                        icon: Icons.dashboard_rounded,
+                        label: 'Dashboard',
+                        isSelected: selectedIndex == 0,
+                        onTap: () {
+                          onSelect(0);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.people_rounded,
+                        label: 'Users',
+                        isSelected: selectedIndex == 1,
+                        onTap: () {
+                          onSelect(1);
+                          context.read<AdminProvider>().loadFreelancersPage(1);
+                          context.read<AdminProvider>().loadClientsPage(1);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.work_rounded,
+                        label: 'Jobs',
+                        isSelected: selectedIndex == 2,
+                        onTap: () {
+                          onSelect(2);
+                          context.read<AdminProvider>().loadJobsPage(1);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.report_problem_rounded,
+                        label: 'Reports',
+                        isSelected: selectedIndex == 3,
+                        badge: context.read<AdminProvider>().pendingReports > 0
+                            ? context.read<AdminProvider>().pendingReports
+                            : null,
+                        onTap: () {
+                          onSelect(3);
+                          context.read<AdminProvider>().loadReports();
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.smart_toy_rounded,
+                        label: 'AI Analysis',
+                        isSelected: selectedIndex == 4,
+                        badge:
+                            context.read<AdminProvider>().pendingScamFlags +
+                                    context
+                                        .read<AdminProvider>()
+                                        .pendingModerationItems >
+                                0
+                            ? context.read<AdminProvider>().pendingScamFlags +
+                                  context
+                                      .read<AdminProvider>()
+                                      .pendingModerationItems
+                            : null,
+                        onTap: () {
+                          onSelect(4);
+                          context.read<AdminProvider>().loadScamFlags();
+                          context.read<AdminProvider>().loadModerationItems();
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.lock_clock_rounded,
+                        label: 'Closed Items',
+                        isSelected: selectedIndex == 5,
+                        onTap: () {
+                          onSelect(5);
+                          context.read<AdminProvider>().loadClosedJobs();
+                          context.read<AdminProvider>().loadClosedAccounts();
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.gavel_rounded,
+                        label: 'Appeals',
+                        isSelected: selectedIndex == 6,
+                        badge: context.read<AdminProvider>().pendingAppeals > 0
+                            ? context.read<AdminProvider>().pendingAppeals
+                            : null,
+                        onTap: () {
+                          onSelect(6);
+                          context.read<AdminProvider>().loadAppeals(status: 'all');
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.balance_rounded,
+                        label: 'Disputes',
+                        isSelected: selectedIndex == 7,
+                        badge: context.read<AdminProvider>().pendingDisputesCount > 0
+                            ? context.read<AdminProvider>().pendingDisputesCount
+                            : null,
+                        onTap: () {
+                          onSelect(7);
+                          context.read<AdminProvider>().loadDisputedContracts();
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              _DrawerItem(
-                icon: Icons.dashboard_rounded,
-                label: 'Dashboard',
-                isSelected: selectedIndex == 0,
-                onTap: () {
-                  onSelect(0);
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.people_rounded,
-                label: 'Users',
-                isSelected: selectedIndex == 1,
-                onTap: () {
-                  onSelect(1);
-                  context.read<AdminProvider>().loadFreelancersPage(1);
-                  context.read<AdminProvider>().loadClientsPage(1);
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.work_rounded,
-                label: 'Jobs',
-                isSelected: selectedIndex == 2,
-                onTap: () {
-                  onSelect(2);
-                  context.read<AdminProvider>().loadJobsPage(1);
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.flag_rounded,
-                label: 'Reports',
-                isSelected: selectedIndex == 3,
-                badge: context.read<AdminProvider>().pendingReports > 0
-                    ? context.read<AdminProvider>().pendingReports
-                    : null,
-                onTap: () {
-                  onSelect(3);
-                  context.read<AdminProvider>().loadReports();
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.smart_toy_rounded,
-                label: 'AI Analysis',
-                isSelected: selectedIndex == 4,
-                badge:
-                    context.read<AdminProvider>().pendingScamFlags +
-                            context
-                                .read<AdminProvider>()
-                                .pendingModerationItems >
-                        0
-                    ? context.read<AdminProvider>().pendingScamFlags +
-                          context.read<AdminProvider>().pendingModerationItems
-                    : null,
-                onTap: () {
-                  onSelect(4);
-                  context.read<AdminProvider>().loadScamFlags();
-                  context.read<AdminProvider>().loadModerationItems();
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.lock_clock_rounded,
-                label: 'Closed Items',
-                isSelected: selectedIndex == 5,
-                onTap: () {
-                  onSelect(5);
-                  context.read<AdminProvider>().loadClosedJobs();
-                  context.read<AdminProvider>().loadClosedAccounts();
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.gavel_rounded,
-                label: 'Appeals',
-                isSelected: selectedIndex == 6,
-                badge: context.read<AdminProvider>().pendingAppeals > 0
-                    ? context.read<AdminProvider>().pendingAppeals
-                    : null,
-                onTap: () {
-                  onSelect(6);
-                  context.read<AdminProvider>().loadAppeals(status: 'all');
-                  Navigator.pop(context);
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.balance_rounded,
-                label: 'Disputes',
-                isSelected: selectedIndex == 7,
-                badge: context.read<AdminProvider>().pendingDisputesCount > 0
-                    ? context.read<AdminProvider>().pendingDisputesCount
-                    : null,
-                onTap: () {
-                  onSelect(7);
-                  context.read<AdminProvider>().loadDisputedContracts();
-                  Navigator.pop(context);
-                },
-              ),
-              const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Divider(

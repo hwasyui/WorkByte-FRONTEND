@@ -22,11 +22,17 @@ class AdminAiPage extends StatefulWidget {
 class _AdminAiPageState extends State<AdminAiPage>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  int _mainTabIndex = 0;
+  int _reviewSubIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    _tab.addListener(() {
+      if (_tab.indexIsChanging) return;
+      setState(() => _mainTabIndex = _tab.index);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final admin = context.read<AdminProvider>();
       admin.loadScamFlags();
@@ -42,10 +48,47 @@ class _AdminAiPageState extends State<AdminAiPage>
     super.dispose();
   }
 
+  Widget _headerDateRangeButton(AdminProvider admin) {
+    switch (_mainTabIndex) {
+      case 0:
+        return DateRangeFilterButton(
+          range: admin.scamDateRange,
+          onChanged: admin.setScamDateRange,
+          accentColor: const Color(0xFFDC2626),
+        );
+      case 1:
+        return DateRangeFilterButton(
+          range: admin.moderationDateRange,
+          onChanged: admin.setModerationDateRange,
+        );
+      default:
+        switch (_reviewSubIndex) {
+          case 0:
+            return DateRangeFilterButton(
+              range: admin.reviewRedFlagsDateRange,
+              onChanged: admin.setReviewRedFlagsDateRange,
+              accentColor: const Color(0xFFDC2626),
+            );
+          case 1:
+            return DateRangeFilterButton(
+              range: admin.flaggedReviewsDateRange,
+              onChanged: admin.setFlaggedReviewsDateRange,
+              accentColor: const Color(0xFF7C3AED),
+            );
+          default:
+            return DateRangeFilterButton(
+              range: admin.flaggedClientReviewsDateRange,
+              onChanged: admin.setFlaggedClientReviewsDateRange,
+              accentColor: const Color(0xFF7C3AED),
+            );
+        }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           width: double.infinity,
@@ -70,25 +113,33 @@ class _AdminAiPageState extends State<AdminAiPage>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AI Analysis',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF111827),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI Analysis',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF111827),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Job Scam Detection, Harmful Text Detection, and Review Integrity',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF9CA3AF),
+                        Text(
+                          'Job Scam Detection, Harmful Text Detection, and Review Integrity',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Consumer<AdminProvider>(
+                    builder: (context, admin, _) => _headerDateRangeButton(admin),
                   ),
                 ],
               ),
@@ -116,7 +167,13 @@ class _AdminAiPageState extends State<AdminAiPage>
         Expanded(
           child: TabBarView(
             controller: _tab,
-            children: const [_ScamTab(), _ModerationTab(), _ReviewIntegrityTab()],
+            children: [
+              const _ScamTab(),
+              const _ModerationTab(),
+              _ReviewIntegrityTab(
+                onSubIndexChanged: (i) => setState(() => _reviewSubIndex = i),
+              ),
+            ],
           ),
         ),
       ],
@@ -135,20 +192,7 @@ class _ScamTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  DateRangeFilterButton(
-                    range: admin.scamDateRange,
-                    onChanged: admin.setScamDateRange,
-                    accentColor: const Color(0xFFDC2626),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 10),
             FilterDropdownBar(
               summaryText: admin.scamStatusFilter == 'all'
                   ? 'All flags'
@@ -665,19 +709,7 @@ class _ModerationTab extends StatelessWidget {
       builder: (context, admin, _) {
         return Column(
           children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  DateRangeFilterButton(
-                    range: admin.moderationDateRange,
-                    onChanged: admin.setModerationDateRange,
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 10),
             FilterDropdownBar(
               summaryText: admin.moderationStatusFilter == 'all'
                   ? 'All flags'
@@ -1636,7 +1668,7 @@ class _StatusPill extends StatelessWidget {
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 5),
         Text(
-          status[0].toUpperCase() + status.substring(1),
+          status.toUpperCase(),
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -1675,7 +1707,7 @@ class _ModerationStatusPill extends StatelessWidget {
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 5),
         Text(
-          label,
+          label.toUpperCase(),
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -1724,7 +1756,8 @@ class _Empty extends StatelessWidget {
 }
 
 class _ReviewIntegrityTab extends StatefulWidget {
-  const _ReviewIntegrityTab();
+  final ValueChanged<int> onSubIndexChanged;
+  const _ReviewIntegrityTab({required this.onSubIndexChanged});
 
   @override
   State<_ReviewIntegrityTab> createState() => _ReviewIntegrityTabState();
@@ -1739,6 +1772,11 @@ class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().loadFlaggedClientReviews();
     });
+  }
+
+  void _selectTab(int index) {
+    setState(() => _tabIndex = index);
+    widget.onSubIndexChanged(index);
   }
 
   @override
@@ -1756,7 +1794,7 @@ class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
                     label: 'Red Flags '
                         '(${_totalCount(admin.reviewRedFlagsPagination, admin.reviewRedFlags.length)})',
                     selected: _tabIndex == 0,
-                    onTap: () => setState(() => _tabIndex = 0),
+                    onTap: () => _selectTab(0),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1765,7 +1803,7 @@ class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
                     label: 'Freelancer '
                         '(${_totalCount(admin.flaggedReviewsPagination, admin.flaggedReviews.length)})',
                     selected: _tabIndex == 1,
-                    onTap: () => setState(() => _tabIndex = 1),
+                    onTap: () => _selectTab(1),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1774,7 +1812,7 @@ class _ReviewIntegrityTabState extends State<_ReviewIntegrityTab> {
                     label: 'Client '
                         '(${_totalCount(admin.flaggedClientReviewsPagination, admin.flaggedClientReviews.length)})',
                     selected: _tabIndex == 2,
-                    onTap: () => setState(() => _tabIndex = 2),
+                    onTap: () => _selectTab(2),
                   ),
                 ),
               ],
@@ -1856,20 +1894,7 @@ class _RedFlagsList extends StatelessWidget {
         final totalPages = _totalPages(admin.reviewRedFlagsPagination);
         return Column(
           children: [
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  DateRangeFilterButton(
-                    range: admin.reviewRedFlagsDateRange,
-                    onChanged: admin.setReviewRedFlagsDateRange,
-                    accentColor: const Color(0xFFDC2626),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 10),
             FilterDropdownBar(
               summaryText: admin.reviewRedFlagsResolvedFilter == 'all'
                   ? 'All alerts'
@@ -2098,8 +2123,6 @@ class _FlaggedReviewsList extends StatelessWidget {
           pagination: admin.flaggedReviewsPagination,
           holdFilter: admin.flaggedReviewStatusFilter,
           sortBy: admin.flaggedReviewSortBy,
-          dateRange: admin.flaggedReviewsDateRange,
-          onDateRangeChanged: admin.setFlaggedReviewsDateRange,
           onHoldSelect: (s) => admin.loadFlaggedReviews(status: s),
           onSortSelect: admin.setFlaggedReviewSort,
           onPageChange: (p) => admin.loadFlaggedReviews(page: p),
@@ -2124,8 +2147,6 @@ class _FlaggedClientReviewsList extends StatelessWidget {
           pagination: admin.flaggedClientReviewsPagination,
           holdFilter: admin.flaggedClientReviewStatusFilter,
           sortBy: admin.flaggedClientReviewSortBy,
-          dateRange: admin.flaggedClientReviewsDateRange,
-          onDateRangeChanged: admin.setFlaggedClientReviewsDateRange,
           onHoldSelect: (s) => admin.loadFlaggedClientReviews(status: s),
           onSortSelect: admin.setFlaggedClientReviewSort,
           onPageChange: (p) => admin.loadFlaggedClientReviews(page: p),
@@ -2143,8 +2164,6 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
   final Map<String, dynamic> pagination;
   final String holdFilter;
   final String sortBy;
-  final DateTimeRange? dateRange;
-  final ValueChanged<DateTimeRange?> onDateRangeChanged;
   final ValueChanged<String> onHoldSelect;
   final ValueChanged<String> onSortSelect;
   final ValueChanged<int> onPageChange;
@@ -2157,8 +2176,6 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
     required this.pagination,
     required this.holdFilter,
     required this.sortBy,
-    required this.dateRange,
-    required this.onDateRangeChanged,
     required this.onHoldSelect,
     required this.onSortSelect,
     required this.onPageChange,
@@ -2170,20 +2187,7 @@ class _FlaggedReviewsScaffold extends StatelessWidget {
     final total = _totalCount(pagination, items.length);
     return Column(
       children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: Row(
-            children: [
-              const Spacer(),
-              DateRangeFilterButton(
-                range: dateRange,
-                onChanged: onDateRangeChanged,
-                accentColor: const Color(0xFF7C3AED),
-              ),
-            ],
-          ),
-        ),
+        const SizedBox(height: 10),
         FilterDropdownBar(
           summaryText:
               holdFilter == 'all' ? 'All holds' : _holdLevelLabel(holdFilter),

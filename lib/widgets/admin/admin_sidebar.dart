@@ -67,115 +67,122 @@ class AdminSidebar extends StatelessWidget {
                   ),
                 ),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    'NAVIGATION',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF818CF8),
-                      letterSpacing: 1.2,
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            'NAVIGATION',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF818CF8),
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        _NavItem(
+                          icon: Icons.dashboard_rounded,
+                          label: 'Dashboard',
+                          page: AdminPage.overview,
+                          current: admin.currentPage,
+                          onTap: () => admin.setPage(AdminPage.overview),
+                        ),
+                        _NavItem(
+                          icon: Icons.people_rounded,
+                          label: 'Users',
+                          page: AdminPage.users,
+                          current: admin.currentPage,
+                          onTap: () {
+                            admin.setPage(AdminPage.users);
+                            admin.loadFreelancersPage(1);
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.work_rounded,
+                          label: 'Jobs',
+                          page: AdminPage.jobs,
+                          current: admin.currentPage,
+                          onTap: () {
+                            admin.setPage(AdminPage.jobs);
+                            admin.loadJobsPage(1);
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.report_problem_rounded,
+                          label: 'Reports',
+                          page: AdminPage.reports,
+                          current: admin.currentPage,
+                          badge: admin.pendingReports > 0 ? admin.pendingReports : null,
+                          onTap: () {
+                            admin.setPage(AdminPage.reports);
+                            admin.loadReports();
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.smart_toy_rounded,
+                          label: 'AI Analysis',
+                          page: AdminPage.ai,
+                          current: admin.currentPage,
+                          badge:
+                              (admin.pendingScamFlags + admin.pendingModerationItems) >
+                                  0
+                              ? admin.pendingScamFlags + admin.pendingModerationItems
+                              : null,
+                          onTap: () {
+                            admin.setPage(AdminPage.ai);
+                            admin.loadScamFlags();
+                            admin.loadModerationItems();
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.lock_clock_rounded,
+                          label: 'Closed Items',
+                          page: AdminPage.closed,
+                          current: admin.currentPage,
+                          onTap: () {
+                            admin.setPage(AdminPage.closed);
+                            admin.loadClosedJobs();
+                            admin.loadClosedAccounts();
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.gavel_rounded,
+                          label: 'Appeals',
+                          page: AdminPage.appeals,
+                          current: admin.currentPage,
+                          badge: admin.pendingAppeals > 0 ? admin.pendingAppeals : null,
+                          onTap: () {
+                            admin.setPage(AdminPage.appeals);
+                            admin.loadAppeals(status: 'all');
+                          },
+                        ),
+                        _NavItem(
+                          icon: Icons.balance_rounded,
+                          label: 'Disputes',
+                          page: AdminPage.disputes,
+                          current: admin.currentPage,
+                          badge: admin.pendingDisputesCount > 0
+                              ? admin.pendingDisputesCount
+                              : null,
+                          onTap: () {
+                            admin.setPage(AdminPage.disputes);
+                            admin.loadDisputedContracts();
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 4),
-
-                _NavItem(
-                  icon: Icons.dashboard_rounded,
-                  label: 'Dashboard',
-                  page: AdminPage.overview,
-                  current: admin.currentPage,
-                  onTap: () => admin.setPage(AdminPage.overview),
-                ),
-                _NavItem(
-                  icon: Icons.people_rounded,
-                  label: 'Users',
-                  page: AdminPage.users,
-                  current: admin.currentPage,
-                  onTap: () {
-                    admin.setPage(AdminPage.users);
-                    admin.loadFreelancersPage(1);
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.work_rounded,
-                  label: 'Jobs',
-                  page: AdminPage.jobs,
-                  current: admin.currentPage,
-                  onTap: () {
-                    admin.setPage(AdminPage.jobs);
-                    admin.loadJobsPage(1);
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.flag_rounded,
-                  label: 'Reports',
-                  page: AdminPage.reports,
-                  current: admin.currentPage,
-                  badge: admin.pendingReports > 0 ? admin.pendingReports : null,
-                  onTap: () {
-                    admin.setPage(AdminPage.reports);
-                    admin.loadReports();
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.smart_toy_rounded,
-                  label: 'AI Analysis',
-                  page: AdminPage.ai,
-                  current: admin.currentPage,
-                  badge:
-                      (admin.pendingScamFlags + admin.pendingModerationItems) >
-                          0
-                      ? admin.pendingScamFlags + admin.pendingModerationItems
-                      : null,
-                  onTap: () {
-                    admin.setPage(AdminPage.ai);
-                    admin.loadScamFlags();
-                    admin.loadModerationItems();
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.lock_clock_rounded,
-                  label: 'Closed Items',
-                  page: AdminPage.closed,
-                  current: admin.currentPage,
-                  onTap: () {
-                    admin.setPage(AdminPage.closed);
-                    admin.loadClosedJobs();
-                    admin.loadClosedAccounts();
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.gavel_rounded,
-                  label: 'Appeals',
-                  page: AdminPage.appeals,
-                  current: admin.currentPage,
-                  badge: admin.pendingAppeals > 0 ? admin.pendingAppeals : null,
-                  onTap: () {
-                    admin.setPage(AdminPage.appeals);
-                    admin.loadAppeals(status: 'all');
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.balance_rounded,
-                  label: 'Disputes',
-                  page: AdminPage.disputes,
-                  current: admin.currentPage,
-                  badge: admin.pendingDisputesCount > 0
-                      ? admin.pendingDisputesCount
-                      : null,
-                  onTap: () {
-                    admin.setPage(AdminPage.disputes);
-                    admin.loadDisputedContracts();
-                  },
-                ),
-
-                const Spacer(),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
