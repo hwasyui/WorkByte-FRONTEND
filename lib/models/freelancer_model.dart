@@ -45,7 +45,14 @@ class FreelancerModel {
         estimatedRate: (json['estimated_rate'] as num?)?.toDouble(),
         rateTime: json['rate_time'] as String?,
         rateCurrency: json['rate_currency'] as String?,
-        totalProjects: (json['total_projects'] as num?)?.toInt() ?? 0,
+        // freelancer.total_jobs is incremented by the backend only when a
+        // contract reaches 'completed', so this is the completed-job count.
+        // The column used to be called total_projects; keep reading it as a
+        // fallback for any endpoint still returning the old name.
+        totalProjects:
+            (json['total_jobs'] as num?)?.toInt() ??
+            (json['total_projects'] as num?)?.toInt() ??
+            0,
         createdAt: json['created_at'] != null
             ? DateTime.tryParse(json['created_at'].toString())
             : null,

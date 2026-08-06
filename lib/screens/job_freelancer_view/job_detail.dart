@@ -16,9 +16,7 @@ import 'package:workbyte_app/providers/saved_items_provider.dart';
 import 'package:workbyte_app/providers/skill_provider.dart';
 import 'package:workbyte_app/services/api_service.dart';
 import 'package:workbyte_app/services/auth_service.dart';
-import 'package:workbyte_app/services/client_service.dart';
 import 'package:workbyte_app/widgets/appeal_dialog.dart';
-import 'package:workbyte_app/widgets/client_reliability_badge.dart';
 import 'package:workbyte_app/widgets/job_detail_header.dart';
 import 'package:workbyte_app/widgets/job_detail_tab_bar.dart';
 import 'package:workbyte_app/widgets/report_sheet.dart';
@@ -49,8 +47,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   int selectedTab = 0;
   ClientModel? client;
   bool clientLoading = true;
-  String? _clientReliability;
-  final ClientService _clientService = ClientService();
   List<JobRoleModel> roles = [];
   bool rolesLoading = true;
   String? _analyzingRoleId;
@@ -140,13 +136,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         this.client = client;
         clientLoading = false;
       });
-    }
-    if (client != null) {
-      final label = await _clientService.getClientReliability(
-        token,
-        client.clientId,
-      );
-      if (mounted) setState(() => _clientReliability = label);
     }
   }
 
@@ -971,6 +960,39 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               height: 20 / 13,
             ),
           ),
+          if (_hasTimeline) ...[
+            const SizedBox(height: 28),
+            sectionTitle('Timeline'),
+            const SizedBox(height: 12),
+            // IntrinsicHeight so both tiles match the taller one. Do NOT use
+            // CrossAxisAlignment.stretch here: a Row inside a scrolling Column
+            // has no bounded height, so stretch hands its children an infinite
+            // height constraint and the whole screen fails to lay out.
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_hasDuration)
+                    Expanded(
+                      child: timelineTile(
+                        icon: Icons.hourglass_bottom_rounded,
+                        label: 'Estimated Duration',
+                        value: widget.job.estimatedDuration!,
+                      ),
+                    ),
+                  if (_hasDuration && _hasDeadline) const SizedBox(width: 12),
+                  if (_hasDeadline)
+                    Expanded(
+                      child: timelineTile(
+                        icon: Icons.event_rounded,
+                        label: 'Deadline',
+                        value: formatDate(widget.job.deadline!),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           if (!_filesLoading && _jobFiles.isNotEmpty) ...[
             const SizedBox(height: 28),
             sectionTitle('Attachments (${_jobFiles.length})'),
@@ -1012,10 +1034,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            if (_clientReliability != null) ...[
-              ClientReliabilityBadge(label: _clientReliability),
-              const SizedBox(height: 8),
-            ],
             Text(
               client!.bio?.isNotEmpty == true
                   ? client!.bio!
@@ -1292,7 +1310,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 children: skills.map((s) {
                   final skill = skillLookup[s.skillId];
                   final name = skill?.skillName ?? s.skillId;
-                  return skillChip(name, s.isRequired, s.importanceLevel);
+                  return skillChip(name, s.isRequired);
                 }).toList(),
               ),
 
@@ -1509,6 +1527,62 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  bool get _hasDuration =>
+      widget.job.estimatedDuration != null &&
+      widget.job.estimatedDuration!.isNotEmpty;
+
+  bool get _hasDeadline =>
+      widget.job.deadline != null && widget.job.deadline!.isNotEmpty;
+
+  bool get _hasTimeline => _hasDuration || _hasDeadline;
+
+  Widget timelineTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF7D7D7D),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1A1A2E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget sectionTitle(String title) => Text(
     title,
     style: GoogleFonts.poppins(
@@ -1576,7 +1650,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ),
   );
 
-  Widget skillChip(String label, bool isRequired, String? importance) {
+  Widget skillChip(String label, bool isRequired) {
     final color = isRequired ? primary : const Color(0xFF7D7D7D);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1586,11 +1660,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
-        importance != null &&
-                importance.isNotEmpty &&
-                importance.toLowerCase() != 'required'
-            ? '$label (${capitalize(importance)})'
-            : label,
+        label,
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w500,

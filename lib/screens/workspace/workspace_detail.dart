@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:workbyte_app/models/dm_model.dart';
@@ -15,6 +16,7 @@ import '../../models/proposal_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_submission_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
 import '../reviews/client_review_form.dart';
@@ -77,9 +79,64 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   static const int _autoApproveDays = 7;
 
+  /// Mirrors `_CANCELLATION_DISPUTE_WINDOW` in the backend's contract_routes.py.
+  /// Only decides what the UI offers — the backend re-checks and has the final say.
+  static const Duration _cancellationDisputeWindow = Duration(hours: 72);
+
+  String? get _myUserId => context.read<AuthProvider>().userId;
+
+  /// Naive timestamps are read as UTC, which is how the backend reads them too.
+  DateTime? _parseAsUtc(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final parsed = DateTime.tryParse(raw.trim());
+    if (parsed == null) return null;
+    if (parsed.isUtc) return parsed;
+    return DateTime.utc(
+      parsed.year,
+      parsed.month,
+      parsed.day,
+      parsed.hour,
+      parsed.minute,
+      parsed.second,
+      parsed.millisecond,
+    );
+  }
+
+  /// The backend anchors the window on the `contract_cancelled` DM system event,
+  /// which `ContractResponse` doesn't carry. `updated_at` is the same fallback the
+  /// backend uses when that event is missing, and a cancellation is normally the
+  /// last write to the row — so this is an estimate for display purposes only.
+  Duration? get _cancellationDisputeTimeLeft {
+    final cancelledAt = _parseAsUtc(_contract.updatedAt);
+    if (cancelledAt == null) return null;
+    final left =
+        _cancellationDisputeWindow -
+        DateTime.now().toUtc().difference(cancelledAt);
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// An admin resolving an arbitration also writes into `cancelled_by`, and their
+  /// id matches neither party. That case is indistinguishable from here, so the
+  /// card shows and the backend refuses it with "That decision is final."
+  bool get _cancelledByOtherParty {
+    if (_contract.status != 'cancelled') return false;
+    final cancelledBy = (_contract.cancelledBy ?? '').trim();
+    final me = (_myUserId ?? '').trim();
+    if (cancelledBy.isEmpty || me.isEmpty) return false;
+    return cancelledBy != me;
+  }
+
+  /// Fails open on an unresolvable timestamp, matching the backend.
+  bool get _canDisputeCancellation {
+    if (!_cancelledByOtherParty) return false;
+    final left = _cancellationDisputeTimeLeft;
+    return left == null || left > Duration.zero;
+  }
+
   bool get _canRaiseDispute =>
       _contract.status == 'under_review' ||
-      _contract.status == 'revision_requested';
+      _contract.status == 'revision_requested' ||
+      _canDisputeCancellation;
 
   bool get _canCancel =>
       _contract.status == 'active' ||
@@ -162,9 +219,42 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       if (!mounted) return;
       _showSnack('Work submitted successfully!', isError: false);
     } catch (e) {
-      _showSnack('Something went wrong.', isError: true);
+      // The backend writes the submission and its files before it answers, so a
+      // timeout does not mean the work was lost - it usually means the upload or
+      // the notification that follows it ran long. Check what actually landed
+      // rather than telling the freelancer it failed and inviting a duplicate.
+      final landed = await _submissionLanded();
+      if (!mounted) return;
+
+      if (landed) {
+        _showSnack('Work submitted successfully!', isError: false);
+      } else {
+        _showSnack(
+          e is TimeoutException
+              ? 'Submitting is taking longer than expected. Check your '
+                    'connection and pull to refresh before trying again.'
+              : 'Something went wrong.',
+          isError: true,
+        );
+      }
     } finally {
       if (mounted) setState(() => _isActioning = false);
+    }
+  }
+
+  /// Re-reads the contract and its submissions to see whether the submission we
+  /// just tried to send is actually recorded.
+  Future<bool> _submissionLanded() async {
+    try {
+      await Future.wait([_refreshContractStatus(), _fetchSubmissions()]);
+      if (!mounted) return false;
+
+      final latest = context
+          .read<ContractSubmissionProvider>()
+          .latestSubmission;
+      return latest != null && latest.status == 'submitted';
+    } catch (_) {
+      return false;
     }
   }
 
@@ -277,6 +367,10 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         children: [
           _buildStatusBanner(),
           const SizedBox(height: 16),
+          if (_cancelledByOtherParty) ...[
+            _buildCancellationBanner(),
+            const SizedBox(height: 16),
+          ],
           if (_isOverdue) ...[
             _buildOverdueBanner(),
             const SizedBox(height: 16),
@@ -363,6 +457,88 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Rounded down to whole hours above a day, then whole hours, then minutes.
+  /// The estimate isn't precise enough to justify a ticking countdown.
+  String _formatWindowRemaining(Duration left) {
+    if (left.inHours >= 1) {
+      final hours = left.inHours;
+      return 'about $hours ${hours == 1 ? 'hour' : 'hours'} left';
+    }
+    final minutes = left.inMinutes;
+    if (minutes >= 1) {
+      return 'about $minutes ${minutes == 1 ? 'minute' : 'minutes'} left';
+    }
+    return 'less than a minute left';
+  }
+
+  Widget _buildCancellationBanner() {
+    final reason = (_contract.cancellationReason ?? '').trim();
+    final left = _cancellationDisputeTimeLeft;
+    final otherParty = _isClient ? 'The freelancer' : 'The client';
+
+    final String windowLine;
+    if (left == null) {
+      windowLine =
+          'You can dispute this cancellation and ask an admin to review it.';
+    } else if (left > Duration.zero) {
+      windowLine =
+          'You have 72 hours from the cancellation to dispute it — '
+          '${_formatWindowRemaining(left)}.';
+    } else {
+      windowLine = 'The 72-hour window to dispute this cancellation has passed.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFCC80)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.report_problem_outlined,
+            color: Color(0xFFE65100),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$otherParty cancelled this contract',
+                  style: AppText.captionSemiBold.copyWith(
+                    color: const Color(0xFFE65100),
+                  ),
+                ),
+                if (reason.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '"$reason"',
+                    style: AppText.caption.copyWith(
+                      color: const Color(0xFFE65100).withOpacity(0.9),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  windowLine,
+                  style: AppText.caption.copyWith(
+                    color: const Color(0xFFE65100).withOpacity(0.85),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1040,6 +1216,45 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     );
   }
 
+  /// Only one DM thread can exist per pair of users, so a thread opened for an
+  /// earlier contract - or by a job pitch - is the thread for this contract too,
+  /// even though its contract_id points elsewhere.
+  DMThreadModel? _findExistingThreadWithCounterparty(DMProvider dmProvider) {
+    final counterpartyProfileId = _isClient
+        ? _contract.freelancerId
+        : _contract.clientId;
+
+    for (final thread in dmProvider.threads) {
+      final other = thread.otherUser;
+      if (other == null) continue;
+      final otherProfileId = _isClient ? other.freelancerId : other.clientId;
+      if (otherProfileId != null && otherProfileId == counterpartyProfileId) {
+        return thread;
+      }
+    }
+    return null;
+  }
+
+  /// The contract carries profile ids; the DM API wants the counterparty's
+  /// user id, so it has to be looked up.
+  Future<String?> _resolveCounterpartyUserId(String token) async {
+    final profile = context.read<ProfileProvider>();
+
+    if (_isClient) {
+      final freelancer = await profile.fetchFreelancerById(
+        token: token,
+        freelancerId: _contract.freelancerId,
+      );
+      return freelancer?.userId;
+    }
+
+    final client = await profile.fetchClientById(
+      token: token,
+      clientId: _contract.clientId,
+    );
+    return client?.userId;
+  }
+
   Widget _buildMessagesButton() {
     return GestureDetector(
       onTap: () async {
@@ -1060,25 +1275,42 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           orElse: () => null,
         );
 
-        if (thread == null) {
-          if (!_isClient) {
-            _showSnack(
-              'Your client hasn\'t started this conversation yet.',
-              isError: true,
-            );
-            return;
-          }
+        // A thread already open with the other party but not yet tagged with
+        // this contract still works - reuse it rather than trying to create a
+        // second one, which the one-thread-per-pair rule forbids.
+        thread ??= _findExistingThreadWithCounterparty(dmProvider);
 
+        if (thread == null) {
           try {
+            // startThread takes the counterparty's USER id. The contract only
+            // carries profile ids, so resolve the user id first - passing
+            // freelancerId/clientId here is what used to fail.
+            final participantUserId = await _resolveCounterpartyUserId(token);
+            if (participantUserId == null) {
+              if (!mounted) return;
+              _showSnack(
+                'Unable to start chat. Could not find the other party.',
+                isError: true,
+              );
+              return;
+            }
+
             final result = await dmProvider.startThread(
               token: token,
-              participantId: _contract.freelancerId,
+              participantId: participantUserId,
               jobPostId: _contract.jobPostId,
             );
             thread = result.thread;
           } catch (e) {
             if (!mounted) return;
-            _showSnack('Unable to start chat. Please try again.', isError: true);
+            // Show what the server actually said - POST /dm/threads still
+            // refuses freelancer-initiated threads, and a generic retry
+            // message just sends people round the same loop.
+            final reason = e.toString().replaceFirst('Exception: ', '').trim();
+            _showSnack(
+              reason.isEmpty ? 'Unable to start chat. Please try again.' : reason,
+              isError: true,
+            );
             return;
           }
         }
@@ -1269,11 +1501,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Raise a Dispute',
+                    _canDisputeCancellation
+                        ? 'Dispute This Cancellation'
+                        : 'Raise a Dispute',
                     style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
                   ),
                   Text(
-                    'Can\'t resolve this with the other party? Ask an admin to step in.',
+                    _canDisputeCancellation
+                        ? 'Disagree with the cancellation? Ask an admin to review it.'
+                        : 'Can\'t resolve this with the other party? Ask an admin to step in.',
                     style: AppText.caption.copyWith(color: Colors.grey.shade500),
                   ),
                 ],
@@ -1476,6 +1712,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     final reasonCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isSubmitting = false;
+    // Captured before submitting: the status flips to 'disputed' on success, which
+    // would otherwise flip the copy mid-dialog.
+    final disputingCancellation = _canDisputeCancellation;
 
     showDialog(
       context: context,
@@ -1493,10 +1732,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           title: _buildDialogHeader(
             icon: Icons.gavel_rounded,
             accent: Colors.redAccent,
-            title: 'Raise a Dispute',
-            subtitle:
-                'An admin will review this contract and decide the outcome. '
-                'Explain what went wrong.',
+            title: disputingCancellation
+                ? 'Dispute This Cancellation'
+                : 'Raise a Dispute',
+            subtitle: disputingCancellation
+                ? 'An admin will review the cancellation and decide the '
+                      'outcome. Explain why you disagree with it.'
+                : 'An admin will review this contract and decide the outcome. '
+                      'Explain what went wrong.',
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -1509,9 +1752,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                   _buildReasonField(
                     controller: reasonCtrl,
                     label: 'Reason for dispute',
-                    hint:
-                        'Describe the issue in detail — what was agreed, what '
-                        'happened, and what you want resolved.',
+                    hint: disputingCancellation
+                        ? 'Explain why this contract shouldn\'t have been '
+                              'cancelled — what was agreed, what was delivered, '
+                              'and what you want resolved.'
+                        : 'Describe the issue in detail — what was agreed, what '
+                              'happened, and what you want resolved.',
                     accent: Colors.redAccent,
                     maxLines: 4,
                     maxLength: 1000,
@@ -1526,10 +1772,15 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                   _buildDialogNote(
                     icon: Icons.schedule_rounded,
                     accent: AppColors.primary,
-                    text:
-                        'Disputes are reviewed manually by our admin team. '
-                        'This usually takes 1-3 business days, and the contract '
-                        'stays locked until a decision is made.',
+                    text: disputingCancellation
+                        ? 'This reopens the contract for admin review, which '
+                              'usually takes 1-3 business days. The admin can '
+                              'approve the work as completed, send it back for '
+                              'revision with a new deadline, or let the '
+                              'cancellation stand — and that decision is final.'
+                        : 'Disputes are reviewed manually by our admin team. '
+                              'This usually takes 1-3 business days, and the '
+                              'contract stays locked until a decision is made.',
                   ),
                 ],
               ),
@@ -1546,13 +1797,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 if (!(formKey.currentState?.validate() ?? false)) return;
                 setDialogState(() => isSubmitting = true);
                 final token = context.read<AuthProvider>().token!;
-                final success = await context
-                    .read<ContractProvider>()
-                    .raiseDispute(
-                      token,
-                      _contract.contractId,
-                      reasonCtrl.text.trim(),
-                    );
+                final contractProvider = context.read<ContractProvider>();
+                final success = await contractProvider.raiseDispute(
+                  token,
+                  _contract.contractId,
+                  reasonCtrl.text.trim(),
+                );
                 if (!mounted) return;
                 Navigator.pop(ctx);
                 if (success) {
@@ -1564,7 +1814,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     isError: false,
                   );
                 } else {
-                  _showSnack('Failed to raise dispute.', isError: true);
+                  // The window/ownership refusals carry the only explanation the
+                  // user gets, so the server's message wins over a generic one.
+                  _showSnack(
+                    contractProvider.error ?? 'Failed to raise dispute.',
+                    isError: true,
+                  );
                 }
               },
             ),
@@ -2499,8 +2754,17 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                 if (!mounted) return;
                 Navigator.pop(ctx);
                 if (success) {
+                  // Recording the canceller locally keeps this screen from
+                  // offering me a dispute against my own cancellation before the
+                  // contract is refetched.
                   setState(
-                    () => _contract = _contract.copyWith(status: 'cancelled'),
+                    () => _contract = _contract.copyWith(
+                      status: 'cancelled',
+                      cancelledBy: _myUserId,
+                      cancellationReason: reasonCtrl.text.trim().isEmpty
+                          ? null
+                          : reasonCtrl.text.trim(),
+                    ),
                   );
                   _showSnack('Contract cancelled.', isError: false);
                   await Future.delayed(const Duration(milliseconds: 800));

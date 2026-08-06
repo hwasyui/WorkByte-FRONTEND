@@ -245,6 +245,7 @@ class _ScoreHistoryChart extends StatelessWidget {
 
     return _Section(
       title: 'Trust score history',
+      subtitle: 'Overall trust score out of 100 — higher is better.',
       trailing: drop.delta != null
           ? _DeltaBadge(delta: drop.delta!)
           : null,
@@ -258,6 +259,28 @@ class _ScoreHistoryChart extends StatelessWidget {
               child: _buildChart(points, drop),
             ),
     );
+  }
+
+  /// Trust scores are stored 0–100 (calculate_trust_score returns a percentage),
+  /// so the axis has to span 100, not 1. Padded around the actual range because
+  /// a full 0–100 axis flattens the drop this dialog exists to show.
+  static ({double min, double max, double interval}) _axis(
+    List<ScoreHistoryPoint> points,
+  ) {
+    final values = points.map((p) => p.score!).toList();
+    final lowest = values.reduce((a, b) => a < b ? a : b);
+    final highest = values.reduce((a, b) => a > b ? a : b);
+    final pad = ((highest - lowest) * 0.2).clamp(2.0, 10.0);
+    final min = (lowest - pad).clamp(0.0, 100.0);
+    final max = (highest + pad).clamp(0.0, 100.0);
+    // Guard the degenerate case: a flat history would give min == max and
+    // fl_chart divides by the span.
+    if (max - min < 1) {
+      final lo = (min - 5).clamp(0.0, 100.0);
+      final hi = (max + 5).clamp(0.0, 100.0);
+      return (min: lo, max: hi, interval: ((hi - lo) / 4).clamp(1.0, 100.0));
+    }
+    return (min: min, max: max, interval: (max - min) / 4);
   }
 
   Widget _buildChart(List<ScoreHistoryPoint> points, ScoreDrop drop) {
@@ -326,6 +349,8 @@ class _ScoreHistoryChart extends StatelessWidget {
       );
     }
 
+    final axis = _axis(points);
+
     return LineChart(
       LineChartData(
         lineTouchData: LineTouchData(
@@ -345,8 +370,8 @@ class _ScoreHistoryChart extends StatelessWidget {
         ),
         minX: 0,
         maxX: (points.length - 1).toDouble(),
-        minY: 0,
-        maxY: 1,
+        minY: axis.min,
+        maxY: axis.max,
         lineBarsData: bars,
         titlesData: FlTitlesData(
           bottomTitles: AxisTitles(
@@ -373,12 +398,14 @@ class _ScoreHistoryChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 28,
-              interval: 0.25,
+              reservedSize: 30,
+              interval: axis.interval,
               getTitlesWidget: (value, meta) {
-                if (value == 0) return const SizedBox.shrink();
+                if (value <= meta.min || value >= meta.max) {
+                  return const SizedBox.shrink();
+                }
                 return Text(
-                  value.toStringAsFixed(2),
+                  value.toStringAsFixed(0),
                   style:
                       GoogleFonts.poppins(fontSize: 9, color: AdminColors.faint),
                 );
@@ -393,7 +420,7 @@ class _ScoreHistoryChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: 0.25,
+          horizontalInterval: axis.interval,
           getDrawingHorizontalLine: (_) =>
               const FlLine(color: AdminColors.surfaceAlt, strokeWidth: 1),
         ),
@@ -440,18 +467,81 @@ class _DeltaBadge extends StatelessWidget {
   }
 }
 
+/// The units the trust-score row mixes together. Rendering all of them as a
+/// 0–1 bar was wrong in both directions: `overall_score` (0–100), a 0–5 star
+/// average and a raw review count all clamped to a full bar, while only the
+/// weighted sub-scores were ever on the 0–1 scale the bar assumes.
+enum _ComponentScale { unit, stars, percent, count }
+
+class _ComponentSpec {
+  final String label;
+  final _ComponentScale scale;
+  const _ComponentSpec(this.label, this.scale);
+}
+
+/// Every numeric column the detail endpoint selects out of
+/// freelancer_trust_scores / client_trust_score. A key missing from here is
+/// rendered on the 0–1 scale, which is what the remaining score columns use.
+const _componentSpecs = <String, _ComponentSpec>{
+  // The composite output, not an input — shown apart from the weighted inputs.
+  'overall_score': _ComponentSpec('Overall trust score', _ComponentScale.percent),
+
+  'weighted_review_avg': _ComponentSpec('Weighted review average', _ComponentScale.stars),
+  'effective_review_avg':
+      _ComponentSpec('Effective review average (shrunk)', _ComponentScale.stars),
+  'display_star_avg': _ComponentSpec('Displayed star average', _ComponentScale.stars),
+  'weighted_review_avg_received':
+      _ComponentSpec('Weighted review average', _ComponentScale.stars),
+  'effective_review_avg_received':
+      _ComponentSpec('Effective review average (shrunk)', _ComponentScale.stars),
+
+  'on_time_score': _ComponentSpec('On-time delivery', _ComponentScale.unit),
+  'revision_rate_score': _ComponentSpec('Revision efficiency', _ComponentScale.unit),
+  'responsiveness_score': _ComponentSpec('Responsiveness', _ComponentScale.unit),
+  'communication_sentiment': _ComponentSpec('Communication sentiment', _ComponentScale.unit),
+  'authenticity_confidence': _ComponentSpec('Review authenticity', _ComponentScale.unit),
+  'consistency_score': _ComponentSpec('Rating consistency', _ComponentScale.unit),
+  'dispute_fairness_score': _ComponentSpec('Dispute-free rate', _ComponentScale.unit),
+
+  'total_reviews': _ComponentSpec('Reviews counted', _ComponentScale.count),
+  'total_reviews_received': _ComponentSpec('Reviews counted', _ComponentScale.count),
+};
+
+/// Columns the endpoint returns that the breakdown deliberately does not show.
+/// The category rank percentile says where the subject sits against its peers,
+/// not why its own score moved, so it has no bearing on reviewing a red flag.
+const _hiddenComponents = <String>{'category_rank_pct'};
+
 class _ComponentsBreakdown extends StatelessWidget {
   final RedFlagDetail detail;
   const _ComponentsBreakdown({required this.detail});
 
-  String _label(String raw) => raw
-      .split('_')
-      .map((p) => p.isEmpty ? p : '${p[0].toUpperCase()}${p.substring(1)}')
-      .join(' ');
+  static _ComponentSpec _specFor(String key) =>
+      _componentSpecs[key] ??
+      _ComponentSpec(
+        key
+            .split('_')
+            .map((p) => p.isEmpty ? p : '${p[0].toUpperCase()}${p.substring(1)}')
+            .join(' '),
+        _ComponentScale.unit,
+      );
+
+  static String _formatted(double value, _ComponentScale scale) =>
+      switch (scale) {
+        _ComponentScale.unit => '${value.toStringAsFixed(2)} / 1.00',
+        _ComponentScale.stars => '${value.toStringAsFixed(2)} / 5',
+        _ComponentScale.percent => '${value.toStringAsFixed(1)} / 100',
+        _ComponentScale.count => value.toStringAsFixed(0),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final comps = detail.currentComponents;
+    final comps = detail.currentComponents == null
+        ? null
+        : Map<String, double>.fromEntries(
+            detail.currentComponents!.entries
+                .where((e) => !_hiddenComponents.contains(e.key)),
+          );
     if (comps == null || comps.isEmpty) {
       return _Section(
         title: 'Trust score components',
@@ -462,48 +552,103 @@ class _ComponentsBreakdown extends StatelessWidget {
       );
     }
 
-    final entries = comps.entries.toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
-    final lowest = entries.first.value;
+    // Only the 0–1 weighted inputs are comparable with each other, so only they
+    // can be ranked "lowest first" or blamed for the drop. The rest are context.
+    final weighted = <MapEntry<String, double>>[];
+    final otherScales = <MapEntry<String, double>>[];
+    for (final e in comps.entries) {
+      final spec = _specFor(e.key);
+      if (spec.scale == _ComponentScale.unit) {
+        weighted.add(e);
+      } else {
+        otherScales.add(e);
+      }
+    }
+    weighted.sort((a, b) => a.value.compareTo(b.value));
+    final lowest = weighted.isEmpty ? 0.0 : weighted.first.value;
     const band = 0.05;
 
     return _Section(
       title: 'Trust score components',
-      subtitle: 'Lowest inputs first — the likely cause of the drop is flagged.',
+      subtitle: 'Weighted inputs are scored 0.00–1.00, higher is better. '
+          'Lowest first — the likely cause of the drop is flagged.',
       child: Column(
-        children: entries.map((e) {
-          final isCause = e.value <= lowest + band;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 4),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCause ? 10 : 0,
-              vertical: isCause ? 4 : 0,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...weighted.map((e) {
+            final isCause = e.value <= lowest + band;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCause ? 10 : 0,
+                vertical: isCause ? 4 : 0,
+              ),
+              decoration: isCause
+                  ? BoxDecoration(
+                      color: AdminColors.redBg,
+                      borderRadius: BorderRadius.circular(8),
+                    )
+                  : null,
+              child: Row(
+                children: [
+                  if (isCause)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 6),
+                      child: Icon(Icons.error_outline_rounded,
+                          size: 14, color: AdminColors.red),
+                    ),
+                  Expanded(
+                    child: MeasuredScoreBar(
+                      label: _specFor(e.key).label,
+                      value: e.value,
+                      accent: isCause ? AdminColors.red : AdminColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (otherScales.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'MEASURED ON OTHER SCALES',
+              style: GoogleFonts.poppins(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: AdminColors.faint,
+                letterSpacing: 0.5,
+              ),
             ),
-            decoration: isCause
-                ? BoxDecoration(
-                    color: AdminColors.redBg,
-                    borderRadius: BorderRadius.circular(8),
-                  )
-                : null,
-            child: Row(
-              children: [
-                if (isCause)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 6),
-                    child: Icon(Icons.error_outline_rounded,
-                        size: 14, color: AdminColors.red),
-                  ),
-                Expanded(
-                  child: MeasuredScoreBar(
-                    label: _label(e.key),
-                    value: e.value,
-                    accent: isCause ? AdminColors.red : AdminColors.primary,
-                  ),
+            const SizedBox(height: 6),
+            ...otherScales.map((e) {
+              final spec = _specFor(e.key);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        spec.label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AdminColors.body,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatted(e.value, spec.scale),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AdminColors.ink,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }),
+          ],
+        ],
       ),
     );
   }

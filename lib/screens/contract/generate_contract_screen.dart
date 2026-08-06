@@ -84,6 +84,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   late TextEditingController _contractTitleController;
   late TextEditingController _roleTitleController;
   late TextEditingController _agreedBudgetController;
+  late TextEditingController _startDateController;
   late TextEditingController _endDateController;
   late TextEditingController _confidentialityTextController;
   late TextEditingController _additionalClausesController;
@@ -141,6 +142,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _contractTitleController = TextEditingController();
     _roleTitleController = TextEditingController();
     _agreedBudgetController = TextEditingController();
+    _startDateController = TextEditingController();
     _endDateController = TextEditingController();
     _confidentialityTextController = TextEditingController();
     _additionalClausesController = TextEditingController();
@@ -159,6 +161,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _contractTitleController.dispose();
     _roleTitleController.dispose();
     _agreedBudgetController.dispose();
+    _startDateController.dispose();
     _endDateController.dispose();
     _confidentialityTextController.dispose();
     _additionalClausesController.dispose();
@@ -583,6 +586,11 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   bool _validateBeforeGenerate() {
+    if ((_startDate ?? '').isEmpty) {
+      _showError('Please pick a start date');
+      return false;
+    }
+
     if (_durationValueController.text.trim().isEmpty) {
       _showError('Please enter the agreed duration');
       return false;
@@ -906,6 +914,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           'date follows from them.',
                       icon: Icons.rule_folder_outlined,
                       children: [
+                        _buildStartDateField(),
+                        const SizedBox(height: 14),
                         _buildDurationField(),
                         const SizedBox(height: 14),
                         _buildEndDateField(),
@@ -1227,12 +1237,20 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     String hint, {
     int maxLines = 1,
     bool readOnly = false,
+    bool? locked,
+    Widget? suffixIcon,
     String? helper,
     Function(String)? onChanged,
     TextInputType? keyboardType,
     IconData? prefixIcon,
     List<TextInputFormatter>? inputFormatters,
   }) {
+    // `readOnly` only says the keyboard cannot edit the field. A field filled by
+    // a picker is still the client's to change, so the greyed-out padlock
+    // treatment follows `locked` — which defaults to `readOnly` because most
+    // read-only fields here really are fixed by the bid.
+    final isLocked = locked ?? readOnly;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1254,7 +1272,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           readOnly: readOnly,
           style: GoogleFonts.poppins(
             fontSize: 13,
-            color: readOnly ? const Color(0xFF475467) : const Color(0xFF101828),
+            color: isLocked ? const Color(0xFF475467) : const Color(0xFF101828),
           ),
           decoration: InputDecoration(
             hintText: hint,
@@ -1265,13 +1283,15 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             prefixIcon: prefixIcon != null
                 ? Icon(prefixIcon, color: _primary, size: 20)
                 : null,
-            suffixIcon: readOnly
-                ? const Icon(
-                    Icons.lock_outline_rounded,
-                    color: Color(0xFF98A2B3),
-                    size: 18,
-                  )
-                : null,
+            suffixIcon:
+                suffixIcon ??
+                (isLocked
+                    ? const Icon(
+                        Icons.lock_outline_rounded,
+                        color: Color(0xFF98A2B3),
+                        size: 18,
+                      )
+                    : null),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: Color(0xFFE4E7EC)),
@@ -1283,13 +1303,13 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: readOnly ? const Color(0xFFE4E7EC) : _primary,
-                width: readOnly ? 1 : 1.5,
+                color: isLocked ? const Color(0xFFE4E7EC) : _primary,
+                width: isLocked ? 1 : 1.5,
               ),
             ),
             contentPadding: _fieldPadding,
             filled: true,
-            fillColor: readOnly
+            fillColor: isLocked
                 ? const Color(0xFFF2F4F7)
                 : const Color(0xFFFCFCFD),
           ),
@@ -1353,6 +1373,58 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         ),
       ],
     );
+  }
+
+  /// The one date the client actually picks. Everything else on the timeline
+  /// (the end date, and the backend's own _derive_end_date) hangs off it.
+  Widget _buildStartDateField() {
+    _startDateController.text = _startDate ?? '';
+
+    return GestureDetector(
+      onTap: _isCreated ? null : _pickStartDate,
+      child: AbsorbPointer(
+        child: _buildTextField(
+          'Start Date',
+          _startDateController,
+          'Pick when the work begins',
+          // Read-only against the keyboard, but the picker still owns it —
+          // only a created contract actually freezes the date.
+          readOnly: true,
+          locked: _isCreated,
+          suffixIcon: _isCreated
+              ? null
+              : const Icon(
+                  Icons.edit_calendar_outlined,
+                  color: _primary,
+                  size: 20,
+                ),
+          helper: _isCreated
+              ? null
+              : 'Tap to choose. The end date updates automatically.',
+          prefixIcon: Icons.event_available_outlined,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickStartDate() async {
+    final now = DateTime.now();
+    final current = DateTime.tryParse(_startDate ?? '');
+    final firstDate = DateTime(now.year - 1);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? now,
+      firstDate: firstDate,
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _startDate = picked.toIso8601String().split('T').first;
+      _startDateController.text = _startDate!;
+      _recomputeEndDate();
+    });
   }
 
   /// Derived from the start date and the duration rather than collected, so

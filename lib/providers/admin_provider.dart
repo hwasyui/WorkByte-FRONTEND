@@ -82,13 +82,23 @@ class AdminProvider extends ChangeNotifier {
   Map<String, dynamic> _flaggedClientReviewsPagination = {};
   String _reviewRedFlagsResolvedFilter = 'all';
   String _reviewRedFlagsSortBy = 'triggered_at';
-  String _flaggedReviewStatusFilter = 'all';
-  String _flaggedClientReviewStatusFilter = 'all';
+  // 'flagged', not 'all': the queue means "needs a human". Under 'all' an
+  // upheld review stayed in the list with only its badge changing, so the
+  // admin who just ruled saw no progress and the item could be ruled on twice.
+  // The all/flagged/suppressed chips are the archive view.
+  String _flaggedReviewStatusFilter = 'flagged';
+  String _flaggedClientReviewStatusFilter = 'flagged';
   String _flaggedReviewSortBy = 'created_at';
   String _flaggedClientReviewSortBy = 'created_at';
   DateTimeRange? _reviewRedFlagsDateRange;
   DateTimeRange? _flaggedReviewsDateRange;
   DateTimeRange? _flaggedClientReviewsDateRange;
+  // Queue sizes for the nav badge. Deliberately NOT read off the three list
+  // paginations above: those follow whatever hold level, date range and page the
+  // admin is looking at, so the badge would shrink as soon as someone filtered.
+  int _openReviewRedFlags = 0;
+  int _pendingFlaggedReviews = 0;
+  int _pendingFlaggedClientReviews = 0;
   List<Map<String, dynamic>> _moderationItems = [];
   List<Map<String, dynamic>> _closedJobs = [];
   List<Map<String, dynamic>> _closedAccounts = [];
@@ -208,6 +218,22 @@ class AdminProvider extends ChangeNotifier {
   int get pendingModerationItems =>
       (_dashboardStats['pending_moderation_items'] as num?)?.toInt() ?? 0;
 
+  int get openReviewRedFlags => _openReviewRedFlags;
+  int get pendingFlaggedReviews => _pendingFlaggedReviews;
+  int get pendingFlaggedClientReviews => _pendingFlaggedClientReviews;
+
+  /// Review Integrity work still waiting on an admin: unresolved red flag
+  /// alerts plus reviews still held at 'flagged'. 'suppressed' is excluded —
+  /// an upheld hold is a decision already taken, not an open item.
+  int get pendingReviewIntegrity =>
+      _openReviewRedFlags +
+      _pendingFlaggedReviews +
+      _pendingFlaggedClientReviews;
+
+  /// Everything the AI Analysis nav entry covers.
+  int get pendingAiWork =>
+      pendingScamFlags + pendingModerationItems + pendingReviewIntegrity;
+
   void setPage(AdminPage page) {
     _currentPage = page;
     notifyListeners();
@@ -288,6 +314,48 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider.loadDashboardStats error: $e');
     }
     notifyListeners();
+    // The dashboard endpoint counts held reviews as flagged + suppressed and so
+    // cannot answer "still open"; these three come from the queue endpoints.
+    loadReviewIntegrityQueueCounts();
+  }
+
+  /// Queue sizes behind the AI Analysis badge. Each call asks for a single row
+  /// and reads the envelope total, so this is three COUNT(*)s, not three pages.
+  Future<void> loadReviewIntegrityQueueCounts() async {
+    if (_token == null) return;
+    Future<int> total(Future<Map<String, dynamic>> request) async {
+      final data = await request;
+      final pagination = data['pagination'];
+      return pagination is Map
+          ? (pagination['total'] as num?)?.toInt() ?? 0
+          : 0;
+    }
+
+    try {
+      final counts = await Future.wait([
+        total(AdminService.getReviewRedFlags(
+          _token!,
+          isResolved: false,
+          pageSize: 1,
+        )),
+        total(AdminService.getFlaggedReviews(
+          _token!,
+          status: 'flagged',
+          pageSize: 1,
+        )),
+        total(AdminService.getFlaggedClientReviews(
+          _token!,
+          status: 'flagged',
+          pageSize: 1,
+        )),
+      ]);
+      _openReviewRedFlags = counts[0];
+      _pendingFlaggedReviews = counts[1];
+      _pendingFlaggedClientReviews = counts[2];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('AdminProvider.loadReviewIntegrityQueueCounts error: $e');
+    }
   }
 
   Future<void> loadReports({
@@ -723,7 +791,10 @@ class AdminProvider extends ChangeNotifier {
       alertId,
       reason: reason,
     );
-    if (outcome.success) await loadReviewRedFlags();
+    if (outcome.success) {
+      await loadReviewRedFlags();
+      await loadReviewIntegrityQueueCounts();
+    }
     return outcome;
   }
 
@@ -774,7 +845,10 @@ class AdminProvider extends ChangeNotifier {
       reviewId,
       reason: reason,
     );
-    if (outcome.success) await loadFlaggedReviews();
+    if (outcome.success) {
+      await loadFlaggedReviews();
+      await loadReviewIntegrityQueueCounts();
+    }
     return outcome;
   }
 
@@ -790,7 +864,10 @@ class AdminProvider extends ChangeNotifier {
       reviewId,
       reason: reason,
     );
-    if (outcome.success) await loadFlaggedReviews();
+    if (outcome.success) {
+      await loadFlaggedReviews();
+      await loadReviewIntegrityQueueCounts();
+    }
     return outcome;
   }
 
@@ -843,7 +920,10 @@ class AdminProvider extends ChangeNotifier {
       clientReviewId,
       reason: reason,
     );
-    if (outcome.success) await loadFlaggedClientReviews();
+    if (outcome.success) {
+      await loadFlaggedClientReviews();
+      await loadReviewIntegrityQueueCounts();
+    }
     return outcome;
   }
 
@@ -859,7 +939,10 @@ class AdminProvider extends ChangeNotifier {
       clientReviewId,
       reason: reason,
     );
-    if (outcome.success) await loadFlaggedClientReviews();
+    if (outcome.success) {
+      await loadFlaggedClientReviews();
+      await loadReviewIntegrityQueueCounts();
+    }
     return outcome;
   }
 
@@ -1092,16 +1175,19 @@ class AdminProvider extends ChangeNotifier {
     _reviewRedFlagsResolvedFilter = 'all';
     _reviewRedFlagsSortBy = 'triggered_at';
     _flaggedReviews = [];
-    _flaggedReviewStatusFilter = 'all';
+    _flaggedReviewStatusFilter = 'flagged';
     _flaggedReviewSortBy = 'created_at';
     _flaggedReviewsPagination = {};
     _flaggedClientReviews = [];
-    _flaggedClientReviewStatusFilter = 'all';
+    _flaggedClientReviewStatusFilter = 'flagged';
     _flaggedClientReviewSortBy = 'created_at';
     _flaggedClientReviewsPagination = {};
     _isRedFlagsLoading = false;
     _isFlaggedReviewsLoading = false;
     _isFlaggedClientReviewsLoading = false;
+    _openReviewRedFlags = 0;
+    _pendingFlaggedReviews = 0;
+    _pendingFlaggedClientReviews = 0;
     _moderationItems = [];
     _closedJobs = [];
     _closedAccounts = [];

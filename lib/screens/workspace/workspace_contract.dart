@@ -31,19 +31,19 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
   String _sortOption = 'Latest';
 
   static const List<String> _tabs = [
+    'All',
     'Active',
     'Completed',
     'Cancelled',
     'Disputed',
-    'All',
   ];
   Map<String, String> _nameCache = {};
   static const Map<String, List<String>?> _tabStatusMap = {
+    'All': null,
     'Active': ['active', 'under_review', 'revision_requested'],
     'Completed': ['completed'],
     'Cancelled': ['cancelled'],
     'Disputed': ['disputed'],
-    'All': null,
   };
 
   bool get _isClient => context.read<ProfileProvider>().isClient;
@@ -205,7 +205,7 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
   }
 
   Widget _buildHeader() {
-    final title = widget.jobTitle ?? 'My Contracts';
+    final title = widget.jobTitle ?? 'Working Space';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(

@@ -9,7 +9,7 @@ class ClientModel {
   final int totalJobsPosted;
   final int totalProjectsCompleted;
   final double? averageRatingGiven;
-  final double? weightedReviewAvgReceived;
+  final double? displayStarAvg;
   final int totalReviewsReceived;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -25,7 +25,7 @@ class ClientModel {
     this.totalJobsPosted = 0,
     this.totalProjectsCompleted = 0,
     this.averageRatingGiven,
-    this.weightedReviewAvgReceived,
+    this.displayStarAvg,
     this.totalReviewsReceived = 0,
     this.createdAt,
     this.updatedAt,
@@ -43,8 +43,7 @@ class ClientModel {
     totalProjectsCompleted:
         (json['total_jobs_completed'] as num?)?.toInt() ?? 0,
     averageRatingGiven: (json['average_rating_given'] as num?)?.toDouble(),
-    weightedReviewAvgReceived:
-        (json['weighted_review_avg_received'] as num?)?.toDouble(),
+    displayStarAvg: (json['display_star_avg'] as num?)?.toDouble(),
     totalReviewsReceived: (json['total_reviews_received'] as num?)?.toInt() ?? 0,
     createdAt: json['created_at'] != null
         ? DateTime.tryParse(json['created_at'].toString())
@@ -73,7 +72,7 @@ class ClientModel {
     totalJobsPosted: totalJobsPosted,
     totalProjectsCompleted: totalProjectsCompleted,
     averageRatingGiven: averageRatingGiven,
-    weightedReviewAvgReceived: weightedReviewAvgReceived,
+    displayStarAvg: displayStarAvg,
     totalReviewsReceived: totalReviewsReceived,
     createdAt: createdAt,
     updatedAt: updatedAt,

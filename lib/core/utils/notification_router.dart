@@ -12,6 +12,7 @@ import '../../providers/profile_provider.dart';
 import '../../screens/dm/dm_chat_screen.dart';
 import '../../screens/job_client_view/job_detail.dart';
 import '../../screens/job_freelancer_view/job_detail.dart';
+import '../../screens/job_freelancer_view/job_list.dart';
 import '../../screens/reviews/client_reviews_screen.dart';
 import '../../screens/reviews/freelancer_reviews_screen.dart';
 import '../../screens/workspace/workspace_detail.dart';
@@ -62,8 +63,17 @@ Future<void> openNotificationTarget(
       if (contractId != null) await _openContract(context, token, contractId);
       return;
 
-    case 'new_proposal':
     case 'proposal_accepted':
+      // The freelancer whose proposal was accepted wants their applications,
+      // not the public job post. Clients get the job post as before.
+      if (context.read<ProfileProvider>().isFreelancer) {
+        await _push(context, const JobListScreen(initialTabIndex: 1));
+        return;
+      }
+      if (jobPostId != null) await _openJobPost(context, token, jobPostId);
+      return;
+
+    case 'new_proposal':
     case 'proposal_rejected':
     case kNotifJobClosedHarmfulText:
     case 'job_closed_scam':

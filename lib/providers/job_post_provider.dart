@@ -403,13 +403,18 @@ class JobPostProvider extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>?> fetchMyJobPosts(
     String token,
-    String clientId,
-  ) async {
+    String clientId, {
+    bool includeDrafts = false,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      final posts = await _jobPostService.getJobPostsByClient(token, clientId);
+      final posts = await _jobPostService.getJobPostsByClient(
+        token,
+        clientId,
+        includeDrafts: includeDrafts,
+      );
       _jobPosts = posts;
       _draftJobPosts = _jobPosts
           .where((p) => (p.status ?? '').toLowerCase() == 'draft')

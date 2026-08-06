@@ -66,7 +66,11 @@ class JobListScreenState extends State<JobListScreen> {
       final token = context.read<AuthProvider>().token!;
       final clientId = context.read<ProfileProvider>().clientProfile!.clientId;
       final provider = context.read<JobPostProvider>();
-      final jobs = await provider.fetchMyJobPosts(token, clientId);
+      final jobs = await provider.fetchMyJobPosts(
+        token,
+        clientId,
+        includeDrafts: true,
+      );
 
       setState(() {
         _allJobs = jobs ?? [];
@@ -646,15 +650,20 @@ class JobListScreenState extends State<JobListScreen> {
   }
 
   Widget _statusBadge(String status) {
+    // (foreground, background) per status. Every status the filter tabs can
+    // produce needs its own entry - 'active' used to be missing, so live jobs
+    // fell through to the same grey as closed ones.
     final map = {
-      'draft': (const Color(0xFFB5B4B4), const Color(0xFFF5F5F5)),
-      'open': (AppColors.primary, AppColors.secondary),
-      'closed': (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1)),
-      'cancelled': (const Color(0xFFE53935), const Color(0xFFFFEBEE)),
-      'filled': (const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
+      'draft': (const Color(0xFFB45309), const Color(0xFFFEF3C7)),
+      'active': (const Color(0xFF15803D), const Color(0xFFDCFCE7)),
+      'open': (const Color(0xFF15803D), const Color(0xFFDCFCE7)),
+      'filled': (AppColors.primary, AppColors.secondary),
+      'closed': (const Color(0xFF475569), const Color(0xFFF1F5F9)),
+      'cancelled': (const Color(0xFFB91C1C), const Color(0xFFFEE2E2)),
     };
     final colors =
-        map[status] ?? (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1));
+        map[status.toLowerCase()] ??
+        (const Color(0xFF7D7D7D), const Color(0xFFF0F0F1));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(

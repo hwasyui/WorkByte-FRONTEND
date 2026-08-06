@@ -113,7 +113,7 @@ class ClientReview {
 class ClientTrustScore {
   final String clientId;
   final double trustScore;
-  final double? weightedReviewAvgReceived;
+  final double? displayStarAvg;
   final double? responsivenessScore;
   final double? communicationSentiment;
   final double? disputeFairnessScore;
@@ -126,7 +126,7 @@ class ClientTrustScore {
   const ClientTrustScore({
     required this.clientId,
     required this.trustScore,
-    this.weightedReviewAvgReceived,
+    this.displayStarAvg,
     this.responsivenessScore,
     this.communicationSentiment,
     this.disputeFairnessScore,
@@ -141,8 +141,7 @@ class ClientTrustScore {
       ClientTrustScore(
         clientId: json['client_id'] as String? ?? '',
         trustScore: (json['trust_score'] as num?)?.toDouble() ?? 0.0,
-        weightedReviewAvgReceived:
-            (json['weighted_review_avg_received'] as num?)?.toDouble(),
+        displayStarAvg: (json['display_star_avg'] as num?)?.toDouble(),
         responsivenessScore: (json['responsiveness_score'] as num?)
             ?.toDouble(),
         communicationSentiment: (json['communication_sentiment'] as num?)

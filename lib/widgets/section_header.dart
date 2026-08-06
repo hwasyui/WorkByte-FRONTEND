@@ -12,14 +12,21 @@ class SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: AppText.h3.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF333333),
+        // The title is caller-supplied and the action is a fixed width, so the
+        // title has to be the one that gives way when the pair won't fit.
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.h3.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF333333),
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         GestureDetector(
           onTap: onViewAll,
           child: Text(

@@ -140,8 +140,16 @@ class ContractSubmissionService {
         );
       }
 
-      final streamed = await request.send().timeout(const Duration(seconds: 60));
-      return http.Response.fromStream(streamed);
+      // Files are uploaded to object storage one by one inside this request and
+      // a push notification is sent before it answers, so the response can lag
+      // well behind the upload itself. 60s was tripping on submissions that had
+      // already been recorded server-side.
+      final streamed = await request
+          .send()
+          .timeout(const Duration(seconds: 180));
+      return http.Response.fromStream(
+        streamed,
+      ).timeout(const Duration(seconds: 30));
     });
 
     if (res.statusCode == 200 || res.statusCode == 201) {

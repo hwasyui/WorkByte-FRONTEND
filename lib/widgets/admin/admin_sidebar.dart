@@ -214,10 +214,8 @@ class AdminSidebar extends StatelessWidget {
                           page: AdminPage.ai,
                           current: admin.currentPage,
                           collapsed: collapsed,
-                          badge:
-                              (admin.pendingScamFlags + admin.pendingModerationItems) >
-                                  0
-                              ? admin.pendingScamFlags + admin.pendingModerationItems
+                          badge: admin.pendingAiWork > 0
+                              ? admin.pendingAiWork
                               : null,
                           onTap: () {
                             admin.setPage(AdminPage.ai);

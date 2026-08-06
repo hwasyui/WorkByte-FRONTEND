@@ -116,13 +116,15 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
   }
 
+  /// The currency the role was posted in, which is what any bid against that
+  /// role is denominated in. Deliberately no fallback currency: printing a
+  /// guessed symbol next to a real number misstates the amount, so an
+  /// unresolved role yields an empty string and the number is shown bare.
   String _roleCurrency(String? jobRoleId) {
-    if (jobRoleId == null) return 'IDR';
-    try {
-      return _roles.firstWhere((r) => r.jobRoleId == jobRoleId).budgetCurrency;
-    } catch (_) {
-      return 'IDR';
+    for (final role in _roles) {
+      if (role.jobRoleId == jobRoleId) return role.budgetCurrency;
     }
+    return '';
   }
 
   @override
@@ -1530,6 +1532,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     final isRejected = proposal.status == 'rejected';
     final isPinned = _pinnedProposalIds.contains(proposal.proposalId);
     final roleTitle = _roleTitle(proposal.jobRoleId);
+    // The proposal carries a bare number, so the role the bid was made against
+    // is what gives it a currency — same source the contract draft uses.
+    final budget =
+        '${_roleCurrency(proposal.jobRoleId)} '
+                '${proposal.proposedBudget.toStringAsFixed(0)}'
+            .trim();
     final isExpanded = _expandedProposalIds.contains(proposal.proposalId);
 
     final files = context.watch<ProposalFileProvider>().filesForProposal(
@@ -1668,10 +1676,12 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               children: [
                 if (roleTitle.isNotEmpty)
                   _softChip(roleTitle, icon: Icons.work_outline_rounded),
-                _softChip(
-                  'Rp ${proposal.proposedBudget.toStringAsFixed(0)}',
-                  icon: Icons.account_balance_wallet_outlined,
-                ),
+                _softChip(budget, icon: Icons.account_balance_wallet_outlined),
+                if ((proposal.proposedDuration ?? '').trim().isNotEmpty)
+                  _softChip(
+                    proposal.proposedDuration!.trim(),
+                    icon: Icons.schedule_rounded,
+                  ),
               ],
             ),
             const SizedBox(height: 14),
@@ -2525,9 +2535,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 children: skills.map((s) {
                   final skill = skillLookup[s.skillId];
                   final name = skill?.skillName ?? s.skillId;
-                  final importance = s.importanceLevel;
-                  final isRequired = s.isRequired;
-                  return _skillChip(name, isRequired, importance);
+                  return _skillChip(name, s.isRequired);
                 }).toList(),
               ),
           ],
@@ -2746,7 +2754,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     ),
   );
 
-  Widget _skillChip(String name, bool isRequired, String? importance) {
+  Widget _skillChip(String name, bool isRequired) {
     final color = isRequired ? _primary : const Color(0xFF7D7D7D);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

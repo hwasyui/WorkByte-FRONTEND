@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:workbyte_app/screens/workspace/workspace_contract.dart';
 import '../../core/constants/colors.dart';
+import '../../core/constants/job_categories.dart';
 import '../../core/constants/text_styles.dart';
 import '../../models/job_post_model.dart';
 import '../../models/contract_model.dart';
@@ -25,9 +28,26 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   String _searchQuery = '';
   String _sortOption = 'Latest';
   Map<String, String> _freelancerNames = {};
+  final Map<String, String?> _freelancerAvatars = {};
 
   List<JobPostModel> _jobsWithContracts = [];
   Map<String, List<ContractModel>> _contractsByJob = {};
+
+  /// Statuses where the client is the one holding things up, listed in the
+  /// order they should be surfaced on a card.
+  static const List<String> _attentionStatuses = [
+    'disputed',
+    'revision_requested',
+    'under_review',
+  ];
+
+  /// Everything else, in the order a space usually moves through.
+  static const List<String> _quietStatuses = [
+    'active',
+    'pending',
+    'completed',
+    'cancelled',
+  ];
 
   @override
   void initState() {
@@ -81,6 +101,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           final f = results[i];
           if (f != null) {
             _freelancerNames[missingIds[i]] = f.displayName;
+            _freelancerAvatars[missingIds[i]] = f.profilePictureUrl;
           }
         }
       }
@@ -259,6 +280,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Widget _buildJobCard(JobPostModel job) {
     final contracts = _contractsByJob[job.jobPostId] ?? [];
+    final statusCounts = _statusCounts(contracts);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -313,7 +335,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            job.projectCategory,
+                            categoryLabel(job.projectCategory),
                             style: AppText.caption.copyWith(
                               color: Colors.grey.shade400,
                             ),
@@ -326,6 +348,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 const SizedBox(height: 16),
                 Container(height: 1, color: Colors.grey.shade100),
                 const SizedBox(height: 14),
+                if (statusCounts.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in statusCounts)
+                        _statusChip(entry.key, entry.value),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 Row(
                   children: [
                     _buildAvatarStack(contracts),
@@ -375,6 +408,102 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
+  /// How many contracts sit in each status, attention-first so a card reads as
+  /// a worklist rather than a tally.
+  List<MapEntry<String, int>> _statusCounts(List<ContractModel> contracts) {
+    final counts = <String, int>{};
+    for (final c in contracts) {
+      counts[c.status] = (counts[c.status] ?? 0) + 1;
+    }
+
+    final entries = <MapEntry<String, int>>[];
+    for (final status in [..._attentionStatuses, ..._quietStatuses]) {
+      final count = counts.remove(status);
+      if (count != null) entries.add(MapEntry(status, count));
+    }
+    // A status the app does not know about still gets shown, just last.
+    for (final status in counts.keys.toList()..sort()) {
+      entries.add(MapEntry(status, counts[status]!));
+    }
+    return entries;
+  }
+
+  Widget _statusChip(String status, int count) {
+    final color = _statusColor(status);
+    final needsAttention = _attentionStatuses.contains(status);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(needsAttention ? 0.14 : 0.07),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(needsAttention ? 0.45 : 0.18),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count ${_statusLabel(status)}',
+            style: AppText.overline.copyWith(
+              color: color,
+              fontWeight: needsAttention ? FontWeight.w700 : FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'active':
+        return AppColors.primary;
+      case 'under_review':
+        return const Color(0xFF2196F3);
+      case 'revision_requested':
+        return const Color(0xFFFF9800);
+      case 'completed':
+        return const Color(0xFF4CAF50);
+      case 'disputed':
+        return Colors.redAccent;
+      case 'pending':
+        return const Color(0xFF9E9E9E);
+      case 'cancelled':
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'active':
+        return 'Active';
+      case 'under_review':
+        return 'Under Review';
+      case 'revision_requested':
+        return 'Revision Requested';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'disputed':
+        return 'Disputed';
+      case 'pending':
+        return 'Pending';
+      default:
+        return status;
+    }
+  }
+
   Widget _buildAvatarStack(List<ContractModel> contracts) {
     const maxShown = 3;
     final shown = contracts.take(maxShown).toList();
@@ -388,7 +517,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           for (int i = 0; i < shown.length; i++)
             Positioned(
               left: i * 22.0,
-              child: _initialAvatar(_freelancerNames[shown[i].freelancerId]),
+              child: _workerAvatar(
+                _freelancerNames[shown[i].freelancerId],
+                _freelancerAvatars[shown[i].freelancerId],
+              ),
             ),
           if (overflow > 0)
             Positioned(
@@ -414,6 +546,33 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ],
       ),
     );
+  }
+
+  /// The worker's own picture when there is one, their initial otherwise.
+  Widget _workerAvatar(String? name, String? avatarUrl) {
+    final provider = _avatarImage(avatarUrl);
+    if (provider != null) {
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          image: DecorationImage(image: provider, fit: BoxFit.cover),
+        ),
+      );
+    }
+    return _initialAvatar(name);
+  }
+
+  /// Profile pictures come back either as a remote URL or, for a picture that
+  /// has not been uploaded yet, a local file path.
+  ImageProvider? _avatarImage(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    final value = url.trim();
+    if (value.startsWith('http')) return NetworkImage(value);
+    final file = File(value);
+    return file.existsSync() ? FileImage(file) : null;
   }
 
   Widget _initialAvatar(String? name) {

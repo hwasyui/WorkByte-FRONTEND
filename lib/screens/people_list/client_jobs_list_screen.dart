@@ -195,6 +195,29 @@ class _ClientJobsListScreenState extends State<ClientJobsListScreen> {
     );
   }
 
+  Widget _metaStat(IconData icon, String label) {
+    return Flexible(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[500]),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF7D7D7D),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildJobCard(JobPostModel job) {
     final status = _jobStatusInfo(job.status);
     final roleCount = job.roleCount > 0 ? job.roleCount : 1;
@@ -293,32 +316,17 @@ class _ClientJobsListScreenState extends State<ClientJobsListScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Icon(
+                      // Flexible so the labels ellipsize instead of
+                      // overflowing the card once the counts reach two or
+                      // three digits on a narrow screen.
+                      _metaStat(
                         Icons.group_outlined,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
                         '$roleCount role${roleCount != 1 ? 's' : ''}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF7D7D7D),
-                        ),
                       ),
                       const SizedBox(width: 12),
-                      Icon(
+                      _metaStat(
                         Icons.article_outlined,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
                         '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF7D7D7D),
-                        ),
                       ),
                     ],
                   ),

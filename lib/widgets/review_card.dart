@@ -93,6 +93,8 @@ class ReviewCard extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -100,6 +102,8 @@ class ReviewCard extends StatelessWidget {
                     ),
                     Text(
                       timeAgo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
                     ),
                   ],

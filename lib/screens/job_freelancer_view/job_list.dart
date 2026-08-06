@@ -12,15 +12,26 @@ import '../../providers/proposal_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../models/job_post_model.dart';
 import '../../models/proposal_model.dart';
+import '../../services/contract_service.dart';
 import '../../services/job_post_service.dart';
 import '../../widgets/pagination_bar.dart';
+import '../workspace/workspace_contract.dart';
 import 'job_detail.dart';
 
 class JobListScreen extends StatefulWidget {
   final String? initialQuery;
   final String? categoryFilter;
 
-  const JobListScreen({super.key, this.initialQuery, this.categoryFilter});
+  /// 0 = browse jobs, 1 = applied jobs. Only honoured for freelancers, who are
+  /// the only role with the applied tab.
+  final int initialTabIndex;
+
+  const JobListScreen({
+    super.key,
+    this.initialQuery,
+    this.categoryFilter,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<JobListScreen> createState() => _JobListScreenState();
@@ -57,6 +68,10 @@ class _JobListScreenState extends State<JobListScreen> {
 
   final Map<String, int> _positionCounts = {};
   final Map<String, String?> _clientProfilePictures = {};
+
+  /// Proposals of this freelancer that already have a contract — tapping those
+  /// applied jobs opens the working space instead of the job detail.
+  final Set<String> _contractedProposalIds = {};
 
   bool get _showingApplied => _isFreelancer && _selectedTabIndex == 1;
 
@@ -96,6 +111,7 @@ class _JobListScreenState extends State<JobListScreen> {
   void initState() {
     super.initState();
     _activeCategoryFilter = widget.categoryFilter;
+    _selectedTabIndex = widget.initialTabIndex;
 
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
@@ -190,6 +206,8 @@ class _JobListScreenState extends State<JobListScreen> {
       );
 
       _appliedJobs = results.whereType<_AppliedJobItem>().toList();
+
+      await _loadContractedProposals(token, freelancerId.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -197,6 +215,30 @@ class _JobListScreenState extends State<JobListScreen> {
           _applySortAndFilter();
         });
       }
+    }
+  }
+
+  /// `contract.proposal_id` is unique, so the freelancer's contract list is the
+  /// authoritative answer for "which of my bids turned into a contract?".
+  Future<void> _loadContractedProposals(
+    String token,
+    String freelancerId,
+  ) async {
+    try {
+      final contracts = await ContractService().getContractsByFreelancer(
+        token,
+        freelancerId,
+      );
+      _contractedProposalIds
+        ..clear()
+        ..addAll(
+          contracts
+              .map((c) => c.proposalId)
+              .whereType<String>()
+              .where((id) => id.isNotEmpty),
+        );
+    } catch (_) {
+      // Nothing loaded means every applied job falls back to the job detail.
     }
   }
 
@@ -1026,6 +1068,20 @@ class _JobListScreenState extends State<JobListScreen> {
     );
   }
 
+  void _openAppliedJob(_AppliedJobItem item) {
+    final hasContract = _contractedProposalIds.contains(
+      item.proposal.proposalId,
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => hasContract
+            ? const WorkspaceContractScreen()
+            : JobDetailScreen(job: item.job),
+      ),
+    );
+  }
+
   Widget _buildAppliedJobCard(_AppliedJobItem item) {
     final proposal = item.proposal;
     final job = item.job;
@@ -1037,10 +1093,7 @@ class _JobListScreenState extends State<JobListScreen> {
     final clientAvatarUrl = _clientProfilePictures[job.clientId];
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-      ),
+      onTap: () => _openAppliedJob(item),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(

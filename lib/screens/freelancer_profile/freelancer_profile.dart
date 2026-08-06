@@ -31,11 +31,15 @@ import '../../widgets/app_toast.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/education_profile.dart';
 import '../../widgets/experience_profile.dart';
+import '../../widgets/pinned_tab_bar_delegate.dart';
 import '../../widgets/portfolio_profile.dart';
 import '../../widgets/review_card.dart';
 import '../../widgets/review_rating_helpers.dart';
 import '../../widgets/trust_score_card.dart';
 import 'upload_cv.dart';
+
+/// Height of the fixed back/share/saved row that sits above the scrolling body.
+const double _kActionBarHeight = 48;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -1388,11 +1392,24 @@ class _ProfileScreenState extends State<ProfileScreen>
         top: false,
         child: Column(
           children: [
-            _buildStickyHeader(),
+            _buildFixedActionBar(),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildAboutTab(), _buildReviewsTab(), _buildSavedTab()],
+              child: NestedScrollView(
+                headerSliverBuilder: (context, _) => [
+                  SliverToBoxAdapter(child: _buildProfileHeader()),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: PinnedTabBarDelegate(_buildTabBar()),
+                  ),
+                ],
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildAboutTab(),
+                    _buildReviewsTab(),
+                    _buildSavedTab(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1401,7 +1418,58 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildStickyHeader() {
+  /// The only permanently fixed part of the screen: back and share.
+  /// Everything below it scrolls away.
+  Widget _buildFixedActionBar() {
+    return Container(
+      color: AppColors.secondary,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: _kActionBarHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.maybePop(context),
+                ),
+                Row(
+                  children: [
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) => IconButton(
+                        icon: const Icon(
+                          Icons.share_outlined,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: auth.userId == null
+                            ? null
+                            : () => Share.share(profileShareUrl(auth.userId!)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    // The action row is pinned above, so the banner only draws what is left of
+    // its original 175px once that row and the status bar are accounted for.
+    final bannerHeight =
+        (175 - MediaQuery.of(context).padding.top - _kActionBarHeight)
+            .clamp(60.0, 175.0);
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -1411,45 +1479,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: 175,
+                height: bannerHeight,
                 width: double.infinity,
                 color: AppColors.secondary,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                          onPressed: () => Navigator.maybePop(context),
-                        ),
-                        Row(
-                          children: [
-                            Consumer<AuthProvider>(
-                              builder: (context, auth, _) => IconButton(
-                                icon: const Icon(
-                                  Icons.share_outlined,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: auth.userId == null
-                                    ? null
-                                    : () => Share.share(
-                                        profileShareUrl(auth.userId!),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ),
               Positioned(
                 bottom: -44,
@@ -1732,32 +1764,31 @@ class _ProfileScreenState extends State<ProfileScreen>
             },
           ),
           const SizedBox(height: 12),
-
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: primaryColor,
-              indicatorWeight: 2.5,
-              labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey[400],
-              labelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-              unselectedLabelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
-              tabs: const [
-                Tab(text: 'About'),
-                Tab(text: 'Reviews'),
-                Tab(text: 'Saved'),
-              ],
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  TabBar _buildTabBar() {
+    return TabBar(
+      controller: _tabController,
+      indicatorColor: primaryColor,
+      indicatorWeight: 2.5,
+      labelColor: primaryColor,
+      unselectedLabelColor: Colors.grey[400],
+      labelStyle: GoogleFonts.poppins(
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+      ),
+      unselectedLabelStyle: GoogleFonts.poppins(
+        fontWeight: FontWeight.w500,
+        fontSize: 13,
+      ),
+      tabs: const [
+        Tab(text: 'About'),
+        Tab(text: 'Reviews'),
+        Tab(text: 'Saved'),
+      ],
     );
   }
 
@@ -1776,6 +1807,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         final List<PortfolioModel> portfolios = profile.portfolios;
 
         return SingleChildScrollView(
+          key: const PageStorageKey<String>('about'),
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             children: [
@@ -2234,93 +2266,102 @@ class _ProfileScreenState extends State<ProfileScreen>
         final int totalReviews = trustScore?.totalReviews ?? reviews.length;
         final categoryAverages = buildCategoryAverages(reviews);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 16, bottom: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (totalReviews > 0) ...[
-                RatingSummaryCard(
-                  averageRating: averageRating,
-                  totalReviews: totalReviews,
-                  confidence: trustScore?.confidence,
-                ),
-                const SizedBox(height: 16),
-                CategoryRatingsCard(categoryAverages: categoryAverages),
-                const SizedBox(height: 16),
-              ],
-              if (trustScore != null) ...[
-                TrustScoreCard(trustScore: trustScore, isOwnProfile: true),
-                const SizedBox(height: 16),
-                SentimentDistributionCard(
-                  distribution: trustScore.sentimentDistribution,
-                  confidence: trustScore.confidence,
-                ),
-                if (trustScore.sentimentDistribution.total > 0)
+        return RefreshIndicator(
+          color: primaryColor,
+          onRefresh: _loadReviews,
+          child: SingleChildScrollView(
+            key: const PageStorageKey<String>('reviews'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(top: 16, bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (totalReviews > 0) ...[
+                  RatingSummaryCard(
+                    averageRating: averageRating,
+                    totalReviews: totalReviews,
+                    confidence: trustScore?.confidence,
+                  ),
                   const SizedBox(height: 16),
-                AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
-                if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                  CategoryRatingsCard(categoryAverages: categoryAverages),
                   const SizedBox(height: 16),
-              ],
-              if (reviews.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Column(
+                ],
+                if (trustScore != null) ...[
+                  TrustScoreCard(trustScore: trustScore, isOwnProfile: true),
+                  const SizedBox(height: 16),
+                  SentimentDistributionCard(
+                    distribution: trustScore.sentimentDistribution,
+                    confidence: trustScore.confidence,
+                  ),
+                  if (trustScore.sentimentDistribution.total > 0)
+                    const SizedBox(height: 16),
+                  AiReviewSummaryCard(summary: trustScore.aiReviewSummary),
+                  if ((trustScore.aiReviewSummary ?? '').trim().isNotEmpty)
+                    const SizedBox(height: 16),
+                ],
+                if (reviews.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.rate_review,
+                            color: Colors.grey[400],
+                            size: 48,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No reviews yet',
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(
-                          Icons.rate_review,
-                          color: Colors.grey[400],
-                          size: 48,
+                        Expanded(
+                          child: Text(
+                            'Reviews',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(width: 8),
                         Text(
-                          'No reviews yet',
+                          '$totalReviews total',
                           style: GoogleFonts.poppins(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            fontSize: 13,
                           ),
                         ),
                       ],
                     ),
                   ),
-                )
-              else ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Reviews',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '$totalReviews total',
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 12),
+                  ...reviews.map(
+                    (r) => ReviewCard(
+                      review: r,
+                      reviewerName: _reviewerNameCache[r.reviewerId],
+                      reviewerAvatarUrl: _reviewerAvatarCache[r.reviewerId],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ...reviews
-                    .map(
-                      (r) => ReviewCard(
-                        review: r,
-                        reviewerName: _reviewerNameCache[r.reviewerId],
-                        reviewerAvatarUrl: _reviewerAvatarCache[r.reviewerId],
-                      ),
-                    )
-                    .toList(),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -2366,6 +2407,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         }
 
         return SingleChildScrollView(
+          key: const PageStorageKey<String>('saved'),
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

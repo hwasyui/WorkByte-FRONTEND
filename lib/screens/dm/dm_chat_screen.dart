@@ -109,7 +109,10 @@ class _DMChatScreenState extends State<DMChatScreen>
 
   Future<void> _loadMessages() async {
     final token = context.read<AuthProvider>().token;
-    if (token == null) return;
+    if (token == null) {
+      setState(() => _isLoadingMessages = false);
+      return;
+    }
 
     setState(() => _isLoadingMessages = true);
 
@@ -728,7 +731,9 @@ class _DMChatScreenState extends State<DMChatScreen>
         child: Column(
           children: [
             Expanded(child: _buildMessageList(messages, currentUserId)),
-            if (_isLoadingMessages)
+            // The list itself shows the spinner on a cold load; the bar is for
+            // refreshes where messages are already on screen.
+            if (_isLoadingMessages && messages.isNotEmpty)
               const LinearProgressIndicator(
                 backgroundColor: Color(0xFFF0F0F1),
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -882,7 +887,13 @@ class _DMChatScreenState extends State<DMChatScreen>
     return Column(
       children: [
         if (displayMessages.isEmpty)
-          Expanded(child: _buildEmptyChat())
+          // Only claim the thread is empty once the first fetch has settled,
+          // otherwise the empty state flashes while messages are on the way.
+          Expanded(
+            child: _isLoadingMessages
+                ? _buildLoadingChat()
+                : _buildEmptyChat(),
+          )
         else
           Expanded(
             child: GestureDetector(
@@ -1412,6 +1423,32 @@ class _DMChatScreenState extends State<DMChatScreen>
                 color: Colors.white,
                 size: 20,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingChat() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Loading messages...',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: const Color(0xFF8D8D98),
             ),
           ),
         ],

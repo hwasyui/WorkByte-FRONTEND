@@ -618,27 +618,7 @@ class _ScamCardState extends State<_ScamCard> {
           ),
 
           const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () => _showDetail(context),
-            child: Row(
-              children: [
-                Text(
-                  'View full details',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF7C3AED),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.open_in_new_rounded,
-                  size: 12,
-                  color: Color(0xFF7C3AED),
-                ),
-              ],
-            ),
-          ),
+          _ViewDetailsLink(onTap: () => _showDetail(context)),
           const SizedBox(height: 10),
           if (status == 'pending')
             _loading
@@ -1297,27 +1277,7 @@ class _ModerationCardState extends State<_ModerationCard> {
           // below the fold. The card ranks by severity; the detail explains why.
 
           const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () => _showDetail(context),
-            child: Row(
-              children: [
-                Text(
-                  'View full details',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF7C3AED),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.open_in_new_rounded,
-                  size: 12,
-                  color: Color(0xFF7C3AED),
-                ),
-              ],
-            ),
-          ),
+          _ViewDetailsLink(onTap: () => _showDetail(context)),
           const SizedBox(height: 10),
           if (status == 'pending')
             _loading
@@ -1986,7 +1946,7 @@ class _RedFlagCard extends StatelessWidget {
     final ageHours = alert['age_hours'] as num?;
     final resolved = alert['is_resolved'] == true;
 
-    return GestureDetector(
+    return _TappableCard(
       onTap: () =>
           showRedFlagDetailDialog(context, alertId: _redFlagId(alert)),
       child: Container(
@@ -2061,24 +2021,30 @@ class _RedFlagCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (!resolved) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: _ActionButton(
-                  label: 'Mark Resolved',
-                  icon: Icons.check_circle_outline,
-                  color: const Color(0xFF059669),
-                  onTap: () => _resolve(context),
-                ),
-              ),
-            ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const _ViewDetailsLink(),
+                const Spacer(),
+                if (!resolved)
+                  _ActionButton(
+                    label: 'Mark Resolved',
+                    icon: Icons.check_circle_outline,
+                    color: const Color(0xFF059669),
+                    onTap: () => _resolve(context),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+/// Mirrors DISAGREEMENT_THRESHOLD in the backend's mismatch_detector.py — the
+/// point above which the disagreement model calls a review mismatched.
+const _disagreementThreshold = 0.5;
 
 const _flaggedHoldLevels = ['all', 'flagged', 'suppressed'];
 const _flaggedSorts = ['created_at', 'authenticity', 'disagreement'];
@@ -2235,6 +2201,23 @@ class _FlaggedReviewCard extends StatelessWidget {
   final bool isClient;
   const _FlaggedReviewCard({required this.review, required this.isClient});
 
+  String get _holdLevel =>
+      review['hold_level']?.toString() ??
+      review['status']?.toString() ??
+      'flagged';
+
+  /// How many rulings are already on file, from `admin_ruling_count` on the
+  /// list row. The flagged-list endpoint does not send it yet, so this reads 0
+  /// and the marker stays hidden until it does — 0 means "nothing on file",
+  /// never "definitely never ruled on", which is why it only ever adds a
+  /// marker and never gates an action.
+  int get _rulingCount => (review['admin_ruling_count'] as num?)?.toInt() ?? 0;
+
+  /// Already suppressed by the pipeline: upholding records agreement rather
+  /// than changing anything. The list endpoint carries no ruling history, so
+  /// hold level is all a queue card can branch on for the copy.
+  bool get _alreadySuppressed => _holdLevel == 'suppressed';
+
   Future<void> _publish(BuildContext context) async {
     final admin = context.read<AdminProvider>();
     final id = _id(review);
@@ -2260,16 +2243,30 @@ class _FlaggedReviewCard extends StatelessWidget {
     final id = _id(review);
     final outcome = await showAdminReasonDialog(
       context,
-      title: 'Uphold this hold?',
-      submitLabel: 'Uphold hold',
+      title: _alreadySuppressed
+          ? 'Confirm this suppression?'
+          : 'Uphold this hold?',
+      submitLabel: _alreadySuppressed ? 'Confirm suppression' : 'Uphold hold',
       accentColor: const Color(0xFFDC2626),
       icon: Icons.gpp_maybe_rounded,
+      warningText: _alreadySuppressed
+          ? 'The review is already suppressed and stays that way. This records '
+              'your agreement with the pipeline for the audit trail; nothing '
+              'changes for either party.'
+          : 'This suppresses the review permanently. It will not be published, '
+              'and the reviewer was already told it was held.',
       onSubmit: (reason) => isClient
           ? admin.upholdClientReview(id, reason: reason)
           : admin.upholdReview(id, reason: reason),
     );
     if (outcome != null && outcome.success && context.mounted) {
-      AppToast.success('Hold upheld — review suppressed.');
+      // Upholding an already-suppressed review changes no status, so saying
+      // "review suppressed" here would be false.
+      AppToast.success(
+        _alreadySuppressed
+            ? 'Ruling recorded.'
+            : 'Hold upheld — review suppressed.',
+      );
     }
   }
 
@@ -2292,12 +2289,15 @@ class _FlaggedReviewCard extends StatelessWidget {
         (review['authenticity_score'] as num?)?.toDouble();
     final isFlaggedFake = review['is_flagged_fake'] == true;
     final isFlaggedCoerced = review['is_flagged_coerced'] == true;
+    // The LLM's own read that the words and the stars disagree, and the
+    // disagreement model's probability for the same claim. They are separate
+    // signals and can contradict each other, so both are shown.
+    final sentimentMismatch = review['sentiment_mismatch'] == true;
+    final disagreementProbability =
+        (review['disagreement_probability'] as num?)?.toDouble();
     final analysisUnavailable = review['analysis_unavailable'] == true;
-    final holdLevel = review['hold_level']?.toString() ??
-        review['status']?.toString() ??
-        'flagged';
 
-    return GestureDetector(
+    return _TappableCard(
       onTap: () => showReviewModerationDialog(
         context,
         id: _id(review),
@@ -2338,7 +2338,7 @@ class _FlaggedReviewCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _HoldLevelPill(holdLevel: holdLevel),
+                _HoldLevelPill(holdLevel: _holdLevel),
               ],
             ),
             if (comment.isNotEmpty) ...[
@@ -2378,11 +2378,41 @@ class _FlaggedReviewCard extends StatelessWidget {
                       color: authenticityScore < 0.5
                           ? const Color(0xFFDC2626)
                           : const Color(0xFFD97706),
+                    )
+                  else
+                    // Null is "never scored", not a bad score — say so rather
+                    // than leaving the chip off and implying nothing was flagged.
+                    const _InfoChip(
+                      label: 'NOT SCORED',
+                      color: Color(0xFF6B7280),
+                    ),
+                  if (disagreementProbability != null)
+                    _InfoChip(
+                      label: 'Disagreement '
+                          '${(disagreementProbability * 100).round()}%',
+                      // 0.5 is the model's own mismatch threshold
+                      // (DISAGREEMENT_THRESHOLD in mismatch_detector.py).
+                      color: disagreementProbability >= _disagreementThreshold
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF6B7280),
                     ),
                   if (isFlaggedFake)
                     const _InfoChip(label: 'FAKE', color: Color(0xFFDC2626)),
                   if (isFlaggedCoerced)
                     const _InfoChip(label: 'COERCED', color: Color(0xFFDC2626)),
+                  if (sentimentMismatch)
+                    const _InfoChip(
+                      label: 'SENTIMENT MISMATCH',
+                      color: Color(0xFFDC2626),
+                    )
+                  else if (disagreementProbability != null &&
+                      disagreementProbability >= _disagreementThreshold)
+                    // The LLM saw no mismatch but the disagreement model did.
+                    // Amber, not red: the two models are in conflict here.
+                    const _InfoChip(
+                      label: 'MODEL DISAGREEMENT',
+                      color: Color(0xFFD97706),
+                    ),
                 ],
                 if (flagReasonCount > 0)
                   _MetaChip(
@@ -2394,20 +2424,41 @@ class _FlaggedReviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _ActionButton(
-                  label: 'Uphold',
-                  icon: Icons.gpp_maybe_outlined,
-                  color: const Color(0xFFDC2626),
-                  onTap: () => _uphold(context),
-                ),
-                const SizedBox(width: 8),
-                _ActionButton(
-                  label: 'Publish Anyway',
-                  icon: Icons.check_circle_outline,
-                  color: const Color(0xFF059669),
-                  onTap: () => _publish(context),
+                const _ViewDetailsLink(),
+                const SizedBox(width: 12),
+                Expanded(
+                  // Once a ruling is on file the marker takes the actions'
+                  // place. Re-ruling from a card would file a duplicate label
+                  // for a case the admin cannot see the history of; the detail
+                  // dialog shows the reasons already recorded and still offers
+                  // publishing, which stays open as the appeal path.
+                  child: _rulingCount > 0
+                      ? Align(
+                          alignment: Alignment.centerRight,
+                          child: _RuledMarker(count: _rulingCount),
+                        )
+                      : Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _ActionButton(
+                              label: _alreadySuppressed
+                                  ? 'Confirm suppression'
+                                  : 'Uphold hold',
+                              icon: Icons.gpp_maybe_outlined,
+                              color: const Color(0xFFDC2626),
+                              onTap: () => _uphold(context),
+                            ),
+                            _ActionButton(
+                              label: 'Publish Anyway',
+                              icon: Icons.check_circle_outline,
+                              color: const Color(0xFF059669),
+                              onTap: () => _publish(context),
+                            ),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -2469,6 +2520,93 @@ String _ageLabel(num hours) {
   if (h < 24) return '${h}h ago';
   final d = (h / 24).floor();
   return '${d}d ago';
+}
+
+/// A card whose whole surface opens a detail dialog. On the admin web build the
+/// pointer cursor is half the affordance; [_ViewDetailsLink] is the other half,
+/// for anyone who never hovers.
+class _TappableCard extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _TappableCard({required this.child, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: onTap, child: child),
+    );
+  }
+}
+
+/// The "this opens something" affordance. Cards that are tappable as a whole
+/// look identical to cards that are not, so without this the detail dialogs are
+/// invisible features. Pass [onTap] only when the card itself is not tappable —
+/// otherwise the tap falls through to the card's own handler.
+class _ViewDetailsLink extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _ViewDetailsLink({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'View full details',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: const Color(0xFF7C3AED),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.open_in_new_rounded,
+          size: 12,
+          color: Color(0xFF7C3AED),
+        ),
+      ],
+    );
+    if (onTap == null) return row;
+    return GestureDetector(onTap: onTap, child: row);
+  }
+}
+
+/// "An admin has already ruled on this one" — history, not a verdict on the
+/// review. It says nothing about the outcome, because the ruling that matters
+/// is the reason text, and that only fits in the detail dialog.
+class _RuledMarker extends StatelessWidget {
+  final int count;
+  const _RuledMarker({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.history_rounded, size: 12, color: Color(0xFFD97706)),
+          const SizedBox(width: 4),
+          Text(
+            count == 1 ? 'Ruled on' : 'Ruled on ×$count',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFD97706),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MetaChip extends StatelessWidget {

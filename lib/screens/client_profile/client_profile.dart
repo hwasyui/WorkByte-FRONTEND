@@ -9,17 +9,18 @@ import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/client_review_provider.dart';
-import '../../services/api_service.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/edit_profile_form.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/pinned_tab_bar_delegate.dart';
 import '../../widgets/review_card.dart' show SentimentBadge;
 import '../../widgets/trust_score_card.dart';
 import '../../widgets/review_rating_helpers.dart';
-import '../../models/job_post_model.dart';
-import '../job_client_view/job_detail.dart';
 import '../people_list/people_list_screen.dart' show PeopleProfileScreen;
 import 'dart:io';
+
+/// Height of the fixed back/share/saved row that sits above the scrolling body.
+const double _kActionBarHeight = 48;
 
 class ClientProfileScreen extends StatefulWidget {
   const ClientProfileScreen({Key? key}) : super(key: key);
@@ -32,8 +33,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     with SingleTickerProviderStateMixin {
   String bioText = '';
   String websiteUrl = '';
-  List<JobPostModel> postedJobs = [];
-  bool _isLoading = false;
   late TabController _tabController;
 
   static const Color primaryColor = AppColors.primary;
@@ -46,7 +45,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     bioController.addListener(() {
       setState(() => bioText = bioController.text);
     });
@@ -75,7 +74,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         bioController.text = bioText;
         websiteController.text = websiteUrl;
       });
-      _loadPostedJobs();
       _loadReviews();
     });
   }
@@ -126,41 +124,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       }
     }
     if (mounted) setState(() {});
-  }
-
-  Future<void> _loadPostedJobs() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-
-    if (!mounted) return;
-
-    if (profile.clientProfile == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final jobsList = await ApiService.getClientPostedJobs(
-        auth.token!,
-        profile.clientProfile!.clientId,
-      );
-
-      if (mounted) {
-        setState(() {
-          postedJobs = jobsList
-              .map((job) => JobPostModel.fromJson(job))
-              .toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        AppToast.error('Failed to load jobs: ${e.toString()}');
-      }
-    }
   }
 
   Future<void> _refreshProfile() async {
@@ -917,16 +880,24 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             top: false,
             child: Column(
               children: [
-                _buildStickyHeader(),
+                _buildFixedActionBar(),
                 Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildAboutTab(profile),
-                      _buildPostedJobsTab(),
-                      _buildReviewsTab(),
-                      _buildSavedTab(),
+                  child: NestedScrollView(
+                    headerSliverBuilder: (context, _) => [
+                      SliverToBoxAdapter(child: _buildProfileHeader()),
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: PinnedTabBarDelegate(_buildTabBar()),
+                      ),
                     ],
+                    body: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildAboutTab(profile),
+                        _buildReviewsTab(),
+                        _buildSavedTab(),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -937,8 +908,59 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  Widget _buildStickyHeader() {
+  /// The only permanently fixed part of the screen: back and share.
+  /// Everything below it scrolls away.
+  Widget _buildFixedActionBar() {
+    return Container(
+      color: AppColors.secondary,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: _kActionBarHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  onPressed: () => Navigator.maybePop(context),
+                ),
+                Row(
+                  children: [
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) => IconButton(
+                        icon: const Icon(
+                          Icons.share_outlined,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: auth.userId == null
+                            ? null
+                            : () => Share.share(profileShareUrl(auth.userId!)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
     final auth = context.read<AuthProvider>();
+
+    // The action row is pinned above, so the banner only draws what is left of
+    // its original 175px once that row and the status bar are accounted for.
+    final bannerHeight =
+        (175 - MediaQuery.of(context).padding.top - _kActionBarHeight)
+            .clamp(60.0, 175.0);
 
     return Container(
       color: Colors.white,
@@ -949,45 +971,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: 175,
+                height: bannerHeight,
                 width: double.infinity,
                 color: AppColors.secondary,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                          onPressed: () => Navigator.maybePop(context),
-                        ),
-                        Row(
-                          children: [
-                            Consumer<AuthProvider>(
-                              builder: (context, auth, _) => IconButton(
-                                icon: const Icon(
-                                  Icons.share_outlined,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: auth.userId == null
-                                    ? null
-                                    : () => Share.share(
-                                        profileShareUrl(auth.userId!),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ),
               Positioned(
                 bottom: -44,
@@ -1091,7 +1077,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           Consumer<ClientReviewProvider>(
             builder: (context, reviewProvider, _) {
               final trustScore = reviewProvider.trustScore;
-              final rawRating = trustScore?.weightedReviewAvgReceived;
+              final rawRating = trustScore?.displayStarAvg;
               final totalReviews = trustScore?.totalReviewsReceived ?? 0;
 
               if (rawRating == null || totalReviews == 0) {
@@ -1314,35 +1300,31 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ],
 
           const SizedBox(height: 12),
-
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: primaryColor,
-              indicatorWeight: 2.5,
-              labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey[400],
-              labelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-              unselectedLabelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: const [
-                Tab(text: 'About'),
-                Tab(text: 'Posted Jobs'),
-                Tab(text: 'Reviews'),
-                Tab(text: 'Saved'),
-              ],
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  TabBar _buildTabBar() {
+    return TabBar(
+      controller: _tabController,
+      indicatorColor: primaryColor,
+      indicatorWeight: 2.5,
+      labelColor: primaryColor,
+      unselectedLabelColor: Colors.grey[400],
+      labelStyle: GoogleFonts.poppins(
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+      ),
+      unselectedLabelStyle: GoogleFonts.poppins(
+        fontWeight: FontWeight.w500,
+        fontSize: 13,
+      ),
+      tabs: const [
+        Tab(text: 'About'),
+        Tab(text: 'Reviews'),
+        Tab(text: 'Saved'),
+      ],
     );
   }
 
@@ -1379,6 +1361,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   Widget _buildAboutTab(ProfileProvider profile) {
     return SingleChildScrollView(
+      key: const PageStorageKey<String>('about'),
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       child: Column(
         children: [
@@ -1485,207 +1468,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  Widget _buildPostedJobsTab() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-        ),
-      );
-    }
-
-    if (postedJobs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.work_outline, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              'No jobs posted yet',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start posting jobs to find freelancers',
-              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Column(
-        children: [
-          ...postedJobs.map(
-            (job) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildPostedJobCard(job),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  ({String label, Color color}) _jobStatusInfo(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return (label: 'Active', color: const Color(0xFF16A34A));
-      case 'filled':
-        return (label: 'Filled', color: primaryColor);
-      case 'closed':
-        return (label: 'Closed', color: const Color(0xFFE11D48));
-      case 'draft':
-      default:
-        return (label: 'Draft', color: const Color(0xFFF59E0B));
-    }
-  }
-
-  Widget _buildPostedJobCard(JobPostModel job) {
-    final status = _jobStatusInfo(job.status);
-    final roleCount = job.roleCount > 0 ? job.roleCount : 1;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ClientJobDetailScreen(job: job)),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFEEEEF5)),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.work_outline_rounded,
-                color: primaryColor,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          job.jobTitle,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1A1A2E),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: status.color.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          status.label,
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: status.color,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          job.projectType == 'team' ? 'Team' : 'Individual',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: primaryColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Icon(
-                        Icons.group_outlined,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$roleCount role${roleCount != 1 ? 's' : ''}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF7D7D7D),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        Icons.article_outlined,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${job.proposalCount} proposal${job.proposalCount != 1 ? 's' : ''}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF7D7D7D),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildReviewsTab() {
     return Consumer<ClientReviewProvider>(
       builder: (context, reviewProvider, _) {
@@ -1742,12 +1524,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           color: primaryColor,
           onRefresh: _loadReviews,
           child: SingleChildScrollView(
+            key: const PageStorageKey<String>('reviews'),
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (trustScore != null) ...[
+                  RatingSummaryCard(
+                    averageRating: trustScore.displayStarAvg ?? 0.0,
+                    totalReviews: totalReviews,
+                    confidence: trustScore.confidence,
+                  ),
+                  const SizedBox(height: 16),
                   ClientTrustScoreCard(trustScore: trustScore, isOwnProfile: true),
                   const SizedBox(height: 16),
                   SentimentDistributionCard(
@@ -1763,12 +1552,29 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 if (reviews.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      '$totalReviews Review${totalReviews == 1 ? '' : 's'} from Freelancers',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Reviews',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$totalReviews total',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1943,6 +1749,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         }
 
         return SingleChildScrollView(
+          key: const PageStorageKey<String>('saved'),
           padding: const EdgeInsets.only(top: 16, bottom: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

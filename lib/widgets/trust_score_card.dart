@@ -19,8 +19,6 @@ class TrustScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = trustScore.overallScore;
-    final rankPct = trustScore.categoryRankPct;
-    final category = toTitleCase(trustScore.category);
 
     Color scoreColor;
     String scoreLabel;
@@ -55,33 +53,12 @@ class TrustScoreCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ConfidenceBadge(
-                confidence: trustScore.confidence,
-                totalReviews: trustScore.totalReviews,
-              ),
-              if (rankPct != null && category.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Top ${(100 - rankPct).toStringAsFixed(0)}% in $category',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            'Trust Score',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -215,9 +192,6 @@ class ClientTrustScoreCard extends StatelessWidget {
       scoreLabel = 'Needs Work';
     }
 
-    final dispute = trustScore.disputeFairnessScore;
-    final showDispute = dispute != null && dispute < 1.0;
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -235,9 +209,12 @@ class ClientTrustScoreCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ConfidenceBadge(
-            confidence: trustScore.confidence,
-            totalReviews: trustScore.totalReviewsReceived,
+          Text(
+            'Trust Score',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -320,12 +297,14 @@ class ClientTrustScoreCard extends StatelessWidget {
                 ? 'Not measured yet — needs written feedback from a freelancer'
                 : null,
           ),
-          if (showDispute)
-            ScoreBar(
-              label: 'Dispute-Free Rate',
-              icon: Icons.gavel_outlined,
-              value: dispute,
-            ),
+          ScoreBar(
+            label: 'Dispute-Free Rate',
+            icon: Icons.gavel_outlined,
+            value: trustScore.disputeFairnessScore,
+            nullLabel: isOwnProfile
+                ? 'Not measured yet — no completed contracts with disputes'
+                : null,
+          ),
         ],
       ),
     );
@@ -446,6 +425,8 @@ class ConfidenceBadge extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.w600,
@@ -466,44 +447,17 @@ class SentimentDistributionCard extends StatelessWidget {
     required this.confidence,
   });
 
+  static const Color _positiveColor = Color(0xFF059669);
+  static const Color _neutralColor = Color(0xFF9CA3AF);
+  static const Color _negativeColor = Color(0xFFDC2626);
+  static const Color _unclassifiedColor = Color(0xFFD1D5DB);
+
   @override
   Widget build(BuildContext context) {
     final d = distribution;
     if (d.total == 0) return const SizedBox.shrink();
 
-    final showChart = confidence != 'new';
-
-    Widget segment(int count, Color color) {
-      if (count == 0) return const SizedBox.shrink();
-      return Expanded(flex: count, child: Container(height: 8, color: color));
-    }
-
-    String pct(int count) => '${(count / d.total * 100).round()}%';
-
-    final legends = <Widget>[
-      if (d.positive > 0)
-        _legend(
-          showChart ? '${pct(d.positive)} positive' : '${d.positive} positive',
-          const Color(0xFF059669),
-        ),
-      if (d.neutral > 0)
-        _legend(
-          showChart ? '${pct(d.neutral)} neutral' : '${d.neutral} neutral',
-          const Color(0xFF9CA3AF),
-        ),
-      if (d.negative > 0)
-        _legend(
-          showChart ? '${pct(d.negative)} negative' : '${d.negative} negative',
-          const Color(0xFFDC2626),
-        ),
-      if (d.unclassified > 0)
-        _legend(
-          showChart
-              ? '${pct(d.unclassified)} unclassified'
-              : '${d.unclassified} unclassified',
-          const Color(0xFFD1D5DB),
-        ),
-    ];
+    final showPercent = confidence != 'new';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -522,46 +476,146 @@ class SentimentDistributionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Review Sentiment',
-            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (showChart) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: SizedBox(
-                height: 8,
-                child: Row(
-                  children: [
-                    segment(d.positive, const Color(0xFF059669)),
-                    segment(d.neutral, const Color(0xFF9CA3AF)),
-                    segment(d.negative, const Color(0xFFDC2626)),
-                    segment(d.unclassified, const Color(0xFFD1D5DB)),
-                  ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              // A Spacer gives up before the title does, so the title has to be
+              // the flexible one or the pair overflows at large text scales.
+              Expanded(
+                child: Text(
+                  'Review Sentiment',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                '${d.total} review${d.total == 1 ? '' : 's'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _SentimentBar(
+            label: 'Positive',
+            icon: Icons.sentiment_satisfied_alt_rounded,
+            count: d.positive,
+            total: d.total,
+            color: _positiveColor,
+            showPercent: showPercent,
+          ),
+          _SentimentBar(
+            label: 'Neutral',
+            icon: Icons.sentiment_neutral_rounded,
+            count: d.neutral,
+            total: d.total,
+            color: _neutralColor,
+            showPercent: showPercent,
+          ),
+          _SentimentBar(
+            label: 'Negative',
+            icon: Icons.sentiment_dissatisfied_rounded,
+            count: d.negative,
+            total: d.total,
+            color: _negativeColor,
+            showPercent: showPercent,
+          ),
+          if (d.unclassified > 0)
+            _SentimentBar(
+              label: 'Unclassified',
+              icon: Icons.help_outline_rounded,
+              count: d.unclassified,
+              total: d.total,
+              color: _unclassifiedColor,
+              showPercent: showPercent,
             ),
-            const SizedBox(height: 10),
-          ],
-          Wrap(spacing: 14, runSpacing: 6, children: legends),
+          if (!showPercent)
+            Text(
+              'Too few reviews to show percentages yet',
+              style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                color: Colors.grey[400],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _legend(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
-      ],
+class _SentimentBar extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final int count;
+  final int total;
+  final Color color;
+  final bool showPercent;
+
+  const _SentimentBar({
+    required this.label,
+    required this.icon,
+    required this.count,
+    required this.total,
+    required this.color,
+    required this.showPercent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = total == 0 ? 0.0 : (count / total).clamp(0.0, 1.0);
+    final isEmpty = count == 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: isEmpty ? Colors.grey.shade400 : color),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 86,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: isEmpty ? Colors.grey[400] : Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: fraction,
+                minHeight: 7,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 58,
+            child: Text(
+              showPercent ? '${(fraction * 100).round()}% · $count' : '$count',
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: isEmpty ? Colors.grey[400] : Colors.black54,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -679,6 +733,9 @@ class RatingSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rating = averageRating.clamp(0.0, 5.0);
+    // Star averages run 1-5, so a zero here means "no published reviews yet"
+    // (a null display average coerced to 0.0), not a genuine zero-star score.
+    final hasRating = rating > 0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -704,14 +761,20 @@ class RatingSummaryCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
-              child: Text(
-                rating.toStringAsFixed(1),
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
+              child: hasRating
+                  ? Text(
+                      rating.toStringAsFixed(1),
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : Icon(
+                      Icons.star_border_rounded,
+                      size: 28,
+                      color: AppColors.primary.withValues(alpha: 0.45),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -719,7 +782,14 @@ class RatingSummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                // Title and badge are both intrinsically sized, and the badge
+                // grows with the review count ("Established · 128 reviews"),
+                // so a Row overflows on any phone. A Wrap drops the badge onto
+                // its own line instead of clipping it.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'Average Rating',
@@ -728,22 +798,30 @@ class RatingSummaryCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (confidence != null) ...[
-                      const SizedBox(width: 8),
+                    if (confidence != null)
                       ConfidenceBadge(
                         confidence: confidence!,
                         totalReviews: totalReviews,
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 4),
-                StarRow(rating: rating),
-                const SizedBox(height: 6),
-                Text(
-                  'Based on $totalReviews review${totalReviews == 1 ? '' : 's'}',
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
-                ),
+                if (hasRating) ...[
+                  StarRow(rating: rating),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Based on $totalReviews review${totalReviews == 1 ? '' : 's'}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                  ),
+                ] else
+                  Text(
+                    'No rating yet',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
               ],
             ),
           ),

@@ -22,6 +22,11 @@ class ContractModel {
   final String? createdAt;
   final String? updatedAt;
 
+  /// user_id of whoever cancelled, or of the admin who cancelled as the outcome
+  /// of an arbitration. Empty when the contract was never cancelled.
+  final String? cancelledBy;
+  final String? cancellationReason;
+
   final String? freelancerName;
   final String? clientName;
 
@@ -48,6 +53,8 @@ class ContractModel {
     this.contractPdfGeneratedAt,
     this.createdAt,
     this.updatedAt,
+    this.cancelledBy,
+    this.cancellationReason,
     this.freelancerName,
     this.clientName,
   });
@@ -75,6 +82,8 @@ class ContractModel {
     contractPdfGeneratedAt: json['contract_pdf_generated_at']?.toString(),
     createdAt: json['created_at']?.toString(),
     updatedAt: json['updated_at']?.toString(),
+    cancelledBy: json['cancelled_by']?.toString(),
+    cancellationReason: json['cancellation_reason'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -102,6 +111,8 @@ class ContractModel {
     String? agreedDuration,
     String? freelancerName,
     String? clientName,
+    String? cancelledBy,
+    String? cancellationReason,
   }) => ContractModel(
     contractId: contractId,
     jobPostId: jobPostId,
@@ -125,6 +136,8 @@ class ContractModel {
     contractPdfGeneratedAt: contractPdfGeneratedAt ?? this.contractPdfGeneratedAt,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    cancelledBy: cancelledBy ?? this.cancelledBy,
+    cancellationReason: cancellationReason ?? this.cancellationReason,
     freelancerName: freelancerName ?? this.freelancerName,
     clientName: clientName ?? this.clientName,
   );

@@ -137,7 +137,7 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                 children: [
                   if (trustScore != null) ...[
                     RatingSummaryCard(
-                      averageRating: trustScore.weightedReviewAvgReceived ?? 0.0,
+                      averageRating: trustScore.displayStarAvg ?? 0.0,
                       totalReviews: totalReviews,
                       confidence: trustScore.confidence,
                     ),
@@ -160,13 +160,18 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Reviews',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              'Reviews',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             '$totalReviews total',
                             style: GoogleFonts.poppins(
@@ -262,6 +267,8 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                   children: [
                     Text(
                       displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -269,6 +276,8 @@ class _ClientReviewsScreenState extends State<ClientReviewsScreen> {
                     ),
                     Text(
                       timeAgo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11),
                     ),
                   ],

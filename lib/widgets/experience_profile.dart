@@ -264,14 +264,17 @@ class _ExperienceProfileState extends State<ExperienceProfile> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Currently working here',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1A1A2E),
+                    Expanded(
+                      child: Text(
+                        'Currently working here',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1A1A2E),
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     SizedBox(
                       width: 28,
                       height: 28,

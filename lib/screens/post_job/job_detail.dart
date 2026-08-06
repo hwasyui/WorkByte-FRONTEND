@@ -36,12 +36,15 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
     text: '7',
   );
 
+  static const List<String> _durationUnits = ['days', 'weeks', 'months'];
+
   String _experienceLevel = 'entry';
   String _durationUnit = 'days';
   DateTime? _deadline;
   bool _submitted = false;
   bool _savingDraft = false;
   bool _isHydratingDraft = false;
+  bool _suppressAutosave = false;
   bool _didBootstrapEmptyDraft = false;
   Timer? _autosaveTimer;
 
@@ -179,7 +182,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
           : 'entry';
       _durationController.text =
           parsedDurationValue?.toString() ?? _durationController.text;
-      _durationUnit = ['days', 'weeks', 'months'].contains(parsedDurationUnit)
+      _durationUnit = _durationUnits.contains(parsedDurationUnit)
           ? parsedDurationUnit
           : 'days';
       _deadline = parsedDeadline;
@@ -207,7 +210,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   }
 
   void _scheduleAutosave() {
-    if (_isHydratingDraft) return;
+    if (_isHydratingDraft || _suppressAutosave) return;
 
     if (!_hasDraftTriggerFields) return;
 
@@ -267,6 +270,10 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
   }
 
   void _resetForm({bool notifyProvider = true}) {
+    // Clearing the controllers one by one fires their autosave listeners while
+    // the other fields still hold text, which would re-seed the draft we are
+    // trying to wipe. Suppress autosave for the whole reset.
+    _suppressAutosave = true;
     setState(() {
       _titleController.clear();
       _descController.clear();
@@ -276,6 +283,8 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       _deadline = null;
       _submitted = false;
     });
+    _suppressAutosave = false;
+    _autosaveTimer?.cancel();
     if (notifyProvider) _syncDraftToProvider();
   }
 
@@ -940,6 +949,9 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
                   color: _primary,
                 ),
                 style: GoogleFonts.poppins(color: _textDark, fontSize: 13.5),
+                borderRadius: BorderRadius.circular(14),
+                dropdownColor: Colors.white,
+                elevation: 3,
                 padding: EdgeInsets.only(
                   left: prefixIcon != null ? 10 : 16,
                   right: 6,
@@ -961,6 +973,18 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
         ],
       ),
     );
+  }
+
+  // Stored values stay plural ('days'); only the label shown is inflected.
+  String _durationUnitLabel(String unit, bool singular) {
+    switch (unit) {
+      case 'weeks':
+        return singular ? 'Week' : 'Weeks';
+      case 'months':
+        return singular ? 'Month' : 'Months';
+      default:
+        return singular ? 'Day' : 'Days';
+    }
   }
 
   Widget _buildEstimationDurationField() {
@@ -1004,30 +1028,42 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
               color: AppColors.secondary,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _durationUnit,
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: _primary,
-                ),
-                style: GoogleFonts.poppins(
-                  color: _primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'days', child: Text('Days')),
-                  DropdownMenuItem(value: 'weeks', child: Text('Weeks')),
-                  DropdownMenuItem(value: 'months', child: Text('Months')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _durationUnit = value);
-                    _scheduleAutosave();
-                  }
-                },
-              ),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _durationController,
+              builder: (context, value, _) {
+                final singular = int.tryParse(value.text.trim()) == 1;
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _durationUnit,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: _primary,
+                    ),
+                    style: GoogleFonts.poppins(
+                      color: _primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    dropdownColor: Colors.white,
+                    elevation: 3,
+                    items: _durationUnits
+                        .map(
+                          (unit) => DropdownMenuItem(
+                            value: unit,
+                            child: Text(_durationUnitLabel(unit, singular)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _durationUnit = value);
+                        _scheduleAutosave();
+                      }
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],

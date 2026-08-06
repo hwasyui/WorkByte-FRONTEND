@@ -81,6 +81,7 @@ class _ReviewModerationDetailViewState
         return _LoadedBody(
           detail: detail,
           isClientReview: widget.isClientReview,
+          onRuled: _reload,
         );
       },
     );
@@ -143,9 +144,14 @@ class _LoadedBody extends StatelessWidget {
   final ReviewModerationDetail detail;
   final bool isClientReview;
 
-  const _LoadedBody({required this.detail, required this.isClientReview});
+  /// Re-fetches the detail so a ruling that leaves the dialog open shows up.
+  final Future<void> Function() onRuled;
 
-  String get _subjectName => detail.reviewer.name ?? 'Review';
+  const _LoadedBody({
+    required this.detail,
+    required this.isClientReview,
+    required this.onRuled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +159,8 @@ class _LoadedBody extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _Header(
-          title: _subjectName,
+          title: detail.subjectName ?? 'Review',
+          reviewerName: detail.reviewer.name,
           holdLevel: detail.holdLevel,
           isClientReview: isClientReview,
         ),
@@ -162,12 +169,20 @@ class _LoadedBody extends StatelessWidget {
             shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
             children: [
+              // Above everything else and inside the scroll view: a ruling
+              // quotes its reason in full, so it has no bounded height and
+              // cannot live in the fixed action bar without pushing it past
+              // the dialog.
+              if (detail.adminRulings.isNotEmpty)
+                _RulingHistoryBanner(rulings: detail.adminRulings),
               if (detail.analysisUnavailable) const _AnalysisUnavailableBanner(),
               _ContradictionPane(detail: detail),
               const _SectionDivider(),
               _QuestionAnswerPane(detail: detail),
               const _SectionDivider(),
               _ContractRecordStrip(detail: detail),
+              const _SectionDivider(),
+              _RecordGapsPane(detail: detail),
               const _SectionDivider(),
               _ComponentVerdicts(detail: detail),
               const _SectionDivider(),
@@ -179,7 +194,11 @@ class _LoadedBody extends StatelessWidget {
             ],
           ),
         ),
-        _ActionsBar(detail: detail, isClientReview: isClientReview),
+        _ActionsBar(
+          detail: detail,
+          isClientReview: isClientReview,
+          onRuled: onRuled,
+        ),
       ],
     );
   }
@@ -187,11 +206,13 @@ class _LoadedBody extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   final String title;
+  final String? reviewerName;
   final String holdLevel;
   final bool isClientReview;
 
   const _Header({
     required this.title,
+    required this.reviewerName,
     required this.holdLevel,
     required this.isClientReview,
   });
@@ -231,6 +252,14 @@ class _Header extends StatelessWidget {
                     color: AdminColors.ink,
                   ),
                 ),
+                if (reviewerName != null)
+                  Text(
+                    'reviewed by $reviewerName',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AdminColors.muted,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -630,46 +659,455 @@ class _ContractRecordStrip extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _ContractRecordStrip({required this.detail});
 
-  @override
-  Widget build(BuildContext context) {
-    final source = detail.isClientReview
-        ? (detail.subjectLifetimeScores ?? const {})
-        : detail.telemetry;
+  static const String _baseSubtitle =
+      'Measured platform data — check it against the model verdicts.';
 
+  String get _subtitle {
+    if (detail.isClientReview && detail.hasPersistedTrustScore == false) {
+      return '$_baseSubtitle\n'
+          'Measured now; this client has no published review yet.';
+    }
+    return _baseSubtitle;
+  }
+
+  /// This contract, for the freelancer being reviewed.
+  Widget _freelancerRows() {
+    final source = detail.telemetry;
     double? num2(String k) => (source[k] as num?)?.toDouble();
     final onTime = num2('on_time_score');
     final revisionRate = num2('revision_rate_score');
     final responsiveness = num2('responsiveness_score');
     final revisionCount = (source['revision_count'] as num?)?.toInt();
-    final onTimeMeasurable = detail.isClientReview
-        ? onTime != null
-        : (detail.telemetry['on_time_measurable'] == true);
+    final onTimeMeasurable = source['on_time_measurable'] == true;
 
+    return Column(
+      children: [
+        MeasuredScoreBar(
+          label: 'On-time delivery',
+          value: onTime,
+          isMeasured: onTimeMeasurable && onTime != null,
+        ),
+        MeasuredScoreBar(
+          label: 'Revision rate',
+          value: revisionRate,
+          isMeasured: revisionRate != null,
+          note: revisionCount != null ? '$revisionCount revisions' : null,
+        ),
+        MeasuredScoreBar(
+          label: 'Responsiveness',
+          value: responsiveness,
+          isMeasured: responsiveness != null,
+        ),
+      ],
+    );
+  }
+
+  /// Lifetime, for the client being reviewed. No on-time row: a client has no
+  /// delivery deadline, so it is not an unmeasured value — there is nothing to
+  /// measure.
+  Widget _clientRows() {
+    final responsiveness = detail.lifetimeScore('responsiveness_score');
+    final requirementChurn = detail.lifetimeScore('revision_rate_score');
+    final disputeFairness = detail.lifetimeScore('dispute_fairness_score');
+
+    return Column(
+      children: [
+        MeasuredScoreBar(
+          label: 'Responsiveness',
+          value: responsiveness,
+          isMeasured: responsiveness != null,
+          note: 'DM reply gaps, all contracts',
+        ),
+        MeasuredScoreBar(
+          label: 'Requirement churn',
+          value: requirementChurn,
+          isMeasured: requirementChurn != null,
+          note: 'scope stability — low means the brief kept moving',
+        ),
+        MeasuredScoreBar(
+          label: 'Dispute fairness',
+          value: disputeFairness,
+          isMeasured: disputeFairness != null,
+          note: '1 − disputed / closed contracts',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return _Section(
       title: detail.isClientReview
           ? 'Client lifetime record'
           : 'Objective contract record',
-      subtitle: 'Measured platform data — check it against the model verdicts.',
+      subtitle: _subtitle,
+      child: detail.isClientReview ? _clientRows() : _freelancerRows(),
+    );
+  }
+}
+
+class _RecordGapsPane extends StatelessWidget {
+  final ReviewModerationDetail detail;
+  const _RecordGapsPane({required this.detail});
+
+  /// Categories with no objective counterpart are simply not compared. On
+  /// client reviews `communication` is also dropped when `responsiveness` is
+  /// present — both map to the same measurement.
+  String? get _notComparedNote {
+    final compared = detail.recordGaps.perDimension.keys.toSet();
+    final skipped = detail.ratings.categories
+        .map((c) => c.category)
+        .where((c) => c.isNotEmpty && !compared.contains(c))
+        .toList();
+    if (skipped.isEmpty) return null;
+    final names = skipped.map(ratingLabel).join(', ');
+    final base = 'Not compared: $names. These have no objective counterpart, '
+        'which is normal.';
+    final foldedIntoResponsiveness = detail.isClientReview &&
+        skipped.contains('communication') &&
+        compared.contains('responsiveness');
+    if (!foldedIntoResponsiveness) return base;
+    return '$base Communication maps to the same measurement as '
+        'responsiveness — counting both would double-count it.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gaps = detail.recordGaps;
+
+    return _Section(
+      title: 'Claimed vs. record',
+      subtitle: 'What the stars claim, next to what the platform measured.',
+      child: gaps.nothingComparable
+          ? const _NothingComparableNote()
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _GapSummaryTile(
+                        label: 'INFLATION',
+                        value: gaps.inflation,
+                        color: AdminColors.red,
+                        background: AdminColors.redBg,
+                        icon: Icons.trending_up_rounded,
+                        hint: 'review flatters the record',
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _GapSummaryTile(
+                        label: 'DEFLATION',
+                        value: gaps.deflation,
+                        color: AdminColors.cyan,
+                        background: AdminColors.cyanBg,
+                        icon: Icons.trending_down_rounded,
+                        hint: 'review is harsher than the record',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${gaps.dimensionsCompared} '
+                  '${gaps.dimensionsCompared == 1 ? 'category' : 'categories'} '
+                  'compared',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: AdminColors.faint,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...gaps.perDimension.entries.map(
+                  (e) => _GapBar(category: e.key, dimension: e.value),
+                ),
+                if (detail.isClientReview) ...[
+                  const SizedBox(height: 8),
+                  _GapFootnote(
+                    icon: Icons.history_rounded,
+                    text: "This record is the client's lifetime average, not "
+                        'this contract. A client who is responsive in general '
+                        'but went quiet on this one job will make an accurate '
+                        'complaint look like deflation.',
+                  ),
+                ],
+                if (_notComparedNote != null) ...[
+                  const SizedBox(height: 6),
+                  _GapFootnote(
+                    icon: Icons.info_outline_rounded,
+                    text: _notComparedNote!,
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _NothingComparableNote extends StatelessWidget {
+  const _NothingComparableNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AdminColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AdminColors.border),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MeasuredScoreBar(
-            label: 'On-time delivery',
-            value: onTime,
-            isMeasured: onTimeMeasurable && onTime != null,
+          Row(
+            children: [
+              const Icon(Icons.remove_circle_outline_rounded,
+                  size: 14, color: AdminColors.muted),
+              const SizedBox(width: 6),
+              Text(
+                'Nothing comparable',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AdminColors.body,
+                ),
+              ),
+            ],
           ),
-          MeasuredScoreBar(
-            label: 'Revision rate',
-            value: revisionRate,
-            isMeasured: revisionRate != null,
-            note: revisionCount != null ? '$revisionCount revisions' : null,
-          ),
-          MeasuredScoreBar(
-            label: 'Responsiveness',
-            value: responsiveness,
-            isMeasured: responsiveness != null,
+          const SizedBox(height: 4),
+          Text(
+            'No rated category on this review had an objective counterpart to '
+            'measure against, so there is no evidence either way. This is not '
+            'the same as the review agreeing with the record.',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AdminColors.muted,
+              height: 1.4,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _GapSummaryTile extends StatelessWidget {
+  final String label;
+  final double? value;
+  final Color color;
+  final Color background;
+  final IconData icon;
+  final String hint;
+
+  const _GapSummaryTile({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.background,
+    required this.icon,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final measured = value != null;
+    final magnitude = (value ?? 0).abs();
+    final active = measured && magnitude > 0.0005;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: active ? background : AdminColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: active ? color.withOpacity(0.3) : AdminColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon,
+                  size: 13, color: active ? color : AdminColors.faint),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: active ? color : AdminColors.faint,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            measured ? magnitude.toStringAsFixed(2) : 'No evidence',
+            style: GoogleFonts.poppins(
+              fontSize: measured ? 20 : 13,
+              fontWeight: FontWeight.w700,
+              color: active ? color : AdminColors.muted,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            measured ? hint : 'nothing measurable to compare',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: AdminColors.muted,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GapBar extends StatelessWidget {
+  final String category;
+  final RecordGapDimension dimension;
+
+  const _GapBar({required this.category, required this.dimension});
+
+  @override
+  Widget build(BuildContext context) {
+    final gap = dimension.gap;
+    final inflated = dimension.isInflation;
+    final deflated = dimension.isDeflation;
+    final color = inflated
+        ? AdminColors.red
+        : deflated
+            ? AdminColors.cyan
+            : AdminColors.green;
+    final verdict = inflated
+        ? 'flatters the record'
+        : deflated
+            ? 'harsher than the record'
+            : 'matches the record';
+    final magnitude = (gap ?? 0).abs().clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(ratingIcon(category), size: 13, color: AdminColors.muted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  ratingLabel(category),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AdminColors.body,
+                  ),
+                ),
+              ),
+              if (gap != null)
+                Text(
+                  '${inflated ? '+' : deflated ? '−' : ''}'
+                  '${magnitude.toStringAsFixed(2)}  $verdict',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                )
+              else
+                Text(
+                  'no gap recorded',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AdminColors.faint,
+                  ),
+                ),
+            ],
+          ),
+          if (gap != null) ...[
+            const SizedBox(height: 6),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final half = constraints.maxWidth / 2;
+                final width = magnitude * half;
+                return SizedBox(
+                  height: 8,
+                  child: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AdminColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      Positioned(
+                        left: inflated ? half : half - width,
+                        width: width < 2 ? 2 : width,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: half - 1,
+                        top: -2,
+                        bottom: -2,
+                        child: Container(width: 2, color: AdminColors.ink),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            'claimed ${_fmt(dimension.claimed)}  ·  '
+            'record ${_fmt(dimension.actual)}',
+            style: GoogleFonts.poppins(fontSize: 10, color: AdminColors.faint),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(double? v) => v == null ? '—' : v.toStringAsFixed(2);
+}
+
+class _GapFootnote extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _GapFootnote({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 12, color: AdminColors.faint),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AdminColors.faint,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -683,9 +1121,20 @@ class _ComponentVerdicts extends StatelessWidget {
     if (detail.analysisUnavailable) {
       return _Section(
         title: 'Per-model verdicts',
-        child: Text(
-          'No model verdicts exist — analysis was unavailable (see banner above).',
-          style: GoogleFonts.poppins(fontSize: 12, color: AdminColors.faint),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _AuthenticityScoreRow(
+              label: 'Blended authenticity (stored)',
+              value: detail.storedAuthenticityScore,
+              analysisUnavailable: true,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No model verdicts exist — analysis was unavailable (see banner above).',
+              style: GoogleFonts.poppins(fontSize: 12, color: AdminColors.faint),
+            ),
+          ],
         ),
       );
     }
@@ -697,9 +1146,10 @@ class _ComponentVerdicts extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MeasuredScoreBar(
+            _AuthenticityScoreRow(
               label: 'Blended authenticity (stored)',
               value: detail.storedAuthenticityScore,
+              analysisUnavailable: detail.analysisUnavailable,
             ),
             const SizedBox(height: 8),
             Text(
@@ -717,10 +1167,14 @@ class _ComponentVerdicts extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (c.disagreements.any) _DisagreementBanner(d: c.disagreements),
-          if (c.llm != null) _LlmCard(v: c.llm!),
+          if (c.llm?.isFlaggedFake == true) const _FakeFlagBanner(),
+          if (c.disagreements.any) const _DisagreementBanner(),
+          if (c.llm != null)
+            _LlmCard(
+              v: c.llm!,
+              analysisUnavailable: detail.analysisUnavailable,
+            ),
           if (c.sentimentModel != null) _SentimentCard(v: c.sentimentModel!),
-          if (c.authenticityModel != null) _AuthenticityCard(v: c.authenticityModel!),
           if (c.disagreementModel != null) _DisagreementCard(v: c.disagreementModel!),
           _BlendReconciliation(detail: detail),
         ],
@@ -729,16 +1183,62 @@ class _ComponentVerdicts extends StatelessWidget {
   }
 }
 
-class _DisagreementBanner extends StatelessWidget {
-  final Disagreements d;
-  const _DisagreementBanner({required this.d});
+/// The LLM judge's fake verdict is the whole flag, so this path fires on its
+/// own.
+class _FakeFlagBanner extends StatelessWidget {
+  const _FakeFlagBanner();
 
   @override
   Widget build(BuildContext context) {
-    final parts = <String>[
-      if (d.fake) 'authenticity',
-      if (d.mismatch) 'sentiment mismatch',
-    ];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AdminColors.redBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AdminColors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.gpp_bad_rounded, size: 18, color: AdminColors.red),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Flagged fake by the LLM judge',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AdminColors.red,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The judge read this review as inauthentic. Check it against '
+                  'the objective record and the DM thread before you decide.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AdminColors.red,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisagreementBanner extends StatelessWidget {
+  const _DisagreementBanner();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -755,8 +1255,8 @@ class _DisagreementBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'The LLM and the classifier disagree on ${parts.join(' and ')}. '
-              'This is the call you are adjudicating.',
+              'The models disagree on whether the star ratings match the '
+              'written review. This is the call you are adjudicating.',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -771,10 +1271,98 @@ class _DisagreementBanner extends StatelessWidget {
   }
 }
 
+/// A blended/LLM authenticity score that may legitimately be absent. Null is
+/// "not scored", which is not the same as a bad score, so it never renders as
+/// a zero-width bar.
+class _AuthenticityScoreRow extends StatelessWidget {
+  final String label;
+  final double? value;
+  final bool analysisUnavailable;
+
+  const _AuthenticityScoreRow({
+    required this.label,
+    required this.value,
+    required this.analysisUnavailable,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // An outage wins over whatever is stored: reviews analysed before the
+    // backend switched to NULL kept a misleading mid-range score, and that
+    // number was never a verdict.
+    if (value != null && !analysisUnavailable) {
+      return MeasuredScoreBar(label: label, value: value);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AdminColors.body,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AdminColors.amberBg,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AdminColors.amberBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cloud_off_rounded,
+                        size: 11, color: AdminColors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      analysisUnavailable
+                          ? 'Not scored — analysis unavailable'
+                          : 'Not scored',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: AdminColors.amber,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            analysisUnavailable
+                ? 'The LLM could not be reached, so nothing was stored. Read '
+                    'this as an outage, not as a low score.'
+                : 'No score was stored for this review — nothing was recorded, '
+                    'which is not the same as scoring badly.',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AdminColors.faint,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _VerdictCard extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final List<Widget> children;
+
   const _VerdictCard({
     required this.title,
     this.trailing,
@@ -819,14 +1407,19 @@ class _VerdictCard extends StatelessWidget {
 
 class _LlmCard extends StatelessWidget {
   final LlmVerdict v;
-  const _LlmCard({required this.v});
+  final bool analysisUnavailable;
+  const _LlmCard({required this.v, required this.analysisUnavailable});
 
   @override
   Widget build(BuildContext context) {
     return _VerdictCard(
       title: 'LLM judge',
       children: [
-        MeasuredScoreBar(label: 'Authenticity', value: v.authenticityScore),
+        _AuthenticityScoreRow(
+          label: 'Authenticity',
+          value: v.authenticityScore,
+          analysisUnavailable: analysisUnavailable,
+        ),
         MeasuredScoreBar(
           label: 'Answer groundedness',
           value: v.answerGroundedness,
@@ -883,39 +1476,6 @@ class _SentimentCard extends StatelessWidget {
   }
 }
 
-class _AuthenticityCard extends StatelessWidget {
-  final AuthenticityModelVerdict v;
-  const _AuthenticityCard({required this.v});
-
-  @override
-  Widget build(BuildContext context) {
-    return _VerdictCard(
-      title: 'Authenticity classifier',
-      trailing: ModelVerdictChip(modelUsed: v.modelUsed),
-      children: [
-        MeasuredScoreBar(
-          label: 'Fake probability',
-          note: 'length-adjusted',
-          value: v.fakeProbabilityCalibrated,
-          threshold: v.threshold,
-          higherIsWorse: true,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          v.fakeProbability != null
-              ? 'Raw (uncalibrated): ${v.fakeProbability!.toStringAsFixed(3)}'
-              : 'Raw (uncalibrated): not measured',
-          style: GoogleFonts.poppins(fontSize: 10, color: AdminColors.faint),
-        ),
-        if (v.isLikelyFake) ...[
-          const SizedBox(height: 8),
-          const _FlagChip(label: 'Above threshold — likely fake'),
-        ],
-      ],
-    );
-  }
-}
-
 class _DisagreementCard extends StatelessWidget {
   final DisagreementModelVerdict v;
   const _DisagreementCard({required this.v});
@@ -941,35 +1501,75 @@ class _DisagreementCard extends StatelessWidget {
   }
 }
 
+class _BlendTerm {
+  final String label;
+  final double weight;
+  final double? value;
+
+  /// Rendered in place of the weight when it is 0 — a dropped term, not a term
+  /// that happens to contribute nothing.
+  final String zeroNote;
+
+  /// The `weight×value` fragment of the arithmetic, null when the value is
+  /// missing.
+  final String? expression;
+
+  const _BlendTerm({
+    required this.label,
+    required this.weight,
+    required this.value,
+    required this.zeroNote,
+    required this.expression,
+  });
+
+  bool get isLive => weight != 0;
+}
+
 class _BlendReconciliation extends StatelessWidget {
   final ReviewModerationDetail detail;
   const _BlendReconciliation({required this.detail});
 
+  static String _f(double d) {
+    var s = d.toStringAsFixed(3);
+    if (s.contains('.')) {
+      s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    }
+    return s;
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = detail.blendWeights;
+    if (!w.hasAll) return const SizedBox.shrink();
+
     final c = detail.components;
     final llmScore = c?.llm?.authenticityScore;
-    final calibrated = c?.authenticityModel?.fakeProbabilityCalibrated;
     final grounded = c?.llm?.answerGroundedness;
 
-    if (!w.hasAll ||
-        llmScore == null ||
-        calibrated == null ||
-        grounded == null) {
-      return const SizedBox.shrink();
-    }
-    final authTerm = 1 - calibrated;
-    final blended =
-        w.llm! * llmScore + w.authenticityModel! * authTerm + w.answerGroundedness! * grounded;
+    final terms = <_BlendTerm>[
+      _BlendTerm(
+        label: 'LLM judge',
+        weight: w.llm!,
+        value: llmScore,
+        zeroNote: 'dropped',
+        expression:
+            llmScore == null ? null : '${_f(w.llm!)}×${_f(llmScore)}',
+      ),
+      _BlendTerm(
+        label: 'Answer groundedness',
+        weight: w.answerGroundedness!,
+        value: grounded,
+        zeroNote: 'skipped',
+        expression:
+            grounded == null ? null : '${_f(w.answerGroundedness!)}×${_f(grounded)}',
+      ),
+    ];
 
-    String f(double d) {
-      var s = d.toStringAsFixed(3);
-      if (s.contains('.')) {
-        s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-      }
-      return s;
-    }
+    final live = terms.where((t) => t.isLive).toList();
+    final computable = live.isNotEmpty && live.every((t) => t.value != null);
+    final blended = computable
+        ? live.fold<double>(0, (sum, t) => sum + t.weight * t.value!)
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(top: 4),
@@ -989,13 +1589,90 @@ class _BlendReconciliation extends StatelessWidget {
               color: AdminColors.primary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: terms.map((t) => _WeightChip(term: t)).toList(),
+          ),
+          const SizedBox(height: 8),
+          if (blended != null)
+            Text(
+              '${live.map((t) => t.expression).join(' + ')} = '
+              '${blended.toStringAsFixed(3)}',
+              style: GoogleFonts.robotoMono(
+                fontSize: 12,
+                color: AdminColors.body,
+              ),
+            )
+          else
+            Text(
+              'Not every weighted component was stored for this review, so the '
+              'arithmetic cannot be reproduced here.',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: AdminColors.muted,
+                height: 1.4,
+              ),
+            ),
+          if (w.groundednessDropped) ...[
+            const SizedBox(height: 4),
+            Text(
+              'The reviewer skipped the targeted question, so groundedness '
+              'carries no weight here and the LLM judge carries all of it.',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: AdminColors.muted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WeightChip extends StatelessWidget {
+  final _BlendTerm term;
+  const _WeightChip({required this.term});
+
+  @override
+  Widget build(BuildContext context) {
+    final live = term.isLive;
+    final color = live ? AdminColors.primary : AdminColors.muted;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: live ? Colors.white : AdminColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: live ? AdminColors.primary.withOpacity(0.25) : AdminColors.border,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            '${f(w.llm!)}×${f(llmScore)} + ${f(w.authenticityModel!)}×(1−${f(calibrated)}) '
-            '+ ${f(w.answerGroundedness!)}×${f(grounded)} = ${blended.toStringAsFixed(3)}',
-            style: GoogleFonts.robotoMono(
-              fontSize: 12,
-              color: AdminColors.body,
+            term.label,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: live ? AdminColors.body : AdminColors.muted,
+              decoration: live ? null : TextDecoration.lineThrough,
+              decorationColor: AdminColors.muted,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            live
+                ? _BlendReconciliation._f(term.weight)
+                : term.zeroNote,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ],
@@ -1165,7 +1842,7 @@ class _ReviewerContext extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'trust score',
+                      'trust score / 100',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: AdminColors.faint,
@@ -1278,8 +1955,17 @@ class _DmThread extends StatelessWidget {
 class _ActionsBar extends StatelessWidget {
   final ReviewModerationDetail detail;
   final bool isClientReview;
+  final Future<void> Function() onRuled;
 
-  const _ActionsBar({required this.detail, required this.isClientReview});
+  const _ActionsBar({
+    required this.detail,
+    required this.isClientReview,
+    required this.onRuled,
+  });
+
+  /// Already suppressed by the pipeline: upholding records agreement with it
+  /// rather than changing the review's status.
+  bool get _alreadySuppressed => detail.holdLevel == 'suppressed';
 
   Future<void> _publish(BuildContext context) async {
     final admin = context.read<AdminProvider>();
@@ -1307,15 +1993,29 @@ class _ActionsBar extends StatelessWidget {
     final id = detail.id;
     final outcome = await showAdminReasonDialog(
       context,
-      title: 'Uphold this hold?',
-      submitLabel: 'Uphold hold',
+      title: _alreadySuppressed
+          ? 'Confirm this suppression?'
+          : 'Uphold this hold?',
+      submitLabel: _alreadySuppressed ? 'Confirm suppression' : 'Uphold hold',
       accentColor: AdminColors.red,
       icon: Icons.gpp_maybe_rounded,
+      warningText: _alreadySuppressed
+          ? 'The review is already suppressed and stays that way. This records '
+              'your agreement with the pipeline for the audit trail; nothing '
+              'changes for either party.'
+          : 'This suppresses the review permanently. It will not be published, '
+              'and the reviewer was already told it was held.',
       onSubmit: (reason) => isClientReview
           ? admin.upholdClientReview(id, reason: reason)
           : admin.upholdReview(id, reason: reason),
     );
-    if (outcome != null && outcome.success && context.mounted) {
+    if (outcome == null || !outcome.success || !context.mounted) return;
+    if (_alreadySuppressed) {
+      // Nothing moved — the review was suppressed before and still is — so the
+      // dialog stays open and reloads to show the ruling that was just filed.
+      AppToast.success('Ruling recorded.');
+      await onRuled();
+    } else {
       Navigator.pop(context);
       AppToast.success('Hold upheld — review suppressed.');
     }
@@ -1323,36 +2023,133 @@ class _ActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rulings = detail.adminRulings;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AdminColors.border)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: AdminActionButton(
-              label: 'Uphold hold',
-              icon: Icons.gpp_maybe_rounded,
-              color: AdminColors.red,
-              style: AdminActionStyle.outlined,
-              onPressed: () => _uphold(context),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: AdminActionButton(
-              label: 'Publish anyway',
-              icon: Icons.public_rounded,
-              color: AdminColors.green,
-              onPressed: () => _publish(context),
-            ),
+          Row(
+            children: [
+              // A second uphold would only file a duplicate label for the same
+              // case, so it goes once anything is on record. Publishing stays:
+              // override_publish still accepts a suppressed review server-side
+              // and is the only appeal path out of this dialog.
+              if (rulings.isEmpty) ...[
+                Expanded(
+                  child: AdminActionButton(
+                    label: _alreadySuppressed
+                        ? 'Confirm suppression'
+                        : 'Uphold hold',
+                    icon: Icons.gpp_maybe_rounded,
+                    color: AdminColors.red,
+                    style: AdminActionStyle.outlined,
+                    onPressed: () => _uphold(context),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: AdminActionButton(
+                  label: 'Publish anyway',
+                  icon: Icons.public_rounded,
+                  color: AdminColors.green,
+                  onPressed: () => _publish(context),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+/// The rulings already on file for this review, oldest first.
+///
+/// The log this comes from is gitignored, so its absence proves nothing and
+/// this banner is history only — it never blocks the publish path below it.
+class _RulingHistoryBanner extends StatelessWidget {
+  final List<AdminRuling> rulings;
+
+  const _RulingHistoryBanner({required this.rulings});
+
+  String _label(AdminRuling r) {
+    if (r.confirmedExistingSuppression) return 'Suppression confirmed';
+    return r.isUphold ? 'Hold upheld' : 'Published anyway';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 4, bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: AdminColors.amberBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AdminColors.amberBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_rounded,
+                  size: 14, color: AdminColors.amber),
+              const SizedBox(width: 6),
+              Text(
+                rulings.length == 1
+                    ? 'Already ruled on'
+                    : 'Already ruled on (${rulings.length})',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AdminColors.amber,
+                ),
+              ),
+            ],
+          ),
+          for (final r in rulings) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${_label(r)} · ${r.adminEmail ?? 'admin'}'
+              '${r.loggedAt != null ? ' · ${_ruledAgo(r.loggedAt!)}' : ''}',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AdminColors.ink,
+              ),
+            ),
+            const SizedBox(height: 2),
+            // Quoted in full: the reason is the whole record of why, and a
+            // truncated one is worse than none for an audit trail.
+            Text(
+              '“${r.reason}”',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: AdminColors.body,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _ruledAgo(DateTime dt) {
+  final diff = DateTime.now().difference(dt.toLocal());
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
 }
 
 class _Section extends StatelessWidget {

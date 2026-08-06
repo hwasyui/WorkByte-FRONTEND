@@ -294,16 +294,8 @@ class _MobileDrawer extends StatelessWidget {
                         icon: Icons.smart_toy_rounded,
                         label: 'AI Analysis',
                         isSelected: selectedIndex == 4,
-                        badge:
-                            context.read<AdminProvider>().pendingScamFlags +
-                                    context
-                                        .read<AdminProvider>()
-                                        .pendingModerationItems >
-                                0
-                            ? context.read<AdminProvider>().pendingScamFlags +
-                                  context
-                                      .read<AdminProvider>()
-                                      .pendingModerationItems
+                        badge: context.read<AdminProvider>().pendingAiWork > 0
+                            ? context.read<AdminProvider>().pendingAiWork
                             : null,
                         onTap: () {
                           onSelect(4);

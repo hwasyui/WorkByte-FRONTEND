@@ -22,11 +22,25 @@ import '../../screens/reviews/freelancer_reviews_screen.dart';
 import '../../screens/reviews/client_reviews_screen.dart';
 import 'client_jobs_list_screen.dart';
 import '../../services/api_service.dart';
-import '../../services/client_service.dart';
 import '../../services/portfolio_service.dart';
 import '../../services/profile_service.dart';
-import '../../widgets/client_reliability_badge.dart';
 import '../../widgets/pagination_bar.dart';
+
+/// Mirrors SHRINKAGE_K / SHRINKAGE_PRIOR in the backend's
+/// review_ai_functions.shrink_toward_prior, so this list orders people by the
+/// same effective average the trust score is built on. Keep them in sync.
+const double _ratingPriorWeight = 5.0;
+const double _ratingPrior = 3.5;
+
+/// Bayesian average: pulls small-sample ratings toward the neutral prior so
+/// that rating quality and review volume are balanced against each other. A
+/// lone 5.0 lands ~17% of the way from the prior to the raw average, ten
+/// reviews ~67%, so it cannot outrank a well-reviewed 4.6.
+double _rankScore(double avg, int reviewCount) {
+  final n = reviewCount > 0 ? reviewCount : 1;
+  return (avg * n + _ratingPrior * _ratingPriorWeight) /
+      (n + _ratingPriorWeight);
+}
 
 class PeopleListScreen extends StatefulWidget {
   final bool showClients;
@@ -102,18 +116,38 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           : rawItems.map((e) => FreelancerModel.fromJson(e)).toList();
 
       if (!widget.showClients) {
-        (mapped as List<FreelancerModel>).sort((a, b) {
-          final aScore = a.weightedReviewAvg ?? 0.0;
-          final bScore = b.weightedReviewAvg ?? 0.0;
-          final scoreCompare = bScore.compareTo(aScore);
+        final list = mapped as List<FreelancerModel>;
+        list.sort((a, b) {
+          final aAvg = a.weightedReviewAvg;
+          final bAvg = b.weightedReviewAvg;
+          if ((aAvg == null) != (bAvg == null)) return aAvg == null ? 1 : -1;
+          if (aAvg == null || bAvg == null) {
+            return a.displayName.toLowerCase().compareTo(
+              b.displayName.toLowerCase(),
+            );
+          }
+          final scoreCompare = _rankScore(
+            bAvg,
+            b.totalReviews,
+          ).compareTo(_rankScore(aAvg, a.totalReviews));
           if (scoreCompare != 0) return scoreCompare;
           return b.totalReviews.compareTo(a.totalReviews);
         });
       } else {
-        (mapped as List<ClientModel>).sort((a, b) {
-          final aScore = a.weightedReviewAvgReceived ?? 0.0;
-          final bScore = b.weightedReviewAvgReceived ?? 0.0;
-          final scoreCompare = bScore.compareTo(aScore);
+        final list = mapped as List<ClientModel>;
+        list.sort((a, b) {
+          final aAvg = a.displayStarAvg;
+          final bAvg = b.displayStarAvg;
+          if ((aAvg == null) != (bAvg == null)) return aAvg == null ? 1 : -1;
+          if (aAvg == null || bAvg == null) {
+            return a.displayName.toLowerCase().compareTo(
+              b.displayName.toLowerCase(),
+            );
+          }
+          final scoreCompare = _rankScore(
+            bAvg,
+            b.totalReviewsReceived,
+          ).compareTo(_rankScore(aAvg, a.totalReviewsReceived));
           if (scoreCompare != 0) return scoreCompare;
           return b.totalReviewsReceived.compareTo(a.totalReviewsReceived);
         });
@@ -566,7 +600,7 @@ class _ClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double? avg = client.weightedReviewAvgReceived;
+    final double? avg = client.displayStarAvg;
     final bool isTopRated = avg != null && avg >= 4.5;
 
     return GestureDetector(
@@ -652,7 +686,7 @@ class _ClientCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   _StarRating(
-                    avg: client.weightedReviewAvgReceived,
+                    avg: client.displayStarAvg,
                     count: client.totalReviewsReceived,
                   ),
                   const SizedBox(height: 8),
@@ -873,7 +907,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
   List<ExperienceModel> _experiences = [];
   List<PortfolioModel> _portfolios = [];
   bool _loadingDetails = false;
-  String? _clientReliability;
 
   @override
   void initState() {
@@ -881,19 +914,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     if (!widget.isClient && widget.freelancer != null) {
       _fetchFreelancerDetails();
     }
-    if (widget.isClient && widget.client != null) {
-      _fetchClientReliability();
-    }
-  }
-
-  Future<void> _fetchClientReliability() async {
-    final token = context.read<AuthProvider>().token;
-    if (token == null) return;
-    final label = await ClientService().getClientReliability(
-      token,
-      widget.client!.clientId,
-    );
-    if (mounted) setState(() => _clientReliability = label);
   }
 
   Future<void> _fetchFreelancerDetails() async {
@@ -949,11 +969,20 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     final bio = widget.isClient
         ? (widget.client?.bio ?? 'No description available.')
         : (widget.freelancer?.bio ?? 'No description available.');
-    final badge = widget.isClient
-        ? widget.client?.averageRatingGiven != null
-              ? '★ ${widget.client!.averageRatingGiven!.toStringAsFixed(1)}'
-              : 'No rating yet'
-        : widget.freelancer?.estimatedRate != null
+    // The rating a profile *received* — `average_rating_given` is the rating a
+    // client hands out, so it never reflects how the client itself is rated.
+    final ratingAvg = widget.isClient
+        ? widget.client?.displayStarAvg
+        : widget.freelancer?.weightedReviewAvg;
+    final ratingCount = widget.isClient
+        ? widget.client?.totalReviewsReceived ?? 0
+        : widget.freelancer?.totalReviews ?? 0;
+    final ratingLabel = ratingAvg == null
+        ? 'No rating yet'
+        : ratingCount > 0
+        ? '${ratingAvg.clamp(0.0, 5.0).toStringAsFixed(1)}  ·  $ratingCount review${ratingCount == 1 ? '' : 's'}'
+        : ratingAvg.clamp(0.0, 5.0).toStringAsFixed(1);
+    final rateLabel = widget.freelancer?.estimatedRate != null
         ? widget.freelancer!.formattedRate
         : 'Rate not set';
 
@@ -1038,22 +1067,19 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        badge,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          if (!widget.isClient) _headerPill(rateLabel),
+                          _headerPill(
+                            ratingLabel,
+                            icon: Icons.star_rounded,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1067,10 +1093,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.isClient && _clientReliability != null) ...[
-                    ClientReliabilityBadge(label: _clientReliability),
-                    const SizedBox(height: 12),
-                  ],
                   Row(
                     children: [
                       if (widget.isClient) ...[
@@ -1294,9 +1316,9 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                                 : '-',
                           ),
                           const Divider(height: 20, color: Color(0xFFF0F0F1)),
-                          _DetailRow(label: 'Rating', value: badge),
+                          _DetailRow(label: 'Rating', value: ratingLabel),
                         ] else ...[
-                          _DetailRow(label: 'Rate', value: badge),
+                          _DetailRow(label: 'Rate', value: rateLabel),
                           if (widget.freelancer?.rateTime != null) ...[
                             const Divider(height: 20, color: Color(0xFFF0F0F1)),
                             _DetailRow(
@@ -1304,6 +1326,8 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                               value: widget.freelancer!.rateTime!,
                             ),
                           ],
+                          const Divider(height: 20, color: Color(0xFFF0F0F1)),
+                          _DetailRow(label: 'Rating', value: ratingLabel),
                         ],
                       ],
                     ),
@@ -1419,6 +1443,33 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   const SizedBox(height: 32),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerPill(String label, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: Colors.amber),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
