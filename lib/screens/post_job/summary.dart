@@ -13,6 +13,7 @@ import '../../providers/job_post_provider.dart';
 import 'success.dart';
 import 'job_drafts_screen.dart';
 import '../../widgets/post_job_loading_view.dart';
+import '../../widgets/commission_disclaimer.dart';
 
 class PostNewJobSummary extends StatefulWidget {
   const PostNewJobSummary({super.key});
@@ -251,16 +252,32 @@ class PostNewJobSummaryState extends State<PostNewJobSummary> {
 
                     if (roles.isNotEmpty) ...[
                       Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
-                        child: Text(
-                          'Roles',
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Roles',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: CommissionDisclaimer(
+                          forClient: true,
+                          budget: roles.length == 1
+                              ? (roles.first['role_budget'] as num?)?.toDouble()
+                              : null,
+                          currency:
+                              (roles.first['budget_currency'] as String?) ?? 'USD',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       ...roles.asMap().entries.map((e) {
                         final role = e.value;
                         final skillNames = skillNamesMap[e.key] ?? [];

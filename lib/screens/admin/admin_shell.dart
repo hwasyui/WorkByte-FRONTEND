@@ -15,6 +15,7 @@ import 'pages/admin_ai_page.dart';
 import 'pages/admin_closed_page.dart';
 import 'pages/admin_appeals_page.dart';
 import 'pages/admin_disputes_page.dart';
+import 'pages/admin_payments_page.dart';
 import '../auth/login.dart';
 
 class AdminShell extends StatelessWidget {
@@ -29,6 +30,7 @@ class AdminShell extends StatelessWidget {
     AdminClosedPage(),
     AdminAppealsPage(),
     AdminDisputesPage(),
+    AdminPaymentsPage(),
   ];
 
   static const List<String> _titles = [
@@ -40,6 +42,7 @@ class AdminShell extends StatelessWidget {
     'Closed Items',
     'Appeals',
     'Disputes',
+    'Payments',
   ];
 
   static const double _tabletBreakpoint = 700;
@@ -253,6 +256,20 @@ class _MobileDrawer extends StatelessWidget {
                         isSelected: selectedIndex == 0,
                         onTap: () {
                           onSelect(0);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.payments_rounded,
+                        label: 'Payments',
+                        isSelected: selectedIndex == 8,
+                        badge: context.read<AdminProvider>().pendingPaymentsCount > 0
+                            ? context.read<AdminProvider>().pendingPaymentsCount
+                            : null,
+                        onTap: () {
+                          onSelect(8);
+                          context.read<AdminProvider>().loadPaymentsOverview();
+                          context.read<AdminProvider>().loadPendingPayments();
                           Navigator.pop(context);
                         },
                       ),

@@ -24,6 +24,7 @@ import '../dm/dm_chat_screen.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/text_format.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/payment_proof_section.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final ContractModel contract;
@@ -318,22 +319,27 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
       if (!mounted) return;
 
-      _showSnack('Contract marked as completed!', isError: false);
-      await Future.delayed(
-        const Duration(milliseconds: 600),
-      );
-      if (!mounted) return;
+      if (_contract.status == 'completed') {
+        _showSnack('Contract marked as completed!', isError: false);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ReviewFormScreen(
-            contractId: _contract.contractId,
-            freelancerName: _contract.freelancerName ?? 'Freelancer',
-            projectTitle: _contract.contractTitle,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReviewFormScreen(
+              contractId: _contract.contractId,
+              freelancerName: _contract.freelancerName ?? 'Freelancer',
+              projectTitle: _contract.contractTitle,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        _showSnack(
+          'All work approved! Proceed to payment to complete the contract.',
+          isError: false,
+        );
+      }
     } catch (e) {
       _showSnack('Something went wrong.', isError: true);
     } finally {
@@ -384,6 +390,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           _buildProposalSummary(),
           const SizedBox(height: 16),
           _buildSubmittedWorkSection(submissionProvider),
+          if (PaymentProofSection.showsFor(_contract)) ...[
+            const SizedBox(height: 16),
+            PaymentProofSection(
+              contract: _contract,
+              viewerRole: widget.viewerRole,
+              onContractUpdated: _refreshContractStatus,
+            ),
+          ],
           const SizedBox(height: 16),
           _buildMessagesButton(),
           if (_canCancel) ...[
@@ -2523,6 +2537,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return const Color(0xFF2196F3);
       case 'revision_requested':
         return const Color(0xFFFF9800);
+      case 'pending_payment':
+      case 'payment_review':
+        return const Color(0xFF0891B2);
+      case 'payment_rejected':
+        return const Color(0xFFDC2626);
       case 'completed':
         return const Color(0xFF4CAF50);
       case 'cancelled':
@@ -2542,6 +2561,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         return 'Under Review';
       case 'revision_requested':
         return 'Revision Requested';
+      case 'pending_payment':
+        return 'Pending Payment';
+      case 'payment_review':
+        return 'Payment Under Review';
+      case 'payment_rejected':
+        return 'Payment Proof Rejected';
       case 'completed':
         return 'Completed';
       case 'cancelled':
@@ -2562,6 +2587,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           return 'Your submission is being reviewed by the client';
         case 'revision_requested':
           return 'The client requested changes — resubmit when done';
+        case 'pending_payment':
+          return 'All work approved — waiting for the client to pay';
+        case 'payment_review':
+          return 'Payment is being processed — see Final Payment below';
+        case 'payment_rejected':
+          return 'The client\'s payment proof was rejected and needs re-upload';
         case 'completed':
           return 'This contract has been completed';
         default:
@@ -2575,6 +2606,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           return 'Freelancer submitted work — review and take action';
         case 'revision_requested':
           return 'Waiting for the freelancer to resubmit';
+        case 'pending_payment':
+          return 'All milestones approved — complete payment below';
+        case 'payment_review':
+          return 'Your payment proof is awaiting admin verification';
+        case 'payment_rejected':
+          return 'Your payment proof was rejected — see Final Payment below';
         case 'completed':
           return 'You approved the work — contract completed';
         default:

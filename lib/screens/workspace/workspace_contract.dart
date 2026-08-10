@@ -40,7 +40,14 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
   Map<String, String> _nameCache = {};
   static const Map<String, List<String>?> _tabStatusMap = {
     'All': null,
-    'Active': ['active', 'under_review', 'revision_requested'],
+    'Active': [
+      'active',
+      'under_review',
+      'revision_requested',
+      'pending_payment',
+      'payment_review',
+      'payment_rejected',
+    ],
     'Completed': ['completed'],
     'Cancelled': ['cancelled'],
     'Disputed': ['disputed'],
@@ -677,6 +684,11 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
         return const Color(0xFF2196F3);
       case 'revision_requested':
         return const Color(0xFFFF9800);
+      case 'pending_payment':
+      case 'payment_review':
+        return const Color(0xFF0891B2);
+      case 'payment_rejected':
+        return const Color(0xFFDC2626);
       case 'completed':
         return const Color(0xFF4CAF50);
       case 'cancelled':
@@ -696,6 +708,12 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
         return 'Under Review';
       case 'revision_requested':
         return 'Revision Requested';
+      case 'pending_payment':
+        return 'Pending Payment';
+      case 'payment_review':
+        return 'Payment Under Review';
+      case 'payment_rejected':
+        return 'Payment Rejected';
       case 'completed':
         return 'Completed';
       case 'cancelled':

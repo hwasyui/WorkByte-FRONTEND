@@ -6,6 +6,7 @@ import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/app_toast.dart';
+import '../freelancer_profile/payout_info_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -65,6 +66,15 @@ class SettingsScreen extends StatelessWidget {
                       auth.currentUser?.passwordLoginEnabled != true,
                 ),
               ),
+              if (hasFreelancerRole) ...[
+                const _SectionDivider(),
+                _PayoutInfoSection(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PayoutInfoScreen()),
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
             ],
           );
@@ -955,6 +965,51 @@ class _PasswordField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PayoutInfoSection extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PayoutInfoSection({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payments',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Set the bank account clients pay your share to directly.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.account_balance_outlined,
+            label: 'Payout Bank Details',
+            subtitle: 'Bank name, account number and holder name',
+            onTap: onTap,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }

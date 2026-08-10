@@ -13,6 +13,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/proposal_provider.dart';
 import '../../services/proposal_service.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/commission_disclaimer.dart';
 
 class SubmitProposalScreen extends StatefulWidget {
   final JobPostModel job;
@@ -227,6 +228,8 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
               _buildLabel('Proposed Budget'),
               const SizedBox(height: 8),
               _buildBudgetSection(),
+              const SizedBox(height: 10),
+              _buildCommissionDisclaimer(),
               const SizedBox(height: 20),
               _buildLabel('Estimated Duration'),
               const SizedBox(height: 8),
@@ -443,6 +446,24 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCommissionDisclaimer() {
+    if (_isFixedBudget) {
+      return CommissionDisclaimer(
+        forClient: false,
+        budget: widget.role.roleBudget,
+        currency: _currency,
+      );
+    }
+    return ValueListenableBuilder(
+      valueListenable: _budgetController,
+      builder: (_, value, __) => CommissionDisclaimer(
+        forClient: false,
+        budget: double.tryParse(value.text.trim()),
+        currency: _currency,
+      ),
     );
   }
 

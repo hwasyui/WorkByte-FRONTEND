@@ -4,7 +4,7 @@ import '../models/admin_red_flag_detail_model.dart';
 import '../services/admin_service.dart';
 import '../services/admin_session_guard.dart';
 
-enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes }
+enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes, payments }
 
 class AdminProvider extends ChangeNotifier {
   AdminProvider() {
@@ -125,6 +125,17 @@ class AdminProvider extends ChangeNotifier {
   DateTimeRange? _disputesDateRange;
   Map<String, dynamic> _disputesPagination = {};
 
+  Map<String, dynamic> _paymentsOverview = {};
+  bool _isPaymentsOverviewLoading = false;
+  List<Map<String, dynamic>> _pendingPayments = [];
+  bool _isPendingPaymentsLoading = false;
+  Map<String, dynamic> _paymentsPagination = {};
+  DateTimeRange? _paymentsDateRange;
+
+  List<Map<String, dynamic>> _contractsCommissionList = [];
+  bool _isContractsCommissionLoading = false;
+  Map<String, dynamic> _contractsCommissionPagination = {};
+
   String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isRestoring => _isRestoring;
@@ -210,6 +221,18 @@ class AdminProvider extends ChangeNotifier {
   int get pendingDisputesCount =>
       (_disputesPagination['total'] as num?)?.toInt() ??
       _disputedContracts.length;
+
+  Map<String, dynamic> get paymentsOverview => _paymentsOverview;
+  bool get isPaymentsOverviewLoading => _isPaymentsOverviewLoading;
+  List<Map<String, dynamic>> get pendingPayments => _pendingPayments;
+  bool get isPendingPaymentsLoading => _isPendingPaymentsLoading;
+  Map<String, dynamic> get paymentsPagination => _paymentsPagination;
+  List<Map<String, dynamic>> get contractsCommissionList => _contractsCommissionList;
+  bool get isContractsCommissionLoading => _isContractsCommissionLoading;
+  Map<String, dynamic> get contractsCommissionPagination => _contractsCommissionPagination;
+  DateTimeRange? get paymentsDateRange => _paymentsDateRange;
+  int get pendingPaymentsCount =>
+      (_paymentsPagination['total'] as num?)?.toInt() ?? _pendingPayments.length;
   int get pendingAppeals =>
       (_appealsPagination['pending_count'] as num?)?.toInt() ??
       _appeals.where((a) => a['status'] == 'pending').length;
@@ -412,6 +435,7 @@ class AdminProvider extends ChangeNotifier {
         AdminService.getJobPosts(_token!, page: 1, pageSize: 5),
         AdminService.getAppeals(_token!, status: 'pending', pageSize: 50),
         AdminService.getDisputedContracts(_token!, page: 1, pageSize: 30),
+        AdminService.getPaymentsOverview(_token!, currency: 'USD'),
       ]);
 
       final freelancerResult = results[0];
@@ -419,6 +443,7 @@ class AdminProvider extends ChangeNotifier {
       final jobResult = results[2];
       final appealsResult = results[3];
       final disputesResult = results[4];
+      _paymentsOverview = results[5];
 
       _recentFreelancers = List<Map<String, dynamic>>.from(
         freelancerResult['items'] ?? [],
@@ -1105,6 +1130,119 @@ class AdminProvider extends ChangeNotifier {
     loadDisputedContracts();
   }
 
+  Future<void> loadPaymentsOverview({String currency = 'USD'}) async {
+    if (_token == null) return;
+    _isPaymentsOverviewLoading = true;
+    notifyListeners();
+    try {
+      _paymentsOverview = await AdminService.getPaymentsOverview(
+        _token!,
+        currency: currency,
+        startDate: _isoDate(_paymentsDateRange?.start),
+        endDate: _isoDate(_paymentsDateRange?.end),
+      );
+    } catch (e) {
+      debugPrint('AdminProvider.loadPaymentsOverview error: $e');
+    }
+    _isPaymentsOverviewLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadPendingPayments({int page = 1}) async {
+    if (_token == null) return;
+    _isPendingPaymentsLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getPendingPayments(
+        _token!,
+        page: page,
+        pageSize: 20,
+        startDate: _isoDate(_paymentsDateRange?.start),
+        endDate: _isoDate(_paymentsDateRange?.end),
+      );
+      _pendingPayments = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _paymentsPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+    } catch (e) {
+      debugPrint('AdminProvider.loadPendingPayments error: $e');
+    }
+    _isPendingPaymentsLoading = false;
+    notifyListeners();
+  }
+
+  void setPaymentsDateRange(DateTimeRange? range) {
+    _paymentsDateRange = range;
+    loadPaymentsOverview();
+    loadPendingPayments();
+    loadContractsCommissionList();
+  }
+
+  Future<void> loadContractsCommissionList({
+    int page = 1,
+    String? search,
+    String? status,
+  }) async {
+    if (_token == null) return;
+    _isContractsCommissionLoading = true;
+    notifyListeners();
+    try {
+      final data = await AdminService.getContractsCommissionList(
+        _token!,
+        page: page,
+        pageSize: 20,
+        search: search,
+        status: status,
+        startDate: _isoDate(_paymentsDateRange?.start),
+        endDate: _isoDate(_paymentsDateRange?.end),
+      );
+      _contractsCommissionList = List<Map<String, dynamic>>.from(data['items'] ?? []);
+      _contractsCommissionPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+    } catch (e) {
+      debugPrint('AdminProvider.loadContractsCommissionList error: $e');
+    }
+    _isContractsCommissionLoading = false;
+    notifyListeners();
+  }
+
+  Future<AdminActionOutcome> verifyPayment(String proofId) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.verifyPayment(_token!, proofId);
+    if (outcome.success) {
+      await Future.wait([loadPendingPayments(), loadPaymentsOverview()]);
+    }
+    return outcome;
+  }
+
+  Future<AdminActionOutcome> rejectPayment(String proofId, String reason) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.rejectPayment(_token!, proofId, reason);
+    if (outcome.success) {
+      await Future.wait([loadPendingPayments(), loadPaymentsOverview()]);
+    }
+    return outcome;
+  }
+
+  Future<AdminActionOutcome> overridePaymentCompletion(
+    String contractId,
+    String reason,
+  ) async {
+    if (_token == null) {
+      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+    }
+    final outcome = await AdminService.overridePaymentCompletion(
+      _token!,
+      contractId,
+      reason,
+    );
+    if (outcome.success) {
+      await Future.wait([loadPendingPayments(), loadPaymentsOverview()]);
+    }
+    return outcome;
+  }
+
   Future<bool> arbitrateDispute(
     String contractId, {
     required String outcome,
@@ -1205,6 +1343,15 @@ class AdminProvider extends ChangeNotifier {
     _disputedContracts = [];
     _isDisputesLoading = false;
     _disputesPagination = {};
+    _paymentsOverview = {};
+    _isPaymentsOverviewLoading = false;
+    _pendingPayments = [];
+    _isPendingPaymentsLoading = false;
+    _paymentsPagination = {};
+    _paymentsDateRange = null;
+    _contractsCommissionList = [];
+    _isContractsCommissionLoading = false;
+    _contractsCommissionPagination = {};
     _isAiLoading = false;
     _isClosedLoading = false;
     _error = null;

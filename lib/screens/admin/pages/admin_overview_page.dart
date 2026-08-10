@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
+import '../../../widgets/admin/admin_stat_card.dart';
 
 class AdminOverviewPage extends StatefulWidget {
   const AdminOverviewPage({super.key});
@@ -103,9 +104,48 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
                   total: totalReports,
                 );
 
+                final paymentsOverview = admin.paymentsOverview;
+                final revenueCurrency =
+                    (paymentsOverview['currency'] as String?) ?? 'USD';
+                final realizedCommission =
+                    (paymentsOverview['realized_commission'] as num?)?.toDouble() ?? 0;
+                final gmv = (paymentsOverview['gmv'] as num?)?.toDouble() ?? 0;
+
+                final revenueCard = GestureDetector(
+                  onTap: () => admin.setPage(AdminPage.payments),
+                  child: AdminStatCard(
+                    title: 'Platform Revenue',
+                    value: '$revenueCurrency ${realizedCommission.toStringAsFixed(2)}',
+                    icon: Icons.savings_rounded,
+                    color: const Color(0xFF059669),
+                    subtitle: '10% commission from completed contracts',
+                  ),
+                );
+                final gmvCard = GestureDetector(
+                  onTap: () => admin.setPage(AdminPage.payments),
+                  child: AdminStatCard(
+                    title: 'Total Transaction Value',
+                    value: '$revenueCurrency ${gmv.toStringAsFixed(2)}',
+                    icon: Icons.trending_up_rounded,
+                    color: const Color(0xFF4F46E5),
+                    subtitle: 'Combined value of all contracts',
+                  ),
+                );
+
                 final cardGrid = wide
                     ? Column(
                         children: [
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: revenueCard),
+                                const SizedBox(width: 16),
+                                Expanded(child: gmvCard),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           IntrinsicHeight(
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -131,6 +171,10 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
                       )
                     : Column(
                         children: [
+                          revenueCard,
+                          const SizedBox(height: 16),
+                          gmvCard,
+                          const SizedBox(height: 16),
                           usersCard,
                           const SizedBox(height: 16),
                           attentionCard,

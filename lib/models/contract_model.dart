@@ -30,6 +30,14 @@ class ContractModel {
   final String? freelancerName;
   final String? clientName;
 
+  final double? commissionRate;
+  final double? commissionAmount;
+  final double? payoutAmount;
+  final String? freelancerConfirmedReceiptAt;
+  final String? paymentVerifiedAt;
+  final String? paymentVerifiedBy;
+  final bool completedByAdminOverride;
+
   const ContractModel({
     required this.contractId,
     required this.jobPostId,
@@ -57,6 +65,13 @@ class ContractModel {
     this.cancellationReason,
     this.freelancerName,
     this.clientName,
+    this.commissionRate,
+    this.commissionAmount,
+    this.payoutAmount,
+    this.freelancerConfirmedReceiptAt,
+    this.paymentVerifiedAt,
+    this.paymentVerifiedBy,
+    this.completedByAdminOverride = false,
   });
 
   factory ContractModel.fromJson(Map<String, dynamic> json) => ContractModel(
@@ -84,6 +99,15 @@ class ContractModel {
     updatedAt: json['updated_at']?.toString(),
     cancelledBy: json['cancelled_by']?.toString(),
     cancellationReason: json['cancellation_reason'] as String?,
+    commissionRate: (json['commission_rate'] as num?)?.toDouble(),
+    commissionAmount: (json['commission_amount'] as num?)?.toDouble(),
+    payoutAmount: (json['payout_amount'] as num?)?.toDouble(),
+    freelancerConfirmedReceiptAt:
+        json['freelancer_confirmed_receipt_at']?.toString(),
+    paymentVerifiedAt: json['payment_verified_at']?.toString(),
+    paymentVerifiedBy: json['payment_verified_by']?.toString(),
+    completedByAdminOverride:
+        json['completed_by_admin_override'] as bool? ?? false,
   );
 
   Map<String, dynamic> toJson() => {
@@ -140,5 +164,12 @@ class ContractModel {
     cancellationReason: cancellationReason ?? this.cancellationReason,
     freelancerName: freelancerName ?? this.freelancerName,
     clientName: clientName ?? this.clientName,
+    commissionRate: commissionRate,
+    commissionAmount: commissionAmount,
+    payoutAmount: payoutAmount,
+    freelancerConfirmedReceiptAt: freelancerConfirmedReceiptAt,
+    paymentVerifiedAt: paymentVerifiedAt,
+    paymentVerifiedBy: paymentVerifiedBy,
+    completedByAdminOverride: completedByAdminOverride,
   );
 }

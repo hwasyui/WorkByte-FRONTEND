@@ -1026,6 +1026,144 @@ class AdminService {
     return [];
   }
 
+  static Future<Map<String, dynamic>> getPaymentsOverview(
+    String token, {
+    String currency = 'USD',
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/payments/overview').replace(
+        queryParameters: {
+          'currency': currency,
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final details = body['details'] ?? body['data'] ?? body;
+        if (details is Map) return Map<String, dynamic>.from(details);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  static Future<Map<String, dynamic>> getContractsCommissionList(
+    String token, {
+    int page = 1,
+    int pageSize = 20,
+    String? search,
+    String? status,
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/payments/contracts').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<Map<String, dynamic>> getPendingPayments(
+    String token, {
+    int page = 1,
+    int pageSize = 20,
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/admin/payments/pending').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http.get(uri, headers: _headers(t)).timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode == 200) {
+        return _extract(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return {'items': [], 'pagination': {}};
+  }
+
+  static Future<AdminActionOutcome> _putAction(
+    String token,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      final res = await AdminSessionGuard.guard(
+        token,
+        (t) => http
+            .put(
+              Uri.parse('$_baseUrl$path'),
+              headers: _headers(t),
+              body: body != null ? jsonEncode(body) : null,
+            )
+            .timeout(const Duration(seconds: 20)),
+      );
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return AdminActionOutcome(success: true, statusCode: res.statusCode);
+      }
+      return AdminActionOutcome(
+        success: false,
+        statusCode: res.statusCode,
+        errorMessage: res.statusCode == 404
+            ? 'This item was already actioned by another admin.'
+            : _errorMessage(res.body),
+      );
+    } catch (_) {
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'Network error — please try again.',
+      );
+    }
+  }
+
+  static Future<AdminActionOutcome> verifyPayment(String token, String proofId) =>
+      _putAction(token, '/admin/payments/$proofId/verify');
+
+  static Future<AdminActionOutcome> rejectPayment(
+    String token,
+    String proofId,
+    String reason,
+  ) => _putAction(token, '/admin/payments/$proofId/reject', body: {'reason': reason});
+
+  static Future<AdminActionOutcome> overridePaymentCompletion(
+    String token,
+    String contractId,
+    String reason,
+  ) => _putAction(
+        token,
+        '/admin/contracts/$contractId/override-completion',
+        body: {'reason': reason},
+      );
+
   static Map<String, dynamic> _extract(Map<String, dynamic> data) {
     final details = data['details'] ?? data['data'] ?? data;
     List<Map<String, dynamic>> items = [];

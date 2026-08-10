@@ -175,6 +175,21 @@ class AdminSidebar extends StatelessWidget {
                           onTap: () => admin.setPage(AdminPage.overview),
                         ),
                         _NavItem(
+                          icon: Icons.payments_rounded,
+                          label: 'Payments',
+                          page: AdminPage.payments,
+                          current: admin.currentPage,
+                          collapsed: collapsed,
+                          badge: admin.pendingPaymentsCount > 0
+                              ? admin.pendingPaymentsCount
+                              : null,
+                          onTap: () {
+                            admin.setPage(AdminPage.payments);
+                            admin.loadPaymentsOverview();
+                            admin.loadPendingPayments();
+                          },
+                        ),
+                        _NavItem(
                           icon: Icons.people_rounded,
                           label: 'Users',
                           page: AdminPage.users,
