@@ -279,7 +279,7 @@ class _PostNewJobFilesState extends State<PostNewJobFiles> {
                   _buildUploadCard(),
                   const SizedBox(height: 4),
                   _buildInfoBanner(
-                    'PDF, DOC, PNG, JPG, ZIP — max 50MB each. Files upload automatically as you attach them.',
+                    'PDF, DOC, PNG, JPG, ZIP - max 50MB each. Files upload automatically as you attach them.',
                   ),
                   const SizedBox(height: 8),
                   if (_files.isNotEmpty) ...[

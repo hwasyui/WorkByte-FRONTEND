@@ -4,7 +4,7 @@
 /// `completed`, everything after it is `locked`, and exactly one sits in a
 /// working status at a time. The contract's own status mirrors whichever stage
 /// that current milestone is in, which is why `active` alone no longer means
-/// "nothing has happened yet" — see [ContractMilestoneList.current].
+/// "nothing has happened yet" - see [ContractMilestoneList.current].
 class ContractMilestoneModel {
   final String milestoneId;
   final String contractId;
@@ -117,7 +117,7 @@ extension ContractMilestoneList on List<ContractMilestoneModel> {
     return index < 0 ? length : index + 1;
   }
 
-  /// True once at least one earlier milestone is paid — the signal that a
+  /// True once at least one earlier milestone is paid - the signal that a
   /// contract sitting at `active` just had its next milestone unlock rather
   /// than being brand new.
   bool get hasPaidEarlierMilestone => completedCount > 0;

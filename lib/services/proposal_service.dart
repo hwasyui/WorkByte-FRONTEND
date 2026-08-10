@@ -90,7 +90,7 @@ class ProposalService {
     throw Exception(body['details'] ?? 'Failed to load proposals');
   }
 
-  /// Bids on a single role — the scope where `relevance_score` is directly
+  /// Bids on a single role - the scope where `relevance_score` is directly
   /// comparable between proposals. Defaults to the backend's relevance sort.
   Future<List<ProposalModel>> getProposalsByJobRole(
     String token,

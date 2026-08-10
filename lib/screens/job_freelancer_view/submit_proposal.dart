@@ -49,7 +49,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
     if (_isFixedBudget && widget.role.roleBudget != null) {
       return 'Budget fixed by client: $_currency ${widget.role.roleBudget!.toStringAsFixed(0)}';
     }
-    return 'Client\'s budget: Negotiable — enter your rate';
+    return 'Client\'s budget: Negotiable - enter your rate';
   }
 
   @override
@@ -382,7 +382,7 @@ class _SubmitProposalScreenState extends State<SubmitProposalScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '$_currency ${widget.role.roleBudget!.toStringAsFixed(0)} — fixed by client',
+                    '$_currency ${widget.role.roleBudget!.toStringAsFixed(0)} - fixed by client',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

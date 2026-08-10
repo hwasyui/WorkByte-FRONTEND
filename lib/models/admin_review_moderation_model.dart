@@ -197,7 +197,7 @@ class RecordGapDimension {
 }
 
 class RecordGaps {
-  /// Weighted mean of the positive gaps. Null means nothing was comparable —
+  /// Weighted mean of the positive gaps. Null means nothing was comparable -
   /// no evidence either way, NOT a perfectly consistent review.
   final double? inflation;
 
@@ -234,7 +234,7 @@ class RecordGaps {
   }
 
   /// Nothing could be lined up against the record. Distinct from "the review
-  /// agrees with the record" — there is simply no evidence either way.
+  /// agrees with the record" - there is simply no evidence either way.
   bool get nothingComparable =>
       dimensionsCompared <= 0 ||
       perDimension.isEmpty ||
@@ -311,13 +311,13 @@ class DmThreadMessage {
 /// [ReviewModerationDetail.adminRulings].
 ///
 /// This comes from an append-only log file that is gitignored, so an empty
-/// list means "no ruling on file" — NOT "definitely never ruled on". It is
+/// list means "no ruling on file" - NOT "definitely never ruled on". It is
 /// display-only history; nothing destructive may be gated on it.
 class AdminRuling {
   /// 'uphold' or 'override_publish'.
   final String action;
 
-  /// Null when the log entry predates email capture — fall back to "admin".
+  /// Null when the log entry predates email capture - fall back to "admin".
   final String? adminEmail;
 
   /// Always present and at least 10 characters; the backend requires it.
@@ -369,7 +369,7 @@ class ReviewModerationDetail {
   final ModerationReviewer reviewer;
   final List<DmThreadMessage> dmThread;
 
-  /// Oldest first. Only the detail endpoints send this — the flagged list
+  /// Oldest first. Only the detail endpoints send this - the flagged list
   /// endpoint does not, so queue cards cannot branch on it.
   final List<AdminRuling> adminRulings;
 
@@ -440,7 +440,7 @@ class ReviewModerationDetail {
 
   String? get overallComment => review['overall_comment'] as String?;
 
-  /// Who the review is about — the freelancer for a freelancer review, the
+  /// Who the review is about - the freelancer for a freelancer review, the
   /// client for a client review. Not the reviewer; that is [reviewer].
   String? get subjectName =>
       (review['freelancer_name'] ?? review['client_name']) as String?;
@@ -456,7 +456,7 @@ class ReviewModerationDetail {
 
   /// False means the subject has no published review yet, so the lifetime
   /// figures were measured live. Null when the backend did not send the flag
-  /// (older payload) — say nothing rather than guess.
+  /// (older payload) - say nothing rather than guess.
   bool? get hasPersistedTrustScore {
     final v = _lifetime['has_persisted_trust_score'];
     return v is bool ? v : null;

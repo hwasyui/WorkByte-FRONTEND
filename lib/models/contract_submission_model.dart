@@ -51,7 +51,7 @@ class ContractSubmissionModel {
   final String contractId;
 
   /// The milestone this submission belongs to. The backend resolves it from
-  /// whichever milestone is unlocked at submit time, so it is never sent up —
+  /// whichever milestone is unlocked at submit time, so it is never sent up -
   /// only read back, to label which milestone the work was for.
   final String? milestoneId;
 

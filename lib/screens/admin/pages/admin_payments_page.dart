@@ -251,7 +251,7 @@ class _PaymentsOverviewTab extends StatelessWidget {
                                 child: Text(
                                   '${(data['commission_at_risk'] as num).toInt()} contract(s) have a freelancer '
                                   'who already confirmed receiving their share, but the platform\'s own 10% '
-                                  'proof still hasn\'t been verified. Check the Verification Queue — this is '
+                                  'proof still hasn\'t been verified. Check the Verification Queue - this is '
                                   'the signal that a client may be skipping the platform fee.',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
@@ -361,7 +361,7 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
               ),
               const SizedBox(height: 4),
               Text(
-                'What you\'ll earn from each job — confirmed once a contract completes, '
+                'What you\'ll earn from each job - confirmed once a contract completes, '
                 'estimated while it\'s still in progress.',
                 style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF6B7280)),
               ),

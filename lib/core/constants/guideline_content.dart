@@ -44,31 +44,31 @@ class GuidelineContent {
       GuidelineTopic(
         question: 'How do I navigate the app?',
         steps: [
-          'Home — an overview of recommended jobs or freelancers based on your account.',
-          'Jobs — browse or post work, depending on your role.',
-          'Workspace — manage every contract you currently have, active or completed.',
-          'Messages — chat with clients or freelancers you\'re working with.',
+          'Home - an overview of recommended jobs or freelancers based on your account.',
+          'Jobs - browse or post work, depending on your role.',
+          'Workspace - manage every contract you currently have, active or completed.',
+          'Messages - chat with clients or freelancers you\'re working with.',
         ],
       ),
       GuidelineTopic(
         question: 'How does messaging work?',
         steps: [
           'A new conversation starts as a request under the "Requests" tab in Messages.',
-          'The other person must Accept it before you can chat freely — this helps keep out spam.',
+          'The other person must Accept it before you can chat freely - this helps keep out spam.',
         ],
       ),
       GuidelineTopic(
         question: 'How do payments and contracts work?',
         steps: [
           'Every contract is created and tracked inside WorkByte through Generate Contract and its milestones.',
-          'Never agree to pay or get paid outside the app — WorkByte can\'t protect you if something goes wrong with an off-platform payment.',
+          'Never agree to pay or get paid outside the app - WorkByte can\'t protect you if something goes wrong with an off-platform payment.',
         ],
       ),
       GuidelineTopic(
         question: 'How do ratings work?',
         steps: [
           'Once a contract is marked Completed, both sides can rate each other.',
-          'This builds your trust score, which is what other users see when deciding whether to work with you — rate honestly.',
+          'This builds your trust score, which is what other users see when deciding whether to work with you - rate honestly.',
         ],
       ),
       GuidelineTopic(
@@ -120,7 +120,7 @@ class GuidelineContent {
       GuidelineTopic(
         question: 'What happens after I get hired?',
         steps: [
-          'The client generates and sends you a contract — review the agreed budget, payment structure, and milestones before work begins.',
+          'The client generates and sends you a contract - review the agreed budget, payment structure, and milestones before work begins.',
           'Open the Workspace tab to see "Working Spaces" and manage every active contract from there.',
         ],
       ),
@@ -155,11 +155,11 @@ class GuidelineContent {
       GuidelineTopic(
         question: 'How do I post a new job?',
         steps: [
-          'Tap the "+" button in the bottom navigation to start "Post new job" — it\'s a 3-step wizard.',
+          'Tap the "+" button in the bottom navigation to start "Post new job" - it\'s a 3-step wizard.',
           'Step 1 – Job Detail: fill in Title, Description (minimum 50 words), Experience Level, Estimated Duration, and Project Deadline.',
           'Step 2 – Role & Skills: choose Individual or Team, then set each role\'s Title, Description, Budget Type (Fixed or Negotiable), Amount & Currency, and required Skills.',
           'Step 3 – Attachments (optional): attach briefs, mockups, or reference files, or skip this step.',
-          'Review the Summary and publish — the job goes live once posted.',
+          'Review the Summary and publish - the job goes live once posted.',
           'The wizard autosaves as a draft, so you can leave and resume anytime from "Open drafts".',
         ],
       ),
@@ -191,7 +191,7 @@ class GuidelineContent {
         steps: [
           'When a freelancer submits work, review it inside the contract.',
           'Tap "Approve" if it meets the agreement, or "Revision" to send it back with notes.',
-          'Approving marks the contract Completed and settles payment for that milestone — this can\'t be undone, so review carefully first.',
+          'Approving marks the contract Completed and settles payment for that milestone - this can\'t be undone, so review carefully first.',
         ],
       ),
       GuidelineTopic(

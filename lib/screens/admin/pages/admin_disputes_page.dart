@@ -344,7 +344,7 @@ class _DisputeCard extends StatelessWidget {
     final confirmed = await showAdminConfirmDialog(
       context,
       title: '${labelMap[outcome]}?',
-      message: '$title — ${descMap[outcome]}',
+      message: '$title - ${descMap[outcome]}',
       icon: iconMap[outcome]!,
       confirmLabel: labelMap[outcome]!,
       confirmColor: colorMap[outcome]!,

@@ -90,7 +90,7 @@ class ContractProvider extends ChangeNotifier {
   }
 
   /// Loads the milestone schedule for [contractId]. Returns an empty list on
-  /// failure rather than throwing — the schedule decorates the contract screens
+  /// failure rather than throwing - the schedule decorates the contract screens
   /// and should never be the reason they fail to render.
   Future<List<ContractMilestoneModel>> fetchMilestones(
     String token,
@@ -146,7 +146,7 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  /// Rethrows [ContractServiceException] so callers can act on the status —
+  /// Rethrows [ContractServiceException] so callers can act on the status -
   /// a 409 means the bid is already contracted and should be opened instead.
   Future<ContractModel> createContract(
     String token,

@@ -245,7 +245,7 @@ class _ScoreHistoryChart extends StatelessWidget {
 
     return _Section(
       title: 'Trust score history',
-      subtitle: 'Overall trust score out of 100 — higher is better.',
+      subtitle: 'Overall trust score out of 100 - higher is better.',
       trailing: drop.delta != null
           ? _DeltaBadge(delta: drop.delta!)
           : null,
@@ -483,7 +483,7 @@ class _ComponentSpec {
 /// freelancer_trust_scores / client_trust_score. A key missing from here is
 /// rendered on the 0–1 scale, which is what the remaining score columns use.
 const _componentSpecs = <String, _ComponentSpec>{
-  // The composite output, not an input — shown apart from the weighted inputs.
+  // The composite output, not an input - shown apart from the weighted inputs.
   'overall_score': _ComponentSpec('Overall trust score', _ComponentScale.percent),
 
   'weighted_review_avg': _ComponentSpec('Weighted review average', _ComponentScale.stars),
@@ -571,7 +571,7 @@ class _ComponentsBreakdown extends StatelessWidget {
     return _Section(
       title: 'Trust score components',
       subtitle: 'Weighted inputs are scored 0.00–1.00, higher is better. '
-          'Lowest first — the likely cause of the drop is flagged.',
+          'Lowest first - the likely cause of the drop is flagged.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -801,7 +801,7 @@ class _HeldReviewsPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${detail.heldReviewCount} held review'
-                  '${detail.heldReviewCount == 1 ? '' : 's'} — rule on '
+                  '${detail.heldReviewCount == 1 ? '' : 's'} - rule on '
                   '${detail.heldReviewCount == 1 ? 'it' : 'these'} first',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
@@ -868,7 +868,7 @@ class _OverriddenReviewsPanel extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'These failed the pipeline (overall_pass = false) but an admin '
-            'published them anyway — frequently the actual cause of the drop.',
+            'published them anyway - frequently the actual cause of the drop.',
             style: GoogleFonts.poppins(
               fontSize: 11,
               color: AdminColors.muted,
@@ -1004,7 +1004,7 @@ class _ActionsBar extends StatelessWidget {
       Navigator.pop(context);
       if (outcome.resolutionRecorded == false) {
         AppToast.error(
-          'Alert resolved, but the note was NOT stored — the database '
+          'Alert resolved, but the note was NOT stored - the database '
           'migration is still pending.',
         );
       } else {

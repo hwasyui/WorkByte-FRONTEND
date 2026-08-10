@@ -320,7 +320,7 @@ class _AddSkillWidgetState extends State<AddSkillWidget> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Creating "$_pendingNewSkillName" — choose type:',
+                      'Creating "$_pendingNewSkillName" - choose type:',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: AppColors.primary,

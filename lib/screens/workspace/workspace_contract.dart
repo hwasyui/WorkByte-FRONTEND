@@ -726,7 +726,7 @@ class _WorkspaceContractScreenState extends State<WorkspaceContractScreen>
   }
 
   String _formatDate(String? date) {
-    if (date == null || date.isEmpty) return '—';
+    if (date == null || date.isEmpty) return '-';
     try {
       final d = DateTime.parse(date);
       return '${d.day}/${d.month}/${d.year}';

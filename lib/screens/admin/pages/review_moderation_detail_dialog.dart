@@ -307,7 +307,7 @@ class _AnalysisUnavailableBanner extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'The review pipeline could not reach the models and failed closed. '
-                  'No model scored this review — this is an infrastructure failure, '
+                  'No model scored this review - this is an infrastructure failure, '
                   'not a verdict on the review.',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
@@ -370,7 +370,7 @@ class _ContradictionPane extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'High star ratings paired with negative sentiment — '
+                          'High star ratings paired with negative sentiment - '
                           'the ratings and the written review disagree.',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
@@ -660,7 +660,7 @@ class _ContractRecordStrip extends StatelessWidget {
   const _ContractRecordStrip({required this.detail});
 
   static const String _baseSubtitle =
-      'Measured platform data — check it against the model verdicts.';
+      'Measured platform data - check it against the model verdicts.';
 
   String get _subtitle {
     if (detail.isClientReview && detail.hasPersistedTrustScore == false) {
@@ -703,7 +703,7 @@ class _ContractRecordStrip extends StatelessWidget {
   }
 
   /// Lifetime, for the client being reviewed. No on-time row: a client has no
-  /// delivery deadline, so it is not an unmeasured value — there is nothing to
+  /// delivery deadline, so it is not an unmeasured value - there is nothing to
   /// measure.
   Widget _clientRows() {
     final responsiveness = detail.lifetimeScore('responsiveness_score');
@@ -722,7 +722,7 @@ class _ContractRecordStrip extends StatelessWidget {
           label: 'Requirement churn',
           value: requirementChurn,
           isMeasured: requirementChurn != null,
-          note: 'scope stability — low means the brief kept moving',
+          note: 'scope stability - low means the brief kept moving',
         ),
         MeasuredScoreBar(
           label: 'Dispute fairness',
@@ -752,7 +752,7 @@ class _RecordGapsPane extends StatelessWidget {
 
   /// Categories with no objective counterpart are simply not compared. On
   /// client reviews `communication` is also dropped when `responsiveness` is
-  /// present — both map to the same measurement.
+  /// present - both map to the same measurement.
   String? get _notComparedNote {
     final compared = detail.recordGaps.perDimension.keys.toSet();
     final skipped = detail.ratings.categories
@@ -768,7 +768,7 @@ class _RecordGapsPane extends StatelessWidget {
         compared.contains('responsiveness');
     if (!foldedIntoResponsiveness) return base;
     return '$base Communication maps to the same measurement as '
-        'responsiveness — counting both would double-count it.';
+        'responsiveness - counting both would double-count it.';
   }
 
   @override
@@ -1082,7 +1082,7 @@ class _GapBar extends StatelessWidget {
     );
   }
 
-  String _fmt(double? v) => v == null ? '—' : v.toStringAsFixed(2);
+  String _fmt(double? v) => v == null ? '-' : v.toStringAsFixed(2);
 }
 
 class _GapFootnote extends StatelessWidget {
@@ -1131,7 +1131,7 @@ class _ComponentVerdicts extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'No model verdicts exist — analysis was unavailable (see banner above).',
+              'No model verdicts exist - analysis was unavailable (see banner above).',
               style: GoogleFonts.poppins(fontSize: 12, color: AdminColors.faint),
             ),
           ],
@@ -1153,7 +1153,7 @@ class _ComponentVerdicts extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'The per-model breakdown is unavailable for this review — it was '
+              'The per-model breakdown is unavailable for this review - it was '
               'analysed before per-model judgments were logged.',
               style: GoogleFonts.poppins(fontSize: 12, color: AdminColors.faint),
             ),
@@ -1326,7 +1326,7 @@ class _AuthenticityScoreRow extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       analysisUnavailable
-                          ? 'Not scored — analysis unavailable'
+                          ? 'Not scored - analysis unavailable'
                           : 'Not scored',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
@@ -1344,7 +1344,7 @@ class _AuthenticityScoreRow extends StatelessWidget {
             analysisUnavailable
                 ? 'The LLM could not be reached, so nothing was stored. Read '
                     'this as an outage, not as a low score.'
-                : 'No score was stored for this review — nothing was recorded, '
+                : 'No score was stored for this review - nothing was recorded, '
                     'which is not the same as scoring badly.',
             style: GoogleFonts.poppins(
               fontSize: 11,
@@ -1494,7 +1494,7 @@ class _DisagreementCard extends StatelessWidget {
         ),
         if (v.isMismatched) ...[
           const SizedBox(height: 8),
-          const _FlagChip(label: 'Above threshold — mismatched'),
+          const _FlagChip(label: 'Above threshold - mismatched'),
         ],
       ],
     );
@@ -1506,7 +1506,7 @@ class _BlendTerm {
   final double weight;
   final double? value;
 
-  /// Rendered in place of the weight when it is 0 — a dropped term, not a term
+  /// Rendered in place of the weight when it is 0 - a dropped term, not a term
   /// that happens to contribute nothing.
   final String zeroNote;
 
@@ -1862,7 +1862,7 @@ class _ReviewerContext extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'Only one review — not enough history to show a coercion or '
+                'Only one review - not enough history to show a coercion or '
                 'retaliation pattern.',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
@@ -1898,7 +1898,7 @@ class _DmThread extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          'The LLM cites this — verify its claims here',
+          'The LLM cites this - verify its claims here',
           style: GoogleFonts.poppins(fontSize: 11, color: AdminColors.faint),
         ),
         children: messages.isEmpty
@@ -1976,7 +1976,7 @@ class _ActionsBar extends StatelessWidget {
       submitLabel: 'Publish',
       accentColor: AdminColors.green,
       icon: Icons.public_rounded,
-      warningText: 'This publishes the review immediately — it becomes visible '
+      warningText: 'This publishes the review immediately - it becomes visible '
           'to both parties and cannot be un-published.',
       onSubmit: (reason) => isClientReview
           ? admin.overridePublishClientReview(id, reason: reason)
@@ -2011,13 +2011,13 @@ class _ActionsBar extends StatelessWidget {
     );
     if (outcome == null || !outcome.success || !context.mounted) return;
     if (_alreadySuppressed) {
-      // Nothing moved — the review was suppressed before and still is — so the
+      // Nothing moved - the review was suppressed before and still is - so the
       // dialog stays open and reloads to show the ruling that was just filed.
       AppToast.success('Ruling recorded.');
       await onRuled();
     } else {
       Navigator.pop(context);
-      AppToast.success('Hold upheld — review suppressed.');
+      AppToast.success('Hold upheld - review suppressed.');
     }
   }
 
@@ -2072,7 +2072,7 @@ class _ActionsBar extends StatelessWidget {
 /// The rulings already on file for this review, oldest first.
 ///
 /// The log this comes from is gitignored, so its absence proves nothing and
-/// this banner is history only — it never blocks the publish path below it.
+/// this banner is history only - it never blocks the publish path below it.
 class _RulingHistoryBanner extends StatelessWidget {
   final List<AdminRuling> rulings;
 

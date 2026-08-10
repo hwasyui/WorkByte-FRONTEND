@@ -4,8 +4,8 @@ import 'proposal_model.dart';
 /// `GET /proposals/job-post/{id}/by-role`.
 ///
 /// A group is the only scope where `relevance_score` is comparable between
-/// proposals — the embedding and skills that produce it live on the role, not
-/// the post — so the backend sorts each group independently and the client
+/// proposals - the embedding and skills that produce it live on the role, not
+/// the post - so the backend sorts each group independently and the client
 /// renders them as separate sections rather than one merged list.
 class RoleBidGroup {
   final String jobRoleId;
@@ -18,7 +18,7 @@ class RoleBidGroup {
   /// How many of [proposals] actually carry a usable relevance score.
   final int rankedCount;
 
-  /// Already sorted by the backend. Empty for roles that have no bids yet —
+  /// Already sorted by the backend. Empty for roles that have no bids yet -
   /// those roles are still returned so the client can show them as open.
   final List<ProposalModel> proposals;
 

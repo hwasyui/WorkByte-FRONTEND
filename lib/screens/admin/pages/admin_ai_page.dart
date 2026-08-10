@@ -774,7 +774,7 @@ class _ModerationCardState extends State<_ModerationCard> {
     return showAdminConfirmDialog(
       ctx,
       title: 'Job Has an Active Contract',
-      message: 'This job already has an active contract or an engaged freelancer — '
+      message: 'This job already has an active contract or an engaged freelancer - '
           'there is an ongoing commitment on it. Confirming this flag will close '
           'the job and end that live work. Are you sure you want to close it?',
       icon: Icons.handshake_outlined,
@@ -1927,7 +1927,7 @@ class _RedFlagCard extends StatelessWidget {
     );
     if (outcome != null && outcome.success && context.mounted) {
       if (outcome.resolutionRecorded == false) {
-        AppToast.error('Resolved, but note NOT stored — migration pending.');
+        AppToast.error('Resolved, but note NOT stored - migration pending.');
       } else {
         AppToast.success('Alert resolved.');
       }
@@ -2042,7 +2042,7 @@ class _RedFlagCard extends StatelessWidget {
   }
 }
 
-/// Mirrors DISAGREEMENT_THRESHOLD in the backend's mismatch_detector.py — the
+/// Mirrors DISAGREEMENT_THRESHOLD in the backend's mismatch_detector.py - the
 /// point above which the disagreement model calls a review mismatched.
 const _disagreementThreshold = 0.5;
 
@@ -2208,7 +2208,7 @@ class _FlaggedReviewCard extends StatelessWidget {
 
   /// How many rulings are already on file, from `admin_ruling_count` on the
   /// list row. The flagged-list endpoint does not send it yet, so this reads 0
-  /// and the marker stays hidden until it does — 0 means "nothing on file",
+  /// and the marker stays hidden until it does - 0 means "nothing on file",
   /// never "definitely never ruled on", which is why it only ever adds a
   /// marker and never gates an action.
   int get _rulingCount => (review['admin_ruling_count'] as num?)?.toInt() ?? 0;
@@ -2227,7 +2227,7 @@ class _FlaggedReviewCard extends StatelessWidget {
       submitLabel: 'Publish',
       accentColor: const Color(0xFF059669),
       icon: Icons.public_rounded,
-      warningText: 'This publishes the review immediately — it becomes visible '
+      warningText: 'This publishes the review immediately - it becomes visible '
           'to both parties and cannot be un-published.',
       onSubmit: (reason) => isClient
           ? admin.overridePublishClientReview(id, reason: reason)
@@ -2265,7 +2265,7 @@ class _FlaggedReviewCard extends StatelessWidget {
       AppToast.success(
         _alreadySuppressed
             ? 'Ruling recorded.'
-            : 'Hold upheld — review suppressed.',
+            : 'Hold upheld - review suppressed.',
       );
     }
   }
@@ -2380,7 +2380,7 @@ class _FlaggedReviewCard extends StatelessWidget {
                           : const Color(0xFFD97706),
                     )
                   else
-                    // Null is "never scored", not a bad score — say so rather
+                    // Null is "never scored", not a bad score - say so rather
                     // than leaving the chip off and implying nothing was flagged.
                     const _InfoChip(
                       label: 'NOT SCORED',
@@ -2541,7 +2541,7 @@ class _TappableCard extends StatelessWidget {
 
 /// The "this opens something" affordance. Cards that are tappable as a whole
 /// look identical to cards that are not, so without this the detail dialogs are
-/// invisible features. Pass [onTap] only when the card itself is not tappable —
+/// invisible features. Pass [onTap] only when the card itself is not tappable -
 /// otherwise the tap falls through to the card's own handler.
 class _ViewDetailsLink extends StatelessWidget {
   final VoidCallback? onTap;
@@ -2573,7 +2573,7 @@ class _ViewDetailsLink extends StatelessWidget {
   }
 }
 
-/// "An admin has already ruled on this one" — history, not a verdict on the
+/// "An admin has already ruled on this one" - history, not a verdict on the
 /// review. It says nothing about the outcome, because the ruling that matters
 /// is the reason text, and that only fits in the detail dialog.
 class _RuledMarker extends StatelessWidget {

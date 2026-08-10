@@ -185,7 +185,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       message: action != 'accept'
           ? 'This dismisses the report. No violation will be recorded.'
           : isEngagedJob
-              ? 'This job already has an active contract or an engaged freelancer — '
+              ? 'This job already has an active contract or an engaged freelancer - '
                   'there is an ongoing commitment on it. Accepting this report will '
                   'close the job and end that live work. Are you sure you want to close it?'
               : 'This confirms the violation. The report will be marked as accepted.',

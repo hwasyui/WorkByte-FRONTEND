@@ -92,7 +92,7 @@ class _AdminReasonDialogState extends State<_AdminReasonDialog> {
     } else {
       setState(() {
         _submitting = false;
-        _error = outcome.errorMessage ?? 'Action failed — please try again.';
+        _error = outcome.errorMessage ?? 'Action failed - please try again.';
       });
     }
   }

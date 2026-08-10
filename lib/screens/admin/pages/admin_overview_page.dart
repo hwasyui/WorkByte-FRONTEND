@@ -240,7 +240,7 @@ class _HeroBanner extends StatelessWidget {
       clauses.add('$disputes Dispute${disputes == 1 ? '' : 's'}');
     }
     if (clauses.isEmpty) {
-      return "Everything's running smoothly — no items need attention right now.";
+      return "Everything's running smoothly - no items need attention right now.";
     }
     String joined;
     if (clauses.length == 1) {
@@ -1505,7 +1505,7 @@ List<_ActivityItem> _buildActivityItems(AdminProvider admin) {
     final jobTitle = appeal['job_title'] as String?;
     items.add(_ActivityItem(
       type: _ActivityType.appeal,
-      title: isAccount ? 'Account appeal — $userName' : 'Job appeal — ${jobTitle ?? userName}',
+      title: isAccount ? 'Account appeal - $userName' : 'Job appeal - ${jobTitle ?? userName}',
       subtitle: (appeal['message'] as String? ?? '').trim(),
       statusLabel: 'Pending',
       statusColor: const Color(0xFFD97706),
@@ -1526,7 +1526,7 @@ List<_ActivityItem> _buildActivityItems(AdminProvider admin) {
         'Unknown freelancer';
     items.add(_ActivityItem(
       type: _ActivityType.dispute,
-      title: 'Dispute — ${contract['contract_title'] as String? ?? 'Untitled Contract'}',
+      title: 'Dispute - ${contract['contract_title'] as String? ?? 'Untitled Contract'}',
       subtitle: '$clientName vs $freelancerName',
       statusLabel: 'Disputed',
       statusColor: const Color(0xFFDC2626),

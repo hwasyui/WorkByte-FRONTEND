@@ -126,7 +126,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                 color: const Color(0xFF4F46E5),
                 title: 'Profile Embedding',
                 body:
-                    'Your profile — skills, bio, experience, and portfolio — is encoded into a vector that captures your expertise.',
+                    'Your profile - skills, bio, experience, and portfolio - is encoded into a vector that captures your expertise.',
               ),
               const SizedBox(height: 12),
               _InfoStep(
@@ -162,7 +162,7 @@ class _RecommendedJobsScreenState extends State<RecommendedJobsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Keep your profile up to date — adding skills, work experience, and portfolio items improves the quality of your relevant feed.',
+                        'Keep your profile up to date - adding skills, work experience, and portfolio items improves the quality of your relevant feed.',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: const Color(0xFF4F46E5),

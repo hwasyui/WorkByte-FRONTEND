@@ -54,7 +54,7 @@ class _BidSort {
   final String ascLabel;
   final String descLabel;
 
-  /// Direction applied when this sort is first picked — the one a client
+  /// Direction applied when this sort is first picked - the one a client
   /// almost always wants, so the common case is a single tap.
   final String defaultOrder;
 
@@ -188,7 +188,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   /// Counts the baseline list under a hypothetical filter combination. Used
-  /// only for the chip badges — the rendered list always comes from the
+  /// only for the chip badges - the rendered list always comes from the
   /// server, this just answers "how many would I get if I tapped that?".
   int _bidCount({String? roleId, String? status}) => _proposals
       .where(
@@ -198,7 +198,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       )
       .length;
 
-  /// Everything the bidding tab is currently showing, flattened — used to
+  /// Everything the bidding tab is currently showing, flattened - used to
   /// decide whether the relevance ranking can be trusted.
   List<ProposalModel> get _visibleProposals => _selectedRoleFilter == null
       ? _roleGroups.expand((g) => g.proposals).toList()
@@ -1701,7 +1701,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     }
 
     // A single-role post has nothing to separate, so the section chrome would
-    // only be noise — its bids are already one comparable ranking.
+    // only be noise - its bids are already one comparable ranking.
     if (_roleGroups.length == 1) {
       final only = _roleGroups.first.proposals;
       if (only.isEmpty) {
@@ -1935,7 +1935,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   }
 
   /// Status and sort as two dropdowns on one line. They were chip rows before,
-  /// which put three near-identical scrolling strips above the list — each one
+  /// which put three near-identical scrolling strips above the list - each one
   /// opening with its own "All" chip, so nothing told you which row did what.
   /// Dropdowns state the active choice in words and hide the rest until asked.
   Widget _buildBidToolbar() {
@@ -2139,7 +2139,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         ? proposal.roleTitle!.trim()
         : _roleTitle(proposal.jobRoleId);
     // The proposal carries a bare number, so the role the bid was made against
-    // is what gives it a currency — same source the contract draft uses. The
+    // is what gives it a currency - same source the contract draft uses. The
     // API now sends that currency with the bid; the role lookup stays as the
     // fallback for responses that don't.
     final currency = (proposal.roleBudgetCurrency ?? '').trim().isNotEmpty

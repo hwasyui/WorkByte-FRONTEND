@@ -82,7 +82,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   final TextEditingController _durationValueController =
       TextEditingController();
 
-  /// Locked to the job role's currency — the proposal has no currency of its
+  /// Locked to the job role's currency - the proposal has no currency of its
   /// own, so letting the client pick one could turn a 5,000,000 IDR bid into a
   /// 5,000,000 USD contract.
   String _budgetCurrency = 'IDR';
@@ -118,7 +118,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   String _selectedDurationUnit = 'months';
 
   /// Every contract is milestone based now, so the builder always starts with
-  /// one row. Their amounts must add up to the agreed budget exactly — the
+  /// one row. Their amounts must add up to the agreed budget exactly - the
   /// backend rejects the create with a 422 otherwise.
   final List<_MilestoneItem> _milestones = [_MilestoneItem()];
 
@@ -492,7 +492,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }
 
   /// The backend compares to the cent, so a remainder under half a cent is
-  /// treated as balanced — floating point makes exact equality unreliable.
+  /// treated as balanced - floating point makes exact equality unreliable.
   bool get _milestonesBalanced {
     final remainder = _milestoneRemainder;
     return remainder != null && remainder.abs() < 0.005;
@@ -780,7 +780,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     }
   }
 
-  /// Delivery only — the stored PDF is attached to a DM as-is, so this can be
+  /// Delivery only - the stored PDF is attached to a DM as-is, so this can be
   /// repeated to send the same document again.
   Future<void> _sendToFreelancer() async {
     if (_contractId == null || _contract == null) {
@@ -1109,7 +1109,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                 Text(
                   _isCreated
                       ? 'The PDF has been generated and these terms are now fixed. To agree different terms, cancel this contract and create a new one.'
-                      : 'Nothing is saved yet — the contract, its terms and its PDF are created together once you press "Generate Contract PDF".',
+                      : 'Nothing is saved yet - the contract, its terms and its PDF are created together once you press "Generate Contract PDF".',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
                     color: const Color(0xFF667085),
@@ -1237,7 +1237,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   }) {
     // `readOnly` only says the keyboard cannot edit the field. A field filled by
     // a picker is still the client's to change, so the greyed-out padlock
-    // treatment follows `locked` — which defaults to `readOnly` because most
+    // treatment follows `locked` - which defaults to `readOnly` because most
     // read-only fields here really are fixed by the bid.
     final isLocked = locked ?? readOnly;
 
@@ -1319,8 +1319,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     );
   }
 
-  /// Currency is fixed by the job role — the proposal has no currency of its
-  /// own — so it is shown rather than picked.
+  /// Currency is fixed by the job role - the proposal has no currency of its
+  /// own - so it is shown rather than picked.
   Widget _buildCurrencyLabel() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1377,7 +1377,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
           'Start Date',
           _startDateController,
           'Pick when the work begins',
-          // Read-only against the keyboard, but the picker still owns it —
+          // Read-only against the keyboard, but the picker still owns it -
           // only a created contract actually freezes the date.
           readOnly: true,
           locked: _isCreated,

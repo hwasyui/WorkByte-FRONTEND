@@ -148,6 +148,12 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     return matches.last;
   }
 
+  IconData _fileIconFor(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    if (ext == 'pdf') return Icons.picture_as_pdf_rounded;
+    return Icons.image_rounded;
+  }
+
   Future<void> _openUploadSheet({
     required String payee,
     required double expected,
@@ -167,15 +173,26 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: EdgeInsets.fromLTRB(
-            20,
-            20,
-            20,
-            20 + MediaQuery.of(ctx).viewInsets.bottom,
+            24,
+            24,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text(
                 title,
                 style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
@@ -189,9 +206,9 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () async {
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () async {
                   final result = await FilePicker.platform.pickFiles(
                     type: FileType.custom,
                     allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg'],
@@ -199,28 +216,84 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                   final path = result?.files.single.path;
                   if (path != null) setModal(() => pickedFile = File(path));
                 },
-                icon: const Icon(Icons.attach_file_rounded, size: 16),
-                label: Text(
-                  pickedFile == null
-                      ? 'Choose screenshot / receipt (PDF, PNG, JPG)'
-                      : pickedFile!.path.split(Platform.pathSeparator).last,
-                  overflow: TextOverflow.ellipsis,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: pickedFile == null ? null : const Color(0xFFF5F6FF),
+                    border: Border.all(
+                      color: pickedFile == null ? const Color(0xFFD1D5DB) : AppColors.primary,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        pickedFile == null ? Icons.upload_file_rounded : Icons.check_circle_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        pickedFile == null ? 'Tap to add a screenshot or receipt' : 'File selected, tap to change',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'PDF, PNG, or JPG',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF9CA3AF)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              if (pickedFile != null) ...[
+                const SizedBox(height: 10),
+                Chip(
+                  avatar: Icon(_fileIconFor(pickedFile!.path), size: 16, color: AppColors.primary),
+                  label: Text(
+                    pickedFile!.path.split(Platform.pathSeparator).last,
+                    style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.primary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  backgroundColor: const Color(0xFFEEF2FF),
+                  side: BorderSide.none,
+                  deleteIcon: const Icon(Icons.close_rounded, size: 14),
+                  onDeleted: () => setModal(() => pickedFile = null),
+                ),
+              ],
+              const SizedBox(height: 16),
               TextField(
                 controller: refController,
                 style: GoogleFonts.poppins(fontSize: 13),
                 decoration: InputDecoration(
                   labelText: 'Transaction reference (optional)',
                   labelStyle: GoogleFonts.poppins(fontSize: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: (pickedFile == null || submitting)
                       ? null
@@ -239,8 +312,8 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                             if (ctx.mounted) Navigator.pop(ctx);
                             AppToast.success(
                               payee == 'admin'
-                                  ? 'Proof uploaded — awaiting admin verification.'
-                                  : 'Proof uploaded — waiting for the freelancer to confirm.',
+                                  ? 'Proof uploaded, awaiting admin verification.'
+                                  : 'Proof uploaded, waiting for the freelancer to confirm.',
                             );
                             await _load();
                             widget.onContractUpdated();
@@ -251,8 +324,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: AppColors.primary.withOpacity(0.4),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
                   child: submitting
                       ? const SizedBox(
@@ -304,9 +379,9 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       case 'verified':
         return 'Verified';
       case 'rejected':
-        return 'Rejected — needs re-upload';
+        return 'Rejected - needs re-upload';
       default:
-        return needsAdminReview ? 'Awaiting admin review' : 'Uploaded — waiting on freelancer';
+        return needsAdminReview ? 'Awaiting admin review' : 'Uploaded - waiting on freelancer';
     }
   }
 
@@ -539,7 +614,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
         accountNumber: _freelancerPayout?.accountNumber,
         accountHolder: _freelancerPayout?.accountHolderName,
         missingBankWarning: (_isClient && _freelancerPayout?.isComplete != true)
-            ? 'The freelancer hasn\'t added their bank details yet — ask them to add it under '
+            ? 'The freelancer hasn\'t added their bank details yet - ask them to add it under '
                 'Settings before you can send this share.'
             : null,
       ),
@@ -581,10 +656,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     return [
       Text(
         _isClient
-            ? 'All milestones are paid. Transfer the platform fee directly and upload proof — '
+            ? 'All milestones are paid. Transfer the platform fee directly and upload proof - '
                 'the contract completes once the admin verifies it.'
             : 'You\'ve been paid in full for every milestone. The client is now settling the platform '
-                'fee with WorkByte directly — nothing left for you to do here.',
+                'fee with WorkByte directly - nothing left for you to do here.',
         style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
       ),
       _breakdownRow('Total contract budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),

@@ -352,7 +352,7 @@ class _PostNewJobJobDetailState extends State<PostNewJobJobDetail> {
       icon: Icons.refresh_rounded,
       title: 'Clear this draft?',
       message:
-          'This clears the form so you can start fresh. The draft record itself is not deleted — you can still find and delete it from the Drafts screen.',
+          'This clears the form so you can start fresh. The draft record itself is not deleted - you can still find and delete it from the Drafts screen.',
       confirmLabel: 'Clear draft',
       tone: ConfirmDialogTone.warning,
     );

@@ -693,7 +693,7 @@ class AdminService {
     } catch (_) {
       return const AdminActionOutcome(
         success: false,
-        errorMessage: 'Network error — please try again.',
+        errorMessage: 'Network error - please try again.',
       );
     }
   }
@@ -738,7 +738,7 @@ class AdminService {
         if (msg is String && msg.isNotEmpty) return msg;
       }
     } catch (_) {}
-    return 'Action failed — please try again.';
+    return 'Action failed - please try again.';
   }
 
   static Future<Map<String, dynamic>> getModerationItems(
@@ -1140,7 +1140,7 @@ class AdminService {
     } catch (_) {
       return const AdminActionOutcome(
         success: false,
-        errorMessage: 'Network error — please try again.',
+        errorMessage: 'Network error - please try again.',
       );
     }
   }

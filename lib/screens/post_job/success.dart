@@ -152,7 +152,7 @@ class Frame1State extends State<Frame1> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Your job is already live and visible to freelancers. We also run automated safety checks in the background — you\'ll get a notification if it ever needs your attention.',
+                                'Your job is already live and visible to freelancers. We also run automated safety checks in the background - you\'ll get a notification if it ever needs your attention.',
                                 textAlign: TextAlign.left,
                                 style: GoogleFonts.poppins(
                                   color: AppColors.primary,

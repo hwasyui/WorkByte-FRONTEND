@@ -968,7 +968,7 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
     final bio = widget.isClient
         ? (widget.client?.bio ?? 'No description available.')
         : (widget.freelancer?.bio ?? 'No description available.');
-    // The rating a profile *received* — `average_rating_given` is the rating a
+    // The rating a profile *received* - `average_rating_given` is the rating a
     // client hands out, so it never reflects how the client itself is rated.
     final ratingAvg = widget.isClient
         ? widget.client?.displayStarAvg

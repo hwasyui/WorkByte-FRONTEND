@@ -159,7 +159,7 @@ class AboutScreen extends StatelessWidget {
                     badge: 'Google Sign-In',
                     title: 'Sign In with Google',
                     description:
-                        'Sign in quickly and securely using your Google account — '
+                        'Sign in quickly and securely using your Google account - '
                         'no need to remember another password. On your first login, '
                         'just choose whether you\'re joining as a freelancer or a client.',
                     highlights: const [
@@ -200,7 +200,7 @@ class AboutScreen extends StatelessWidget {
                     badge: 'Profile Setup',
                     title: 'Quick Profile Setup',
                     description:
-                        'No need to fill out your profile from scratch — upload your '
+                        'No need to fill out your profile from scratch - upload your '
                         'CV and WorkByte fills it in for you. You can always review '
                         'and edit it before saving.',
                     highlights: const [

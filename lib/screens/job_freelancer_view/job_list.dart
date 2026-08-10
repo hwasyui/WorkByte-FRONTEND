@@ -69,7 +69,7 @@ class _JobListScreenState extends State<JobListScreen> {
   final Map<String, int> _positionCounts = {};
   final Map<String, String?> _clientProfilePictures = {};
 
-  /// Proposals of this freelancer that already have a contract — tapping those
+  /// Proposals of this freelancer that already have a contract - tapping those
   /// applied jobs opens the working space instead of the job detail.
   final Set<String> _contractedProposalIds = {};
 

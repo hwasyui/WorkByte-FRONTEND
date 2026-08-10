@@ -86,7 +86,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   static const int _autoApproveDays = 7;
 
   /// Mirrors `_CANCELLATION_DISPUTE_WINDOW` in the backend's contract_routes.py.
-  /// Only decides what the UI offers — the backend re-checks and has the final say.
+  /// Only decides what the UI offers - the backend re-checks and has the final say.
   static const Duration _cancellationDisputeWindow = Duration(hours: 72);
 
   String? get _myUserId => context.read<AuthProvider>().userId;
@@ -111,7 +111,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   /// The backend anchors the window on the `contract_cancelled` DM system event,
   /// which `ContractResponse` doesn't carry. `updated_at` is the same fallback the
   /// backend uses when that event is missing, and a cancellation is normally the
-  /// last write to the row — so this is an estimate for display purposes only.
+  /// last write to the row - so this is an estimate for display purposes only.
   Duration? get _cancellationDisputeTimeLeft {
     final cancelledAt = _parseAsUtc(_contract.updatedAt);
     if (cancelledAt == null) return null;
@@ -545,7 +545,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           'You can dispute this cancellation and ask an admin to review it.';
     } else if (left > Duration.zero) {
       windowLine =
-          'You have 72 hours from the cancellation to dispute it — '
+          'You have 72 hours from the cancellation to dispute it - '
           '${_formatWindowRemaining(left)}.';
     } else {
       windowLine = 'The 72-hour window to dispute this cancellation has passed.';
@@ -955,7 +955,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   /// "Milestone 2 · Implementation" for the milestone a submission, approval or
   /// revision applies to. Null when the schedule has not loaded, or for a
-  /// submission written before milestones existed — the label is context and
+  /// submission written before milestones existed - the label is context and
   /// should simply be absent rather than guessed at.
   String? _milestoneLabelFor(String? milestoneId) {
     if (milestoneId == null || _milestones.isEmpty) return null;
@@ -2058,9 +2058,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     label: 'Reason for dispute',
                     hint: disputingCancellation
                         ? 'Explain why this contract shouldn\'t have been '
-                              'cancelled — what was agreed, what was delivered, '
+                              'cancelled - what was agreed, what was delivered, '
                               'and what you want resolved.'
-                        : 'Describe the issue in detail — what was agreed, what '
+                        : 'Describe the issue in detail - what was agreed, what '
                               'happened, and what you want resolved.',
                     accent: Colors.redAccent,
                     maxLines: 4,
@@ -2081,7 +2081,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                               'usually takes 1-3 business days. The admin can '
                               'approve the work as completed, send it back for '
                               'revision with a new deadline, or let the '
-                              'cancellation stand — and that decision is final.'
+                              'cancellation stand - and that decision is final.'
                         : 'Disputes are reviewed manually by our admin team. '
                               'This usually takes 1-3 business days, and the '
                               'contract stays locked until a decision is made.',
@@ -2896,10 +2896,10 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       final position = _milestones.currentPosition;
       final total = _milestones.length;
       final title = _currentMilestone?.title;
-      final named = title == null ? '' : ' — "$title"';
+      final named = title == null ? '' : ' - "$title"';
       return role == 'freelancer'
           ? 'Milestone ${position - 1} was paid. Milestone $position of '
-                '$total$named is now open — submit when ready'
+                '$total$named is now open - submit when ready'
           : 'Milestone ${position - 1} was paid. Waiting for the freelancer to '
                 'submit milestone $position of $total$named';
     }
@@ -2911,12 +2911,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         case 'under_review':
           return 'Your submission is being reviewed by the client';
         case 'revision_requested':
-          return 'The client requested changes — resubmit when done';
+          return 'The client requested changes - resubmit when done';
         case 'pending_payment':
-          return 'Work approved$_currentMilestoneSuffix — waiting for the '
+          return 'Work approved$_currentMilestoneSuffix - waiting for the '
               'client to pay';
         case 'payment_review':
-          return 'Payment is being processed — see Final Payment below';
+          return 'Payment is being processed - see Final Payment below';
         case 'payment_rejected':
           return 'The client\'s payment proof was rejected and needs re-upload';
         case 'completed':
@@ -2929,18 +2929,18 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         case 'active':
           return 'Waiting for the freelancer to submit work';
         case 'under_review':
-          return 'Freelancer submitted work — review and take action';
+          return 'Freelancer submitted work - review and take action';
         case 'revision_requested':
           return 'Waiting for the freelancer to resubmit';
         case 'pending_payment':
-          return 'Work approved$_currentMilestoneSuffix — complete payment '
+          return 'Work approved$_currentMilestoneSuffix - complete payment '
               'below';
         case 'payment_review':
           return 'Your payment proof is awaiting admin verification';
         case 'payment_rejected':
-          return 'Your payment proof was rejected — see Final Payment below';
+          return 'Your payment proof was rejected - see Final Payment below';
         case 'completed':
-          return 'You approved the work — contract completed';
+          return 'You approved the work - contract completed';
         default:
           return null;
       }
@@ -2978,7 +2978,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   String _formatDate(String? date) {
-    if (date == null || date.isEmpty) return '—';
+    if (date == null || date.isEmpty) return '-';
     try {
       final d = DateTime.parse(date);
       return '${d.day}/${d.month}/${d.year}';
@@ -2988,7 +2988,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return '—';
+    if (dateTime == null) return '-';
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} • '
         '${dateTime.hour.toString().padLeft(2, '0')}:'
         '${dateTime.minute.toString().padLeft(2, '0')}';

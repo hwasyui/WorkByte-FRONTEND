@@ -98,7 +98,7 @@ class _ClientReviewSubmittedScreenState
           icon: Icons.hourglass_top_rounded,
           iconColor: AppColors.primary,
           title: 'Review Submitted!',
-          subtitle: 'Checking your review — usually under a minute.',
+          subtitle: 'Checking your review - usually under a minute.',
         );
     }
   }

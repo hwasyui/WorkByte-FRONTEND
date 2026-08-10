@@ -130,7 +130,7 @@ class TrustScoreCard extends StatelessWidget {
             icon: Icons.event_available_outlined,
             value: trustScore.onTimeScore,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — complete a contract with a deadline'
+                ? 'Not measured yet - complete a contract with a deadline'
                 : null,
           ),
           ScoreBar(
@@ -138,7 +138,7 @@ class TrustScoreCard extends StatelessWidget {
             icon: Icons.schedule_outlined,
             value: trustScore.revisionRateScore,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — no revisions recorded'
+                ? 'Not measured yet - no revisions recorded'
                 : null,
           ),
           ScoreBar(
@@ -146,7 +146,7 @@ class TrustScoreCard extends StatelessWidget {
             icon: Icons.chat_bubble_outline,
             value: trustScore.responsivenessScore,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — respond to messages during an active contract'
+                ? 'Not measured yet - respond to messages during an active contract'
                 : null,
           ),
           ScoreBar(
@@ -154,7 +154,7 @@ class TrustScoreCard extends StatelessWidget {
             icon: Icons.sentiment_satisfied_outlined,
             value: trustScore.communicationSentiment,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — needs written feedback from a client'
+                ? 'Not measured yet - needs written feedback from a client'
                 : null,
           ),
         ],
@@ -286,7 +286,7 @@ class ClientTrustScoreCard extends StatelessWidget {
             icon: Icons.bolt_outlined,
             value: trustScore.responsivenessScore,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — respond to messages during an active contract'
+                ? 'Not measured yet - respond to messages during an active contract'
                 : null,
           ),
           ScoreBar(
@@ -294,7 +294,7 @@ class ClientTrustScoreCard extends StatelessWidget {
             icon: Icons.sentiment_satisfied_outlined,
             value: trustScore.communicationSentiment,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — needs written feedback from a freelancer'
+                ? 'Not measured yet - needs written feedback from a freelancer'
                 : null,
           ),
           ScoreBar(
@@ -302,7 +302,7 @@ class ClientTrustScoreCard extends StatelessWidget {
             icon: Icons.gavel_outlined,
             value: trustScore.disputeFairnessScore,
             nullLabel: isOwnProfile
-                ? 'Not measured yet — no completed contracts with disputes'
+                ? 'Not measured yet - no completed contracts with disputes'
                 : null,
           ),
         ],
