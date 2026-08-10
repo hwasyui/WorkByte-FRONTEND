@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../core/utils/moderation_display.dart';
 import '../models/proposal_model.dart';
+import '../models/role_bid_group_model.dart';
 import 'session_guard.dart';
 
 class ProposalFailureException implements Exception {
@@ -38,26 +39,113 @@ class ProposalService {
     'Authorization': 'Bearer $token',
   };
 
+  /// Builds `$_baseUrl$path` with only the non-null params attached, so a call
+  /// that passes nothing hits exactly the same URL it always did and keeps the
+  /// backend's own defaults.
+  Uri _uri(String path, [Map<String, String?> params = const {}]) {
+    final uri = Uri.parse('$_baseUrl$path');
+    final query = {
+      for (final entry in params.entries)
+        if (entry.value != null) entry.key: entry.value!,
+    };
+    return query.isEmpty ? uri : uri.replace(queryParameters: query);
+  }
+
+  List<ProposalModel> _parseProposalList(dynamic body) {
+    final list = body['details'] ?? body['data'] ?? body;
+    return (list as List)
+        .map((e) => ProposalModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// [sortBy] accepts relevance | submitted_at | proposed_budget | rating |
+  /// total_jobs. Note that `relevance` across a whole post only ranks roughly:
+  /// scores are computed per role, so bids on different roles are not really
+  /// comparable. Use [getProposalsByJobRole] or [getProposalsGroupedByRole]
+  /// when the ranking has to hold up.
   Future<List<ProposalModel>> getProposalsByJobPost(
     String token,
-    String jobPostId,
-  ) async {
+    String jobPostId, {
+    String? jobRoleId,
+    String? status,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    final uri = _uri('/proposals/job-post/$jobPostId', {
+      'job_role_id': jobRoleId,
+      'status': status,
+      'sort_by': sortBy,
+      'sort_order': sortOrder,
+    });
     final res = await SessionGuard.guard(
       token,
-      (t) => http.get(
-        Uri.parse('$_baseUrl/proposals/job-post/$jobPostId'),
-        headers: _headers(t),
-      ).timeout(const Duration(seconds: 20)),
+      (t) => http.get(uri, headers: _headers(t))
+          .timeout(const Duration(seconds: 20)),
     );
     final body = jsonDecode(res.body);
-    debugPrint('GET /proposals/job-post/$jobPostId status: ${res.statusCode}');
+    debugPrint('GET ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''} status: ${res.statusCode}');
     if (res.statusCode == 200) {
-      final list = body['details'] ?? body['data'] ?? body;
-      return (list as List)
-          .map((e) => ProposalModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return _parseProposalList(body);
     }
     throw Exception(body['details'] ?? 'Failed to load proposals');
+  }
+
+  /// Bids on a single role — the scope where `relevance_score` is directly
+  /// comparable between proposals. Defaults to the backend's relevance sort.
+  Future<List<ProposalModel>> getProposalsByJobRole(
+    String token,
+    String jobRoleId, {
+    String? status,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    final uri = _uri('/proposals/job-role/$jobRoleId', {
+      'status': status,
+      'sort_by': sortBy,
+      'sort_order': sortOrder,
+    });
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t))
+          .timeout(const Duration(seconds: 20)),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('GET ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''} status: ${res.statusCode}');
+    if (res.statusCode == 200) {
+      return _parseProposalList(body);
+    }
+    throw Exception(body['details'] ?? 'Failed to load role proposals');
+  }
+
+  /// Every role on a post with its own independently sorted bid list,
+  /// including roles nobody has bid on yet.
+  Future<List<RoleBidGroup>> getProposalsGroupedByRole(
+    String token,
+    String jobPostId, {
+    String? status,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    final uri = _uri('/proposals/job-post/$jobPostId/by-role', {
+      'status': status,
+      'sort_by': sortBy,
+      'sort_order': sortOrder,
+    });
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(uri, headers: _headers(t))
+          .timeout(const Duration(seconds: 20)),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('GET ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''} status: ${res.statusCode}');
+    if (res.statusCode == 200) {
+      final payload = body['details'] ?? body['data'] ?? body;
+      final roles = (payload as Map<String, dynamic>)['roles'] as List? ?? const [];
+      return roles
+          .map((e) => RoleBidGroup.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(body['details'] ?? 'Failed to load proposals by role');
   }
 
   Future<List<ProposalModel>> getProposalsByFreelancer(

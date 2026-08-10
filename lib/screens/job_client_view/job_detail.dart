@@ -18,6 +18,7 @@ import '../../models/job_file_model.dart';
 import '../../models/client_model.dart';
 import '../../models/proposal_model.dart';
 import '../../models/proposal_file_model.dart';
+import '../../models/role_bid_group_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/job_post_provider.dart';
@@ -36,6 +37,71 @@ import '../workspace/workspace_detail.dart';
 import '../post_job/job_detail.dart' show PostNewJobJobDetail;
 import '../../core/utils/helpers.dart';
 
+/// `sort_by` values understood by the proposals endpoints.
+const String _sortRelevance = 'relevance';
+const String _sortRating = 'rating';
+const String _sortNewest = 'submitted_at';
+const String _sortBudget = 'proposed_budget';
+
+const String _orderAsc = 'asc';
+const String _orderDesc = 'desc';
+
+/// One sort option and what each direction actually means for it. The chip is
+/// labelled with the outcome ("Cheapest", "Newest") rather than the field name,
+/// so the direction is readable without decoding the arrow.
+class _BidSort {
+  final String sortBy;
+  final String ascLabel;
+  final String descLabel;
+
+  /// Direction applied when this sort is first picked — the one a client
+  /// almost always wants, so the common case is a single tap.
+  final String defaultOrder;
+
+  const _BidSort(
+    this.sortBy, {
+    required this.ascLabel,
+    required this.descLabel,
+    this.defaultOrder = _orderDesc,
+  });
+
+  String labelFor(String order) => order == _orderAsc ? ascLabel : descLabel;
+
+  /// Default direction first, so the menu leads with the useful one.
+  List<String> get orders => [
+    defaultOrder,
+    defaultOrder == _orderAsc ? _orderDesc : _orderAsc,
+  ];
+}
+
+/// `status` values accepted by the proposals endpoints. "All" is the absence
+/// of the param, so it lives outside this map.
+const Map<String, String> _bidStatusLabels = {
+  'pending': 'Pending',
+  'accepted': 'Accepted',
+  'rejected': 'Rejected',
+};
+
+const List<_BidSort> _bidSorts = [
+  // "Most relevant" is the wording the freelancer-side feed already uses for
+  // the same cosine similarity, so both sides of the app name it the same way.
+  _BidSort(
+    _sortRelevance,
+    ascLabel: 'Least relevant',
+    descLabel: 'Most relevant',
+  ),
+  _BidSort(_sortRating, ascLabel: 'Lowest rated', descLabel: 'Top rated'),
+  _BidSort(_sortNewest, ascLabel: 'Oldest', descLabel: 'Newest'),
+  // Cheapest first by default: a client scanning bids is usually looking for
+  // value, and it is the direction the old fixed 'desc' could never reach.
+  _BidSort(
+    _sortBudget,
+    ascLabel: 'Cheapest',
+    descLabel: 'Priciest',
+    defaultOrder: _orderAsc,
+  ),
+];
+
 class ClientJobDetailScreen extends StatefulWidget {
   final JobPostModel job;
 
@@ -51,8 +117,11 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   int _selectedTab = 0;
   String? _selectedRoleFilter;
 
+  /// Null means every status, matching the endpoints' own "no `status` param"
+  /// behaviour.
+  String? _selectedStatusFilter;
+
   final Set<String> _expandedProposalIds = {};
-  final Set<String> _pinnedProposalIds = {};
 
   ClientModel? _client;
   bool _clientLoading = true;
@@ -60,8 +129,33 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
   List<JobRoleModel> _roles = [];
   bool _rolesLoading = true;
 
+  /// Every bid on this post in the backend's default order. Kept as the
+  /// canonical set so the role chip counts and the empty state stay stable no
+  /// matter which role or sort the client is currently looking at.
   List<ProposalModel> _proposals = [];
   bool _proposalsLoading = true;
+
+  String _bidSortBy = _sortNewest;
+  String _bidSortOrder = _orderDesc;
+
+  /// Bids for the selected role chip, sorted server-side by [_bidSortBy].
+  List<ProposalModel> _roleProposals = [];
+
+  /// Per-role sections rendered when the "All" chip is selected. Relevance is
+  /// only comparable inside one role, so "All" shows one ranked list per role
+  /// rather than a single merged ranking.
+  List<RoleBidGroup> _roleGroups = [];
+
+  bool _bidsLoading = true;
+  String? _bidsError;
+  final Set<String> _collapsedRoleIds = {};
+
+  /// Sort and role changes fire overlapping requests; only the newest one is
+  /// allowed to write to state.
+  int _bidRequestId = 0;
+
+  final ProposalService _proposalService = ProposalService();
+  final Map<String, FreelancerModel?> _freelancerCache = {};
 
   List<ContractModel> _workers = [];
   bool _workersLoading = true;
@@ -93,19 +187,28 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     return tags;
   }
 
-  List<ProposalModel> get _filteredProposals {
-    final base = _selectedRoleFilter == null
-        ? _proposals
-        : _proposals.where((p) => p.jobRoleId == _selectedRoleFilter).toList();
+  /// Counts the baseline list under a hypothetical filter combination. Used
+  /// only for the chip badges — the rendered list always comes from the
+  /// server, this just answers "how many would I get if I tapped that?".
+  int _bidCount({String? roleId, String? status}) => _proposals
+      .where(
+        (p) =>
+            (roleId == null || p.jobRoleId == roleId) &&
+            (status == null || p.status == status),
+      )
+      .length;
 
-    final pinned = base
-        .where((p) => _pinnedProposalIds.contains(p.proposalId))
-        .toList();
-    final unpinned = base
-        .where((p) => !_pinnedProposalIds.contains(p.proposalId))
-        .toList();
-    return [...pinned, ...unpinned];
-  }
+  /// Everything the bidding tab is currently showing, flattened — used to
+  /// decide whether the relevance ranking can be trusted.
+  List<ProposalModel> get _visibleProposals => _selectedRoleFilter == null
+      ? _roleGroups.expand((g) => g.proposals).toList()
+      : _roleProposals;
+
+  /// A partial ranking still reads as "best first", so one unranked bid in
+  /// view is enough to stop calling the order a relevance ranking.
+  bool get _relevanceIncomplete =>
+      _bidSortBy == _sortRelevance &&
+      _visibleProposals.any((p) => !p.relevanceReady);
 
   String _roleTitle(String? jobRoleId) {
     if (jobRoleId == null) return '';
@@ -223,21 +326,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
 
     if (!mounted) return;
 
-    final raw = context.read<ProposalProvider>().proposals;
-    final profileProvider = context.read<ProfileProvider>();
-
-    final enriched = await Future.wait(
-      raw.map((p) async {
-        final freelancer = await profileProvider.fetchFreelancerById(
-          token: token,
-          freelancerId: p.freelancerId,
-        );
-        if (freelancer == null) return p;
-        return p.copyWith(
-          freelancerName: freelancer.displayName,
-          freelancerAvatarUrl: freelancer.profilePictureUrl,
-        );
-      }),
+    final enriched = await _withFreelancerProfiles(
+      context.read<ProposalProvider>().proposals,
+      token,
     );
 
     if (!mounted) return;
@@ -247,10 +338,141 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       _proposalsLoading = false;
     });
 
-    await context.read<ProposalFileProvider>().fetchFilesForProposals(
-      token,
-      enriched.map((p) => p.proposalId).toList(),
-    );
+    await _fetchBids();
+  }
+
+  /// Loads the list the bidding tab actually renders: one role's ranked bids
+  /// when a role chip is selected, otherwise every role as its own ranked
+  /// section.
+  Future<void> _fetchBids() async {
+    final token = context.read<AuthProvider>().token!;
+    final roleId = _selectedRoleFilter;
+    final status = _selectedStatusFilter;
+    final sortBy = _bidSortBy;
+    final sortOrder = _bidSortOrder;
+    final requestId = ++_bidRequestId;
+
+    setState(() {
+      _bidsLoading = true;
+      _bidsError = null;
+    });
+
+    try {
+      List<RoleBidGroup> groups = const [];
+      List<ProposalModel> roleProposals = const [];
+
+      if (roleId != null) {
+        roleProposals = await _proposalService.getProposalsByJobRole(
+          token,
+          roleId,
+          status: status,
+          sortBy: sortBy,
+          sortOrder: sortOrder,
+        );
+      } else {
+        groups = await _proposalService.getProposalsGroupedByRole(
+          token,
+          _job.jobPostId,
+          status: status,
+          sortBy: sortBy,
+          sortOrder: sortOrder,
+        );
+      }
+
+      if (!mounted || requestId != _bidRequestId) return;
+
+      final flat = roleId != null
+          ? roleProposals
+          : groups.expand((g) => g.proposals).toList();
+      final enriched = await _withFreelancerProfiles(flat, token);
+
+      if (!mounted || requestId != _bidRequestId) return;
+
+      final byId = {for (final p in enriched) p.proposalId: p};
+
+      setState(() {
+        _roleProposals = roleId != null ? enriched : const [];
+        _roleGroups = roleId != null
+            ? const []
+            : groups
+                  .map(
+                    (g) => g.copyWith(
+                      proposals: g.proposals
+                          .map((p) => byId[p.proposalId] ?? p)
+                          .toList(),
+                    ),
+                  )
+                  .toList();
+        _bidsLoading = false;
+      });
+
+      if (enriched.isNotEmpty) {
+        await context.read<ProposalFileProvider>().fetchFilesForProposals(
+          token,
+          enriched.map((p) => p.proposalId).toList(),
+        );
+      }
+    } catch (e) {
+      if (!mounted || requestId != _bidRequestId) return;
+      setState(() {
+        _bidsLoading = false;
+        _bidsError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  /// Fills in the freelancer name and avatar only for bids the API did not
+  /// already carry them on, so a sort change does not refetch every profile.
+  Future<List<ProposalModel>> _withFreelancerProfiles(
+    List<ProposalModel> proposals,
+    String token,
+  ) async {
+    bool needsProfile(ProposalModel p) =>
+        (p.freelancerName ?? '').trim().isEmpty && p.freelancerId.isNotEmpty;
+
+    final missing = proposals
+        .where(needsProfile)
+        .map((p) => p.freelancerId)
+        .where((id) => !_freelancerCache.containsKey(id))
+        .toSet();
+
+    if (missing.isNotEmpty) {
+      final profileProvider = context.read<ProfileProvider>();
+      await Future.wait(
+        missing.map((id) async {
+          _freelancerCache[id] = await profileProvider.fetchFreelancerById(
+            token: token,
+            freelancerId: id,
+          );
+        }),
+      );
+    }
+
+    return proposals.map((p) {
+      if (!needsProfile(p)) return p;
+      final freelancer = _freelancerCache[p.freelancerId];
+      if (freelancer == null) return p;
+      return p.copyWith(
+        freelancerName: freelancer.displayName,
+        freelancerAvatarUrl: freelancer.profilePictureUrl,
+      );
+    }).toList();
+  }
+
+  /// Mirrors an accept/reject into every list holding that bid, so the card
+  /// updates without a refetch regardless of which view it was decided from.
+  void _applyStatusLocally(String proposalId, String status) {
+    List<ProposalModel> patch(List<ProposalModel> list) => list
+        .map((p) => p.proposalId == proposalId ? p.copyWith(status: status) : p)
+        .toList();
+
+    setState(() {
+      _proposals = patch(_proposals);
+      _roleProposals = patch(_roleProposals);
+      _roleGroups = _roleGroups
+          .map((g) => g.copyWith(proposals: patch(g.proposals)))
+          .toList();
+    });
   }
 
   Future<void> _fetchWorkers() async {
@@ -532,15 +754,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       return;
     }
 
-    setState(() {
-      _proposals = _proposals
-          .map(
-            (p) => p.proposalId == proposal.proposalId
-                ? p.copyWith(status: 'accepted')
-                : p,
-          )
-          .toList();
-    });
+    _applyStatusLocally(proposal.proposalId, 'accepted');
 
     AppToast.success('Bid accepted. Continue with contract setup.');
 
@@ -578,15 +792,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       return;
     }
 
-    setState(() {
-      _proposals = _proposals
-          .map(
-            (p) => p.proposalId == proposal.proposalId
-                ? p.copyWith(status: 'rejected')
-                : p,
-          )
-          .toList();
-    });
+    _applyStatusLocally(proposal.proposalId, 'rejected');
 
     AppToast.success('Bid rejected.');
   }
@@ -1416,59 +1622,279 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
       );
     }
 
-    final filtered = _filteredProposals;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_roles.length > 1) ...[
             _buildRoleFilterChips(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
-          if (filtered.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Text(
-                'No bids for this role yet.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: const Color(0xFF7D7D7D),
-                ),
+          _buildBidToolbar(),
+          // Held back while a fetch is in flight, so the banner never reflects
+          // the list that is being replaced.
+          if (!_bidsLoading && _relevanceIncomplete) ...[
+            const SizedBox(height: 12),
+            _buildRelevanceNotReadyBanner(),
+          ],
+          const SizedBox(height: 16),
+          if (_bidsLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
               ),
             )
-          else ...[
-            ...filtered.map((p) => _buildProposalCard(p)),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Color(0xFF7D7D7D),
-                  size: 18,
-                ),
-                label: Text(
-                  'Load more',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF7D7D7D),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          else if (_bidsError != null)
+            _buildBidsError()
+          else if (_selectedRoleFilter != null)
+            _buildSingleRoleBids()
+          else
+            _buildGroupedBids(),
         ],
       ),
     );
   }
 
-  Widget _buildRoleFilterChips() {
-    final counts = <String, int>{};
-    for (final p in _proposals) {
-      if (p.jobRoleId == null) continue;
-      counts[p.jobRoleId!] = (counts[p.jobRoleId!] ?? 0) + 1;
+  /// Empty-list wording that names the active status filter, so a list that
+  /// was filtered down to nothing never reads as "nobody has bid".
+  Widget _emptyBidsNote({bool inRole = false}) {
+    final status = _selectedStatusFilter;
+    final scope = inRole ? ' on this role' : '';
+    final message = status == null
+        ? 'No bids$scope yet.'
+        : 'No ${_bidStatusLabels[status]!.toLowerCase()} bids$scope.';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Text(
+        message,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: const Color(0xFF7D7D7D),
+        ),
+      ),
+    );
+  }
+
+  /// One role chip is selected, so relevance is comparable across the whole
+  /// list and it can be rendered flat.
+  Widget _buildSingleRoleBids() {
+    final proposals = _roleProposals;
+
+    if (proposals.isEmpty) {
+      return _emptyBidsNote(inRole: true);
     }
+
+    return Column(
+      children: [
+        ...proposals.map((p) => _buildProposalCard(p, showRoleChip: false)),
+      ],
+    );
+  }
+
+  /// "All" roles: one collapsible section per role, each independently ranked,
+  /// because a relevance score only means something against its own role.
+  Widget _buildGroupedBids() {
+    if (_roleGroups.isEmpty) {
+      return _emptyBidsNote();
+    }
+
+    // A single-role post has nothing to separate, so the section chrome would
+    // only be noise — its bids are already one comparable ranking.
+    if (_roleGroups.length == 1) {
+      final only = _roleGroups.first.proposals;
+      if (only.isEmpty) {
+        return _emptyBidsNote(inRole: true);
+      }
+      return Column(
+        children: [...only.map((p) => _buildProposalCard(p))],
+      );
+    }
+
+    return Column(
+      children: [..._roleGroups.map(_buildRoleGroupSection)],
+    );
+  }
+
+  Widget _buildRoleGroupSection(RoleBidGroup group) {
+    final collapsed = _collapsedRoleIds.contains(group.jobRoleId);
+    final proposals = group.proposals;
+    final currency = (group.budgetCurrency ?? '').trim();
+    final budget = group.roleBudget == null
+        ? ''
+        : '$currency ${group.roleBudget!.toStringAsFixed(0)}'.trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBFCFE),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE9ECF2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() {
+              if (collapsed) {
+                _collapsedRoleIds.remove(group.jobRoleId);
+              } else {
+                _collapsedRoleIds.add(group.jobRoleId);
+              }
+            }),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          group.roleTitle.isEmpty
+                              ? 'Untitled role'
+                              : group.roleTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1F2937),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          [
+                            '${group.proposalCount} '
+                                '${group.proposalCount == 1 ? 'bid' : 'bids'}',
+                            if (group.positionsOpen > 0)
+                              '${group.positionsOpen} open',
+                            if (budget.isNotEmpty) budget,
+                          ].join(' · '),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF8A8F98),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    collapsed
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.keyboard_arrow_up_rounded,
+                    color: const Color(0xFF8A8F98),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!collapsed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
+              child: proposals.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        _selectedStatusFilter == null
+                            ? 'No bids on this role yet.'
+                            : 'No '
+                                  '${_bidStatusLabels[_selectedStatusFilter]!.toLowerCase()}'
+                                  ' bids on this role.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF9AA0AC),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        ...proposals.map(
+                          (p) => _buildProposalCard(p, showRoleChip: false),
+                        ),
+                      ],
+                    ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBidsError() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 32),
+    child: Column(
+      children: [
+        Text(
+          _bidsError ?? 'Failed to load bids.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: const Color(0xFF7D7D7D),
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextButton(
+          onPressed: _fetchBids,
+          child: Text(
+            'Try again',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildRelevanceNotReadyBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF3E2B4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.hourglass_top_rounded,
+            size: 16,
+            color: Color(0xFFB78103),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Relevance is not yet ready. Please use another sort filter.',
+              style: GoogleFonts.poppins(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF8A6208),
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _selectRoleFilter(String? jobRoleId) {
+    if (_selectedRoleFilter == jobRoleId) return;
+    setState(() => _selectedRoleFilter = jobRoleId);
+    _fetchBids();
+  }
+
+  Widget _buildRoleFilterChips() {
+    // Counted under the active status filter, so a chip never promises bids
+    // that the current status would filter back out.
+    final status = _selectedStatusFilter;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1476,21 +1902,196 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
         children: [
           _roleFilterChip(
             label: 'All',
-            count: _proposals.length,
+            count: _bidCount(status: status),
             selected: _selectedRoleFilter == null,
-            onTap: () => setState(() => _selectedRoleFilter = null),
+            onTap: () => _selectRoleFilter(null),
           ),
           for (final role in _roles) ...[
             const SizedBox(width: 8),
             _roleFilterChip(
               label: role.roleTitle,
-              count: counts[role.jobRoleId] ?? 0,
+              count: _bidCount(roleId: role.jobRoleId, status: status),
               selected: _selectedRoleFilter == role.jobRoleId,
-              onTap: () =>
-                  setState(() => _selectedRoleFilter = role.jobRoleId),
+              onTap: () => _selectRoleFilter(role.jobRoleId),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  void _selectStatusFilter(String? status) {
+    if (_selectedStatusFilter == status) return;
+    setState(() => _selectedStatusFilter = status);
+    _fetchBids();
+  }
+
+  void _selectSort(String sortBy, String order) {
+    if (_bidSortBy == sortBy && _bidSortOrder == order) return;
+    setState(() {
+      _bidSortBy = sortBy;
+      _bidSortOrder = order;
+    });
+    _fetchBids();
+  }
+
+  /// Status and sort as two dropdowns on one line. They were chip rows before,
+  /// which put three near-identical scrolling strips above the list — each one
+  /// opening with its own "All" chip, so nothing told you which row did what.
+  /// Dropdowns state the active choice in words and hide the rest until asked.
+  Widget _buildBidToolbar() {
+    // Status counts are scoped to the selected role, so they describe the list
+    // actually on screen rather than the whole post.
+    final roleId = _selectedRoleFilter;
+    final activeSort = _bidSorts.firstWhere((s) => s.sortBy == _bidSortBy);
+    final activeStatus = _selectedStatusFilter;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _toolbarMenu<String?>(
+            icon: Icons.filter_list_rounded,
+            label: activeStatus == null
+                ? 'All bids'
+                : _bidStatusLabels[activeStatus]!,
+            trailingCount: _bidCount(roleId: roleId, status: activeStatus),
+            initialValue: activeStatus,
+            onSelected: _selectStatusFilter,
+            items: [
+              _menuItem(
+                value: null,
+                label: 'All bids',
+                count: _bidCount(roleId: roleId),
+                selected: activeStatus == null,
+              ),
+              for (final entry in _bidStatusLabels.entries)
+                _menuItem(
+                  value: entry.key,
+                  label: entry.value,
+                  count: _bidCount(roleId: roleId, status: entry.key),
+                  selected: activeStatus == entry.key,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _toolbarMenu<(String, String)>(
+            icon: Icons.swap_vert_rounded,
+            label: activeSort.labelFor(_bidSortOrder),
+            initialValue: (_bidSortBy, _bidSortOrder),
+            onSelected: (choice) => _selectSort(choice.$1, choice.$2),
+            items: [
+              for (final (index, sort) in _bidSorts.indexed) ...[
+                if (index > 0) const PopupMenuDivider(height: 1),
+                // Both directions spelled out, so the arrow is never the only
+                // thing telling you which end of the list you get.
+                for (final order in sort.orders)
+                  _menuItem(
+                    value: (sort.sortBy, order),
+                    label: sort.labelFor(order),
+                    selected:
+                        _bidSortBy == sort.sortBy && _bidSortOrder == order,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<T> _menuItem<T>({
+    required T value,
+    required String label,
+    required bool selected,
+    int? count,
+  }) {
+    return PopupMenuItem<T>(
+      value: value,
+      height: 42,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? _primary : const Color(0xFF374151),
+              ),
+            ),
+          ),
+          if (count != null)
+            Text(
+              '$count',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF9AA0AC),
+              ),
+            ),
+          if (selected) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.check_rounded, size: 16, color: _primary),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _toolbarMenu<T>({
+    required IconData icon,
+    required String label,
+    required T initialValue,
+    required List<PopupMenuEntry<T>> items,
+    required void Function(T) onSelected,
+    int? trailingCount,
+  }) {
+    return PopupMenuButton<T>(
+      initialValue: initialValue,
+      onSelected: onSelected,
+      itemBuilder: (_) => items,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 6),
+      elevation: 3,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFEDEFF3)),
+      ),
+      padding: EdgeInsets.zero,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE9ECF2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFF8A8F98)),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                trailingCount == null ? label : '$label ($trailingCount)',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF374151),
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: Color(0xFF8A8F98),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1527,18 +2128,28 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
     );
   }
 
-  Widget _buildProposalCard(ProposalModel proposal) {
+  /// [showRoleChip] is off inside a per-role section, where the heading
+  /// already names the role.
+  Widget _buildProposalCard(
+    ProposalModel proposal, {
+    bool showRoleChip = true,
+  }) {
     final isAccepted = proposal.status == 'accepted';
     final isRejected = proposal.status == 'rejected';
-    final isPinned = _pinnedProposalIds.contains(proposal.proposalId);
-    final roleTitle = _roleTitle(proposal.jobRoleId);
+    final roleTitle = (proposal.roleTitle ?? '').trim().isNotEmpty
+        ? proposal.roleTitle!.trim()
+        : _roleTitle(proposal.jobRoleId);
     // The proposal carries a bare number, so the role the bid was made against
-    // is what gives it a currency — same source the contract draft uses.
+    // is what gives it a currency — same source the contract draft uses. The
+    // API now sends that currency with the bid; the role lookup stays as the
+    // fallback for responses that don't.
+    final currency = (proposal.roleBudgetCurrency ?? '').trim().isNotEmpty
+        ? proposal.roleBudgetCurrency!.trim()
+        : _roleCurrency(proposal.jobRoleId);
     final budget =
-        '${_roleCurrency(proposal.jobRoleId)} '
-                '${proposal.proposedBudget.toStringAsFixed(0)}'
-            .trim();
+        '$currency ${proposal.proposedBudget.toStringAsFixed(0)}'.trim();
     final isExpanded = _expandedProposalIds.contains(proposal.proposalId);
+    final hasCoverLetter = proposal.coverLetter.trim().isNotEmpty;
 
     final files = context.watch<ProposalFileProvider>().filesForProposal(
       proposal.proposalId,
@@ -1597,15 +2208,25 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        proposal.freelancerName ?? 'Freelancer',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1F2937),
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              proposal.freelancerName ?? 'Freelancer',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1F2937),
+                              ),
+                            ),
+                          ),
+                          if (proposal.freelancerRating != null) ...[
+                            const SizedBox(width: 6),
+                            _ratingLabel(proposal),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1620,53 +2241,21 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                if (isAccepted)
+                if (isAccepted) ...[
+                  const SizedBox(width: 10),
                   _modernStatusBadge(
                     label: 'Accepted',
                     textColor: AppColors.primary,
                     bgColor: AppColors.primary.withValues(alpha: 0.10),
-                  )
-                else if (isRejected)
+                  ),
+                ] else if (isRejected) ...[
+                  const SizedBox(width: 10),
                   _modernStatusBadge(
                     label: 'Rejected',
                     textColor: Colors.redAccent,
                     bgColor: Colors.redAccent.withValues(alpha: 0.10),
-                  )
-                else
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (isPinned) {
-                          _pinnedProposalIds.remove(proposal.proposalId);
-                        } else {
-                          _pinnedProposalIds.add(proposal.proposalId);
-                        }
-                      });
-                    },
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: isPinned
-                            ? AppColors.primary.withValues(alpha: 0.10)
-                            : const Color(0xFFF8F9FB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isPinned
-                              ? AppColors.primary.withValues(alpha: 0.30)
-                              : const Color(0xFFE8EAF0),
-                        ),
-                      ),
-                      child: Icon(
-                        isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                        size: 18,
-                        color: isPinned
-                            ? AppColors.primary
-                            : const Color(0xFF8A8F98),
-                      ),
-                    ),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 14),
@@ -1674,7 +2263,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (roleTitle.isNotEmpty)
+                if (showRoleChip && roleTitle.isNotEmpty)
                   _softChip(roleTitle, icon: Icons.work_outline_rounded),
                 _softChip(budget, icon: Icons.account_balance_wallet_outlined),
                 if ((proposal.proposedDuration ?? '').trim().isNotEmpty)
@@ -1697,9 +2286,9 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    proposal.coverLetter.trim().isEmpty
-                        ? 'No cover letter provided.'
-                        : proposal.coverLetter,
+                    hasCoverLetter
+                        ? proposal.coverLetter
+                        : 'No cover letter provided.',
                     style: GoogleFonts.poppins(
                       fontSize: 12.5,
                       color: const Color(0xFF374151),
@@ -1710,7 +2299,7 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                         ? TextOverflow.visible
                         : TextOverflow.ellipsis,
                   ),
-                  if (proposal.coverLetter.trim().isNotEmpty) ...[
+                  if (hasCoverLetter) ...[
                     const SizedBox(height: 8),
                     InkWell(
                       onTap: () {
@@ -1899,6 +2488,34 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
           color: textColor,
         ),
       ),
+    );
+  }
+
+  Widget _ratingLabel(ProposalModel proposal) {
+    final reviews = proposal.freelancerReviewCount ?? 0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF5A623)),
+        const SizedBox(width: 2),
+        Text(
+          proposal.freelancerRating!.toStringAsFixed(1),
+          style: GoogleFonts.poppins(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF4B5563),
+          ),
+        ),
+        if (reviews > 0)
+          Text(
+            ' ($reviews)',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: const Color(0xFF9AA0AC),
+            ),
+          ),
+      ],
     );
   }
 
