@@ -152,7 +152,7 @@ class _PayoutInfoScreenState extends State<PayoutInfoScreen> {
                         Expanded(
                           child: Text(
                             'When a client completes payment, they transfer your share (90% of '
-                            'the agreed budget) directly to this account — WorkByte never holds '
+                            'the agreed budget) directly to this account. WorkByte never holds '
                             'or forwards it. Keep this accurate before accepting contracts.',
                             style: GoogleFonts.poppins(
                               fontSize: 11.5,

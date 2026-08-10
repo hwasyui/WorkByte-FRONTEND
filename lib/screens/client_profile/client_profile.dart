@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/saved_items_provider.dart';
 import '../../providers/client_review_provider.dart';
 import '../../screens/auth/login.dart';
 import '../../widgets/edit_profile_form.dart';
@@ -45,7 +44,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     bioController.addListener(() {
       setState(() => bioText = bioController.text);
     });
@@ -895,7 +894,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       children: [
                         _buildAboutTab(profile),
                         _buildReviewsTab(),
-                        _buildSavedTab(),
                       ],
                     ),
                   ),
@@ -1323,7 +1321,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       tabs: const [
         Tab(text: 'About'),
         Tab(text: 'Reviews'),
-        Tab(text: 'Saved'),
       ],
     );
   }
@@ -1708,163 +1705,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildSavedTab() {
-    return Consumer<SavedItemsProvider>(
-      builder: (context, saved, _) {
-        final freelancers = saved.savedFreelancers;
-
-        if (freelancers.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 60),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.bookmarks_outlined,
-                    size: 52,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'No saved freelancers yet',
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Save freelancers to see them here.',
-                    style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return SingleChildScrollView(
-          key: const PageStorageKey<String>('saved'),
-          padding: const EdgeInsets.only(top: 16, bottom: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (freelancers.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Saved Freelancers',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${freelancers.length}',
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ...freelancers.map(
-                  (f) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PeopleProfileScreen(
-                            isClient: false,
-                            freelancer: f,
-                          ),
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: AppColors.secondary,
-                              backgroundImage:
-                                  f.profilePictureUrl != null &&
-                                      f.profilePictureUrl!.startsWith('http')
-                                  ? NetworkImage(f.profilePictureUrl!)
-                                  : null,
-                              onBackgroundImageError:
-                                  f.profilePictureUrl != null &&
-                                      f.profilePictureUrl!.startsWith('http')
-                                  ? (_, _) {}
-                                  : null,
-                              child:
-                                  f.profilePictureUrl == null ||
-                                      !f.profilePictureUrl!.startsWith('http')
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: AppColors.primary,
-                                      size: 22,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    f.displayName,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 3),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => saved.toggleSaveFreelancer(f),
-                              child: const Icon(
-                                Icons.bookmark_rounded,
-                                color: AppColors.primary,
-                                size: 22,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
     );
   }
 

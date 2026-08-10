@@ -29,16 +29,16 @@ class CommissionDisclaimer extends StatelessWidget {
               'and the platform, split at completion: $currency ${freelancerShare!.toStringAsFixed(0)} to '
               'the freelancer and $currency ${commissionShare!.toStringAsFixed(0)} ($ratePct%) as a '
               'platform fee. You won\'t be charged anything extra beyond this amount.'
-          : 'A $ratePct% platform fee is included in this budget — it\'s paid directly to WorkByte '
+          : 'A $ratePct% platform fee is included in this budget. It\'s paid directly to WorkByte '
               'alongside the freelancer\'s share when the project completes. You won\'t be charged '
               'anything on top of the budget you set.';
     } else {
       message = hasBudget
           ? 'A $ratePct% platform fee applies to this budget. If this proposal is accepted at '
               '$currency ${budget!.toStringAsFixed(0)}, you\'ll receive $currency '
-              '${freelancerShare!.toStringAsFixed(0)} — the client pays the remaining $currency '
+              '${freelancerShare!.toStringAsFixed(0)}. The client pays the remaining $currency '
               '${commissionShare!.toStringAsFixed(0)} directly to WorkByte as a platform fee.'
-          : 'A $ratePct% platform fee applies to whatever budget is agreed — you\'ll receive $ratePct% '
+          : 'A $ratePct% platform fee applies to whatever budget is agreed. You\'ll receive $ratePct% '
               'less than the client\'s payment as WorkByte\'s service fee.';
     }
 

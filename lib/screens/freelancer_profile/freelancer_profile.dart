@@ -2372,9 +2372,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Consumer<SavedItemsProvider>(
       builder: (context, saved, _) {
         final jobs = saved.savedJobs;
-        final clients = saved.savedClients;
 
-        if (jobs.isEmpty && clients.isEmpty) {
+        if (jobs.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 60),
@@ -2397,7 +2396,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Save jobs or clients to see them here.',
+                    'Save jobs to see them here.',
                     style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
@@ -2493,109 +2492,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           GestureDetector(
                             onTap: () => saved.toggleSaveJob(job),
-                            child: const Icon(
-                              Icons.bookmark_rounded,
-                              color: AppColors.primary,
-                              size: 22,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              if (clients.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Saved Clients',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${clients.length}',
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ...clients.map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.secondary,
-                            backgroundImage:
-                                c.profilePictureUrl != null &&
-                                    c.profilePictureUrl!.startsWith('http')
-                                ? NetworkImage(c.profilePictureUrl!)
-                                : null,
-                            onBackgroundImageError:
-                                c.profilePictureUrl != null &&
-                                    c.profilePictureUrl!.startsWith('http')
-                                ? (_, _) {}
-                                : null,
-                            child:
-                                c.profilePictureUrl == null ||
-                                    !c.profilePictureUrl!.startsWith('http')
-                                ? const Icon(
-                                    Icons.business,
-                                    color: AppColors.primary,
-                                    size: 22,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  c.displayName,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'Client',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => saved.toggleSaveClient(c),
                             child: const Icon(
                               Icons.bookmark_rounded,
                               color: AppColors.primary,

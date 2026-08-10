@@ -16,7 +16,6 @@ import '../../models/freelancer_skill_model.dart';
 import '../../models/portfolio_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/saved_items_provider.dart';
 import '../../screens/client_history/client_history_screen.dart';
 import '../../screens/reviews/freelancer_reviews_screen.dart';
 import '../../screens/reviews/client_reviews_screen.dart';
@@ -1008,29 +1007,6 @@ class _PeopleProfileScreenState extends State<PeopleProfileScreen> {
                   onPressed: () => Share.share(profileShareUrl(_targetUserId!)),
                   icon: const Icon(Icons.share_outlined, color: Colors.white, size: 22),
                 ),
-              Consumer<SavedItemsProvider>(
-                builder: (context, saved, _) {
-                  final isSaved = widget.isClient
-                      ? saved.isClientSaved(widget.client?.clientId ?? '')
-                      : saved.isFreelancerSaved(
-                          widget.freelancer?.freelancerId ?? '',
-                        );
-                  return IconButton(
-                    onPressed: () {
-                      if (widget.isClient && widget.client != null) {
-                        saved.toggleSaveClient(widget.client!);
-                      } else if (!widget.isClient && widget.freelancer != null) {
-                        saved.toggleSaveFreelancer(widget.freelancer!);
-                      }
-                    },
-                    icon: Icon(
-                      isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  );
-                },
-              ),
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (_targetUserId != null && _targetUserId == auth.userId) {

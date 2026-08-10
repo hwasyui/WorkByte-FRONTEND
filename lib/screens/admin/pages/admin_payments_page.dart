@@ -670,9 +670,22 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
                             ),
                           ],
                         ),
+                        if ((item['milestone_title'] as String?)?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Milestone ${item['milestone_sequence_order'] ?? '?'} · ${item['milestone_title']}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF4F46E5),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         Text(
-                          '${item['budget_currency'] ?? 'USD'} ${item['amount']}'
+                          '${item['budget_currency'] ?? 'USD'} ${item['amount']} platform fee'
                           '${(item['reference_number'] as String?)?.isNotEmpty == true ? ' · Ref: ${item['reference_number']}' : ''}',
                           style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
                         ),

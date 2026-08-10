@@ -82,10 +82,6 @@ class AdminProvider extends ChangeNotifier {
   Map<String, dynamic> _flaggedClientReviewsPagination = {};
   String _reviewRedFlagsResolvedFilter = 'all';
   String _reviewRedFlagsSortBy = 'triggered_at';
-  // 'flagged', not 'all': the queue means "needs a human". Under 'all' an
-  // upheld review stayed in the list with only its badge changing, so the
-  // admin who just ruled saw no progress and the item could be ruled on twice.
-  // The all/flagged/suppressed chips are the archive view.
   String _flaggedReviewStatusFilter = 'flagged';
   String _flaggedClientReviewStatusFilter = 'flagged';
   String _flaggedReviewSortBy = 'created_at';
@@ -93,9 +89,6 @@ class AdminProvider extends ChangeNotifier {
   DateTimeRange? _reviewRedFlagsDateRange;
   DateTimeRange? _flaggedReviewsDateRange;
   DateTimeRange? _flaggedClientReviewsDateRange;
-  // Queue sizes for the nav badge. Deliberately NOT read off the three list
-  // paginations above: those follow whatever hold level, date range and page the
-  // admin is looking at, so the badge would shrink as soon as someone filtered.
   int _openReviewRedFlags = 0;
   int _pendingFlaggedReviews = 0;
   int _pendingFlaggedClientReviews = 0;
@@ -244,16 +237,10 @@ class AdminProvider extends ChangeNotifier {
   int get openReviewRedFlags => _openReviewRedFlags;
   int get pendingFlaggedReviews => _pendingFlaggedReviews;
   int get pendingFlaggedClientReviews => _pendingFlaggedClientReviews;
-
-  /// Review Integrity work still waiting on an admin: unresolved red flag
-  /// alerts plus reviews still held at 'flagged'. 'suppressed' is excluded —
-  /// an upheld hold is a decision already taken, not an open item.
   int get pendingReviewIntegrity =>
       _openReviewRedFlags +
       _pendingFlaggedReviews +
       _pendingFlaggedClientReviews;
-
-  /// Everything the AI Analysis nav entry covers.
   int get pendingAiWork =>
       pendingScamFlags + pendingModerationItems + pendingReviewIntegrity;
 
@@ -337,13 +324,8 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider.loadDashboardStats error: $e');
     }
     notifyListeners();
-    // The dashboard endpoint counts held reviews as flagged + suppressed and so
-    // cannot answer "still open"; these three come from the queue endpoints.
     loadReviewIntegrityQueueCounts();
   }
-
-  /// Queue sizes behind the AI Analysis badge. Each call asks for a single row
-  /// and reads the envelope total, so this is three COUNT(*)s, not three pages.
   Future<void> loadReviewIntegrityQueueCounts() async {
     if (_token == null) return;
     Future<int> total(Future<Map<String, dynamic>> request) async {

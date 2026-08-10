@@ -54,37 +54,18 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
   bool get _isClient => widget.viewerRole == 'client';
   bool get _isFreelancer => widget.viewerRole == 'freelancer';
 
-  /// The milestone being paid for. Null on a contract whose milestones could
-  /// not be loaded, or once every one of them is settled.
   ContractMilestoneModel? get _currentMilestone => _milestones.current;
 
-  /// Payment is per milestone now, so the amount owed is that milestone's
-  /// share — not the whole contract. Falls back to the agreed budget only when
-  /// the schedule is unavailable, which keeps a contract payable rather than
-  /// showing a blank figure.
-  double get _payableAmount =>
-      _currentMilestone?.amount ?? widget.contract.agreedBudget;
+  bool get _inCommissionStage =>
+      _milestones.isNotEmpty && _currentMilestone == null;
 
-  /// The milestone carries its own split once the backend has computed it;
-  /// before then the platform rate is applied to the milestone amount.
-  double get _freelancerShare =>
-      _currentMilestone?.payoutAmount ??
-      _payableAmount * (1 - kPlatformCommissionRate);
+  double get _milestoneFreelancerShare =>
+      (_currentMilestone?.amount ?? 0) * (1 - kPlatformCommissionRate);
 
-  double get _commissionShare =>
-      _currentMilestone?.commissionAmount ??
-      _payableAmount * kPlatformCommissionRate;
+  double get _totalCommission =>
+      widget.contract.agreedBudget * kPlatformCommissionRate;
 
   String get _currency => widget.contract.budgetCurrency;
-
-  /// "Final Payment" only when there is nothing left after this milestone —
-  /// on a multi-milestone contract the contract stays open once this is paid.
-  String get _paymentTitle {
-    final milestone = _currentMilestone;
-    if (milestone == null) return 'Final Payment';
-    final isLast = _milestones.isEmpty || milestone == _milestones.last;
-    return isLast ? 'Final Payment' : 'Milestone Payment';
-  }
 
   String? get _milestoneSubtitle {
     final milestone = _currentMilestone;
@@ -93,16 +74,8 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
         ' · ${milestone.title}';
   }
 
-  /// Receipt confirmation is per milestone. Reading the contract-level flag
-  /// would leave milestone 2 looking already-confirmed because milestone 1 set
-  /// it, so the milestone's own timestamp wins whenever the schedule loaded.
-  bool get _freelancerConfirmed {
-    final milestone = _currentMilestone;
-    if (milestone != null) {
-      return milestone.freelancerConfirmedReceiptAt != null;
-    }
-    return widget.contract.freelancerConfirmedReceiptAt != null;
-  }
+  bool get _freelancerConfirmed =>
+      _currentMilestone?.freelancerConfirmedReceiptAt != null;
 
   @override
   void initState() {
@@ -154,39 +127,32 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }
   }
 
-  /// The proof that settles [payee] for the milestone currently being paid.
-  ///
-  /// `GET /contracts/{id}/payment-proof` returns the whole contract's history,
-  /// so an unfiltered match would surface milestone 1's verified proof and make
-  /// milestone 2 look paid. Within a milestone the newest proof wins — a
-  /// rejected upload is followed by a re-upload, and the re-upload is the one
-  /// whose status matters.
-  PaymentProofModel? _proofFor(String payee) {
+  PaymentProofModel? _freelancerProofForCurrentMilestone() {
     final milestoneId = _currentMilestone?.milestoneId;
 
     final matches = _proofs.where((p) {
-      if (p.payee != payee) return false;
+      if (p.payee != 'freelancer') return false;
       if (milestoneId == null) return true;
-      // A proof predating the milestone rollout carries no milestone_id; it
-      // belongs to the only milestone such a contract has.
       return p.milestoneId == null || p.milestoneId == milestoneId;
     }).toList();
 
     if (matches.isEmpty) return null;
-
-    matches.sort((a, b) {
-      final aAt = a.createdAt;
-      final bAt = b.createdAt;
-      if (aAt == null && bAt == null) return 0;
-      if (aAt == null) return -1;
-      if (bAt == null) return 1;
-      return aAt.compareTo(bAt);
-    });
+    matches.sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
     return matches.last;
   }
 
-  Future<void> _openUploadSheet(String payee) async {
-    final expected = payee == 'admin' ? _commissionShare : _freelancerShare;
+  PaymentProofModel? _adminProof() {
+    final matches = _proofs.where((p) => p.payee == 'admin' && p.milestoneId == null).toList();
+    if (matches.isEmpty) return null;
+    matches.sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+    return matches.last;
+  }
+
+  Future<void> _openUploadSheet({
+    required String payee,
+    required double expected,
+    required String title,
+  }) async {
     File? pickedFile;
     final refController = TextEditingController();
     bool submitting = false;
@@ -211,9 +177,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                payee == 'admin'
-                    ? 'Upload proof — platform fee'
-                    : 'Upload proof — freelancer\'s share',
+                title,
                 style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
@@ -273,7 +237,11 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                               file: pickedFile!,
                             );
                             if (ctx.mounted) Navigator.pop(ctx);
-                            AppToast.success('Proof uploaded — awaiting admin verification.');
+                            AppToast.success(
+                              payee == 'admin'
+                                  ? 'Proof uploaded — awaiting admin verification.'
+                                  : 'Proof uploaded — waiting for the freelancer to confirm.',
+                            );
                             await _load();
                             widget.onContractUpdated();
                           } catch (e) {
@@ -307,7 +275,8 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     try {
       final token = context.read<AuthProvider>().token!;
       await _service.confirmReceipt(token: token, contractId: widget.contract.contractId);
-      AppToast.success('Thanks — receipt confirmed.');
+      AppToast.success('Thanks. Receipt confirmed.');
+      await _load();
       widget.onContractUpdated();
     } catch (e) {
       AppToast.error('Failed to confirm receipt: $e');
@@ -329,7 +298,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }
   }
 
-  String _proofStatusLabel(PaymentProofModel? proof) {
+  String _proofStatusLabel(PaymentProofModel? proof, {required bool needsAdminReview}) {
     if (proof == null) return 'Not uploaded yet';
     switch (proof.status) {
       case 'verified':
@@ -337,7 +306,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       case 'rejected':
         return 'Rejected — needs re-upload';
       default:
-        return 'Awaiting admin review';
+        return needsAdminReview ? 'Awaiting admin review' : 'Uploaded — waiting on freelancer';
     }
   }
 
@@ -381,12 +350,13 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     required String payee,
     required String title,
     required double amount,
+    required PaymentProofModel? proof,
+    required bool needsAdminReview,
     String? bankName,
     String? accountNumber,
     String? accountHolder,
     String? missingBankWarning,
   }) {
-    final proof = _proofFor(payee);
     final statusColor = _proofStatusColor(proof?.status);
 
     return Container(
@@ -414,7 +384,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  _proofStatusLabel(proof),
+                  _proofStatusLabel(proof, needsAdminReview: needsAdminReview),
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -455,7 +425,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _openUploadSheet(payee),
+                onPressed: () => _openUploadSheet(payee: payee, expected: amount, title: title),
                 icon: const Icon(Icons.upload_file_rounded, size: 15),
                 label: Text(proof == null ? 'Upload proof' : 'Re-upload proof'),
                 style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
@@ -474,6 +444,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     final isCompleted = widget.contract.status == 'completed' &&
         widget.contract.commissionAmount != null;
 
+    final title = isCompleted
+        ? 'Payment'
+        : (_inCommissionStage ? 'Platform Fee' : 'Milestone Payment');
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,20 +458,17 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isCompleted ? 'Payment' : _paymentTitle,
+                  title,
                   style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
           ),
-          if (!isCompleted && _milestoneSubtitle != null) ...[
+          if (!isCompleted && !_inCommissionStage && _milestoneSubtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               _milestoneSubtitle!,
-              style: GoogleFonts.poppins(
-                fontSize: 11.5,
-                color: const Color(0xFF6B7280),
-              ),
+              style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF6B7280)),
             ),
           ],
           const SizedBox(height: 12),
@@ -508,8 +479,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
             )
           else if (isCompleted)
             ..._buildCompletedSummary()
+          else if (_inCommissionStage)
+            ..._buildCommissionStage()
           else
-            ..._buildPendingPayment(),
+            ..._buildMilestonePaymentStage(),
         ],
       ),
     );
@@ -519,13 +492,13 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     return [
       _breakdownRow('Total budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),
       _breakdownRow(
-        _isClient ? "Freelancer received" : "You received",
-        '$_currency ${(widget.contract.payoutAmount ?? _freelancerShare).toStringAsFixed(2)}',
+        _isClient ? "Freelancer received (total)" : "You received (total)",
+        '$_currency ${(widget.contract.payoutAmount ?? (widget.contract.agreedBudget - _totalCommission)).toStringAsFixed(2)}',
         bold: true,
       ),
       _breakdownRow(
-        'Platform fee (${(kPlatformCommissionRate * 100).toStringAsFixed(0)}%)',
-        '$_currency ${(widget.contract.commissionAmount ?? _commissionShare).toStringAsFixed(2)}',
+        'Platform fee (${(kPlatformCommissionRate * 100).toStringAsFixed(0)}% of total)',
+        '$_currency ${(widget.contract.commissionAmount ?? _totalCommission).toStringAsFixed(2)}',
       ),
       if (widget.contract.completedByAdminOverride)
         Padding(
@@ -538,42 +511,30 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     ];
   }
 
-  List<Widget> _buildPendingPayment() {
-    final freelancerConfirmed = _freelancerConfirmed;
+  List<Widget> _buildMilestonePaymentStage() {
     final milestone = _currentMilestone;
-    final isLast = milestone != null &&
-        (_milestones.isEmpty || milestone == _milestones.last);
-    final what = milestone == null
-        ? 'This contract\'s work is'
-        : 'The work for "${milestone.title}" is';
-    final settles = isLast
-        ? 'the contract completes'
-        : 'the next milestone unlocks';
+    final proof = _freelancerProofForCurrentMilestone();
 
     return [
       Text(
         _isClient
-            ? '$what approved. Transfer each share directly and upload proof — '
-                '$settles once the platform verifies its share and the freelancer '
-                'confirms receiving theirs.'
-            : '$what approved and the client is completing payment. Once you\'ve '
-                'received your share directly in your bank account, confirm it below.',
+            ? milestone == null
+                ? 'This milestone is approved. Transfer the freelancer\'s share directly and upload proof.'
+                : 'The work for "${milestone.title}" is approved. Transfer the freelancer\'s share directly '
+                    'and upload proof. The next milestone unlocks once they confirm receiving it.'
+            : 'The client is paying you for this milestone. Once you\'ve received your share directly in '
+                'your bank account, confirm it below.',
         style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
       ),
       if (milestone != null)
-        _breakdownRow(
-          'Milestone amount',
-          '$_currency ${milestone.amount.toStringAsFixed(2)}',
-        ),
-      _breakdownRow(
-        'Total contract budget',
-        '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}',
-      ),
+        _breakdownRow('Milestone amount', '$_currency ${milestone.amount.toStringAsFixed(2)}'),
       const SizedBox(height: 6),
       _payeeBlock(
         payee: 'freelancer',
         title: "Freelancer's share (90%)",
-        amount: _freelancerShare,
+        amount: _milestoneFreelancerShare,
+        proof: proof,
+        needsAdminReview: false,
         bankName: _freelancerPayout?.bankName,
         accountNumber: _freelancerPayout?.accountNumber,
         accountHolder: _freelancerPayout?.accountHolderName,
@@ -582,58 +543,91 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                 'Settings before you can send this share.'
             : null,
       ),
-      _payeeBlock(
-        payee: 'admin',
-        title: "Platform fee (10%)",
-        amount: _commissionShare,
-        bankName: AdminPayoutInfo.bankName,
-        accountNumber: AdminPayoutInfo.accountNumber,
-        accountHolder: AdminPayoutInfo.accountHolderName,
-      ),
       if (_isFreelancer) ...[
         const SizedBox(height: 14),
-        if (freelancerConfirmed)
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF059669)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'You confirmed receiving your share. Waiting on the platform\'s own proof '
-                    'to be verified before ${isLast ? 'the contract closes' : 'the next milestone opens'}.',
-                    style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF065F46)),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (_isConfirming || _freelancerConfirmed) ? null : _confirmReceipt,
+            icon: _isConfirming
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Icon(
+                    _freelancerConfirmed
+                        ? Icons.check_circle_rounded
+                        : Icons.check_circle_outline_rounded,
+                    size: 16,
                   ),
-                ),
-              ],
-            ),
-          )
-        else
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isConfirming ? null : _confirmReceipt,
-              icon: _isConfirming
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle_outline_rounded, size: 16),
-              label: const Text('I\'ve received my payment'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            label: Text(_freelancerConfirmed ? 'Payment Confirmed' : 'I\'ve received my payment'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFFE5E7EB),
+              disabledForegroundColor: const Color(0xFF6B7280),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
+        ),
       ],
+    ];
+  }
+
+  List<Widget> _buildCommissionStage() {
+    final proof = _adminProof();
+
+    return [
+      Text(
+        _isClient
+            ? 'All milestones are paid. Transfer the platform fee directly and upload proof — '
+                'the contract completes once the admin verifies it.'
+            : 'You\'ve been paid in full for every milestone. The client is now settling the platform '
+                'fee with WorkByte directly — nothing left for you to do here.',
+        style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
+      ),
+      _breakdownRow('Total contract budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),
+      _breakdownRow(
+        _isClient ? "Freelancer received (total)" : "You received (total)",
+        '$_currency ${(widget.contract.agreedBudget - _totalCommission).toStringAsFixed(2)}',
+        bold: true,
+      ),
+      const SizedBox(height: 6),
+      if (_isClient)
+        _payeeBlock(
+          payee: 'admin',
+          title: "Platform fee (${(kPlatformCommissionRate * 100).toStringAsFixed(0)}% of total)",
+          amount: _totalCommission,
+          proof: proof,
+          needsAdminReview: true,
+          bankName: AdminPayoutInfo.bankName,
+          accountNumber: AdminPayoutInfo.accountNumber,
+          accountHolder: AdminPayoutInfo.accountHolderName,
+        )
+      else
+        Container(
+          margin: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.hourglass_top_rounded, size: 16, color: Color(0xFF4F46E5)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Waiting on the client to pay WorkByte\'s platform fee and an admin to verify it. '
+                  'The contract will show as completed once that\'s done.',
+                  style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF3730A3)),
+                ),
+              ),
+            ],
+          ),
+        ),
     ];
   }
 }
