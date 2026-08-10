@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import '../models/contract_milestone_model.dart';
 import '../models/contract_model.dart';
 import 'session_guard.dart';
 
@@ -206,6 +207,39 @@ class ContractService {
       return ContractModel.fromJson(body['data'] ?? body['details'] ?? body);
     }
     throw _failure(res, body, 'Failed to load contract');
+  }
+
+  /// The contract's milestone schedule, already ordered by `sequence_order`.
+  /// Sorted again here because the list drives an ordered stepper and a
+  /// mis-ordered response would silently mislabel which milestone is current.
+  Future<List<ContractMilestoneModel>> getContractMilestones(
+    String token,
+    String contractId,
+  ) async {
+    final res = await SessionGuard.guard(
+      token,
+      (t) => http.get(
+        Uri.parse('$_baseUrl/contracts/$contractId/milestones'),
+        headers: _headers(t),
+      ).timeout(const Duration(seconds: 20)),
+    );
+    final body = jsonDecode(res.body);
+    debugPrint('GET /contracts/$contractId/milestones status: ${res.statusCode}');
+    if (res.statusCode == 200) {
+      final details = body is Map ? body['details'] : null;
+      final list = (details is Map && details['items'] != null)
+          ? details['items']
+          : (details is List ? details : (body is Map ? body['data'] ?? [] : body));
+      if (list is! List) return const [];
+      final milestones = list
+          .map(
+            (e) => ContractMilestoneModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList()
+        ..sort((a, b) => a.sequenceOrder.compareTo(b.sequenceOrder));
+      return milestones;
+    }
+    throw _failure(res, body, 'Failed to load milestones');
   }
 
   Future<Map<String, dynamic>> getContractGenerationData(

@@ -841,7 +841,6 @@ class _ClientJobDetailScreenState extends State<ClientJobDetailScreen> {
                   // Null when the freelancer bid without proposing a duration,
                   // in which case the client sets it freely.
                   'proposed_duration': proposal.proposedDuration,
-                  'payment_structure': 'full_payment',
                   'start_date': DateTime.now().toString().substring(0, 10),
                 },
               ),

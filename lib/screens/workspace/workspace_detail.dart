@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../models/contract_milestone_model.dart';
 import '../../models/contract_model.dart';
 import '../../models/contract_submission_model.dart';
 import '../../models/proposal_model.dart';
@@ -48,6 +49,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   bool _isLoadingProposal = false;
   final ProposalService _proposalService = ProposalService();
 
+  List<ContractMilestoneModel> _milestones = const [];
+  bool _isLoadingMilestones = true;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +60,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSubmissions();
+      _fetchMilestones();
     });
   }
 
@@ -177,6 +182,32 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
+  Future<void> _fetchMilestones() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    final milestones = await context.read<ContractProvider>().fetchMilestones(
+      token,
+      _contract.contractId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _milestones = milestones;
+      _isLoadingMilestones = false;
+    });
+  }
+
+  /// The milestone the contract is working through, or null once they are all
+  /// settled (or before the schedule has loaded).
+  ContractMilestoneModel? get _currentMilestone => _milestones.current;
+
+  /// A contract sitting at `active` is either brand new or has just had its
+  /// next milestone unlocked by a completed payment. Only the milestone list
+  /// can tell those apart, and the copy shown to both parties differs.
+  bool get _isMidContract => _milestones.hasPaidEarlierMilestone;
+
+  /// Refreshes the contract and, with it, the milestone schedule. A status
+  /// change is usually a milestone advancing, so re-reading one without the
+  /// other leaves the screen describing two different points in time.
   Future<void> _refreshContractStatus() async {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
@@ -189,6 +220,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     if (latest != null && latest.contractId == _contract.contractId) {
       setState(() => _contract = latest);
     }
+    await _fetchMilestones();
   }
 
   Future<void> _submitWork(List<File> files, String note) async {
@@ -335,8 +367,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           ),
         );
       } else {
+        // Approving unlocks payment for the milestone that was just reviewed,
+        // which is only the *last* step when nothing follows it.
+        final milestone = _currentMilestone;
+        final isFinal = milestone == null || milestone == _milestones.last;
         _showSnack(
-          'All work approved! Proceed to payment to complete the contract.',
+          isFinal
+              ? 'Work approved! Proceed to payment to complete the contract.'
+              : 'Milestone approved! Pay it to unlock the next milestone.',
           isError: false,
         );
       }
@@ -385,6 +423,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             _buildAutoApproveCountdown(submissionProvider),
           _buildContractInfo(),
           const SizedBox(height: 16),
+          _buildMilestoneProgress(),
+          if (!_isLoadingMilestones && _milestones.isNotEmpty)
+            const SizedBox(height: 16),
           _buildPartiesCard(),
           const SizedBox(height: 16),
           _buildProposalSummary(),
@@ -694,17 +735,245 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               _contract.agreedDuration!,
             ),
           ],
-          const SizedBox(height: 8),
-          _buildInfoRow(
-            Icons.payment_outlined,
-            'Payment',
-            _contract.paymentStructure == 'milestone_based'
-                ? 'Milestone Based'
-                : 'Full Payment',
+          if (_milestones.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              Icons.payment_outlined,
+              'Payment',
+              _milestones.length == 1
+                  ? '1 milestone'
+                  : '${_milestones.length} milestones',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// An ordered view of the milestone schedule. Milestones unlock strictly in
+  /// sequence, so this doubles as the contract's progress indicator: everything
+  /// above the current row is paid, everything below it is locked.
+  Widget _buildMilestoneProgress() {
+    if (_isLoadingMilestones) {
+      return _buildCard(
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_milestones.isEmpty) return const SizedBox.shrink();
+
+    final current = _currentMilestone;
+    final allDone = current == null;
+
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('Milestones', style: AppText.h3)),
+              _buildMiniStatusChip(
+                allDone
+                    ? 'All ${_milestones.length} paid'
+                    : 'Milestone ${_milestones.currentPosition} '
+                          'of ${_milestones.length}',
+                color: allDone ? const Color(0xFF4CAF50) : AppColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${_milestones.completedCount} of ${_milestones.length} paid · '
+            '${_contract.budgetCurrency} '
+            '${_milestones.totalAmount.toStringAsFixed(0)} total',
+            style: AppText.caption.copyWith(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(_milestones.length, (index) {
+            return _buildMilestoneRow(
+              _milestones[index],
+              index,
+              isLast: index == _milestones.length - 1,
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMilestoneRow(
+    ContractMilestoneModel milestone,
+    int index, {
+    required bool isLast,
+  }) {
+    final isCurrent = milestone == _currentMilestone;
+    final color = _milestoneStatusColor(milestone);
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // The rail: a numbered dot per milestone, joined by a connector so
+          // the sequence reads as one ordered track rather than loose cards.
+          Column(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: milestone.isCompleted ? color : Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color, width: 2),
+                ),
+                child: Center(
+                  child: milestone.isCompleted
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : milestone.isLocked
+                      ? Icon(Icons.lock_outline_rounded, size: 12, color: color)
+                      : Text(
+                          '${index + 1}',
+                          style: AppText.overline.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    color: milestone.isCompleted
+                        ? color.withOpacity(0.4)
+                        : Colors.grey.shade200,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(bottom: isLast ? 0 : 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isCurrent ? const Color(0xFFF7FCFC) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isCurrent ? color.withOpacity(0.35) : Colors.grey.shade200,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          milestone.title,
+                          style: AppText.bodySemiBold.copyWith(
+                            color: milestone.isLocked
+                                ? Colors.grey.shade500
+                                : const Color(0xFF333333),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_contract.budgetCurrency} '
+                        '${milestone.amount.toStringAsFixed(0)}',
+                        style: AppText.captionSemiBold.copyWith(
+                          color: milestone.isLocked
+                              ? Colors.grey.shade500
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      _buildMiniStatusChip(
+                        _milestoneStatusLabel(milestone),
+                        color: color,
+                      ),
+                      if (milestone.dueDate != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Due ${_formatDate(milestone.dueDate)}',
+                            style: AppText.overline.copyWith(
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if ((milestone.description ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      milestone.description!.trim(),
+                      style: AppText.caption.copyWith(
+                        color: milestone.isLocked
+                            ? Colors.grey.shade500
+                            : const Color(0xFF444444),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                  if (milestone.completedByAdminOverride) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Marked complete by admin override.',
+                      style: AppText.overline.copyWith(
+                        color: const Color(0xFFD97706),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// "Milestone 2 · Implementation" for the milestone a submission, approval or
+  /// revision applies to. Null when the schedule has not loaded, or for a
+  /// submission written before milestones existed — the label is context and
+  /// should simply be absent rather than guessed at.
+  String? _milestoneLabelFor(String? milestoneId) {
+    if (milestoneId == null || _milestones.isEmpty) return null;
+    final index = _milestones.indexWhere((m) => m.milestoneId == milestoneId);
+    if (index < 0) return null;
+    return 'Milestone ${index + 1} · ${_milestones[index].title}';
+  }
+
+  Color _milestoneStatusColor(ContractMilestoneModel milestone) {
+    if (milestone.isCompleted) return const Color(0xFF4CAF50);
+    if (milestone.isLocked) return Colors.grey;
+    return _statusColor(milestone.status);
+  }
+
+  String _milestoneStatusLabel(ContractMilestoneModel milestone) {
+    if (milestone.isCompleted) return 'Paid';
+    if (milestone.isLocked) return 'Locked';
+    return _statusLabel(milestone.status);
   }
 
   Widget _buildPartiesCard() {
@@ -1109,6 +1378,27 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               ),
             ],
           ),
+          if (_milestoneLabelFor(submission.milestoneId) != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.flag_outlined,
+                  size: 13,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    _milestoneLabelFor(submission.milestoneId)!,
+                    style: AppText.overline.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (submission.note != null &&
               submission.note!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -2157,7 +2447,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               Text('Submit Work', style: AppText.h2),
               const SizedBox(height: 4),
               Text(
-                'Upload your deliverables and add a note for the client.',
+                'Upload your deliverables$_currentMilestoneSuffix and add a '
+                'note for the client.',
                 style: AppText.caption.copyWith(color: Colors.grey.shade500),
               ),
               const SizedBox(height: 20),
@@ -2343,7 +2634,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             Text('Request Revision', style: AppText.h2),
             const SizedBox(height: 4),
             Text(
-              'Describe what changes you need from the freelancer.',
+              'Describe what changes you need from the freelancer'
+              '$_currentMilestoneSuffix.',
               style: AppText.caption.copyWith(color: Colors.grey.shade500),
             ),
             const SizedBox(height: 20),
@@ -2403,13 +2695,22 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   }
 
   void _showApproveDialog() {
+    final milestone = _currentMilestone;
+    final isFinal = milestone == null || milestone == _milestones.last;
+    // Approving opens payment, and payment is what closes a milestone. Only the
+    // last milestone's payment closes the contract.
+    final consequence = isFinal
+        ? 'This opens the final payment, which completes the contract.'
+        : 'This opens payment for "${milestone.title}". The next milestone '
+              'unlocks once that payment is settled.';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Approve Work', style: AppText.h2),
         content: Text(
-          'Are you sure you want to approve this submission? This will mark the contract as completed.',
+          'Are you sure you want to approve this submission? $consequence',
           style: AppText.body.copyWith(color: Colors.grey.shade600),
         ),
         actions: [
@@ -2578,7 +2879,31 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
+  /// The name of the milestone the current status refers to, ready to drop into
+  /// a sentence. Empty when the schedule has not loaded, so the copy falls back
+  /// to the contract-wide wording it used before milestones existed.
+  String get _currentMilestoneSuffix {
+    final milestone = _currentMilestone;
+    if (milestone == null || _milestones.length < 2) return '';
+    return ' for "${milestone.title}"';
+  }
+
   String? _statusHint(String status, String role) {
+    // `active` no longer means "brand new". Once a milestone is paid the
+    // contract drops back to `active` with the next one unlocked, and the only
+    // way to tell those apart is whether anything earlier is already completed.
+    if (status == 'active' && _isMidContract) {
+      final position = _milestones.currentPosition;
+      final total = _milestones.length;
+      final title = _currentMilestone?.title;
+      final named = title == null ? '' : ' — "$title"';
+      return role == 'freelancer'
+          ? 'Milestone ${position - 1} was paid. Milestone $position of '
+                '$total$named is now open — submit when ready'
+          : 'Milestone ${position - 1} was paid. Waiting for the freelancer to '
+                'submit milestone $position of $total$named';
+    }
+
     if (role == 'freelancer') {
       switch (status) {
         case 'active':
@@ -2588,7 +2913,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         case 'revision_requested':
           return 'The client requested changes — resubmit when done';
         case 'pending_payment':
-          return 'All work approved — waiting for the client to pay';
+          return 'Work approved$_currentMilestoneSuffix — waiting for the '
+              'client to pay';
         case 'payment_review':
           return 'Payment is being processed — see Final Payment below';
         case 'payment_rejected':
@@ -2607,7 +2933,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         case 'revision_requested':
           return 'Waiting for the freelancer to resubmit';
         case 'pending_payment':
-          return 'All milestones approved — complete payment below';
+          return 'Work approved$_currentMilestoneSuffix — complete payment '
+              'below';
         case 'payment_review':
           return 'Your payment proof is awaiting admin verification';
         case 'payment_rejected':

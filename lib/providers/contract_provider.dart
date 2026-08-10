@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../models/contract_milestone_model.dart';
 import '../models/contract_model.dart';
 import '../services/contract_service.dart';
 
@@ -10,10 +11,20 @@ class ContractProvider extends ChangeNotifier {
   String? _error;
   bool _isLoading = false;
 
+  /// Milestone schedules keyed by contract id. Cached per contract rather than
+  /// held as a single "current" list because the workspace and the payment
+  /// section both read it, and they are rebuilt independently.
+  final Map<String, List<ContractMilestoneModel>> _milestones = {};
+
   List<ContractModel> get contracts => _contracts;
   ContractModel? get currentContract => _currentContract;
   String? get error => _error;
   bool get isLoading => _isLoading;
+
+  /// The last loaded schedule for [contractId], or an empty list if it has not
+  /// been fetched yet.
+  List<ContractMilestoneModel> milestonesFor(String contractId) =>
+      _milestones[contractId] ?? const [];
 
   Future<void> fetchAllContracts(String token) async {
     _isLoading = true;
@@ -76,6 +87,27 @@ class ContractProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// Loads the milestone schedule for [contractId]. Returns an empty list on
+  /// failure rather than throwing — the schedule decorates the contract screens
+  /// and should never be the reason they fail to render.
+  Future<List<ContractMilestoneModel>> fetchMilestones(
+    String token,
+    String contractId,
+  ) async {
+    try {
+      final milestones = await _service.getContractMilestones(
+        token,
+        contractId,
+      );
+      _milestones[contractId] = milestones;
+      notifyListeners();
+      return milestones;
+    } catch (e) {
+      debugPrint('Failed to fetch milestones for $contractId: $e');
+      return _milestones[contractId] ?? const [];
+    }
   }
 
   Future<Map<String, dynamic>> fetchGenerationData(

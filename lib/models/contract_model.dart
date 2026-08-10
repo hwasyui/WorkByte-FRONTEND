@@ -9,7 +9,6 @@ class ContractModel {
   final String roleTitle;
   final double agreedBudget;
   final String budgetCurrency;
-  final String paymentStructure;
   final String status;
   final String? startDate;
   final String? endDate;
@@ -49,7 +48,6 @@ class ContractModel {
     required this.roleTitle,
     required this.agreedBudget,
     required this.budgetCurrency,
-    required this.paymentStructure,
     this.status = 'pending',
     this.startDate,
     this.endDate,
@@ -85,7 +83,6 @@ class ContractModel {
     roleTitle: json['role_title'] as String? ?? '',
     agreedBudget: (json['agreed_budget'] as num?)?.toDouble() ?? 0.0,
     budgetCurrency: json['budget_currency'] as String? ?? 'USD',
-    paymentStructure: json['payment_structure'] as String? ?? 'fixed',
     status: json['status'] as String? ?? 'pending',
     startDate: json['start_date']?.toString(),
     endDate: json['end_date']?.toString(),
@@ -120,7 +117,6 @@ class ContractModel {
     'role_title': roleTitle,
     'agreed_budget': agreedBudget,
     'budget_currency': budgetCurrency,
-    'payment_structure': paymentStructure,
     'status': status,
     if (startDate != null) 'start_date': startDate,
     if (endDate != null) 'end_date': endDate,
@@ -148,7 +144,6 @@ class ContractModel {
     roleTitle: roleTitle,
     agreedBudget: agreedBudget,
     budgetCurrency: budgetCurrency,
-    paymentStructure: paymentStructure,
     status: status ?? this.status,
     startDate: startDate,
     endDate: endDate ?? this.endDate,

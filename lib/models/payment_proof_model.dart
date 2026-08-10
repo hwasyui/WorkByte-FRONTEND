@@ -1,6 +1,12 @@
 class PaymentProofModel {
   final String proofId;
   final String contractId;
+
+  /// The milestone this proof pays for. `GET /contracts/{id}/payment-proof`
+  /// returns the whole contract's history, so proofs must be filtered by this
+  /// before deciding whether the *current* milestone has been paid.
+  final String? milestoneId;
+
   final String payee;
   final double amount;
   final String? referenceNumber;
@@ -16,6 +22,7 @@ class PaymentProofModel {
   const PaymentProofModel({
     required this.proofId,
     required this.contractId,
+    this.milestoneId,
     required this.payee,
     required this.amount,
     this.referenceNumber,
@@ -39,6 +46,7 @@ class PaymentProofModel {
     return PaymentProofModel(
       proofId: json['proof_id']?.toString() ?? '',
       contractId: json['contract_id']?.toString() ?? '',
+      milestoneId: json['milestone_id']?.toString(),
       payee: json['payee']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       referenceNumber: json['reference_number']?.toString(),

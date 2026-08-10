@@ -7,10 +7,12 @@ import 'package:provider/provider.dart';
 
 import '../core/constants/colors.dart';
 import '../core/constants/payment_config.dart';
+import '../models/contract_milestone_model.dart';
 import '../models/contract_model.dart';
 import '../models/payment_proof_model.dart';
 import '../models/payout_info_model.dart';
 import '../providers/auth_provider.dart';
+import '../providers/contract_provider.dart';
 import '../services/payment_service.dart';
 import 'app_toast.dart';
 
@@ -44,6 +46,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
   final PaymentService _service = PaymentService();
 
   List<PaymentProofModel> _proofs = [];
+  List<ContractMilestoneModel> _milestones = const [];
   PayoutInfoModel? _freelancerPayout;
   bool _isLoading = true;
   bool _isConfirming = false;
@@ -51,11 +54,55 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
   bool get _isClient => widget.viewerRole == 'client';
   bool get _isFreelancer => widget.viewerRole == 'freelancer';
 
+  /// The milestone being paid for. Null on a contract whose milestones could
+  /// not be loaded, or once every one of them is settled.
+  ContractMilestoneModel? get _currentMilestone => _milestones.current;
+
+  /// Payment is per milestone now, so the amount owed is that milestone's
+  /// share — not the whole contract. Falls back to the agreed budget only when
+  /// the schedule is unavailable, which keeps a contract payable rather than
+  /// showing a blank figure.
+  double get _payableAmount =>
+      _currentMilestone?.amount ?? widget.contract.agreedBudget;
+
+  /// The milestone carries its own split once the backend has computed it;
+  /// before then the platform rate is applied to the milestone amount.
   double get _freelancerShare =>
-      widget.contract.agreedBudget * (1 - kPlatformCommissionRate);
+      _currentMilestone?.payoutAmount ??
+      _payableAmount * (1 - kPlatformCommissionRate);
+
   double get _commissionShare =>
-      widget.contract.agreedBudget * kPlatformCommissionRate;
+      _currentMilestone?.commissionAmount ??
+      _payableAmount * kPlatformCommissionRate;
+
   String get _currency => widget.contract.budgetCurrency;
+
+  /// "Final Payment" only when there is nothing left after this milestone —
+  /// on a multi-milestone contract the contract stays open once this is paid.
+  String get _paymentTitle {
+    final milestone = _currentMilestone;
+    if (milestone == null) return 'Final Payment';
+    final isLast = _milestones.isEmpty || milestone == _milestones.last;
+    return isLast ? 'Final Payment' : 'Milestone Payment';
+  }
+
+  String? get _milestoneSubtitle {
+    final milestone = _currentMilestone;
+    if (milestone == null || _milestones.isEmpty) return null;
+    return 'Milestone ${_milestones.currentPosition} of ${_milestones.length}'
+        ' · ${milestone.title}';
+  }
+
+  /// Receipt confirmation is per milestone. Reading the contract-level flag
+  /// would leave milestone 2 looking already-confirmed because milestone 1 set
+  /// it, so the milestone's own timestamp wins whenever the schedule loaded.
+  bool get _freelancerConfirmed {
+    final milestone = _currentMilestone;
+    if (milestone != null) {
+      return milestone.freelancerConfirmedReceiptAt != null;
+    }
+    return widget.contract.freelancerConfirmedReceiptAt != null;
+  }
 
   @override
   void initState() {
@@ -77,10 +124,17 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }
     setState(() => _isLoading = true);
     try {
-      final proofs = await _service.getPaymentProofs(
-        token: token,
-        contractId: widget.contract.contractId,
-      );
+      final contractProvider = context.read<ContractProvider>();
+      final results = await Future.wait([
+        _service.getPaymentProofs(
+          token: token,
+          contractId: widget.contract.contractId,
+        ),
+        contractProvider.fetchMilestones(token, widget.contract.contractId),
+      ]);
+      final proofs = results[0] as List<PaymentProofModel>;
+      final milestones = results[1] as List<ContractMilestoneModel>;
+
       final payout = _isClient
           ? await _service.getPayoutInfo(
               token: token,
@@ -90,6 +144,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       if (!mounted) return;
       setState(() {
         _proofs = proofs;
+        _milestones = milestones;
         _freelancerPayout = payout;
       });
     } catch (e) {
@@ -99,11 +154,35 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }
   }
 
+  /// The proof that settles [payee] for the milestone currently being paid.
+  ///
+  /// `GET /contracts/{id}/payment-proof` returns the whole contract's history,
+  /// so an unfiltered match would surface milestone 1's verified proof and make
+  /// milestone 2 look paid. Within a milestone the newest proof wins — a
+  /// rejected upload is followed by a re-upload, and the re-upload is the one
+  /// whose status matters.
   PaymentProofModel? _proofFor(String payee) {
-    for (final p in _proofs) {
-      if (p.payee == payee) return p;
-    }
-    return null;
+    final milestoneId = _currentMilestone?.milestoneId;
+
+    final matches = _proofs.where((p) {
+      if (p.payee != payee) return false;
+      if (milestoneId == null) return true;
+      // A proof predating the milestone rollout carries no milestone_id; it
+      // belongs to the only milestone such a contract has.
+      return p.milestoneId == null || p.milestoneId == milestoneId;
+    }).toList();
+
+    if (matches.isEmpty) return null;
+
+    matches.sort((a, b) {
+      final aAt = a.createdAt;
+      final bAt = b.createdAt;
+      if (aAt == null && bAt == null) return 0;
+      if (aAt == null) return -1;
+      if (bAt == null) return 1;
+      return aAt.compareTo(bAt);
+    });
+    return matches.last;
   }
 
   Future<void> _openUploadSheet(String payee) async {
@@ -403,12 +482,24 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
             children: [
               const Icon(Icons.payments_rounded, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text(
-                isCompleted ? 'Payment' : 'Final Payment',
-                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  isCompleted ? 'Payment' : _paymentTitle,
+                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
+          if (!isCompleted && _milestoneSubtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              _milestoneSubtitle!,
+              style: GoogleFonts.poppins(
+                fontSize: 11.5,
+                color: const Color(0xFF6B7280),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (_isLoading)
             const Padding(
@@ -448,19 +539,36 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
   }
 
   List<Widget> _buildPendingPayment() {
-    final freelancerConfirmed = widget.contract.freelancerConfirmedReceiptAt != null;
+    final freelancerConfirmed = _freelancerConfirmed;
+    final milestone = _currentMilestone;
+    final isLast = milestone != null &&
+        (_milestones.isEmpty || milestone == _milestones.last);
+    final what = milestone == null
+        ? 'This contract\'s work is'
+        : 'The work for "${milestone.title}" is';
+    final settles = isLast
+        ? 'the contract completes'
+        : 'the next milestone unlocks';
 
     return [
       Text(
         _isClient
-            ? 'All milestones are approved. Transfer each share directly and upload proof — '
-                'the contract completes once the platform verifies its share and the freelancer '
+            ? '$what approved. Transfer each share directly and upload proof — '
+                '$settles once the platform verifies its share and the freelancer '
                 'confirms receiving theirs.'
-            : 'All milestones are approved and the client is completing payment. Once you\'ve '
+            : '$what approved and the client is completing payment. Once you\'ve '
                 'received your share directly in your bank account, confirm it below.',
         style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
       ),
-      _breakdownRow('Total budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),
+      if (milestone != null)
+        _breakdownRow(
+          'Milestone amount',
+          '$_currency ${milestone.amount.toStringAsFixed(2)}',
+        ),
+      _breakdownRow(
+        'Total contract budget',
+        '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}',
+      ),
       const SizedBox(height: 6),
       _payeeBlock(
         payee: 'freelancer',
@@ -498,7 +606,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                 Expanded(
                   child: Text(
                     'You confirmed receiving your share. Waiting on the platform\'s own proof '
-                    'to be verified before the contract closes.',
+                    'to be verified before ${isLast ? 'the contract closes' : 'the next milestone opens'}.',
                     style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF065F46)),
                   ),
                 ),

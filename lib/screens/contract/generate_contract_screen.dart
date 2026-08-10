@@ -48,22 +48,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     vertical: 14,
   );
 
-  static const Map<String, String> _paymentStructureLabels = {
-    'full_payment': 'Full Payment',
-    'milestone_based': 'Milestone Based',
-  };
-
   static const Map<String, String> _disputeResolutionLabels = {
     'negotiation': 'Negotiation',
     'mediation': 'Mediation',
     'arbitration': 'Arbitration',
-  };
-
-  static const Map<String, String> _fullPaymentTimingLabels = {
-    'upfront': '100% upfront',
-    'on_completion': '100% on completion',
-    '50_50': '50% upfront, 50% on completion',
-    'custom': 'Custom arrangement',
   };
 
   ContractModel? _contract;
@@ -93,8 +81,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
   final TextEditingController _durationValueController =
       TextEditingController();
-  final TextEditingController _customFullPaymentController =
-      TextEditingController();
 
   /// Locked to the job role's currency — the proposal has no currency of its
   /// own, so letting the client pick one could turn a 5,000,000 IDR bid into a
@@ -123,7 +109,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   /// and be rejected as a locked-field mismatch.
   double? _lockedBudget;
 
-  String _selectedPaymentStructure = 'full_payment';
   String? _selectedTerminationNotice = '30';
   String? _selectedDisputeResolution = 'negotiation';
   bool _confidentiality = false;
@@ -131,8 +116,10 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
   int? _revisionRounds = 2;
 
   String _selectedDurationUnit = 'months';
-  String _selectedFullPaymentTiming = 'upfront';
 
+  /// Every contract is milestone based now, so the builder always starts with
+  /// one row. Their amounts must add up to the agreed budget exactly — the
+  /// backend rejects the create with a 422 otherwise.
   final List<_MilestoneItem> _milestones = [_MilestoneItem()];
 
   @override
@@ -168,7 +155,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _revisionRoundsController.dispose();
     _latePaymentPenaltyController.dispose();
     _durationValueController.dispose();
-    _customFullPaymentController.dispose();
 
     for (final m in _milestones) {
       m.dispose();
@@ -226,10 +212,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         ? contract.budgetCurrency
         : 'IDR';
 
-    _selectedPaymentStructure = contract.paymentStructure.isNotEmpty
-        ? contract.paymentStructure
-        : 'full_payment';
-
     _startDate = contract.startDate;
 
     _lockedDurationText = contract.agreedDuration;
@@ -241,6 +223,36 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     _endDateController.text = contract.endDate ?? '';
 
     await _hydrateContractTerms(token);
+    await _hydrateMilestones(token);
+  }
+
+  /// Shows the schedule the contract was actually created with. Read straight
+  /// off `GET /contracts/{id}/milestones` rather than parsed back out of the
+  /// `payment_schedule` prose, which is a rendering of it and not its source.
+  Future<void> _hydrateMilestones(String token) async {
+    final milestones = await context.read<ContractProvider>().fetchMilestones(
+      token,
+      _contractId!,
+    );
+    if (milestones.isEmpty || !mounted) return;
+
+    final rows = milestones.map((m) {
+      final item = _MilestoneItem();
+      item.titleController.text = m.title;
+      item.descriptionController.text = m.description ?? '';
+      item.amountController.text = _formatBudget(m.amount);
+      item.dueDate = m.dueDate;
+      return item;
+    }).toList();
+
+    setState(() {
+      for (final m in _milestones) {
+        m.dispose();
+      }
+      _milestones
+        ..clear()
+        ..addAll(rows);
+    });
   }
 
   void _prefillFromDraft() {
@@ -256,11 +268,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     final currency = draft['budget_currency'] as String?;
     if (currency != null && currency.isNotEmpty) {
       _budgetCurrency = currency;
-    }
-
-    final paymentStructure = draft['payment_structure'] as String?;
-    if (paymentStructure != null && paymentStructure.isNotEmpty) {
-      _selectedPaymentStructure = paymentStructure;
     }
 
     _startDate = draft['start_date'] as String?;
@@ -360,65 +367,8 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       _additionalClausesController.text =
           terms['additional_clauses'] as String? ?? '';
 
-      _hydratePaymentSchedule(terms['payment_schedule'] as String? ?? '');
     } catch (e) {
       debugPrint('Failed to hydrate contract terms: $e');
-    }
-  }
-
-  void _hydratePaymentSchedule(String scheduleText) {
-    if (scheduleText.trim().isEmpty) return;
-
-    if (_selectedPaymentStructure == 'milestone_based') {
-      final lines = scheduleText
-          .split('\n')
-          .map((l) => l.trim())
-          .where((l) => l.isNotEmpty)
-          .toList();
-      if (lines.isEmpty) return;
-
-      // The note is the trailing parenthesised run, not everything between the
-      // first '(' and the last one: a greedy group swallows a title like
-      // "Wireframes (v2)" along with the percentage that follows it.
-      final lineRegex = RegExp(
-        r'^Milestone\s+\d+\s*:\s*(.+?)(?:\s*-\s*([\d.]+)%\s*payment)?(?:\s*\(([^()]*)\))?$',
-      );
-      final parsed = <_MilestoneItem>[];
-      for (final line in lines) {
-        final match = lineRegex.firstMatch(line);
-        final item = _MilestoneItem();
-        if (match != null) {
-          final title = match.group(1)?.trim() ?? '';
-          item.titleController.text = title == 'Unnamed milestone'
-              ? ''
-              : title;
-          item.percentageController.text = match.group(2)?.trim() ?? '';
-          item.noteController.text = match.group(3)?.trim() ?? '';
-        } else {
-          item.titleController.text = line;
-        }
-        parsed.add(item);
-      }
-
-      for (final m in _milestones) {
-        m.dispose();
-      }
-      _milestones
-        ..clear()
-        ..addAll(parsed);
-      return;
-    }
-
-    final trimmed = scheduleText.trim();
-    final matchedEntry = _fullPaymentTimingLabels.entries
-        .where((e) => e.key != 'custom' && e.value == trimmed)
-        .toList();
-
-    if (matchedEntry.isNotEmpty) {
-      _selectedFullPaymentTiming = matchedEntry.first.key;
-    } else {
-      _selectedFullPaymentTiming = 'custom';
-      _customFullPaymentController.text = trimmed;
     }
   }
 
@@ -469,34 +419,33 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     return '$value $_selectedDurationUnit';
   }
 
+  /// The prose schedule printed on the contract PDF. Rendered from the same
+  /// rows that become the structured `milestones` payload so the document and
+  /// the API can never disagree about what was agreed.
   String _buildPaymentScheduleString() {
-    if (_selectedPaymentStructure == 'full_payment') {
-      if (_selectedFullPaymentTiming == 'custom') {
-        return _customFullPaymentController.text.trim();
-      }
-
-      return _fullPaymentTimingLabels[_selectedFullPaymentTiming] ?? '';
-    }
-
     final lines = <String>[];
     for (int i = 0; i < _milestones.length; i++) {
       final m = _milestones[i];
       final title = m.titleController.text.trim();
-      final percentage = m.percentageController.text.trim();
-      final note = m.noteController.text.trim();
+      final amount = _parseAmount(m.amountController.text);
+      final description = m.descriptionController.text.trim();
 
-      if (title.isEmpty && percentage.isEmpty && note.isEmpty) continue;
+      if (title.isEmpty && amount == null && description.isEmpty) continue;
 
       final buffer = StringBuffer();
       buffer.write('Milestone ${i + 1}: ');
       buffer.write(title.isEmpty ? 'Unnamed milestone' : title);
 
-      if (percentage.isNotEmpty) {
-        buffer.write(' - $percentage% payment');
+      if (amount != null) {
+        buffer.write(' - $_budgetCurrency ${_formatBudget(amount)}');
       }
 
-      if (note.isNotEmpty) {
-        buffer.write(' ($note)');
+      if (m.dueDate != null) {
+        buffer.write(' (due ${m.dueDate})');
+      }
+
+      if (description.isNotEmpty) {
+        buffer.write(' - $description');
       }
 
       lines.add(buffer.toString());
@@ -505,40 +454,104 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     return lines.join('\n');
   }
 
-  bool _validateMilestones() {
-    if (_selectedPaymentStructure != 'milestone_based') return true;
+  /// Amounts are typed with a plain decimal point; thousands separators are
+  /// stripped so "1,000" is not silently read as 1.
+  double? _parseAmount(String raw) {
+    final cleaned = raw.replaceAll(',', '').trim();
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
 
-    final filled = _milestones.where((m) {
-      return m.titleController.text.trim().isNotEmpty ||
-          m.percentageController.text.trim().isNotEmpty ||
-          m.noteController.text.trim().isNotEmpty;
+  /// Rows the client has actually started filling in. A blank trailing row is
+  /// ignored rather than treated as an error, since the builder always keeps
+  /// one row on screen.
+  List<_MilestoneItem> get _filledMilestones => _milestones.where((m) {
+    return m.titleController.text.trim().isNotEmpty ||
+        m.amountController.text.trim().isNotEmpty ||
+        m.descriptionController.text.trim().isNotEmpty ||
+        m.dueDate != null;
+  }).toList();
+
+  double get _milestoneTotal {
+    double total = 0;
+    for (final m in _filledMilestones) {
+      total += _parseAmount(m.amountController.text) ?? 0;
+    }
+    return total;
+  }
+
+  /// The budget the milestones must add up to.
+  double? get _targetBudget =>
+      _lockedBudget ?? _parseAmount(_agreedBudgetController.text);
+
+  /// The gap between the milestone total and the agreed budget. Positive means
+  /// the client still has money left to allocate.
+  double? get _milestoneRemainder {
+    final budget = _targetBudget;
+    return budget == null ? null : budget - _milestoneTotal;
+  }
+
+  /// The backend compares to the cent, so a remainder under half a cent is
+  /// treated as balanced — floating point makes exact equality unreliable.
+  bool get _milestonesBalanced {
+    final remainder = _milestoneRemainder;
+    return remainder != null && remainder.abs() < 0.005;
+  }
+
+  /// The structured payload the backend now requires. Optional fields are
+  /// omitted rather than sent empty.
+  List<Map<String, dynamic>> _buildMilestonesPayload() {
+    return _filledMilestones.map((m) {
+      final description = m.descriptionController.text.trim();
+      return <String, dynamic>{
+        'title': m.titleController.text.trim(),
+        if (description.isNotEmpty) 'description': description,
+        'amount': _parseAmount(m.amountController.text),
+        if (m.dueDate != null) 'due_date': m.dueDate,
+      };
     }).toList();
+  }
+
+  bool _validateMilestones() {
+    final filled = _filledMilestones;
 
     if (filled.isEmpty) {
       _showError('Please add at least one milestone');
       return false;
     }
 
-    double total = 0;
     for (final m in filled) {
       final title = m.titleController.text.trim();
-      final percentage = double.tryParse(m.percentageController.text.trim());
+      final amount = _parseAmount(m.amountController.text);
 
       if (title.isEmpty) {
         _showError('Each milestone must have a title');
         return false;
       }
 
-      if (percentage == null || percentage <= 0) {
-        _showError('Each milestone must have a valid payment percentage');
+      if (title.length > 255) {
+        _showError('Milestone titles must be 255 characters or fewer');
         return false;
       }
 
-      total += percentage;
+      if (amount == null || amount <= 0) {
+        _showError('Each milestone must have an amount greater than zero');
+        return false;
+      }
     }
 
-    if ((total - 100.0).abs() > 0.01) {
-      _showError('Milestone payment percentages must add up to 100%');
+    final budget = _targetBudget;
+    if (budget == null) {
+      _showError('Please enter a valid budget amount');
+      return false;
+    }
+
+    if (!_milestonesBalanced) {
+      _showError(
+        'Milestone amounts must add up to the agreed budget '
+        '($_budgetCurrency ${_formatBudget(budget)}). '
+        'Currently $_budgetCurrency ${_formatBudget(_milestoneTotal)}.',
+      );
       return false;
     }
 
@@ -596,13 +609,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
       return false;
     }
 
-    if (_selectedPaymentStructure == 'full_payment' &&
-        _selectedFullPaymentTiming == 'custom' &&
-        _customFullPaymentController.text.trim().isEmpty) {
-      _showError('Please describe the full payment schedule');
-      return false;
-    }
-
     if (_latepaymentPenalty) {
       final penalty = double.tryParse(
         _latePaymentPenaltyController.text.trim(),
@@ -653,7 +659,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         'role_title': _roleTitleController.text.trim(),
         'agreed_budget': agreedBudget,
         'budget_currency': _budgetCurrency,
-        'payment_structure': _selectedPaymentStructure,
+        'milestones': _buildMilestonesPayload(),
         if (_startDate != null) 'start_date': _startDate,
         'terms': _buildTermsData(),
       });
@@ -887,23 +893,6 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                             Expanded(child: _buildCurrencyLabel()),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        _buildDropdownField(
-                          label: 'Payment Structure',
-                          value: _selectedPaymentStructure,
-                          items: const ['full_payment', 'milestone_based'],
-                          labelBuilder: (value) =>
-                              _displayLabel(_paymentStructureLabels, value),
-                          onChanged: _isCreated
-                              ? null
-                              : (value) {
-                                  setState(() {
-                                    _selectedPaymentStructure =
-                                        value ?? 'full_payment';
-                                  });
-                                },
-                          prefixIcon: Icons.account_balance_wallet_outlined,
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -958,12 +947,13 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildSectionCard(
-                      title: 'Payment & Additional Terms',
+                      title: 'Milestones & Additional Terms',
                       subtitle:
-                          'Tailor the payment arrangement and optional clauses.',
+                          'Split the work into milestones and set the optional '
+                          'clauses.',
                       icon: Icons.description_outlined,
                       children: [
-                        _buildPaymentStructureEditor(),
+                        _buildMilestoneEditor(),
                         const SizedBox(height: 14),
                         _buildCheckboxTile(
                           'Include confidentiality clause',
@@ -1581,40 +1571,9 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
     );
   }
 
-  Widget _buildPaymentStructureEditor() {
-    if (_selectedPaymentStructure == 'full_payment') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildDropdownField(
-            label: 'Payment Timing',
-            value: _selectedFullPaymentTiming,
-            items: const ['upfront', 'on_completion', '50_50', 'custom'],
-            labelBuilder: (value) =>
-                _displayLabel(_fullPaymentTimingLabels, value),
-            onChanged: _isCreated
-                ? null
-                : (value) {
-                    setState(() {
-                      _selectedFullPaymentTiming = value ?? 'upfront';
-                    });
-                  },
-            prefixIcon: Icons.payments_outlined,
-          ),
-          if (_selectedFullPaymentTiming == 'custom') ...[
-            const SizedBox(height: 12),
-            _buildTextField(
-              'Custom Payment Arrangement',
-              _customFullPaymentController,
-              'e.g. 30% upfront, 70% after final delivery',
-              maxLines: 3,
-              readOnly: _isCreated,
-              prefixIcon: Icons.edit_note_rounded,
-            ),
-          ],
-        ],
-      );
-    }
+  Widget _buildMilestoneEditor() {
+    final budget = _targetBudget;
+    final remainder = _milestoneRemainder;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1629,7 +1588,12 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Break the project into milestones and assign payment percentages.',
+          _isCreated
+              ? 'The milestone schedule this contract was created with. Work '
+                    'unlocks one milestone at a time, in order.'
+              : 'Break the project into milestones. Their amounts must add up '
+                    'to the agreed budget exactly, and work unlocks one '
+                    'milestone at a time, in order.',
           style: GoogleFonts.poppins(
             fontSize: 12,
             color: const Color(0xFF8A8F98),
@@ -1669,11 +1633,12 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                           color: Colors.redAccent,
                         ),
                         splashRadius: 18,
+                        tooltip: 'Remove milestone',
                       ),
                   ],
                 ),
                 _buildTextField(
-                  'Work Milestone',
+                  'Title',
                   milestone.titleController,
                   'e.g. Wireframes approved',
                   readOnly: _isCreated,
@@ -1681,9 +1646,9 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildTextField(
-                  'Payment Percentage',
-                  milestone.percentageController,
-                  'e.g. 30',
+                  'Amount',
+                  milestone.amountController,
+                  'e.g. 2000000',
                   readOnly: _isCreated,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -1693,13 +1658,19 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
                       RegExp(r'^\d+\.?\d{0,2}'),
                     ),
                   ],
-                  prefixIcon: Icons.percent_rounded,
+                  // The running total below has to move as the client types,
+                  // otherwise the sum check only surfaces on submit.
+                  onChanged: (_) => setState(() {}),
+                  helper: 'In $_budgetCurrency.',
+                  prefixIcon: Icons.payments_outlined,
                 ),
                 const SizedBox(height: 12),
+                _buildMilestoneDueDateField(index),
+                const SizedBox(height: 12),
                 _buildTextField(
-                  'Notes (Optional)',
-                  milestone.noteController,
-                  'e.g. Paid after client approval',
+                  'Description (Optional)',
+                  milestone.descriptionController,
+                  'e.g. Wireframes and API design',
                   maxLines: 2,
                   readOnly: _isCreated,
                   prefixIcon: Icons.notes_outlined,
@@ -1708,7 +1679,7 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
             ),
           );
         }),
-        if (!_isCreated)
+        if (!_isCreated) ...[
           OutlinedButton.icon(
             onPressed: _addMilestone,
             icon: const Icon(Icons.add_rounded),
@@ -1725,8 +1696,200 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+        ],
+        _buildMilestoneTotals(budget, remainder),
       ],
     );
+  }
+
+  /// The running total against the agreed budget. The backend rejects a
+  /// mismatch with a 422, so this tells the client where they stand before they
+  /// press generate rather than after.
+  Widget _buildMilestoneTotals(double? budget, double? remainder) {
+    final balanced = _milestonesBalanced;
+    final Color color;
+    final String message;
+
+    if (budget == null) {
+      color = const Color(0xFF8A8F98);
+      message = 'Set the agreed budget to check the milestone total.';
+    } else if (balanced) {
+      color = const Color(0xFF16A34A);
+      message = 'Milestones add up to the agreed budget.';
+    } else if ((remainder ?? 0) > 0) {
+      color = const Color(0xFFD97706);
+      message =
+          '$_budgetCurrency ${_formatBudget(remainder!)} still to allocate.';
+    } else {
+      color = const Color(0xFFDC2626);
+      message =
+          '$_budgetCurrency ${_formatBudget(remainder!.abs())} over the '
+          'agreed budget.';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Milestone total',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF344054),
+                ),
+              ),
+              Text(
+                '$_budgetCurrency ${_formatBudget(_milestoneTotal)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Agreed budget',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: const Color(0xFF8A8F98),
+                ),
+              ),
+              Text(
+                budget == null
+                    ? '-'
+                    : '$_budgetCurrency ${_formatBudget(budget)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF344054),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                balanced
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.info_outline_rounded,
+                size: 15,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  message,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: color,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMilestoneDueDateField(int index) {
+    final milestone = _milestones[index];
+    final value = milestone.dueDate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Due Date (Optional)',
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF344054),
+          ),
+        ),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: _isCreated ? null : () => _pickMilestoneDueDate(index),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: _fieldPadding,
+            decoration: BoxDecoration(
+              color: _isCreated ? const Color(0xFFF2F4F7) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE7ECF2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.event_outlined,
+                  size: 18,
+                  color: Color(0xFF8A8F98),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    value ?? 'No due date',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: value == null
+                          ? const Color(0xFF8A8F98)
+                          : const Color(0xFF344054),
+                    ),
+                  ),
+                ),
+                if (value != null && !_isCreated)
+                  InkWell(
+                    onTap: () =>
+                        setState(() => _milestones[index].dueDate = null),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: Color(0xFF8A8F98),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickMilestoneDueDate(int index) async {
+    final existing = DateTime.tryParse(_milestones[index].dueDate ?? '');
+    final start = DateTime.tryParse(_startDate ?? '') ?? DateTime.now();
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: existing ?? start,
+      firstDate: start,
+      lastDate: DateTime(start.year + 5),
+    );
+
+    if (picked == null) return;
+    setState(() {
+      _milestones[index].dueDate = picked.toIso8601String().split('T').first;
+    });
   }
 
   Widget _buildCheckboxTile(
@@ -1823,12 +1986,16 @@ class _GenerateContractScreenState extends State<GenerateContractScreen> {
 
 class _MilestoneItem {
   final TextEditingController titleController = TextEditingController();
-  final TextEditingController percentageController = TextEditingController();
-  final TextEditingController noteController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+
+  /// `YYYY-MM-DD`, or null when the client left the due date off - the field is
+  /// optional and is omitted from the payload rather than defaulted.
+  String? dueDate;
 
   void dispose() {
     titleController.dispose();
-    percentageController.dispose();
-    noteController.dispose();
+    descriptionController.dispose();
+    amountController.dispose();
   }
 }

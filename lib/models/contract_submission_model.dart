@@ -49,6 +49,12 @@ class ContractSubmissionFileModel {
 class ContractSubmissionModel {
   final String submissionId;
   final String contractId;
+
+  /// The milestone this submission belongs to. The backend resolves it from
+  /// whichever milestone is unlocked at submit time, so it is never sent up —
+  /// only read back, to label which milestone the work was for.
+  final String? milestoneId;
+
   final String submittedBy;
   final String? note;
   final String status;
@@ -62,6 +68,7 @@ class ContractSubmissionModel {
   ContractSubmissionModel({
     required this.submissionId,
     required this.contractId,
+    this.milestoneId,
     required this.submittedBy,
     this.note,
     required this.status,
@@ -77,6 +84,7 @@ class ContractSubmissionModel {
     return ContractSubmissionModel(
       submissionId: json['submission_id']?.toString() ?? '',
       contractId: json['contract_id']?.toString() ?? '',
+      milestoneId: json['milestone_id']?.toString(),
       submittedBy: json['submitted_by']?.toString() ?? '',
       note: json['note']?.toString(),
       status: json['status']?.toString() ?? 'submitted',
@@ -106,6 +114,7 @@ class ContractSubmissionModel {
     return {
       'submission_id': submissionId,
       'contract_id': contractId,
+      'milestone_id': milestoneId,
       'submitted_by': submittedBy,
       'note': note,
       'status': status,
