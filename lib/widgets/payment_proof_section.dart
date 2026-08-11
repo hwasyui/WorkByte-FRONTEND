@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../core/constants/colors.dart';
 import '../core/constants/payment_config.dart';
+import '../core/utils/helpers.dart';
 import '../models/contract_milestone_model.dart';
 import '../models/contract_model.dart';
 import '../models/payment_proof_model.dart';
@@ -137,14 +138,22 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }).toList();
 
     if (matches.isEmpty) return null;
-    matches.sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+    matches.sort(
+      (a, b) =>
+          (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)),
+    );
     return matches.last;
   }
 
   PaymentProofModel? _adminProof() {
-    final matches = _proofs.where((p) => p.payee == 'admin' && p.milestoneId == null).toList();
+    final matches = _proofs
+        .where((p) => p.payee == 'admin' && p.milestoneId == null)
+        .toList();
     if (matches.isEmpty) return null;
-    matches.sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+    matches.sort(
+      (a, b) =>
+          (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)),
+    );
     return matches.last;
   }
 
@@ -195,7 +204,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
               const SizedBox(height: 20),
               Text(
                 title,
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -222,20 +234,26 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                   decoration: BoxDecoration(
                     color: pickedFile == null ? null : const Color(0xFFF5F6FF),
                     border: Border.all(
-                      color: pickedFile == null ? const Color(0xFFD1D5DB) : AppColors.primary,
+                      color: pickedFile == null
+                          ? const Color(0xFFD1D5DB)
+                          : AppColors.primary,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
                       Icon(
-                        pickedFile == null ? Icons.upload_file_rounded : Icons.check_circle_rounded,
+                        pickedFile == null
+                            ? Icons.upload_file_rounded
+                            : Icons.check_circle_rounded,
                         color: AppColors.primary,
                         size: 28,
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        pickedFile == null ? 'Tap to add a screenshot or receipt' : 'File selected, tap to change',
+                        pickedFile == null
+                            ? 'Tap to add a screenshot or receipt'
+                            : 'File selected, tap to change',
                         style: GoogleFonts.poppins(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -245,7 +263,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                       const SizedBox(height: 2),
                       Text(
                         'PDF, PNG, or JPG',
-                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF9CA3AF)),
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.5,
+                          color: const Color(0xFF9CA3AF),
+                        ),
                       ),
                     ],
                   ),
@@ -254,10 +275,17 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
               if (pickedFile != null) ...[
                 const SizedBox(height: 10),
                 Chip(
-                  avatar: Icon(_fileIconFor(pickedFile!.path), size: 16, color: AppColors.primary),
+                  avatar: Icon(
+                    _fileIconFor(pickedFile!.path),
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                   label: Text(
                     pickedFile!.path.split(Platform.pathSeparator).last,
-                    style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.primary),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      color: AppColors.primary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   backgroundColor: const Color(0xFFEEF2FF),
@@ -326,16 +354,26 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor: AppColors.primary.withOpacity(0.4),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
                   child: submitting
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
-                      : Text('Submit', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                      : Text(
+                          'Submit',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -349,7 +387,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     setState(() => _isConfirming = true);
     try {
       final token = context.read<AuthProvider>().token!;
-      await _service.confirmReceipt(token: token, contractId: widget.contract.contractId);
+      await _service.confirmReceipt(
+        token: token,
+        contractId: widget.contract.contractId,
+      );
       AppToast.success('Thanks. Receipt confirmed.');
       await _load();
       widget.onContractUpdated();
@@ -358,6 +399,19 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     } finally {
       if (mounted) setState(() => _isConfirming = false);
     }
+  }
+
+  Future<void> _openProofFile(String url) async {
+    final token = context.read<AuthProvider>().token;
+    await openDocumentFromUrl(
+      context,
+      url,
+      token: token,
+      onRefreshToken: () async {
+        final ok = await context.read<AuthProvider>().tryRefresh();
+        return ok ? context.read<AuthProvider>().token : null;
+      },
+    );
   }
 
   Color _proofStatusColor(String? status) {
@@ -373,7 +427,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     }
   }
 
-  String _proofStatusLabel(PaymentProofModel? proof, {required bool needsAdminReview}) {
+  String _proofStatusLabel(
+    PaymentProofModel? proof, {
+    required bool needsAdminReview,
+  }) {
     if (proof == null) return 'Not uploaded yet';
     switch (proof.status) {
       case 'verified':
@@ -381,7 +438,9 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       case 'rejected':
         return 'Rejected - needs re-upload';
       default:
-        return needsAdminReview ? 'Awaiting admin review' : 'Uploaded - waiting on freelancer';
+        return needsAdminReview
+            ? 'Awaiting admin review'
+            : 'Uploaded - waiting on freelancer';
     }
   }
 
@@ -396,30 +455,31 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
     child: child,
   );
 
-  Widget _breakdownRow(String label, String value, {bool bold = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12.5,
-            color: const Color(0xFF6B7280),
-            fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-          ),
+  Widget _breakdownRow(String label, String value, {bool bold = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                color: const Color(0xFF6B7280),
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: bold ? AppColors.primary : const Color(0xFF111827),
+              ),
+            ),
+          ],
         ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: bold ? AppColors.primary : const Color(0xFF111827),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 
   Widget _payeeBlock({
     required String payee,
@@ -449,7 +509,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Container(
@@ -472,38 +535,114 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
           const SizedBox(height: 4),
           Text(
             '$_currency ${amount.toStringAsFixed(2)}',
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
           ),
+          if (proof != null) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => _openProofFile(proof.fileUrl),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.description_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'View uploaded proof',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    if ((proof.referenceNumber ?? '').trim().isNotEmpty) ...[
+                      Text(
+                        'Ref: ${proof.referenceNumber}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      size: 13,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (_isClient && bankName != null) ...[
             const SizedBox(height: 6),
             Text(
               '$bankName · $accountNumber · $accountHolder',
-              style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF6B7280)),
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: const Color(0xFF6B7280),
+              ),
             ),
           ],
           if (_isClient && missingBankWarning != null) ...[
             const SizedBox(height: 6),
             Text(
               missingBankWarning,
-              style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFFDC2626)),
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: const Color(0xFFDC2626),
+              ),
             ),
           ],
-          if (proof?.isRejected == true && (proof?.rejectionReason ?? '').isNotEmpty) ...[
+          if (proof?.isRejected == true &&
+              (proof?.rejectionReason ?? '').isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               'Reason: ${proof!.rejectionReason}',
-              style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFFDC2626), fontStyle: FontStyle.italic),
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: const Color(0xFFDC2626),
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
-          if (_isClient && (proof == null || proof.isRejected) && missingBankWarning == null) ...[
+          if (_isClient &&
+              (proof == null || proof.isRejected) &&
+              missingBankWarning == null) ...[
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _openUploadSheet(payee: payee, expected: amount, title: title),
+                onPressed: () => _openUploadSheet(
+                  payee: payee,
+                  expected: amount,
+                  title: title,
+                ),
                 icon: const Icon(Icons.upload_file_rounded, size: 15),
                 label: Text(proof == null ? 'Upload proof' : 'Re-upload proof'),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                ),
               ),
             ),
           ],
@@ -514,9 +653,11 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!PaymentProofSection.showsFor(widget.contract)) return const SizedBox.shrink();
+    if (!PaymentProofSection.showsFor(widget.contract))
+      return const SizedBox.shrink();
 
-    final isCompleted = widget.contract.status == 'completed' &&
+    final isCompleted =
+        widget.contract.status == 'completed' &&
         widget.contract.commissionAmount != null;
 
     final title = isCompleted
@@ -529,28 +670,45 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
         children: [
           Row(
             children: [
-              const Icon(Icons.payments_rounded, size: 18, color: AppColors.primary),
+              const Icon(
+                Icons.payments_rounded,
+                size: 18,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
           ),
-          if (!isCompleted && !_inCommissionStage && _milestoneSubtitle != null) ...[
+          if (!isCompleted &&
+              !_inCommissionStage &&
+              _milestoneSubtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               _milestoneSubtitle!,
-              style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF6B7280)),
+              style: GoogleFonts.poppins(
+                fontSize: 11.5,
+                color: const Color(0xFF6B7280),
+              ),
             ),
           ],
           const SizedBox(height: 12),
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              ),
             )
           else if (isCompleted)
             ..._buildCompletedSummary()
@@ -565,7 +723,10 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
 
   List<Widget> _buildCompletedSummary() {
     return [
-      _breakdownRow('Total budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),
+      _breakdownRow(
+        'Total budget',
+        '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}',
+      ),
       _breakdownRow(
         _isClient ? "Freelancer received (total)" : "You received (total)",
         '$_currency ${(widget.contract.payoutAmount ?? (widget.contract.agreedBudget - _totalCommission)).toStringAsFixed(2)}',
@@ -580,7 +741,11 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
           padding: const EdgeInsets.only(top: 8),
           child: Text(
             'Marked complete by admin override.',
-            style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFFD97706), fontStyle: FontStyle.italic),
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: const Color(0xFFD97706),
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ),
     ];
@@ -594,15 +759,22 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       Text(
         _isClient
             ? milestone == null
-                ? 'This milestone is approved. Transfer the freelancer\'s share directly and upload proof.'
-                : 'The work for "${milestone.title}" is approved. Transfer the freelancer\'s share directly '
-                    'and upload proof. The next milestone unlocks once they confirm receiving it.'
+                  ? 'This milestone is approved. Transfer the freelancer\'s share directly and upload proof.'
+                  : 'The work for "${milestone.title}" is approved. Transfer the freelancer\'s share directly '
+                        'and upload proof. The next milestone unlocks once they confirm receiving it.'
             : 'The client is paying you for this milestone. Once you\'ve received your share directly in '
-                'your bank account, confirm it below.',
-        style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
+                  'your bank account, confirm it below.',
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: const Color(0xFF6B7280),
+          height: 1.4,
+        ),
       ),
       if (milestone != null)
-        _breakdownRow('Milestone amount', '$_currency ${milestone.amount.toStringAsFixed(2)}'),
+        _breakdownRow(
+          'Milestone amount',
+          '$_currency ${milestone.amount.toStringAsFixed(2)}',
+        ),
       const SizedBox(height: 6),
       _payeeBlock(
         payee: 'freelancer',
@@ -615,7 +787,7 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
         accountHolder: _freelancerPayout?.accountHolderName,
         missingBankWarning: (_isClient && _freelancerPayout?.isComplete != true)
             ? 'The freelancer hasn\'t added their bank details yet - ask them to add it under '
-                'Settings before you can send this share.'
+                  'Settings before you can send this share.'
             : null,
       ),
       if (_isFreelancer) ...[
@@ -623,12 +795,17 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: (_isConfirming || _freelancerConfirmed) ? null : _confirmReceipt,
+            onPressed: (_isConfirming || _freelancerConfirmed)
+                ? null
+                : _confirmReceipt,
             icon: _isConfirming
                 ? const SizedBox(
                     width: 14,
                     height: 14,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   )
                 : Icon(
                     _freelancerConfirmed
@@ -636,13 +813,19 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
                         : Icons.check_circle_outline_rounded,
                     size: 16,
                   ),
-            label: Text(_freelancerConfirmed ? 'Payment Confirmed' : 'I\'ve received my payment'),
+            label: Text(
+              _freelancerConfirmed
+                  ? 'Payment Confirmed'
+                  : 'I\'ve received my payment',
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF059669),
               foregroundColor: Colors.white,
               disabledBackgroundColor: const Color(0xFFE5E7EB),
               disabledForegroundColor: const Color(0xFF6B7280),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ),
@@ -657,12 +840,19 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       Text(
         _isClient
             ? 'All milestones are paid. Transfer the platform fee directly and upload proof - '
-                'the contract completes once the admin verifies it.'
+                  'the contract completes once the admin verifies it.'
             : 'You\'ve been paid in full for every milestone. The client is now settling the platform '
-                'fee with WorkByte directly - nothing left for you to do here.',
-        style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280), height: 1.4),
+                  'fee with WorkByte directly - nothing left for you to do here.',
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: const Color(0xFF6B7280),
+          height: 1.4,
+        ),
       ),
-      _breakdownRow('Total contract budget', '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}'),
+      _breakdownRow(
+        'Total contract budget',
+        '$_currency ${widget.contract.agreedBudget.toStringAsFixed(2)}',
+      ),
       _breakdownRow(
         _isClient ? "Freelancer received (total)" : "You received (total)",
         '$_currency ${(widget.contract.agreedBudget - _totalCommission).toStringAsFixed(2)}',
@@ -672,7 +862,8 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
       if (_isClient)
         _payeeBlock(
           payee: 'admin',
-          title: "Platform fee (${(kPlatformCommissionRate * 100).toStringAsFixed(0)}% of total)",
+          title:
+              "Platform fee (${(kPlatformCommissionRate * 100).toStringAsFixed(0)}% of total)",
           amount: _totalCommission,
           proof: proof,
           needsAdminReview: true,
@@ -691,13 +882,20 @@ class _PaymentProofSectionState extends State<PaymentProofSection> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.hourglass_top_rounded, size: 16, color: Color(0xFF4F46E5)),
+              const Icon(
+                Icons.hourglass_top_rounded,
+                size: 16,
+                color: Color(0xFF4F46E5),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Waiting on the client to pay WorkByte\'s platform fee and an admin to verify it. '
                   'The contract will show as completed once that\'s done.',
-                  style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF3730A3)),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: const Color(0xFF3730A3),
+                  ),
                 ),
               ),
             ],

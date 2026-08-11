@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:workbyte_app/widgets/file_viewer.dart';
 import 'package:workbyte_app/widgets/app_toast.dart';
 import 'package:workbyte_app/services/session_guard.dart';
+
+import 'web_file_opener_stub.dart'
+    if (dart.library.html) 'web_file_opener_web.dart';
 
 String get _backendBase =>
     (dotenv.env['BACKEND'] ?? '').replaceAll(RegExp(r'/$'), '');
@@ -47,9 +51,7 @@ Future<void> openDocumentFromUrl(
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
+    builder: (_) => const Center(child: CircularProgressIndicator()),
   );
 
   try {
@@ -74,14 +76,30 @@ Future<void> openDocumentFromUrl(
     }
 
     final name = fileName ?? uri.pathSegments.lastOrNull ?? 'document';
+
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (kIsWeb) {
+      // No filesystem on web, and FileViewerScreen is built entirely around
+      // dart:io File - so instead of writing a temp file, hand the bytes we
+      // already fetched (with auth) straight to the browser as a Blob URL.
+      // The browser renders PDFs/images natively; nothing to view for other
+      // types anyway without a native file system to open them from.
+      await openBytesInBrowser(
+        response.bodyBytes,
+        name,
+        response.headers['content-type'] ?? 'application/octet-stream',
+      );
+      return;
+    }
+
     final tempDir = await getTemporaryDirectory();
     final filePath = '${tempDir.path}/$name';
 
     await File(filePath).writeAsBytes(response.bodyBytes);
 
     if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FileViewerScreen(filePath: filePath, fileName: name),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/helpers.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../widgets/admin/admin_empty_state.dart';
 import '../../../widgets/admin/admin_fade_in.dart';
@@ -12,7 +13,6 @@ import '../../../widgets/admin/date_range_filter_button.dart';
 import '../../../widgets/admin/admin_stat_card.dart';
 import '../../../widgets/pagination_bar.dart';
 import '../../../widgets/app_toast.dart';
-import '../../../widgets/file_viewer.dart';
 
 class AdminPaymentsPage extends StatefulWidget {
   const AdminPaymentsPage({super.key});
@@ -109,8 +109,13 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage>
                       return TabBar(
                         controller: _tab,
                         isScrollable: narrow,
-                        tabAlignment: narrow ? TabAlignment.start : TabAlignment.fill,
-                        labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                        tabAlignment: narrow
+                            ? TabAlignment.start
+                            : TabAlignment.fill,
+                        labelStyle: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                         unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
                         labelColor: const Color(0xFF059669),
                         unselectedLabelColor: const Color(0xFF6B7280),
@@ -126,7 +131,10 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage>
                                 if (admin.pendingPaymentsCount > 0) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFDC2626),
                                       borderRadius: BorderRadius.circular(10),
@@ -200,7 +208,10 @@ class _PaymentsOverviewTab extends StatelessWidget {
                 final cards = [
                   AdminStatCard(
                     title: 'Realized Commission',
-                    value: _money(data['realized_commission'] as num?, currency),
+                    value: _money(
+                      data['realized_commission'] as num?,
+                      currency,
+                    ),
                     icon: Icons.savings_rounded,
                     color: const Color(0xFF059669),
                     subtitle: 'Platform\'s 10% cut, completed contracts only',
@@ -214,14 +225,16 @@ class _PaymentsOverviewTab extends StatelessWidget {
                   ),
                   AdminStatCard(
                     title: 'Awaiting Verification',
-                    value: '${(data['pending_verification'] as num?)?.toInt() ?? 0}',
+                    value:
+                        '${(data['pending_verification'] as num?)?.toInt() ?? 0}',
                     icon: Icons.hourglass_top_rounded,
                     color: const Color(0xFFD97706),
                     subtitle: 'Contracts waiting on your review',
                   ),
                   AdminStatCard(
                     title: 'Commission At Risk',
-                    value: '${(data['commission_at_risk'] as num?)?.toInt() ?? 0}',
+                    value:
+                        '${(data['commission_at_risk'] as num?)?.toInt() ?? 0}',
                     icon: Icons.report_problem_rounded,
                     color: const Color(0xFFDC2626),
                     subtitle: 'Freelancer confirmed, admin proof still missing',
@@ -245,7 +258,11 @@ class _PaymentsOverviewTab extends StatelessWidget {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC2626)),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 18,
+                                color: Color(0xFFDC2626),
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -275,7 +292,13 @@ class _PaymentsOverviewTab extends StatelessWidget {
                               ],
                             ),
                           )
-                        : Column(children: [cards[0], const SizedBox(height: 16), cards[1]]),
+                        : Column(
+                            children: [
+                              cards[0],
+                              const SizedBox(height: 16),
+                              cards[1],
+                            ],
+                          ),
                     const SizedBox(height: 16),
                     wide
                         ? IntrinsicHeight(
@@ -288,7 +311,13 @@ class _PaymentsOverviewTab extends StatelessWidget {
                               ],
                             ),
                           )
-                        : Column(children: [cards[2], const SizedBox(height: 16), cards[3]]),
+                        : Column(
+                            children: [
+                              cards[2],
+                              const SizedBox(height: 16),
+                              cards[3],
+                            ],
+                          ),
                     const SizedBox(height: 24),
                     const _ContractsCommissionSection(),
                   ],
@@ -306,10 +335,12 @@ class _ContractsCommissionSection extends StatefulWidget {
   const _ContractsCommissionSection();
 
   @override
-  State<_ContractsCommissionSection> createState() => _ContractsCommissionSectionState();
+  State<_ContractsCommissionSection> createState() =>
+      _ContractsCommissionSectionState();
 }
 
-class _ContractsCommissionSectionState extends State<_ContractsCommissionSection> {
+class _ContractsCommissionSectionState
+    extends State<_ContractsCommissionSection> {
   int _page = 1;
   final _searchController = TextEditingController();
 
@@ -357,13 +388,19 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
             children: [
               Text(
                 'Per-Job Commission Breakdown',
-                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'What you\'ll earn from each job - confirmed once a contract completes, '
                 'estimated while it\'s still in progress.',
-                style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF6B7280)),
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  color: const Color(0xFF6B7280),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -375,11 +412,19 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
                 style: GoogleFonts.poppins(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Search by job title, client, or freelancer',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF9CA3AF)),
+                  hintStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF9CA3AF),
+                  ),
                   prefixIcon: const Icon(Icons.search_rounded, size: 18),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -394,7 +439,8 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
                   child: AdminEmptyState(
                     icon: Icons.receipt_long_rounded,
                     title: 'No contracts yet',
-                    subtitle: 'Jobs with a signed contract will show up here with their commission breakdown.',
+                    subtitle:
+                        'Jobs with a signed contract will show up here with their commission breakdown.',
                     accent: Color(0xFF4F46E5),
                   ),
                 )
@@ -406,7 +452,9 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
                         index: i,
                         child: _ContractCommissionRow(
                           item: items[i],
-                          statusColor: _statusColor(items[i]['status'] as String? ?? ''),
+                          statusColor: _statusColor(
+                            items[i]['status'] as String? ?? '',
+                          ),
                         ),
                       ),
                   ],
@@ -428,7 +476,10 @@ class _ContractsCommissionSectionState extends State<_ContractsCommissionSection
                           : null,
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
-                    Text('Page $_page of $totalPages', style: GoogleFonts.poppins(fontSize: 12)),
+                    Text(
+                      'Page $_page of $totalPages',
+                      style: GoogleFonts.poppins(fontSize: 12),
+                    ),
                     IconButton(
                       onPressed: _page < totalPages
                           ? () {
@@ -484,27 +535,40 @@ class _ContractCommissionRow extends StatelessWidget {
               children: [
                 Text(
                   (item['contract_title'] as String?) ?? 'Untitled contract',
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${item['client_name'] ?? 'Unknown client'} → ${item['freelancer_name'] ?? 'Unknown freelancer'}',
-                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF6B7280)),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF6B7280),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     status.replaceAll('_', ' '),
-                    style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.w600, color: statusColor),
+                    style: GoogleFonts.poppins(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
                   ),
                 ),
               ],
@@ -516,19 +580,28 @@ class _ContractCommissionRow extends StatelessWidget {
             children: [
               Text(
                 '$currency ${budget.toStringAsFixed(0)}',
-                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF9CA3AF)),
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: const Color(0xFF9CA3AF),
+                ),
               ),
               const SizedBox(height: 3),
               Text(
                 '$currency ${commission.toStringAsFixed(2)}',
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF4F46E5)),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF4F46E5),
+                ),
               ),
               Text(
                 isConfirmed ? 'confirmed' : 'estimated',
                 style: GoogleFonts.poppins(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w600,
-                  color: isConfirmed ? const Color(0xFF059669) : const Color(0xFFD97706),
+                  color: isConfirmed
+                      ? const Color(0xFF059669)
+                      : const Color(0xFFD97706),
                 ),
               ),
             ],
@@ -549,20 +622,21 @@ class _VerificationQueueTab extends StatefulWidget {
 class _VerificationQueueTabState extends State<_VerificationQueueTab> {
   int _page = 1;
 
-  Future<void> _viewProof(BuildContext context, Map<String, dynamic> item) async {
+  Future<void> _viewProof(
+    BuildContext context,
+    Map<String, dynamic> item,
+  ) async {
     final url = item['file_url'] as String?;
     if (url == null || url.isEmpty) {
       AppToast.error('No file attached to this proof.');
       return;
     }
-    Navigator.push(
+    final admin = context.read<AdminProvider>();
+    await openDocumentFromUrl(
       context,
-      MaterialPageRoute(
-        builder: (_) => FileViewerScreen(
-          filePath: url,
-          fileName: '${item['payee']}_payment_proof',
-        ),
-      ),
+      url,
+      token: admin.token,
+      onRefreshToken: () => admin.tryRefresh(),
     );
   }
 
@@ -577,8 +651,14 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
           '${item['amount']}) was received. This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Verify')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Verify'),
+          ),
         ],
       ),
     );
@@ -601,9 +681,12 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
       submitLabel: 'Reject',
       accentColor: const Color(0xFFDC2626),
       icon: Icons.close_rounded,
-      warningText: 'The uploader will be notified and asked to re-upload a valid proof.',
-      hintText: 'Why is this proof being rejected? (e.g. amount mismatch, unreadable file)',
-      onSubmit: (reason) => admin.rejectPayment(item['proof_id'] as String, reason),
+      warningText:
+          'The uploader will be notified and asked to re-upload a valid proof.',
+      hintText:
+          'Why is this proof being rejected? (e.g. amount mismatch, unreadable file)',
+      onSubmit: (reason) =>
+          admin.rejectPayment(item['proof_id'] as String, reason),
     );
     if (outcome != null && outcome.success) {
       AppToast.success('Payment proof rejected.');
@@ -648,7 +731,11 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 3)),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
                       ],
                     ),
                     child: Column(
@@ -658,19 +745,29 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
                           children: [
                             Expanded(
                               child: Text(
-                                (item['contract_title'] as String?) ?? 'Untitled contract',
-                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF111827)),
+                                (item['contract_title'] as String?) ??
+                                    'Untitled contract',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF111827),
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             AdminBadge(
-                              label: isAdminPayee ? "Platform's 10%" : "Freelancer's share",
-                              color: isAdminPayee ? const Color(0xFF059669) : const Color(0xFF4F46E5),
+                              label: isAdminPayee
+                                  ? "Platform's 10%"
+                                  : "Freelancer's share",
+                              color: isAdminPayee
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF4F46E5),
                             ),
                           ],
                         ),
-                        if ((item['milestone_title'] as String?)?.isNotEmpty == true) ...[
+                        if ((item['milestone_title'] as String?)?.isNotEmpty ==
+                            true) ...[
                           const SizedBox(height: 4),
                           Text(
                             'Milestone ${item['milestone_sequence_order'] ?? '?'} · ${item['milestone_title']}',
@@ -687,30 +784,42 @@ class _VerificationQueueTabState extends State<_VerificationQueueTab> {
                         Text(
                           '${item['budget_currency'] ?? 'USD'} ${item['amount']} platform fee'
                           '${(item['reference_number'] as String?)?.isNotEmpty == true ? ' · Ref: ${item['reference_number']}' : ''}',
-                          style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF6B7280)),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF6B7280),
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Row(
                           children: [
                             TextButton.icon(
                               onPressed: () => _viewProof(context, item),
-                              icon: const Icon(Icons.visibility_rounded, size: 16),
+                              icon: const Icon(
+                                Icons.visibility_rounded,
+                                size: 16,
+                              ),
                               label: const Text('View proof'),
-                              style: TextButton.styleFrom(foregroundColor: const Color(0xFF4F46E5)),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF4F46E5),
+                              ),
                             ),
                             const Spacer(),
                             OutlinedButton(
                               onPressed: () => _reject(context, item),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFDC2626),
-                                side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                side: const BorderSide(
+                                  color: Color(0xFFFCA5A5),
+                                ),
                               ),
                               child: const Text('Reject'),
                             ),
                             const SizedBox(width: 8),
                             FilledButton(
                               onPressed: () => _verify(context, item),
-                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                              ),
                               child: const Text('Verify'),
                             ),
                           ],

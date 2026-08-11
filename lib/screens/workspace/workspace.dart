@@ -471,6 +471,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         return const Color(0xFF2196F3);
       case 'revision_requested':
         return const Color(0xFFFF9800);
+      case 'pending_payment':
+        return const Color(0xFF0891B2);
+      case 'payment_review':
+        return const Color(0xFF0891B2);
       case 'completed':
         return const Color(0xFF4CAF50);
       case 'disputed':
@@ -491,6 +495,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         return 'Under Review';
       case 'revision_requested':
         return 'Revision Requested';
+      case 'pending_payment':
+        return 'Pending Payment';
+      case 'payment_review':
+        return 'Payment Review';
       case 'completed':
         return 'Completed';
       case 'cancelled':

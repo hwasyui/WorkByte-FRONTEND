@@ -4,7 +4,17 @@ import '../models/admin_red_flag_detail_model.dart';
 import '../services/admin_service.dart';
 import '../services/admin_session_guard.dart';
 
-enum AdminPage { overview, users, jobs, reports, ai, closed, appeals, disputes, payments }
+enum AdminPage {
+  overview,
+  users,
+  jobs,
+  reports,
+  ai,
+  closed,
+  appeals,
+  disputes,
+  payments,
+}
 
 class AdminProvider extends ChangeNotifier {
   AdminProvider() {
@@ -21,6 +31,12 @@ class AdminProvider extends ChangeNotifier {
       _refreshInFlight = null;
     });
   }
+
+  /// Public entry point for pages that need to force a token refresh outside
+  /// the AdminSessionGuard flow - e.g. a 401 while opening a file. Reuses the
+  /// same in-flight guard as the session-guard path so the two never race
+  /// each other into duplicate refresh calls.
+  Future<String?> tryRefresh() => _refreshOrRetryOnce();
 
   String? _isoDate(DateTime? d) => d == null
       ? null
@@ -172,14 +188,17 @@ class AdminProvider extends ChangeNotifier {
   bool get isRedFlagsLoading => _isRedFlagsLoading;
   bool get isFlaggedReviewsLoading => _isFlaggedReviewsLoading;
   bool get isFlaggedClientReviewsLoading => _isFlaggedClientReviewsLoading;
-  Map<String, dynamic> get reviewRedFlagsPagination => _reviewRedFlagsPagination;
-  Map<String, dynamic> get flaggedReviewsPagination => _flaggedReviewsPagination;
+  Map<String, dynamic> get reviewRedFlagsPagination =>
+      _reviewRedFlagsPagination;
+  Map<String, dynamic> get flaggedReviewsPagination =>
+      _flaggedReviewsPagination;
   Map<String, dynamic> get flaggedClientReviewsPagination =>
       _flaggedClientReviewsPagination;
   String get reviewRedFlagsResolvedFilter => _reviewRedFlagsResolvedFilter;
   String get reviewRedFlagsSortBy => _reviewRedFlagsSortBy;
   String get flaggedReviewStatusFilter => _flaggedReviewStatusFilter;
-  String get flaggedClientReviewStatusFilter => _flaggedClientReviewStatusFilter;
+  String get flaggedClientReviewStatusFilter =>
+      _flaggedClientReviewStatusFilter;
   String get flaggedReviewSortBy => _flaggedReviewSortBy;
   String get flaggedClientReviewSortBy => _flaggedClientReviewSortBy;
   DateTimeRange? get reviewRedFlagsDateRange => _reviewRedFlagsDateRange;
@@ -220,12 +239,15 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get pendingPayments => _pendingPayments;
   bool get isPendingPaymentsLoading => _isPendingPaymentsLoading;
   Map<String, dynamic> get paymentsPagination => _paymentsPagination;
-  List<Map<String, dynamic>> get contractsCommissionList => _contractsCommissionList;
+  List<Map<String, dynamic>> get contractsCommissionList =>
+      _contractsCommissionList;
   bool get isContractsCommissionLoading => _isContractsCommissionLoading;
-  Map<String, dynamic> get contractsCommissionPagination => _contractsCommissionPagination;
+  Map<String, dynamic> get contractsCommissionPagination =>
+      _contractsCommissionPagination;
   DateTimeRange? get paymentsDateRange => _paymentsDateRange;
   int get pendingPaymentsCount =>
-      (_paymentsPagination['total'] as num?)?.toInt() ?? _pendingPayments.length;
+      (_paymentsPagination['total'] as num?)?.toInt() ??
+      _pendingPayments.length;
   int get pendingAppeals =>
       (_appealsPagination['pending_count'] as num?)?.toInt() ??
       _appeals.where((a) => a['status'] == 'pending').length;
@@ -316,8 +338,10 @@ class AdminProvider extends ChangeNotifier {
   Future<void> loadDashboardStats() async {
     if (_token == null) return;
     try {
-      _dashboardStats =
-          await AdminService.getDashboardStats(_token!, granularity: 'month');
+      _dashboardStats = await AdminService.getDashboardStats(
+        _token!,
+        granularity: 'month',
+      );
       _pendingReports =
           (_dashboardStats['pending_reports'] as num?)?.toInt() ?? 0;
     } catch (e) {
@@ -326,6 +350,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
     loadReviewIntegrityQueueCounts();
   }
+
   Future<void> loadReviewIntegrityQueueCounts() async {
     if (_token == null) return;
     Future<int> total(Future<Map<String, dynamic>> request) async {
@@ -338,21 +363,27 @@ class AdminProvider extends ChangeNotifier {
 
     try {
       final counts = await Future.wait([
-        total(AdminService.getReviewRedFlags(
-          _token!,
-          isResolved: false,
-          pageSize: 1,
-        )),
-        total(AdminService.getFlaggedReviews(
-          _token!,
-          status: 'flagged',
-          pageSize: 1,
-        )),
-        total(AdminService.getFlaggedClientReviews(
-          _token!,
-          status: 'flagged',
-          pageSize: 1,
-        )),
+        total(
+          AdminService.getReviewRedFlags(
+            _token!,
+            isResolved: false,
+            pageSize: 1,
+          ),
+        ),
+        total(
+          AdminService.getFlaggedReviews(
+            _token!,
+            status: 'flagged',
+            pageSize: 1,
+          ),
+        ),
+        total(
+          AdminService.getFlaggedClientReviews(
+            _token!,
+            status: 'flagged',
+            pageSize: 1,
+          ),
+        ),
       ]);
       _openReviewRedFlags = counts[0];
       _pendingFlaggedReviews = counts[1];
@@ -480,7 +511,9 @@ class AdminProvider extends ChangeNotifier {
     String? createdFrom,
     String? createdTo,
   }) async {
-    debugPrint('[DEBUG] loadFreelancersPage page=$page search=$search createdFrom=$createdFrom createdTo=$createdTo');
+    debugPrint(
+      '[DEBUG] loadFreelancersPage page=$page search=$search createdFrom=$createdFrom createdTo=$createdTo',
+    );
     if (_token == null) return;
     _isTableLoading = true;
     notifyListeners();
@@ -501,7 +534,8 @@ class AdminProvider extends ChangeNotifier {
         data = {
           'items': rawItems.map((u) {
             final m = Map<String, dynamic>.from(u);
-            m['full_name'] = (u['freelancer_name'] as String?)?.isNotEmpty == true
+            m['full_name'] =
+                (u['freelancer_name'] as String?)?.isNotEmpty == true
                 ? u['freelancer_name']
                 : u['full_name'] ?? '';
             return m;
@@ -518,7 +552,9 @@ class AdminProvider extends ChangeNotifier {
         );
       }
       _tableFreelancers = List<Map<String, dynamic>>.from(data['items'] ?? []);
-      _freelancerPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+      _freelancerPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
       _totalFreelancers =
           (_freelancerPagination['total'] as num?)?.toInt() ??
           _tableFreelancers.length;
@@ -791,7 +827,10 @@ class AdminProvider extends ChangeNotifier {
     required String reason,
   }) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.resolveReviewRedFlag(
       _token!,
@@ -845,7 +884,10 @@ class AdminProvider extends ChangeNotifier {
     required String reason,
   }) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.overridePublishReview(
       _token!,
@@ -864,7 +906,10 @@ class AdminProvider extends ChangeNotifier {
     required String reason,
   }) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.upholdReview(
       _token!,
@@ -920,7 +965,10 @@ class AdminProvider extends ChangeNotifier {
     required String reason,
   }) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.overridePublishClientReview(
       _token!,
@@ -939,7 +987,10 @@ class AdminProvider extends ChangeNotifier {
     required String reason,
   }) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.upholdClientReview(
       _token!,
@@ -1013,9 +1064,17 @@ class AdminProvider extends ChangeNotifier {
   Future<bool> adminCloseJob(String jobPostId, {String? reason}) async {
     if (_token == null) return false;
     try {
-      final ok = await AdminService.closeJob(_token!, jobPostId, reason: reason);
+      final ok = await AdminService.closeJob(
+        _token!,
+        jobPostId,
+        reason: reason,
+      );
       if (ok) {
-        await Future.wait([loadScamFlags(), loadModerationItems(), loadDashboardStats()]);
+        await Future.wait([
+          loadScamFlags(),
+          loadModerationItems(),
+          loadDashboardStats(),
+        ]);
       }
       return ok;
     } catch (_) {
@@ -1023,7 +1082,9 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> loadFreelancerFullProfile(String freelancerId) async {
+  Future<Map<String, dynamic>?> loadFreelancerFullProfile(
+    String freelancerId,
+  ) async {
     if (_token == null) return null;
     return AdminService.getFreelancerFullProfile(_token!, freelancerId);
   }
@@ -1031,7 +1092,11 @@ class AdminProvider extends ChangeNotifier {
   Future<bool> adminCloseAccount(String userId, {String? reason}) async {
     if (_token == null) return false;
     try {
-      final ok = await AdminService.closeAccount(_token!, userId, reason: reason);
+      final ok = await AdminService.closeAccount(
+        _token!,
+        userId,
+        reason: reason,
+      );
       if (ok) {
         await Future.wait([loadModerationItems(), loadDashboardStats()]);
       }
@@ -1069,7 +1134,11 @@ class AdminProvider extends ChangeNotifier {
     loadAppeals();
   }
 
-  Future<bool> resolveAppeal(String appealId, String action, {String? adminNote}) async {
+  Future<bool> resolveAppeal(
+    String appealId,
+    String action, {
+    String? adminNote,
+  }) async {
     if (_token == null) return false;
     try {
       final ok = await AdminService.resolveAppeal(
@@ -1176,8 +1245,12 @@ class AdminProvider extends ChangeNotifier {
         startDate: _isoDate(_paymentsDateRange?.start),
         endDate: _isoDate(_paymentsDateRange?.end),
       );
-      _contractsCommissionList = List<Map<String, dynamic>>.from(data['items'] ?? []);
-      _contractsCommissionPagination = Map<String, dynamic>.from(data['pagination'] ?? {});
+      _contractsCommissionList = List<Map<String, dynamic>>.from(
+        data['items'] ?? [],
+      );
+      _contractsCommissionPagination = Map<String, dynamic>.from(
+        data['pagination'] ?? {},
+      );
     } catch (e) {
       debugPrint('AdminProvider.loadContractsCommissionList error: $e');
     }
@@ -1187,7 +1260,10 @@ class AdminProvider extends ChangeNotifier {
 
   Future<AdminActionOutcome> verifyPayment(String proofId) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.verifyPayment(_token!, proofId);
     if (outcome.success) {
@@ -1196,9 +1272,15 @@ class AdminProvider extends ChangeNotifier {
     return outcome;
   }
 
-  Future<AdminActionOutcome> rejectPayment(String proofId, String reason) async {
+  Future<AdminActionOutcome> rejectPayment(
+    String proofId,
+    String reason,
+  ) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.rejectPayment(_token!, proofId, reason);
     if (outcome.success) {
@@ -1212,7 +1294,10 @@ class AdminProvider extends ChangeNotifier {
     String reason,
   ) async {
     if (_token == null) {
-      return const AdminActionOutcome(success: false, errorMessage: 'No session');
+      return const AdminActionOutcome(
+        success: false,
+        errorMessage: 'No session',
+      );
     }
     final outcome = await AdminService.overridePaymentCompletion(
       _token!,

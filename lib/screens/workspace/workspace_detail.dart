@@ -13,11 +13,13 @@ import '../../core/constants/text_styles.dart';
 import '../../models/contract_milestone_model.dart';
 import '../../models/contract_model.dart';
 import '../../models/contract_submission_model.dart';
+import '../../models/payment_proof_model.dart';
 import '../../models/proposal_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/contract_submission_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/payment_service.dart';
 import '../../services/proposal_service.dart';
 import '../reviews/review_form.dart';
 import '../reviews/client_review_form.dart';
@@ -48,9 +50,12 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   ProposalModel? _proposalDetail;
   bool _isLoadingProposal = false;
   final ProposalService _proposalService = ProposalService();
+  final PaymentService _paymentService = PaymentService();
 
   List<ContractMilestoneModel> _milestones = const [];
   bool _isLoadingMilestones = true;
+
+  List<PaymentProofModel> _paymentProofs = const [];
 
   @override
   void initState() {
@@ -61,6 +66,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSubmissions();
       _fetchMilestones();
+      _fetchPaymentProofs();
     });
   }
 
@@ -196,6 +202,50 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     });
   }
 
+  Future<void> _fetchPaymentProofs() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    try {
+      final proofs = await _paymentService.getPaymentProofs(
+        token: token,
+        contractId: _contract.contractId,
+      );
+      if (!mounted) return;
+      setState(() => _paymentProofs = proofs);
+    } catch (e) {
+      debugPrint('Failed to fetch payment proofs: $e');
+    }
+  }
+
+  /// Latest freelancer-share proof uploaded against this specific milestone.
+  /// The platform-fee proof carries no milestone_id, so it never matches here -
+  /// it only ever shows in PaymentProofSection.
+  PaymentProofModel? _proofForMilestone(String milestoneId) {
+    final matches =
+        _paymentProofs
+            .where(
+              (p) => p.payee == 'freelancer' && p.milestoneId == milestoneId,
+            )
+            .toList()
+          ..sort(
+            (a, b) => (a.createdAt ?? DateTime(0)).compareTo(
+              b.createdAt ?? DateTime(0),
+            ),
+          );
+    return matches.isEmpty ? null : matches.last;
+  }
+
+  Color _proofStatusColor(String status) {
+    switch (status) {
+      case 'verified':
+        return const Color(0xFF4CAF50);
+      case 'rejected':
+        return const Color(0xFFC62828);
+      default:
+        return const Color(0xFFD97706);
+    }
+  }
+
   /// The milestone the contract is working through, or null once they are all
   /// settled (or before the schedule has loaded).
   ContractMilestoneModel? get _currentMilestone => _milestones.current;
@@ -221,6 +271,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       setState(() => _contract = latest);
     }
     await _fetchMilestones();
+    await _fetchPaymentProofs();
   }
 
   Future<void> _submitWork(List<File> files, String note) async {
@@ -548,7 +599,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           'You have 72 hours from the cancellation to dispute it - '
           '${_formatWindowRemaining(left)}.';
     } else {
-      windowLine = 'The 72-hour window to dispute this cancellation has passed.';
+      windowLine =
+          'The 72-hour window to dispute this cancellation has passed.';
     }
 
     return Container(
@@ -647,7 +699,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   Widget _buildAutoApproveCountdown(ContractSubmissionProvider provider) {
     final latest = provider.latestSubmission;
-    if (latest == null || latest.status != 'submitted' || latest.submittedAt == null) {
+    if (latest == null ||
+        latest.status != 'submitted' ||
+        latest.submittedAt == null) {
       return const SizedBox.shrink();
     }
     final daysElapsed = DateTime.now().difference(latest.submittedAt!).inDays;
@@ -686,7 +740,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                   Text(
                     'The client hasn\'t reviewed your submission yet. If they stay silent, '
                     'this contract will be automatically approved and marked complete.',
-                    style: AppText.caption.copyWith(color: color.withOpacity(0.85)),
+                    style: AppText.caption.copyWith(
+                      color: color.withOpacity(0.85),
+                    ),
                   ),
                 ],
               ),
@@ -869,10 +925,14 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               margin: EdgeInsets.only(bottom: isLast ? 0 : 14),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isCurrent ? const Color(0xFFF7FCFC) : Colors.grey.shade50,
+                color: isCurrent
+                    ? const Color(0xFFF7FCFC)
+                    : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isCurrent ? color.withOpacity(0.35) : Colors.grey.shade200,
+                  color: isCurrent
+                      ? color.withOpacity(0.35)
+                      : Colors.grey.shade200,
                 ),
               ),
               child: Column(
@@ -942,6 +1002,58 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                         color: const Color(0xFFD97706),
                         fontStyle: FontStyle.italic,
                       ),
+                    ),
+                  ],
+                  if (_proofForMilestone(milestone.milestoneId) != null) ...[
+                    const SizedBox(height: 8),
+                    Builder(
+                      builder: (context) {
+                        final proof = _proofForMilestone(
+                          milestone.milestoneId,
+                        )!;
+                        final proofColor = _proofStatusColor(proof.status);
+                        return InkWell(
+                          onTap: () => _openUrl(proof.fileUrl),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: proofColor.withOpacity(0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.description_outlined,
+                                  size: 15,
+                                  color: proofColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'View proof of payment',
+                                    style: AppText.overline.copyWith(
+                                      color: proofColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 13,
+                                  color: proofColor.withOpacity(0.7),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ],
@@ -1612,7 +1724,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             // message just sends people round the same loop.
             final reason = e.toString().replaceFirst('Exception: ', '').trim();
             _showSnack(
-              reason.isEmpty ? 'Unable to start chat. Please try again.' : reason,
+              reason.isEmpty
+                  ? 'Unable to start chat. Please try again.'
+                  : reason,
               isError: true,
             );
             return;
@@ -1763,7 +1877,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                   Text(
                     'Either party can end this contract. A reason is required '
                     'once work is in progress.',
-                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                    style: AppText.caption.copyWith(
+                      color: Colors.grey.shade500,
+                    ),
                   ),
                 ],
               ),
@@ -1808,13 +1924,17 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     _canDisputeCancellation
                         ? 'Dispute This Cancellation'
                         : 'Raise a Dispute',
-                    style: AppText.bodySemiBold.copyWith(color: Colors.redAccent),
+                    style: AppText.bodySemiBold.copyWith(
+                      color: Colors.redAccent,
+                    ),
                   ),
                   Text(
                     _canDisputeCancellation
                         ? 'Disagree with the cancellation? Ask an admin to review it.'
                         : 'Can\'t resolve this with the other party? Ask an admin to step in.',
-                    style: AppText.caption.copyWith(color: Colors.grey.shade500),
+                    style: AppText.caption.copyWith(
+                      color: Colors.grey.shade500,
+                    ),
                   ),
                 ],
               ),
@@ -1914,10 +2034,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Colors.redAccent,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
             ),
           ),
           validator: validator,
@@ -2025,7 +2142,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 24,
             vertical: 24,
@@ -2212,7 +2331,8 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     MaterialPageRoute(
                       builder: (_) => ReviewFormScreen(
                         contractId: _contract.contractId,
-                        freelancerName: _contract.freelancerName ?? 'Freelancer',
+                        freelancerName:
+                            _contract.freelancerName ?? 'Freelancer',
                         projectTitle: _contract.contractTitle,
                       ),
                     ),
@@ -2342,9 +2462,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               const SizedBox(width: 8),
               Text(
                 'Waiting for freelancer to submit...',
-                style: AppText.bodySemiBold.copyWith(
-                  color: AppColors.primary,
-                ),
+                style: AppText.bodySemiBold.copyWith(color: AppColors.primary),
               ),
             ],
           ),
@@ -3041,7 +3159,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 24,
             vertical: 24,
